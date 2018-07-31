@@ -1,5 +1,4 @@
 import datajoint as dj
-
 import reference
 
 
@@ -56,11 +55,13 @@ class Allele(dj.Manual):
     ---
     standard_name=null:		varchar(255)	# standard name
     """
-    class AlleleSequence(dj.Part):
-        definition = """
-        -> Allele
-        -> Sequence       
-        """
+    
+@schema
+class AlleleSequence(dj.Manual):
+    definition = """
+    -> Allele
+    -> Sequence       
+    """
 
 @schema
 class Line(dj.Manual):
@@ -75,37 +76,13 @@ class Line(dj.Manual):
     auto_names:				varchar(255)	# auto name
     is_active:				boolean		# is active
     """
-    class LineAllele(dj.Part):
-        definition = """
-        -> Line
-        -> Allele
-        """
-    
+
 @schema
-class BreedingPair(dj.Manual):
-    # <class 'subjects.models.BreedingPair'>
+class LineAllele(dj.Manual):
     definition = """
     -> Line
-    name:			varchar(255)		# name
-    ---
-    description=null:		varchar(255)		# description
-    start_date:			date			# start date
-    end_date=null:			date			# end date
-    (father)			-> Subject		# father
-    (mother1) 			-> Subject		# mother1
-    (mother2)			-> [nullable] Subject	# mother2
+    -> Allele
     """
-
-    class Litter(dj.Part):
-        # <class 'subjects.models.Litter'>
-        definition = """
-        -> BreedingPair
-        litter_id:			char(32)	# litter id
-        ---
-        descriptive_name=null:		varchar(255)	# descriptive name
-        description=null:			varchar(255)	# description
-        birth_date:			date		# birth date
-        """
 
 @schema
 class Source(dj.Manual):
@@ -125,7 +102,7 @@ class SubjectRequest(dj.Manual):
     -> Line
     subject_request_id:         int                  	# subject request id
     ---
-    count:                      integer 		# count
+    count:                      int 		# count
     date_time:                  date    		# date time
     due_date=null:              date    		# due date
     description=null:           varchar(255)            # description
@@ -144,12 +121,44 @@ class Subject(dj.Manual):
     ear_mark=null:			varchar(255)		# ear mark
     (request)                   -> SubjectRequest(subject_request_id)
     -> Source
-    -> Litter (nullable)
     (responsible_user)          -> reference.User
     """
 
+@schema
+class BreedingPair(dj.Manual):
+    # <class 'subjects.models.BreedingPair'>
+    definition = """
+    -> Line
+    name:			varchar(255)		# name
+    ---
+    description=null:		varchar(255)		# description
+    start_date:			date			# start date
+    end_date=null:			date			# end date
+    (father)			-> Subject		# father
+    (mother1) 			-> Subject		# mother1
+    (mother2)			-> [nullable] Subject	# mother2
+    """
+    
+@schema
+class Litter(dj.Manual):
+    # <class 'subjects.models.Litter'>
+    definition = """
+    -> BreedingPair
+    litter_id:			char(32)	# litter id
+    ---
+    descriptive_name=null:		varchar(255)	# descriptive name
+    description=null:			varchar(255)	# description
+    birth_date:			date		# birth date
+    """
 
-
+@schema
+class LitterSubject(dj.Manual):
+    # litter subject membership table
+    definition = """
+    -> Subject
+    -> Litter
+    """
+    
 @schema
 class Weighing(dj.Manual):
     # <class 'actions.models.Weighing'>
@@ -236,13 +245,11 @@ class Surgery(dj.Manual):
     # <class 'actions.models.Surgery'>
     definition = """
     -> Subject
-    -> reference.BrainLocation
     surgery_start_time:		datetime        # surgery start time
     ---
     surgery_end_time:		datetime        # surgery end time
     outcome_type:		varchar(255)	# outcome type
     narrative:			varchar(255)	# narrative
-    # -> equipment.LabLocation # equipment removed
     """
 
 
@@ -266,13 +273,11 @@ class VirusInjection(dj.Manual):
     # XXX: user was m2m field in django
     definition = """
     -> Subject
-    -> equipment.VirusBatch
     injection_time:		datetime        	# injection time
     ---
     injection_volume:		float   		# injection volume
     rate_of_injection:		float                   # rate of injection
     injection_type:		varchar(255)    	# injection type
-    -> equipment.LabLocation
     """
 
 

@@ -1,7 +1,6 @@
 import datajoint as dj
 
 import subject
-import equipment
 import reference
 
 schema = dj.schema(dj.config['names.%s' % __name__], locals())
@@ -56,6 +55,5 @@ class Session(dj.Manual):
     ---
     session_end_time:           datetime	# end time
     session_type:		varchar(255)	# type
-    #-> equipment.LabLocation
     -> reference.User
     """

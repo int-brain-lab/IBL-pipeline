@@ -1,0 +1,24 @@
+{
+    "database.host": "127.0.0.1",
+    "database.password": "",
+    "database.user": "shanshen",
+    "database.port": 3306,
+    "names.subject": "subject_test1",
+    "names.acquisition": "acquisition_test1",
+    "names.reference": "reference_test1",
+    "connection.init_function": null,
+    "database.reconnect": false,
+    "loglevel": "INFO",
+    "safemode": true,
+    "display.limit": 7,
+    "display.width": 14,
+    "display.show_tuple_count": true,
+    "external.aws_access_key_id": null,
+    "external.aws_secret_access_key": null,
+    "external.location": null,
+    "history": [
+        "No config file found, using default settings."
+    ],
+    "foobar": true,
+    "imported_session_path": "./data"
+}
