@@ -17,7 +17,7 @@ schema = dj.schema(dj.config['names.%s' % __name__], locals())
 
 
 @schema
-class Species(dj.Manual):
+class Species(dj.Lookup):
     # <class 'subjects.models.Species'>
     definition = """
     binomial:			varchar(255)	# binomial
@@ -27,7 +27,7 @@ class Species(dj.Manual):
 
 
 @schema
-class Strain(dj.Manual):
+class Strain(dj.Lookup):
     # <class 'subjects.models.Strain'>
     definition = """
     strain_name:		varchar(255)	# strain name
@@ -37,7 +37,7 @@ class Strain(dj.Manual):
 
 
 @schema
-class Sequence(dj.Manual):
+class Sequence(dj.Lookup):
     # <class 'subjects.models.Sequence'>
     definition = """
     sequence_name:		varchar(255)	# informal name
@@ -48,7 +48,7 @@ class Sequence(dj.Manual):
 
 
 @schema
-class Allele(dj.Manual):
+class Allele(dj.Lookup):
     # <class 'subjects.models.Allele'>
     definition = """
     allele_name:			varchar(255)             # informal name
@@ -57,14 +57,14 @@ class Allele(dj.Manual):
     """
     
 @schema
-class AlleleSequence(dj.Manual):
+class AlleleSequence(dj.Lookup):
     definition = """
     -> Allele
     -> Sequence       
     """
 
 @schema
-class Line(dj.Manual):
+class Line(dj.Lookup):
     # <class 'subjects.models.Line'>
     definition = """
     -> Species
@@ -78,14 +78,14 @@ class Line(dj.Manual):
     """
 
 @schema
-class LineAllele(dj.Manual):
+class LineAllele(dj.Lookup):
     definition = """
     -> Line
     -> Allele
     """
 
 @schema
-class Source(dj.Manual):
+class Source(dj.Lookup):
     # <class 'subjects.models.Source'>
     definition = """
     name:				varchar(255)	# name
@@ -200,7 +200,7 @@ class Caging(dj.Manual):
     -> Subject
     caging_date:                datetime                # caging date
     ---
-    lamis_cage:			integer			# lamis cage
+    lamis_cage:			int			# lamis cage
     """
 
 
@@ -287,6 +287,7 @@ class Culling(dj.Manual):
     definition = """
     -> Subject
     ---
+    cull_date:          date                # cull date
     cull_method:		varchar(255)		# cull method
     """
 

@@ -4,7 +4,7 @@ schema = dj.schema(dj.config['names.%s' % __name__], locals())
 
 
 @schema
-class User(dj.Manual):
+class User(dj.Lookup):
     # <class 'misc.models.OrderedUser'>
     # <class 'django.contrib.auth.models.User'>
     definition = """
