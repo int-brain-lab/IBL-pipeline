@@ -117,8 +117,9 @@ class Ephys(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    ephys_raw:          longblob     # Raw ephys: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
-    ephys_timestamps:   longblob     # Timestamps for raw ephys timeseries: 2 column array giving sample number and time in seconds
+    ephys_raw:              longblob     # Raw ephys: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
+    ephys_sample_id:        longblob
+    ephys_timestamps:       longblob     # Timestamps for raw ephys timeseries in seconds
     """
 
 @schema
@@ -127,19 +128,10 @@ class LFP(dj.Imported):
     -> Ephys
     ---
     lfp_raw:        longblob   # LFP: array of size nSamples * nChannels. Channels from all probes are included
-    lfp_timestamps: longblob   # Timestamps for LFP timeseries: 2 column array giving sample number and time in seconds
+    lfp_sample_id:  longblob 
+    lfp_timestamps: longblob   # Timestamps for LFP timeseries in seconds
     """
 
-@schema
-class Spikes(dj.Imported):
-    definition = """
-    -> Ephys
-    ---
-    spike_times:    longblob      # Times of spikes (seconds)
-    spike_clusters: longblob      # Cluster assignments for each spike (integers counting from 0)
-    spike_depth:    longblob      # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
-    spike_amps:     longblob      # Amplitude of each spike (µV)
-    """
 
 @schema
 class ProbeModel(dj.Lookup):
@@ -163,7 +155,12 @@ class ProbeArray(dj.Imported):
         -> master
         probe_idx:          tinyint     # probe number in this array
         ---
-        probe_insertion:    blob        # array of entry_point_rl, entry_point_ap, vertical_angle, horizontal_angle, axial_angle, distance_advanced
+        entry_point_rl:    float        
+        entry_point_ap:    float        
+        vertical_angle:    float
+        horizontal_angle:  float
+        axial_angle:       float
+        distance_advanced: float
         """
 
 @schema
@@ -199,4 +196,12 @@ class ClusterGroup(dj.Imported):
         (cluster_peak_channel)  -> Channel(channel_idx)
         """
 
-
+@schema
+class ClusterSpikes(dj.Imported):
+    definition = """
+    -> ClusterGroup.Cluster
+    ---
+    cluster_spike_times:    longblob        # spike times of a particular cluster (seconds)
+    cluster_spike_depth:    longblob        # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
+    cluster_spike_amps:     longblob        # Amplitude of each spike (µV)
+    """
