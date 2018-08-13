@@ -1,9 +1,9 @@
 # Alyx pipeline
 
 Schema of subject, reference and acquisition
-(./total_erd.png)
+![Subject, reference and acquisition erd](./total_erd.png)
 
 Schema of ephys
-(./ephys_erd.png)
+![Ephys erd](./ephys_erd.png)
 
 
