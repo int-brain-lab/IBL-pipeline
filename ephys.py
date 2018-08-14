@@ -8,7 +8,8 @@ class Eye(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    eye_timestamps:     longblob # Timestamps for pupil tracking timeseries: 2 column array giving sample number and time in seconds
+    eye_sample_idx:     longblob # Sample number of the pupil recording
+    eye_timestamps:     longblob # Timestamps for pupil tracking timeseries in seconds
     eye_raw:            longblob # Raw movie data for pupil tracking
     eye_area:           longblob # Area of pupil (pixels^2)
     eye_xy_pos:         longblob # matrix with 2 columns giving x and y position of pupil (in pixels)
@@ -22,14 +23,15 @@ class Wheel(dj.Imported):
     ---
     wheel_position:     longblob  # Absolute position of wheel (cm)
     wheel_velocity:     longblob  # Signed velocity of wheel (cm/s) positive = CW
-    wheel_timestamp:    longblob  # Timestamps for wheel timeseries
+    wheel_timestamps:   longblob  # Timestamps for wheel timeseries
     """
     class WheelMove(dj.Part):
         definition = """
         -> master
         wheel_move_id:          int     # identifier of a wheel movement
         ---
-        wheel_move_interval:    blob    # 2 element array with onset and offset times of detected wheel movements in seconds
+        wheel_move_start:       blob    # onset time of the detected wheel movement in seconds
+        wheel_move_end:         blob    # offset time of the detected wheel movement in seconds
         wheel_move_type:        enum("CW", "CCW", "Flinch", "Other")  # string array containing classified type of movement
         """
         
@@ -67,7 +69,8 @@ class Lick(dj.Imported):
     ---
     lick_times:             longblob  # Times of licks
     lick_piezo_raw:         longblob  # Raw lick trace (1 column array; volts)
-    lick_piezo_timestamps:  longblob  # Timestamps for lick trace timeseries: 2 column array giving sample number and time in seconds
+    lick_sample_id:         longblob  # Sample number of lick
+    lick_piezo_timestamps:  longblob  # Timestamps for lick trace timeseries in seconds
     """
 
 @schema
@@ -75,7 +78,7 @@ class TrialSet(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    repitition_num: int     	# the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
+    repetition_num: int     	# the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
     
     """
     class Trial(dj.Part):
