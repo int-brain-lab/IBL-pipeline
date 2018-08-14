@@ -1,7 +1,8 @@
 import datajoint as dj
 import acquisition
+import reference
 
-schema = dj.schema('ephys')
+schema = dj.schema(dj.config['names.{}'.format(__name__)])
 
 @schema
 class Ephys(dj.Imported):
@@ -13,6 +14,7 @@ class Ephys(dj.Imported):
     ephys_start_time:       float        # (seconds)
     ephys_start_time:       float        # (seconds)
     ephys_duration:         float        # (seconds)
+    ephys_sampling_rate:    float        # samples per second
     """
 
 @schema
@@ -27,8 +29,8 @@ class ProbeModel(dj.Lookup):
         -> master
         channel_id:         smallint     # id of a channel on the probe
         ---
-        channel_x_pos:  float   # (um)
-        channel_y_pos:  float   # (um)
+        channel_x_pos:  float   # x position relative to the tip of the probe (um)
+        channel_y_pos:  float   # y position relative to the tip of the probe (um)
         """
 
 @schema
@@ -59,11 +61,11 @@ class Channel(dj.Imported):
     -> ProbeSet.Probe
     -> ProbeModel.Channel
     ---
-    channel_index:          smallint    # position within the recording array
-    channel_ccf_ap:         float       # (um)
-    channel_ccf_dv:         float       # (um)
-    channel_ccf_lf:         float       # (um)
-    channel_ccf_acronym:    float       # (um)
+    channel_index:          smallint    # position within the data array of recording
+    channel_ccf_ap:         float       # anterior posterior CCF coordinate (um)
+    channel_ccf_dv:         float       # dorsal ventral CCF coordinate (um)
+    channel_ccf_lr:         float       # left right CCF coordinate (um)
+    -> reference.BrainLocationAcronym   # acronym of the brain location 
     channel_raw_row:        smallint     # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
     """
 
@@ -72,7 +74,6 @@ class ClusterGroup(dj.Imported):
     definition = """
     -> ProbeSet
     ---
-    cluster_phy_annotation: tinyint       # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
     """
     class Cluster(dj.Part):
         definition = """
@@ -86,6 +87,7 @@ class ClusterGroup(dj.Imported):
         cluster_amp:                float         # Mean amplitude of each cluster (µV)
         -> ProbeSet.Probe
         (cluster_peak_channel)  -> Channel(channel_id)
+        cluster_phy_annotation:     tinyint       # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
         """
 
 @schema
@@ -108,4 +110,5 @@ class LFP(dj.Imported):
     lfp_start_time:       float        # (seconds)
     lfp_end_time:         float        # (seconds)
     lfp_duration:         float        # (seconds)
+    lfp_sampling_rate:    float        # samples per second
     """

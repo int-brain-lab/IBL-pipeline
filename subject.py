@@ -2,7 +2,7 @@ import datajoint as dj
 import reference
 
 
-schema = dj.schema(dj.config['names.%s' % __name__], locals())
+schema = dj.schema(dj.config['names.{}'.format(__name__)])
 
 
 # Actions:

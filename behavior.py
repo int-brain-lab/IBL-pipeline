@@ -1,7 +1,7 @@
 import datajoint as dj
 import acquisition
 
-schema = dj.schema('behavior')
+schema = dj.schema(dj.config['names.{}'.format(__name__)])
 
 @schema
 class Eye(dj.Imported):
@@ -15,8 +15,8 @@ class Eye(dj.Imported):
     eye_y_pos:          longblob # y position of pupil (pixels)
     eye_blink:          boolean  # Boolean array saying whether eye was blinking in each frame
     eye_fps:            float    # frames per second
-    eye_start_time:     float    # start time
-    eye_end_time:       float    # end time
+    eye_start_time:     float    # (seconds)
+    eye_end_time:       float    # (seconds)
     """
 
 @schema
@@ -24,9 +24,13 @@ class Wheel(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    wheel_position:     longblob  # Absolute position of wheel (cm)
-    wheel_velocity:     longblob  # Signed velocity of wheel (cm/s) positive = CW
-    wheel_timestamps:   longblob  # Timestamps for wheel timeseries (seconds)
+    wheel_position:         longblob  # Absolute position of wheel (cm)
+    wheel_velocity:         longblob  # Signed velocity of wheel (cm/s) positive = CW
+    wheel_timestamps:       longblob  # Timestamps for wheel timeseries (seconds)
+    wheel_start_time:       float     # (seconds)
+    wheel_end_time:         float     # (seconds)
+    wheel_duration:         float     # (seconds)
+    wheel_sampling_rate:    float     # samples per second
     """
 
 @schema
@@ -47,10 +51,10 @@ class WheelMoveSet(dj.Imported):
         definition = """
         wheel_move_id:          int     # identifier of a wheel movement
         ---
-        wheel_move_start:       blob    # onset time of the detected wheel movement (seconds)
-        wheel_move_end:         blob    # offset time of the detected wheel movement (seconds)
+        wheel_move_start_time:  float   # onset time of the detected wheel movement (seconds)
+        wheel_move_end_time:    float   # offset time of the detected wheel movement (seconds)
         -> WheelMoveType     
-            """
+        """
         
 
 @schema
@@ -69,7 +73,7 @@ class ExtraRewards(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    extrarewards_times: longblob 			# times of extra rewards (seconds)
+    extra_rewards_times: longblob 			# times of extra rewards (seconds)
     """
 
 @schema
@@ -89,12 +93,15 @@ class Lick(dj.Imported):
     -> acquisition.Session
     ---
     lick_times:             longblob  # Times of licks
-    #lick_piezo_raw:         longblob  # Raw lick trace (volts)
-    #lick_sample_id:         longblob  # Sample number of lick
-    #lick_piezo_timestamps:  longblob  # Timestamps for lick trace timeseries in seconds
-    #lick_start_times: longblob
-    #lick_end_times: longblob
     """
+
+# saved for future when we have the corresponding data
+#lick_piezo_raw:         longblob  # Raw lick trace (volts)
+#lick_sample_id:         longblob  # Sample number of lick
+#lick_piezo_timestamps:  longblob  # Timestamps for lick trace timeseries in seconds
+#lick_start_times: longblob
+#lick_end_times: longblob
+
 
 @schema
 class TrialSet(dj.Imported):
@@ -109,13 +116,13 @@ class TrialSet(dj.Imported):
         # all times are in absolute seconds, rather than relative to trial onset
         definition = """
         -> master
-        trial_idx:              int           # trial identification number
+        trial_id:               int           # trial identification number
         ---
         trial_start_time:       float         # beginning of quiescent period time (seconds)
         trial_end_time:         float         # end of iti (seconds)
         trial_go_cue_time:      float         # Time of go cue in choiceworld (seconds)
         trial_response_time:    float         # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins. 
-        trial_choice:           tinyint       # which choice was made in choiceworld: -1 (turn CCW), +1 (turn CW), or 0 (nogo)
+        trial_choice:           enum("CCW", "CW", "No Go")       # which choice was made in choiceworld
         trial_stim_on_time:     float         # Time of stimulus in choiceworld (seconds)
         trial_stim_position:    enum("Left", "Right")	 # position of the stimulus
         trial_stim_contrast:    float         # contrast of the stimulus
@@ -125,11 +132,9 @@ class TrialSet(dj.Imported):
         """
 
 @schema
-class TrialInclude(dj.Imported):
+class ExcludedTrial(dj.Imported):
     definition = """
-    -> TrialSet
-    ---
-    trial_included:         boolean	      # boolean suggesting which trials to include in analysis, chosen at experimenter discretion, e.g. by excluding the block of incorrect trials at the end of the session when the mouse has stopped
+    -> TrialSet.Trial
     """
 
 @schema
@@ -141,8 +146,8 @@ class PassiveTrial(dj.Imported):
     -> acquisition.Session
     passive_trial_id:           int         # trial identifier
     ---
-    passive_trial_included:     boolean		# suggesting whether this trial to include in analysis, chosen at experimenter discretion, e.g. by excluding the block of incorrect trials at the end of the session when the mouse has stopped
-    passive_trial_stim_on_time: float	    # Time of stimuli in choiceworld
+    passive_trial_included:         boolean		             # suggesting whether this trial to include in analysis, chosen at experimenter discretion, e.g. by excluding the block of incorrect trials at the end of the session when the mouse has stopped
+    passive_trial_stim_on_time:     float	                 # Time of stimuli in choiceworld
     passive_trial_stim_position:    enum("Left", "Right")	 # position of the stimulus
     passive_trial_contrast:         float                    # contrast of the stimulus				    
     passive_valve_click_time:       float 		             # Time of valve opening during passive trial presentation (seconds)

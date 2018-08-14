@@ -1,6 +1,6 @@
 import datajoint as dj
 
-schema = dj.schema(dj.config['names.%s' % __name__], locals())
+schema = dj.schema(dj.config['names.{}'.format(__name__)])
 
 
 @schema
@@ -52,3 +52,22 @@ class Note(dj.Manual):
     text:		varchar(255)		# text
     object_id:		char(32)		# object id
     """
+
+@schema
+class BrainLocationAcronym(dj.Lookup):
+    definition = """
+    acronym:  varchar(32) # acronym of a brain location
+    ---
+    full_name = null: varchar(128) # full name of the brain location
+    """
+    contents = [
+        ['ACA', 'Anterior cingulate area'],
+        ['ACB', 'Nucleus accumbens'],
+        ['IC', 'Inferior colliculus '],
+        ['MOs', 'Secondary motor area'],
+        ['MRN', 'Midbrain reticular nucleus'],
+        ['root', ''],
+        ['RSP', 'Retrosplenial area'],
+        ['SCsg', 'Superficial gray layer '],
+        ['VISp', 'Primary visual area']
+    ]

@@ -3,7 +3,7 @@ import datajoint as dj
 import subject
 import reference
 
-schema = dj.schema(dj.config['names.%s' % __name__], locals())
+schema = dj.schema(dj.config['names.{}'.format(__name__)])
 
 '''
 To simplify from Alyx schema, dropping file repositories as core
