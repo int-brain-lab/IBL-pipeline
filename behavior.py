@@ -63,7 +63,7 @@ class SparseNoise(dj.Imported):
     -> acquisition.Session
     ---
     sparse_noise_x_pos:  longblob				# x coordiate on screen of sparse noise stimulus squares (WHAT UNIT?)
-    sparse_noise_y_pos:  longblob				# x coordiate on screen of sparse noise stimulus squares (WHAT UNIT?)
+    sparse_noise_y_pos:  longblob				# y coordiate on screen of sparse noise stimulus squares (WHAT UNIT?)
     sparse_noise_times:  longblob				# times of those stimulus squares appeared in universal seconds
     """
 
