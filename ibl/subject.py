@@ -1,8 +1,7 @@
 import datajoint as dj
-import reference
+from . import reference
 
-
-schema = dj.schema(dj.config['names.{}'.format(__name__)])
+schema = dj.schema('ibl_subject')
 
 
 # Actions:
