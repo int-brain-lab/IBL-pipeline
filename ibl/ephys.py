@@ -1,5 +1,6 @@
 import datajoint as dj
 from . import acquisition
+from . import reference
 
 schema = dj.schema('ibl_ephys')
 
