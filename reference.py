@@ -1,10 +1,10 @@
 import datajoint as dj
 
-schema = dj.schema(dj.config['names.%s' % __name__], locals())
+schema = dj.schema(dj.config['names.{}'.format(__name__)])
 
 
 @schema
-class User(dj.Manual):
+class User(dj.Lookup):
     # <class 'misc.models.OrderedUser'>
     # <class 'django.contrib.auth.models.User'>
     definition = """
@@ -19,20 +19,6 @@ class User(dj.Manual):
     is_active:		boolean		# active
     is_staff:		boolean		# staff status
     is_superuser:	boolean		# superuser status
-    """
-
-
-@schema
-class BrainLocation(dj.Manual):
-    # <class 'misc.models.BrainLocation'>
-    # <class 'electrophysiology.models.BaseBrainLocation'>
-    definition = """
-    ccf_ap:			float		# ccf ap
-    ccf_dv:			float		# ccf dv
-    ccf_lr:			float		# ccf lr
-    ---
-    brain_location_description: varchar(64)	# description
-    allen_location_ontology:    varchar(255)	# allen ontology
     """
 
 
@@ -53,19 +39,6 @@ class Severity(dj.Lookup):
     )
 
 
-@schema
-class CoordinateTransformation(dj.Manual):
-    # <class 'misc.models.CoordinateTransformation'>
-    definition = """
-    transform_id:		int		# id
-    ---
-    name:    			varchar(255)	# name
-    description:		varchar(255)	# description
-    allen_location_ontology:	varchar(255)	# allen location ontology
-    origin:			longblob	# origin
-    transformation_matrix:    	longblob	# transformation matrix
-    """
-
 
 @schema
 class Note(dj.Manual):
@@ -79,3 +52,22 @@ class Note(dj.Manual):
     text:		varchar(255)		# text
     object_id:		char(32)		# object id
     """
+
+@schema
+class BrainLocationAcronym(dj.Lookup):
+    definition = """
+    acronym:  varchar(32) # acronym of a brain location
+    ---
+    full_name = null: varchar(128) # full name of the brain location
+    """
+    contents = [
+        ['ACA', 'Anterior cingulate area'],
+        ['ACB', 'Nucleus accumbens'],
+        ['IC', 'Inferior colliculus '],
+        ['MOs', 'Secondary motor area'],
+        ['MRN', 'Midbrain reticular nucleus'],
+        ['root', ''],
+        ['RSP', 'Retrosplenial area'],
+        ['SCsg', 'Superficial gray layer '],
+        ['VISp', 'Primary visual area']
+    ]
