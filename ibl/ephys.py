@@ -1,8 +1,8 @@
 import datajoint as dj
-import acquisition
-import reference
+from . import acquisition
+from . import reference
 
-schema = dj.schema(dj.config['names.{}'.format(__name__)])
+schema = dj.schema('ibl_ephys')
 
 @schema
 class Ephys(dj.Imported):

@@ -1,7 +1,7 @@
 import datajoint as dj
-import acquisition
+from . import acquisition
 
-schema = dj.schema(dj.config['names.{}'.format(__name__)])
+schema = dj.schema('ibl_behavior')
 
 @schema
 class Eye(dj.Imported):
