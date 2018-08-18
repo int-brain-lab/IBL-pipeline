@@ -94,21 +94,6 @@ class Source(dj.Lookup):
 
 
 @schema
-class SubjectRequest(dj.Manual):
-    # <class 'subjects.models.SubjectRequest'>
-    definition = """
-    -> reference.User
-    -> Line
-    subject_request_id:         int                  	# subject request id
-    ---
-    count:                      int 		# count
-    date_time:                  date    		# date time
-    due_date=null:              date    		# due date
-    description=null:           varchar(255)            # description
-    """
-
-
-@schema
 class Subject(dj.Manual):
     # <class 'subjects.models.Subject'>
     definition = """
@@ -118,7 +103,6 @@ class Subject(dj.Manual):
     sex:			enum("M", "F", "U")	# sex
     birth_date:			date			# birth date
     ear_mark=null:			varchar(255)		# ear mark
-    (request)                   -> SubjectRequest(subject_request_id)
     -> Source
     (responsible_user)          -> reference.User
     """

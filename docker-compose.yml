@@ -10,6 +10,7 @@ services:
       - ./notebooks:/notebooks
       - ./images:/images
       - .:/src/alyx-pipeline
+      - ./data:/data
     links:
       - db
     ports:
