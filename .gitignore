@@ -111,4 +111,4 @@ venv.bak/
 .mypy_cache/
 
 # json file
-*.json
+dj_local_conf.json
