@@ -87,7 +87,7 @@ class LineAllele(dj.Lookup):
 class Source(dj.Lookup):
     # <class 'subjects.models.Source'>
     definition = """
-    name:				varchar(255)	# name
+    source_name:				varchar(255)	# name of source
     ---
     description=null:			varchar(255)	# description
     """
