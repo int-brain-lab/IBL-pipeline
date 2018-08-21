@@ -12,7 +12,7 @@ class Ephys(dj.Imported):
     ephys_raw:              longblob     # Raw ephys: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
     ephys_timestamps:       longblob     # Timestamps for raw ephys timeseries (seconds)
     ephys_start_time:       float        # (seconds)
-    ephys_start_time:       float        # (seconds)
+    ephys_stop_time:       float        # (seconds)
     ephys_duration:         float        # (seconds)
     ephys_sampling_rate:    float        # samples per second
     """
@@ -47,8 +47,8 @@ class ProbeSet(dj.Imported):
         probe_idx:          tinyint     # probe number in this array
         ---
         -> ProbeModel
-        entry_point_rl:    float        
-        entry_point_ap:    float        
+        entry_point_rl:    float
+        entry_point_ap:    float
         vertical_angle:    float
         horizontal_angle:  float
         axial_angle:       float
@@ -65,7 +65,7 @@ class Channel(dj.Imported):
     channel_ccf_ap:         float       # anterior posterior CCF coordinate (um)
     channel_ccf_dv:         float       # dorsal ventral CCF coordinate (um)
     channel_ccf_lr:         float       # left right CCF coordinate (um)
-    -> reference.BrainLocationAcronym   # acronym of the brain location 
+    -> reference.BrainLocationAcronym   # acronym of the brain location
     channel_raw_row:        smallint     # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
     """
 
@@ -78,7 +78,7 @@ class ClusterGroup(dj.Imported):
     class Cluster(dj.Part):
         definition = """
         -> master
-        cluster_id: smallint      
+        cluster_id: smallint
         ---
         cluster_mean_waveform:      longblob      # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered): nClusters*nSamples*nChannels
         cluster_template_waveform:  longblob      # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
