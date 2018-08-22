@@ -20,6 +20,7 @@ class Ephys(dj.Imported):
 @schema
 class ProbeModel(dj.Lookup):
     definition = """
+    # Description of a particular model of probe.
     probe_model_name: varchar(128)      # String naming probe model, from probe.description
     ---
     channel_counts: smallint            # number of channels in the probe
@@ -37,9 +38,6 @@ class ProbeModel(dj.Lookup):
 class ProbeSet(dj.Imported):
     definition = """
     -> Ephys
-    ---
-    -> ProbeModel
-    probe_set_raw_filename: varchar(256)      # Name of the raw data file this probe was recorded in
     """
     class Probe(dj.Part):
         definition = """
@@ -47,6 +45,7 @@ class ProbeSet(dj.Imported):
         probe_idx:          tinyint     # probe number in this array
         ---
         -> ProbeModel
+        probe_set_raw_filename: varchar(256)      # Name of the raw data file this probe was recorded in
         entry_point_rl:    float
         entry_point_ap:    float
         vertical_angle:    float
@@ -68,6 +67,7 @@ class Channel(dj.Imported):
     -> reference.BrainLocationAcronym   # acronym of the brain location
     channel_raw_row:        smallint     # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
     """
+    key_source = Ephys
 
 @schema
 class ClusterGroup(dj.Imported):
@@ -99,6 +99,7 @@ class ClusterSpikes(dj.Imported):
     cluster_spike_depth:    longblob        # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
     cluster_spike_amps:     longblob        # Amplitude of each spike (µV)
     """
+    key_source = Ephys
 
 @schema
 class LFP(dj.Imported):
