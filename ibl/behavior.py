@@ -7,6 +7,7 @@ schema = dj.schema('ibl_behavior')
 @schema
 class Eye(dj.Imported):
     definition = """
+    # eye recording
     -> acquisition.Session
     ---
     eye_timestamps:     longblob # Timestamps for pupil tracking timeseries (seconds)
@@ -49,6 +50,7 @@ class Eye(dj.Imported):
 @schema
 class Wheel(dj.Imported):
     definition = """
+    # raw wheel recording
     -> acquisition.Session
     ---
     wheel_position:         longblob  # Absolute position of wheel (cm)
@@ -90,6 +92,7 @@ class WheelMoveType(dj.Lookup):
 @schema
 class WheelMoveSet(dj.Imported):
     definition = """
+    # detected wheel movements
     -> Wheel
     ---
     wheel_move_number : int     # total number of movements in this set
@@ -120,8 +123,7 @@ class WheelMoveSet(dj.Imported):
             self.WheelMove().insert1(wheel_move_key)
         
         print('Populated a WheelMoveSet and all WheelMove tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))
-
-        
+     
     class WheelMove(dj.Part):
         definition = """
         -> master
@@ -158,6 +160,7 @@ class SparseNoise(dj.Imported):
 @schema
 class ExtraRewards(dj.Imported):
     definition = """
+    # information about extra rewards given manually by the experimenter
     -> acquisition.Session
     ---
     extra_rewards_times: longblob 			# times of extra rewards (seconds)
@@ -174,8 +177,8 @@ class ExtraRewards(dj.Imported):
 
 @schema
 class SpontaneousTimeSet(dj.Imported):
-    # times when no other protocol was going on for at least 30 sec or so
     definition = """
+    # times when no other protocol was going on for at least 30 sec or so
     -> acquisition.Session
     ---
     spontaneous_time_total_num:   int   # total number of the spontaneous time periods
@@ -211,6 +214,7 @@ class SpontaneousTimeSet(dj.Imported):
 @schema
 class Lick(dj.Imported):
     definition = """
+    # detected licks
     -> acquisition.Session
     ---
     lick_times:             longblob  # Times of licks
@@ -245,6 +249,7 @@ class Lick(dj.Imported):
 @schema
 class TrialSet(dj.Imported):
     definition = """
+    # information about behavioral trials
     -> acquisition.Session
     ---
     trials_total_num:   int              # total trial numbers in this set
