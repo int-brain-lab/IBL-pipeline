@@ -178,7 +178,7 @@ class SpontaneousTimeSet(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    spontaneous_time_total:         int               # total number of the spontaneous time
+    spontaneous_time_total_num:   int   # total number of the spontaneous time periods
     """
     def make(self, key):
         spon_time_key = key.copy()
@@ -186,7 +186,7 @@ class SpontaneousTimeSet(dj.Imported):
         datapath = 'data/{subject_id}-{session_start_time}/'.format(**key)
         spontaneous_intervals = np.load(f'{datapath}spontaneous.intervals.npy')
         
-        key['spontaneous_time_total'] = len(spontaneous_intervals)
+        key['spontaneous_time_total_num'] = len(spontaneous_intervals)
         self.insert1(key)
         
         for iSponTime in range(len(spontaneous_intervals)):
@@ -196,7 +196,7 @@ class SpontaneousTimeSet(dj.Imported):
             spon_time_key['spontaneous_time_duration'] = float(np.diff(spontaneous_intervals[iSponTime, :]))
             self.SpontaneousTime().insert1(spon_time_key)
         
-        print('Populated an SpontaneousTimeSet tuple and all Spontaneoustime tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))        
+        print('Populated a SpontaneousTimeSet tuple and all Spontaneoustime tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))        
     
     class SpontaneousTime(dj.Part):
         definition = """
@@ -216,8 +216,8 @@ class Lick(dj.Imported):
     lick_times:             longblob  # Times of licks
     lick_piezo_raw:         longblob  # Raw lick trace (volts)
     lick_piezo_timestamps:  longblob  # Timestamps for lick trace timeseries (seconds)
-    lick_start_time:        longblob  # recording start time (seconds)
-    lick_end_time:          longblob  # recording end time (seconds)]
+    lick_start_time:        float     # recording start time (seconds)
+    lick_end_time:          float     # recording end time (seconds)]
     lick_sampling_rate:     float     # number of samples per second
     """
     def make(self, key):
