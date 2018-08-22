@@ -12,7 +12,7 @@ class Ephys(dj.Imported):
     ephys_raw:              longblob     # Raw ephys: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
     ephys_timestamps:       longblob     # Timestamps for raw ephys timeseries (seconds)
     ephys_start_time:       float        # (seconds)
-    ephys_start_time:       float        # (seconds)
+    ephys_stop_time:       float        # (seconds)
     ephys_duration:         float        # (seconds)
     ephys_sampling_rate:    float        # samples per second
     """
@@ -20,6 +20,7 @@ class Ephys(dj.Imported):
 @schema
 class ProbeModel(dj.Lookup):
     definition = """
+    # Description of a particular model of probe.
     probe_model_name: varchar(128)      # String naming probe model, from probe.description
     ---
     channel_counts: smallint            # number of channels in the probe
@@ -37,9 +38,6 @@ class ProbeModel(dj.Lookup):
 class ProbeSet(dj.Imported):
     definition = """
     -> Ephys
-    ---
-    -> ProbeModel
-    probe_set_raw_filename: varchar(256)      # Name of the raw data file this probe was recorded in
     """
     class Probe(dj.Part):
         definition = """
@@ -47,8 +45,9 @@ class ProbeSet(dj.Imported):
         probe_idx:          tinyint     # probe number in this array
         ---
         -> ProbeModel
-        entry_point_rl:    float        
-        entry_point_ap:    float        
+        probe_set_raw_filename: varchar(256)      # Name of the raw data file this probe was recorded in
+        entry_point_rl:    float
+        entry_point_ap:    float
         vertical_angle:    float
         horizontal_angle:  float
         axial_angle:       float
@@ -65,9 +64,10 @@ class Channel(dj.Imported):
     channel_ccf_ap:         float       # anterior posterior CCF coordinate (um)
     channel_ccf_dv:         float       # dorsal ventral CCF coordinate (um)
     channel_ccf_lr:         float       # left right CCF coordinate (um)
-    -> reference.BrainLocationAcronym   # acronym of the brain location 
+    -> reference.BrainLocationAcronym   # acronym of the brain location
     channel_raw_row:        smallint     # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
     """
+    key_source = Ephys
 
 @schema
 class ClusterGroup(dj.Imported):
@@ -78,7 +78,7 @@ class ClusterGroup(dj.Imported):
     class Cluster(dj.Part):
         definition = """
         -> master
-        cluster_id: smallint      
+        cluster_id: smallint
         ---
         cluster_mean_waveform:      longblob      # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered): nClusters*nSamples*nChannels
         cluster_template_waveform:  longblob      # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
@@ -99,6 +99,7 @@ class ClusterSpikes(dj.Imported):
     cluster_spike_depth:    longblob        # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
     cluster_spike_amps:     longblob        # Amplitude of each spike (µV)
     """
+    key_source = Ephys
 
 @schema
 class LFP(dj.Imported):
