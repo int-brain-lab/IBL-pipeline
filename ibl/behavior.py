@@ -4,7 +4,7 @@ from os import path
 import logging
 from . import acquisition
 
-logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 schema = dj.schema('ibl_behavior')
 
 @schema
@@ -47,7 +47,6 @@ class Eye(dj.Imported):
         key['eye_end_time'] = eye_timestamps[-1]
         
         self.insert1(key)
-        log = logging.getLogger('Eye logger')
         log.info('Populated an Eye tuple for subject {subject_id} on {session_start_time}'.format(**key))
 
 @schema
@@ -83,7 +82,6 @@ class Wheel(dj.Imported):
         key['wheel_sampling_rate'] = wheel_sampling_rate
 
         self.insert1(key)
-        log = logging.getLogger('Wheel logger')
         log.info('Populated a Wheel tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))
         
 @schema
@@ -126,7 +124,6 @@ class WheelMoveSet(dj.Imported):
             wheel_move_key['wheel_move_type'] = wheel_moves_types_str[idx_move]
             self.WheelMove().insert1(wheel_move_key)
         
-        log = logging.getLogger('WheelMoveSet logger')        
         log.info('Populated a WheelMoveSet and all WheelMove tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))
      
     class WheelMove(dj.Part):
@@ -160,7 +157,6 @@ class SparseNoise(dj.Imported):
         key['sparse_noise_y_pos'] = sparse_noise_positions[:, 1],
         key['sparse_noise_times'] = sparse_noise_times
         self.insert1(key)
-        log = logging.getLogger('SparseNoise logger')
         log.info('Populated a SparseNoise tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))        
 
 @schema
@@ -179,7 +175,6 @@ class ExtraRewards(dj.Imported):
         
         self.insert1(key)
     
-        log = logging.getLogger('ExtraRewards logger')
         log.info('Populated an ExtraRewards tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))        
 
 
@@ -207,7 +202,6 @@ class SpontaneousTimeSet(dj.Imported):
             spon_time_key['spontaneous_time_duration'] = float(np.diff(spontaneous_intervals[idx_spon, :]))
             self.SpontaneousTime().insert1(spon_time_key)
         
-        log = logging.getLogger('SpontaneousTimeSet logger')        
         log.info('Populated a SpontaneousTimeSet tuple and all Spontaneoustime tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))        
     
     class SpontaneousTime(dj.Part):
@@ -253,7 +247,6 @@ class Lick(dj.Imported):
 
         self.insert1(key) 
 
-        log = logging.getLogger('Lick logger')        
         log.info('Populated a Lick tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))        
         
 
@@ -329,7 +322,6 @@ class TrialSet(dj.Imported):
             trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
 
             self.Trial().insert1(trial_key) 
-        log = logging.getLogger('TrialSet logger')
         log.info('Populated a TrialSet tuple and all Trial tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))
     
     class Trial(dj.Part):
