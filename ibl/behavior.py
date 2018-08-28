@@ -1,7 +1,10 @@
 import datajoint as dj
 import numpy as np
+from os import path
+import logging
 from . import acquisition
 
+logging.basicConfig(level=logging.INFO)
 schema = dj.schema('ibl_behavior')
 
 @schema
@@ -11,7 +14,7 @@ class Eye(dj.Imported):
     -> acquisition.Session
     ---
     eye_timestamps:     longblob # Timestamps for pupil tracking timeseries (seconds)
-    eye_raw:            longblob # Raw movie data for pupil tracking
+    eye_raw = null:     longblob # Raw movie data for pupil tracking
     eye_area:           longblob # Area of pupil (pixels^2)
     eye_x_pos:          longblob # x position of pupil (pixels)
     eye_y_pos:          longblob # y position of pupil (pixels)
@@ -21,8 +24,8 @@ class Eye(dj.Imported):
     eye_end_time:       float    # (seconds)
     """
     def make(self, key):
-        
-        datapath = 'data/{subject_id}-{session_start_time}/'.format(**key)
+    
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
         eye_area = np.load(f'{datapath}eye.area.npy')
         eye_blink = np.load(f'{datapath}eye.blink.npy')
         eye_xypos = np.load(f'{datapath}eye.xyPos.npy')
@@ -35,17 +38,17 @@ class Eye(dj.Imported):
                                        len(eye_area)]))) == 1, 'Loaded eye files do not have same length'
 
         key['eye_timestamps'] = eye_timestamps
-        key['eye_raw'] = 0 # to be fixed when raw data is available
         key['eye_area'] = eye_area
         key['eye_x_pos'] = eye_xypos[:, 0]
         key['eye_y_pos'] = eye_xypos[:, 1]
         key['eye_blink'] = eye_blink
-        key['eye_fps'] = 1/np.median(np.diff(eye_timestamps))
+        key['eye_fps'] = 1 / np.median(np.diff(eye_timestamps))
         key['eye_start_time'] = eye_timestamps[0]
         key['eye_end_time'] = eye_timestamps[-1]
         
         self.insert1(key)
-        print('Populated an Eye tuple for subject {subject_id} on {session_start_time}'.format(**key))
+        log = logging.getLogger('Eye logger')
+        log.info('Populated an Eye tuple for subject {subject_id} on {session_start_time}'.format(**key))
 
 @schema
 class Wheel(dj.Imported):
@@ -62,14 +65,14 @@ class Wheel(dj.Imported):
     wheel_sampling_rate:    float     # samples per second
     """
     def make(self, key):
-        datapath = 'data/{subject_id}-{session_start_time}/'.format(**key)
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
         wheel_position = np.load(f'{datapath}_ibl_wheel.position.npy')
         wheel_timestamps = np.load(f'{datapath}_ibl_wheel.timestamps.npy')
 
         #assert len(np.unique(np.array([len(wheel_position), len(wheel_timestamps)]))) == 1, 'Loaded wheel files do not have same length'
 
         wheel_timestamps = wheel_timestamps[:, 1]
-        wheel_sampling_rate = 1/np.median(np.diff(wheel_timestamps))
+        wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
         
         key['wheel_position'] = wheel_position
         key['wheel_velocity'] = np.diff(wheel_position)*wheel_sampling_rate
@@ -80,7 +83,8 @@ class Wheel(dj.Imported):
         key['wheel_sampling_rate'] = wheel_sampling_rate
 
         self.insert1(key)
-        print('Populated a Wheel tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))
+        log = logging.getLogger('Wheel logger')
+        log.info('Populated a Wheel tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))
         
 @schema
 class WheelMoveType(dj.Lookup):
@@ -100,13 +104,13 @@ class WheelMoveSet(dj.Imported):
     def make(self, key):
         wheel_move_key = key.copy()
 
-        datapath = 'data/{subject_id}-{session_start_time}/'.format(**key)
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
         wheel_moves_intervals = np.load(f'{datapath}_ns_wheelMoves.intervals.npy')
         wheel_moves_types = np.load(f'{datapath}_ns_wheelMoves.type.npy')
 
         assert len(np.unique(np.array([len(wheel_moves_intervals), len(wheel_moves_types)]))) == 1, 'Loaded wheel move files do not have same length'
 
-        wheel_moves_types_str = np.array(["        " for x in range(len(wheel_moves_types))])
+        wheel_moves_types_str = np.array(["" for x in range(len(wheel_moves_types))], dtype='<U10')
         # mapping between numbers and "CW" etc need to be confirmed
         wheel_moves_types_str[wheel_moves_types.ravel()==0] = "CW"
         wheel_moves_types_str[wheel_moves_types.ravel()==1] = "CCW"
@@ -115,14 +119,15 @@ class WheelMoveSet(dj.Imported):
         key['wheel_move_number'] = len(wheel_moves_types)
         self.insert1(key)
         
-        for iMove in range(len(wheel_moves_types)):
-            wheel_move_key['wheel_move_id'] = iMove + 1
-            wheel_move_key['wheel_move_start_time'] = wheel_moves_intervals[iMove, 0]
-            wheel_move_key['wheel_move_end_time'] = wheel_moves_intervals[iMove, 1]
-            wheel_move_key['wheel_move_type'] = wheel_moves_types_str[iMove]
+        for idx_move in range(len(wheel_moves_types)):
+            wheel_move_key['wheel_move_id'] = idx_move + 1
+            wheel_move_key['wheel_move_start_time'] = wheel_moves_intervals[idx_move, 0]
+            wheel_move_key['wheel_move_end_time'] = wheel_moves_intervals[idx_move, 1]
+            wheel_move_key['wheel_move_type'] = wheel_moves_types_str[idx_move]
             self.WheelMove().insert1(wheel_move_key)
         
-        print('Populated a WheelMoveSet and all WheelMove tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))
+        log = logging.getLogger('WheelMoveSet logger')        
+        log.info('Populated a WheelMoveSet and all WheelMove tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))
      
     class WheelMove(dj.Part):
         definition = """
@@ -145,7 +150,7 @@ class SparseNoise(dj.Imported):
     sparse_noise_times:  longblob				# times of those stimulus squares appeared in universal seconds
     """
     def make(self, key):
-        datapath = 'data/{subject_id}-{session_start_time}/'.format(**key)
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
         sparse_noise_positions = np.load(f'{datapath}_ns_sparseNoise.positions.npy')
         sparse_noise_times = np.load(f'{datapath}_ns_sparseNoise.times.npy')
 
@@ -155,7 +160,9 @@ class SparseNoise(dj.Imported):
         key['sparse_noise_y_pos'] = sparse_noise_positions[:, 1],
         key['sparse_noise_times'] = sparse_noise_times
         self.insert1(key)
-        print('Populated a SparseNoise tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))        
+
+    log = logging.getLogger('SparseNoise logger')
+    log.info('Populated a SparseNoise tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))        
 
 @schema
 class ExtraRewards(dj.Imported):
@@ -166,13 +173,15 @@ class ExtraRewards(dj.Imported):
     extra_rewards_times: longblob 			# times of extra rewards (seconds)
     """
     def make(self, key):
-        datapath = 'data/{subject_id}-{session_start_time}/'.format(**key)
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
         extra_rewards_times = np.load(f'{datapath}_ibl_extraRewards.times.npy')
        
         key['extra_rewards_times'] = extra_rewards_times
         
         self.insert1(key)
-        print('Populated an ExtraRewards tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))        
+    
+    log = logging.getLogger('ExtraRewards logger')
+    log.info('Populated an ExtraRewards tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))        
 
 
 @schema
@@ -186,20 +195,21 @@ class SpontaneousTimeSet(dj.Imported):
     def make(self, key):
         spon_time_key = key.copy()
                 
-        datapath = 'data/{subject_id}-{session_start_time}/'.format(**key)
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
         spontaneous_intervals = np.load(f'{datapath}spontaneous.intervals.npy')
         
         key['spontaneous_time_total_num'] = len(spontaneous_intervals)
         self.insert1(key)
         
-        for iSponTime in range(len(spontaneous_intervals)):
-            spon_time_key['spontaneous_time_id'] = iSponTime + 1
-            spon_time_key['spontaneous_start_time'] = spontaneous_intervals[iSponTime, 0]
-            spon_time_key['spontaneous_end_time'] = spontaneous_intervals[iSponTime, 1]
-            spon_time_key['spontaneous_time_duration'] = float(np.diff(spontaneous_intervals[iSponTime, :]))
+        for idx_spon in range(len(spontaneous_intervals)):
+            spon_time_key['spontaneous_time_id'] = idx_spon + 1
+            spon_time_key['spontaneous_start_time'] = spontaneous_intervals[idx_spon, 0]
+            spon_time_key['spontaneous_end_time'] = spontaneous_intervals[idx_spon, 1]
+            spon_time_key['spontaneous_time_duration'] = float(np.diff(spontaneous_intervals[idx_spon, :]))
             self.SpontaneousTime().insert1(spon_time_key)
         
-        print('Populated a SpontaneousTimeSet tuple and all Spontaneoustime tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))        
+        log = logging.getLogger('SpontaneousTimeSet logger')        
+        log.info('Populated a SpontaneousTimeSet tuple and all Spontaneoustime tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))        
     
     class SpontaneousTime(dj.Part):
         definition = """
@@ -218,7 +228,7 @@ class Lick(dj.Imported):
     -> acquisition.Session
     ---
     lick_times:             longblob  # Times of licks
-    lick_piezo_raw:         longblob  # Raw lick trace (volts)
+    lick_piezo_raw = null:  longblob  # Raw lick trace (volts)
     lick_piezo_timestamps:  longblob  # Timestamps for lick trace timeseries (seconds)
     lick_start_time:        float     # recording start time (seconds)
     lick_end_time:          float     # recording end time (seconds)]
@@ -226,7 +236,7 @@ class Lick(dj.Imported):
     """
     def make(self, key):
         
-        datapath = 'data/{subject_id}-{session_start_time}/'.format(**key)
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
         lick_times = np.load(f'{datapath}licks.times.npy')
         lick_piezo_raw = np.load(f'{datapath}_ibl_lickPiezo.raw.npy')
         lick_piezo_timestamps = np.load(f'{datapath}_ibl_lickPiezo.timestamps.npy')
@@ -240,10 +250,12 @@ class Lick(dj.Imported):
         key['lick_piezo_timestamps'] = lick_piezo_timestamps
         key['lick_start_time'] = lick_piezo_timestamps[0]
         key['lick_end_time'] = lick_piezo_timestamps[-1]
-        key['lick_sampling_rate'] = 1/np.median(np.diff(lick_piezo_timestamps))
+        key['lick_sampling_rate'] = 1 / np.median(np.diff(lick_piezo_timestamps))
 
         self.insert1(key) 
-        print('Populated a Lick tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))        
+
+        log = logging.getLogger('Lick logger')        
+        log.info('Populated a Lick tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))        
         
 
 @schema
@@ -258,7 +270,8 @@ class TrialSet(dj.Imported):
     """
     def make(self, key):
         trial_key = key.copy()
-        datapath = 'data/{subject_id}-{session_start_time}/'.format(**key)
+        
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
         trials_feedback_times = np.load(f'{datapath}_ns_trials.feedback_times.npy')
         trials_feedback_types = np.load(f'{datapath}_ns_trials.feedbackType.npy')
         trials_gocue_times = np.load(f'{datapath}_ns_trials.goCue_times.npy')
@@ -287,38 +300,38 @@ class TrialSet(dj.Imported):
         
         self.insert1(key) 
 
-        for iTrial in range(len(trials_response_choice)):
-            if np.isnan(trials_visual_stim_contrast_left[iTrial]):
+        for idx_trial in range(len(trials_response_choice)):
+            if np.isnan(trials_visual_stim_contrast_left[idx_trial]):
                 trial_stim_position = 'Right'
-                trial_stim_contrast = trials_visual_stim_contrast_right[iTrial]
+                trial_stim_contrast = trials_visual_stim_contrast_right[idx_trial]
             else:
                 trial_stim_position = 'Left'
-                trial_stim_contrast = trials_visual_stim_contrast_left[iTrial]
-            if trials_response_choice[iTrial] == -1:
+                trial_stim_contrast = trials_visual_stim_contrast_left[idx_trial]
+            if trials_response_choice[idx_trial] == -1:
                 trial_response_choice = "CCW"
-            elif trials_response_choice[iTrial] == 0:
+            elif trials_response_choice[idx_trial] == 0:
                 trial_response_choice = "No Go"
-            elif trials_response_choice[iTrial] == 1:
+            elif trials_response_choice[idx_trial] == 1:
                 trial_response_choice = "CW"
             else:
                 raise ValueError('Invalid reponse choice.')
 
-            trial_key['trial_id'] = iTrial + 1
-            trial_key['trial_start_time'] = trials_intervals[iTrial, 0]
-            trial_key['trial_end_time'] = trials_intervals[iTrial, 0]
-            trial_key['trial_go_cue_time'] = float(trials_gocue_times[iTrial])
-            trial_key['trial_response_time'] = float(trials_response_times[iTrial])
+            trial_key['trial_id'] = idx_trial + 1
+            trial_key['trial_start_time'] = trials_intervals[idx_trial, 0]
+            trial_key['trial_end_time'] = trials_intervals[idx_trial, 0]
+            trial_key['trial_go_cue_time'] = float(trials_gocue_times[idx_trial])
+            trial_key['trial_response_time'] = float(trials_response_times[idx_trial])
             trial_key['trial_choice'] = trial_response_choice
-            trial_key['trial_stim_on_time'] = trials_visual_stim_times[iTrial, 0]
+            trial_key['trial_stim_on_time'] = trials_visual_stim_times[idx_trial, 0]
             trial_key['trial_stim_position'] = trial_stim_position
             trial_key['trial_stim_contrast'] = float(trial_stim_contrast)
-            trial_key['trial_feedback_time'] = float(trials_feedback_times[iTrial])
-            trial_key['trial_feedback_type'] = int(trials_feedback_types[iTrial])
-            trial_key['trial_rep_num'] = int(trials_rep_num[iTrial])
+            trial_key['trial_feedback_time'] = float(trials_feedback_times[idx_trial])
+            trial_key['trial_feedback_type'] = int(trials_feedback_types[idx_trial])
+            trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
 
             self.Trial().insert1(trial_key) 
-
-        print('Populated a TrialSet tuple and all Trial tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))
+        log = logging.getLogger('TrialSet logger')
+        log.info('Populated a TrialSet tuple and all Trial tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))
     
     class Trial(dj.Part):
         # all times are in absolute seconds, rather than relative to trial onset
