@@ -160,9 +160,8 @@ class SparseNoise(dj.Imported):
         key['sparse_noise_y_pos'] = sparse_noise_positions[:, 1],
         key['sparse_noise_times'] = sparse_noise_times
         self.insert1(key)
-
-    log = logging.getLogger('SparseNoise logger')
-    log.info('Populated a SparseNoise tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))        
+        log = logging.getLogger('SparseNoise logger')
+        log.info('Populated a SparseNoise tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))        
 
 @schema
 class ExtraRewards(dj.Imported):
@@ -180,8 +179,8 @@ class ExtraRewards(dj.Imported):
         
         self.insert1(key)
     
-    log = logging.getLogger('ExtraRewards logger')
-    log.info('Populated an ExtraRewards tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))        
+        log = logging.getLogger('ExtraRewards logger')
+        log.info('Populated an ExtraRewards tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))        
 
 
 @schema
