@@ -6,6 +6,10 @@ from . import acquisition
 
 logger = logging.getLogger(__name__)
 schema = dj.schema('ibl_behavior')
+dj.config['external-data'] = {
+    'protocol': 'file',
+    'location': 'external/'
+}
 
 @schema
 class Eye(dj.Imported):
@@ -13,16 +17,16 @@ class Eye(dj.Imported):
     # eye recording
     -> acquisition.Session
     ---
-    eye_sample_ids:     longblob # Sample ids corresponding to the timestamps
-    eye_timestamps:     longblob # Timestamps for pupil tracking timeseries (seconds)
-    eye_raw = null:     longblob # Raw movie data for pupil tracking
-    eye_area:           longblob # Area of pupil (pixels^2)
-    eye_x_pos:          longblob # x position of pupil (pixels)
-    eye_y_pos:          longblob # y position of pupil (pixels)
-    eye_blink:          longblob # Boolean array saying whether eye was blinking in each frame
-    eye_fps:            float    # Frames per second
-    eye_start_time:     float    # (seconds)
-    eye_end_time:       float    # (seconds)
+    eye_sample_ids:     longblob        # Sample ids corresponding to the timestamps
+    eye_timestamps:     longblob        # Timestamps for pupil tracking timeseries (seconds)
+    eye_raw_dir=null:   varchar(256)    # directory of the raw datafile
+    eye_area:           longblob        # Area of pupil (pixels^2)
+    eye_x_pos:          longblob        # x position of pupil (pixels)
+    eye_y_pos:          longblob        # y position of pupil (pixels)
+    eye_blink:          longblob        # Boolean array saying whether eye was blinking in each frame
+    eye_fps:            float           # Frames per second
+    eye_start_time:     float           # (seconds)
+    eye_end_time:       float           # (seconds)
     """
     def make(self, key):
     
@@ -37,7 +41,7 @@ class Eye(dj.Imported):
         assert len(np.unique(np.array([len(eye_xypos), 
                                        len(eye_blink),
                                        len(eye_area)]))) == 1, 'Loaded eye files do not have the same length'
-
+        
         key['eye_sample_ids'] = eye_sample_ids
         key['eye_timestamps'] = eye_timestamps
         key['eye_area'] = eye_area
@@ -302,12 +306,15 @@ class TrialSet(dj.Imported):
         for idx_trial in range(len(trials_response_choice)):
             
             if np.isnan(trials_visual_stim_contrast_left[idx_trial]):
-                trial_stim_position = 'Right'
-                trial_stim_contrast = trials_visual_stim_contrast_right[idx_trial]
+                trial_stim_contrast_left = 0
             else:
-                trial_stim_position = 'Left'
-                trial_stim_contrast = trials_visual_stim_contrast_left[idx_trial]
+                trial_stim_contrast_left = trials_visual_stim_contrast_left[idx_trial]
             
+            if np.isnan(trials_visual_stim_contrast_right[idx_trial]):
+                trial_stim_contrast_right = 0
+            else:
+                trial_stim_contrast_right = trials_visual_stim_contrast_right[idx_trial]
+
             if trials_response_choice[idx_trial] == -1:
                 trial_response_choice = "CCW"
             elif trials_response_choice[idx_trial] == 0:
@@ -324,8 +331,8 @@ class TrialSet(dj.Imported):
             trial_key['trial_response_time'] = float(trials_response_times[idx_trial])
             trial_key['trial_choice'] = trial_response_choice
             trial_key['trial_stim_on_time'] = trials_visual_stim_times[idx_trial, 0]
-            trial_key['trial_stim_position'] = trial_stim_position
-            trial_key['trial_stim_contrast'] = float(trial_stim_contrast)
+            trial_key['trial_stim_contrast_left'] = float(trial_stim_contrast_left)
+            trial_key['trial_stim_contrast_right'] = float(trial_stim_contrast_right)
             trial_key['trial_feedback_time'] = float(trials_feedback_times[idx_trial])
             trial_key['trial_feedback_type'] = int(trials_feedback_types[idx_trial])
             trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
@@ -344,17 +351,17 @@ class TrialSet(dj.Imported):
         -> master
         trial_id:               int           # trial identification number
         ---
-        trial_start_time:       float         # beginning of quiescent period time (seconds)
-        trial_end_time:         float         # end of iti (seconds)
-        trial_go_cue_time:      float         # Time of go cue in choiceworld (seconds)
-        trial_response_time:    float         # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
-        trial_choice:           enum("CCW", "CW", "No Go")       # which choice was made in choiceworld
-        trial_stim_on_time:     float         # Time of stimulus in choiceworld (seconds)
-        trial_stim_position:    enum("Left", "Right")	 # position of the stimulus
-        trial_stim_contrast:    float         # contrast of the stimulus
-        trial_feedback_time:    float         # Time of feedback delivery (reward or not) in choiceworld
-        trial_feedback_type:    tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
-        trial_rep_num:          int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
+        trial_start_time:           float         # beginning of quiescent period time (seconds)
+        trial_end_time:             float         # end of iti (seconds)
+        trial_go_cue_time:          float         # Time of go cue in choiceworld (seconds)
+        trial_response_time:        float         # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
+        trial_choice:               enum("CCW", "CW", "No Go")       # which choice was made in choiceworld
+        trial_stim_on_time:         float         # Time of stimulus in choiceworld (seconds)
+        trial_stim_contrast_left:   float	      # contrast of the stimulus on the left
+        trial_stim_contrast_right:  float         # contrast of the stimulus on the right
+        trial_feedback_time:        float         # Time of feedback delivery (reward or not) in choiceworld
+        trial_feedback_type:        tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
+        trial_rep_num:              int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
         """
 
     class ExcludedTrial(dj.Part):
@@ -394,16 +401,19 @@ class PassiveTrialSet(dj.Imported):
         for idx_trial in range(len(passive_visual_stim_times)):
 
             if np.isnan(passive_visual_stim_contrast_left[idx_trial]):
-                passive_stim_position = 'Right'
-                passive_stim_contrast = passive_visual_stim_contrast_right[idx_trial]
+                passive_stim_contrast_left = 0
             else:
-                passive_stim_position = 'Left'
-                passive_stim_contrast = passive_visual_stim_contrast_left[idx_trial]
+                passive_stim_contrast_left = passive_visual_stim_contrast_left[idx_trial]
+            
+            if np.isnan(passive_visual_stim_contrast_right[idx_trial]):
+                passive_stim_contrast_right = 0
+            else:
+                passive_stim_contrast_right = passive_visual_stim_contrast_right[idx_trial]
             
             passive_trial_key['passive_trial_id'] = idx_trial + 1
             passive_trial_key['passive_trial_stim_on_time'] = float(passive_visual_stim_times[idx_trial])
-            passive_trial_key['passive_trial_stim_position'] = passive_stim_position
-            passive_trial_key['passive_trial_stim_contrast'] = float(passive_stim_contrast)
+            passive_trial_key['passive_trial_stim_contrast_left'] = float(passive_stim_contrast_left)
+            passive_trial_key['passive_trial_stim_contrast_right'] = float(passive_stim_contrast_right)
 
             self.PassiveTrial().insert1(passive_trial_key)
             
@@ -413,9 +423,9 @@ class PassiveTrialSet(dj.Imported):
         -> master
         passive_trial_id:           int         # trial identifier
         ---
-        passive_trial_stim_on_time:     float	                 # Time of stimuli in choiceworld
-        passive_trial_stim_position:    enum("Left", "Right")	 # position of the stimulus
-        passive_trial_stim_contrast:    float                    # contrast of the stimulus
+        passive_trial_stim_on_time:             float	    # Time of stimuli in choiceworld
+        passive_trial_stim_contrast_left:       float 	    # contrast of the stimulus on the left
+        passive_trial_stim_contrast_right:      float       # contrast of the stimulus on the right
         """
 
 
