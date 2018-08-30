@@ -6,10 +6,6 @@ from . import acquisition
 
 logger = logging.getLogger(__name__)
 schema = dj.schema('ibl_behavior')
-dj.config['external-data'] = {
-    'protocol': 'file',
-    'location': 'external/'
-}
 
 @schema
 class Eye(dj.Imported):
