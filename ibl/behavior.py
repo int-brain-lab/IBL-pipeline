@@ -13,15 +13,16 @@ class Eye(dj.Imported):
     # eye recording
     -> acquisition.Session
     ---
-    eye_timestamps:     longblob # Timestamps for pupil tracking timeseries (seconds)
-    eye_raw = null:     longblob # Raw movie data for pupil tracking
-    eye_area:           longblob # Area of pupil (pixels^2)
-    eye_x_pos:          longblob # x position of pupil (pixels)
-    eye_y_pos:          longblob # y position of pupil (pixels)
-    eye_blink:          longblob # Boolean array saying whether eye was blinking in each frame
-    eye_fps:            float    # frames per second
-    eye_start_time:     float    # (seconds)
-    eye_end_time:       float    # (seconds)
+    eye_sample_ids:     longblob        # Sample ids corresponding to the timestamps
+    eye_timestamps:     longblob        # Timestamps for pupil tracking timeseries (seconds)
+    eye_raw_dir=null:   varchar(256)    # directory of the raw datafile
+    eye_area:           longblob        # Area of pupil (pixels^2)
+    eye_x_pos:          longblob        # x position of pupil (pixels)
+    eye_y_pos:          longblob        # y position of pupil (pixels)
+    eye_blink:          longblob        # Boolean array saying whether eye was blinking in each frame
+    eye_fps:            float           # Frames per second
+    eye_start_time:     float           # (seconds)
+    eye_end_time:       float           # (seconds)
     """
     def make(self, key):
     
@@ -30,13 +31,14 @@ class Eye(dj.Imported):
         eye_blink = np.load(f'{datapath}eye.blink.npy')
         eye_xypos = np.load(f'{datapath}eye.xyPos.npy')
         eye_timestamps = np.load(f'{datapath}eye.timestamps.npy')
+        eye_sample_ids = eye_timestamps[:, 0]
         eye_timestamps = eye_timestamps[:, 1]
         
         assert len(np.unique(np.array([len(eye_xypos), 
-                                       len(eye_timestamps),
                                        len(eye_blink),
-                                       len(eye_area)]))) == 1, 'Loaded eye files do not have same length'
-
+                                       len(eye_area)]))) == 1, 'Loaded eye files do not have the same length'
+        
+        key['eye_sample_ids'] = eye_sample_ids
         key['eye_timestamps'] = eye_timestamps
         key['eye_area'] = eye_area
         key['eye_x_pos'] = eye_xypos[:, 0]
@@ -57,24 +59,25 @@ class Wheel(dj.Imported):
     ---
     wheel_position:         longblob  # Absolute position of wheel (cm)
     wheel_velocity:         longblob  # Signed velocity of wheel (cm/s) positive = CW
+    wheel_sample_ids:       longblob  # Sample ids corresponding to the timestamps
     wheel_timestamps:       longblob  # Timestamps for wheel timeseries (seconds)
     wheel_start_time:       float     # Start time of wheel recording (seconds)
     wheel_end_time:         float     # End time of wheel recording (seconds)
     wheel_duration:         float     # Duration time of wheel recording (seconds)
-    wheel_sampling_rate:    float     # samples per second
+    wheel_sampling_rate:    float     # Samples per second
     """
     def make(self, key):
         datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
         wheel_position = np.load(f'{datapath}_ibl_wheel.position.npy')
         wheel_timestamps = np.load(f'{datapath}_ibl_wheel.timestamps.npy')
 
-        #assert len(np.unique(np.array([len(wheel_position), len(wheel_timestamps)]))) == 1, 'Loaded wheel files do not have same length'
-
+        wheel_sample_ids = wheel_timestamps[:, 0]
         wheel_timestamps = wheel_timestamps[:, 1]
         wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
         
         key['wheel_position'] = wheel_position
         key['wheel_velocity'] = np.diff(wheel_position)*wheel_sampling_rate
+        key['wheel_sample_ids'] = wheel_sample_ids
         key['wheel_timestamps'] = wheel_timestamps
         key['wheel_start_time'] = wheel_timestamps[0]
         key['wheel_end_time'] = wheel_timestamps[-1]
@@ -106,7 +109,7 @@ class WheelMoveSet(dj.Imported):
         wheel_moves_intervals = np.load(f'{datapath}_ns_wheelMoves.intervals.npy')
         wheel_moves_types = np.load(f'{datapath}_ns_wheelMoves.type.npy')
 
-        assert len(np.unique(np.array([len(wheel_moves_intervals), len(wheel_moves_types)]))) == 1, 'Loaded wheel move files do not have same length'
+        assert len(np.unique(np.array([len(wheel_moves_intervals), len(wheel_moves_types)]))) == 1, 'Loaded wheel move files do not have the same length'
 
         wheel_moves_types_str = np.array(["" for x in range(len(wheel_moves_types))], dtype='<U10')
         # mapping between numbers and "CW" etc need to be confirmed
@@ -151,7 +154,7 @@ class SparseNoise(dj.Imported):
         sparse_noise_positions = np.load(f'{datapath}_ns_sparseNoise.positions.npy')
         sparse_noise_times = np.load(f'{datapath}_ns_sparseNoise.times.npy')
 
-        assert len(np.unique(np.array([len(sparse_noise_positions), len(sparse_noise_times)]))) == 1, 'Loaded sparse noise files do not have same length'
+        assert len(np.unique(np.array([len(sparse_noise_positions), len(sparse_noise_times)]))) == 1, 'Loaded sparse noise files do not have the same length'
 
         key['sparse_noise_x_pos'] = sparse_noise_positions[:, 0],
         key['sparse_noise_y_pos'] = sparse_noise_positions[:, 1],
@@ -222,6 +225,7 @@ class Lick(dj.Imported):
     ---
     lick_times:             longblob  # Times of licks
     lick_piezo_raw = null:  longblob  # Raw lick trace (volts)
+    lick_sample_ids:        longblob  # Sample ids corresponding to the timestamps
     lick_piezo_timestamps:  longblob  # Timestamps for lick trace timeseries (seconds)
     lick_start_time:        float     # recording start time (seconds)
     lick_end_time:          float     # recording end time (seconds)]
@@ -234,12 +238,12 @@ class Lick(dj.Imported):
         lick_piezo_raw = np.load(f'{datapath}_ibl_lickPiezo.raw.npy')
         lick_piezo_timestamps = np.load(f'{datapath}_ibl_lickPiezo.timestamps.npy')
 
-        # assert len(np.unique(np.array([len(lick_piezo_raw), len(lick_piezo_timestamps)]))) == 1, 'Loaded wheel lick files do not have same length'
-
+        lick_sample_ids = lick_piezo_timestamps[:, 0]
         lick_piezo_timestamps = lick_piezo_timestamps[:, 1]
 
         key['lick_times'] = lick_times
         key['lick_piezo_raw'] = lick_piezo_raw
+        key['lick_sample_ids'] = lick_sample_ids
         key['lick_piezo_timestamps'] = lick_piezo_timestamps
         key['lick_start_time'] = lick_piezo_timestamps[0]
         key['lick_end_time'] = lick_piezo_timestamps[-1]
@@ -262,6 +266,7 @@ class TrialSet(dj.Imported):
     """
     def make(self, key):
         trial_key = key.copy()
+        excluded_trial_key = key.copy()
         
         datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
         trials_feedback_times = np.load(f'{datapath}_ns_trials.feedback_times.npy')
@@ -274,6 +279,7 @@ class TrialSet(dj.Imported):
         trials_visual_stim_contrast_left = np.load(f'{datapath}_ns_trials.visualStim_contrastLeft.npy')
         trials_visual_stim_contrast_right = np.load(f'{datapath}_ns_trials.visualStim_contrastRight.npy')
         trials_visual_stim_times = np.load(f'{datapath}_ns_trials.visualStim_times.npy')
+        trials_included = np.load(f'{datapath}_ns_trials.included.npy')
 
         assert len(np.unique(np.array([len(trials_feedback_times), 
                                        len(trials_feedback_types),
@@ -284,7 +290,8 @@ class TrialSet(dj.Imported):
                                        len(trials_response_times),
                                        len(trials_visual_stim_contrast_left),
                                        len(trials_visual_stim_contrast_right),
-                                       len(trials_visual_stim_times)]))) == 1, 'Loaded trial files do not have same length'
+                                       len(trials_visual_stim_times),
+                                       len(trials_included)]))) == 1, 'Loaded trial files do not have the same length'
 
         key['trials_total_num'] = len(trials_response_choice)
         key['trials_start_time'] = trials_intervals[0, 0]
@@ -293,12 +300,17 @@ class TrialSet(dj.Imported):
         self.insert1(key) 
 
         for idx_trial in range(len(trials_response_choice)):
+            
             if np.isnan(trials_visual_stim_contrast_left[idx_trial]):
-                trial_stim_position = 'Right'
-                trial_stim_contrast = trials_visual_stim_contrast_right[idx_trial]
+                trial_stim_contrast_left = 0
             else:
-                trial_stim_position = 'Left'
-                trial_stim_contrast = trials_visual_stim_contrast_left[idx_trial]
+                trial_stim_contrast_left = trials_visual_stim_contrast_left[idx_trial]
+            
+            if np.isnan(trials_visual_stim_contrast_right[idx_trial]):
+                trial_stim_contrast_right = 0
+            else:
+                trial_stim_contrast_right = trials_visual_stim_contrast_right[idx_trial]
+
             if trials_response_choice[idx_trial] == -1:
                 trial_response_choice = "CCW"
             elif trials_response_choice[idx_trial] == 0:
@@ -315,14 +327,19 @@ class TrialSet(dj.Imported):
             trial_key['trial_response_time'] = float(trials_response_times[idx_trial])
             trial_key['trial_choice'] = trial_response_choice
             trial_key['trial_stim_on_time'] = trials_visual_stim_times[idx_trial, 0]
-            trial_key['trial_stim_position'] = trial_stim_position
-            trial_key['trial_stim_contrast'] = float(trial_stim_contrast)
+            trial_key['trial_stim_contrast_left'] = float(trial_stim_contrast_left)
+            trial_key['trial_stim_contrast_right'] = float(trial_stim_contrast_right)
             trial_key['trial_feedback_time'] = float(trials_feedback_times[idx_trial])
             trial_key['trial_feedback_type'] = int(trials_feedback_types[idx_trial])
             trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
 
-            self.Trial().insert1(trial_key) 
-        logger.info('Populated a TrialSet tuple and all Trial tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))
+            self.Trial().insert1(trial_key)
+
+            if trials_included[idx_trial] == False:
+                excluded_trial_key['trial_id'] = idx_trial + 1
+                self.ExcludedTrial().insert1(excluded_trial_key)
+
+        logger.info('Populated a TrialSet tuple, all Trial tuples and Excluded Trial tuples for subject {subject_id} in session started at {session_start_time}'.format(**key))
     
     class Trial(dj.Part):
         # all times are in absolute seconds, rather than relative to trial onset
@@ -330,25 +347,25 @@ class TrialSet(dj.Imported):
         -> master
         trial_id:               int           # trial identification number
         ---
-        trial_start_time:       float         # beginning of quiescent period time (seconds)
-        trial_end_time:         float         # end of iti (seconds)
-        trial_go_cue_time:      float         # Time of go cue in choiceworld (seconds)
-        trial_response_time:    float         # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
-        trial_choice:           enum("CCW", "CW", "No Go")       # which choice was made in choiceworld
-        trial_stim_on_time:     float         # Time of stimulus in choiceworld (seconds)
-        trial_stim_position:    enum("Left", "Right")	 # position of the stimulus
-        trial_stim_contrast:    float         # contrast of the stimulus
-        trial_feedback_time:    float         # Time of feedback delivery (reward or not) in choiceworld
-        trial_feedback_type:    tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
-        trial_rep_num:          int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
+        trial_start_time:           float         # beginning of quiescent period time (seconds)
+        trial_end_time:             float         # end of iti (seconds)
+        trial_go_cue_time:          float         # Time of go cue in choiceworld (seconds)
+        trial_response_time:        float         # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
+        trial_choice:               enum("CCW", "CW", "No Go")       # which choice was made in choiceworld
+        trial_stim_on_time:         float         # Time of stimulus in choiceworld (seconds)
+        trial_stim_contrast_left:   float	      # contrast of the stimulus on the left
+        trial_stim_contrast_right:  float         # contrast of the stimulus on the right
+        trial_feedback_time:        float         # Time of feedback delivery (reward or not) in choiceworld
+        trial_feedback_type:        tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
+        trial_rep_num:              int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
         """
 
-@schema
-class ExcludedTrial(dj.Imported):
-    definition = """
-    -> TrialSet.Trial
-    """
-        
+    class ExcludedTrial(dj.Part):
+        definition = """
+        -> master
+        -> TrialSet.Trial
+        """
+    
 @schema
 class PassiveTrialSet(dj.Imported):
     definition = """
@@ -358,18 +375,69 @@ class PassiveTrialSet(dj.Imported):
     passive_trials_start_time : float
     passive_trials_end_time : float
     """
+    def make(self, key):
+
+        passive_trial_key = key.copy()
+
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        passive_visual_stim_contrast_left = np.load(f'{datapath}_ns_passiveVisual.contrastLeft.npy')
+        passive_visual_stim_contrast_right = np.load(f'{datapath}_ns_passiveVisual.contrastRight.npy')
+        passive_visual_stim_times = np.load(f'{datapath}_ns_passiveVisual.times.npy')
+        
+        assert len(np.unique(np.array([len(passive_visual_stim_contrast_left),
+                                       len(passive_visual_stim_contrast_right),
+                                       len(passive_visual_stim_times)]))) == 1, 'Loaded passive visual files do not have the same length'
+
+        key['passive_trials_total_num'] = len(passive_visual_stim_times)
+        key['passive_trials_start_time'] = float(passive_visual_stim_times[0])
+        key['passive_trials_end_time'] = float(passive_visual_stim_times[-1])
+        
+        self.insert1(key)
+
+        for idx_trial in range(len(passive_visual_stim_times)):
+
+            if np.isnan(passive_visual_stim_contrast_left[idx_trial]):
+                passive_stim_contrast_left = 0
+            else:
+                passive_stim_contrast_left = passive_visual_stim_contrast_left[idx_trial]
+            
+            if np.isnan(passive_visual_stim_contrast_right[idx_trial]):
+                passive_stim_contrast_right = 0
+            else:
+                passive_stim_contrast_right = passive_visual_stim_contrast_right[idx_trial]
+            
+            passive_trial_key['passive_trial_id'] = idx_trial + 1
+            passive_trial_key['passive_trial_stim_on_time'] = float(passive_visual_stim_times[idx_trial])
+            passive_trial_key['passive_trial_stim_contrast_left'] = float(passive_stim_contrast_left)
+            passive_trial_key['passive_trial_stim_contrast_right'] = float(passive_stim_contrast_right)
+
+            self.PassiveTrial().insert1(passive_trial_key)
+            
+    
     class PassiveTrial(dj.Part):
         definition = """
         -> master
         passive_trial_id:           int         # trial identifier
         ---
-        passive_trial_included:         boolean		             # suggesting whether this trial to include in analysis, chosen at experimenter discretion, e.g. by excluding the block of incorrect trials at the end of the session when the mouse has stopped
-        passive_trial_stim_on_time:     float	                 # Time of stimuli in choiceworld
-        passive_trial_stim_position:    enum("Left", "Right")	 # position of the stimulus
-        passive_trial_contrast:         float                    # contrast of the stimulus
-        passive_valve_click_time:       float 		             # Time of valve opening during passive trial presentation (seconds)
-        passive_beep_time:              float         		     # Time of the beep, equivilent to the go cue during the choice world task (seconds)
-        passive_white_noise_time:       float		             # Time of white noise bursts, equivilent to the negative feedback sound during the choice world task (seconds)
-        passive_noise_start_time:       float  	                 # passive noise trial's start(i.e. beginning of quiescent period) (seconds)
-        passive_noise_end_time:         float                    # passive noise trial's stop (i.e. end of iti) (seconds)
+        passive_trial_stim_on_time:             float	    # Time of stimuli in choiceworld
+        passive_trial_stim_contrast_left:       float 	    # contrast of the stimulus on the left
+        passive_trial_stim_contrast_right:      float       # contrast of the stimulus on the right
         """
+
+
+@schema
+class PassiveRecordings(dj.Imported):
+    definition = """
+    -> acquisition.Session
+    ---
+    passive_valve_click_times:      longblob      # Times of valve opening during passive trial presentation (seconds)
+    passive_beep_times:             longblob      # Times of the beeps, equivilent to the go cue during the choice world task (seconds)
+    passive_white_noise_times:      longblob      # Times of white noise bursts, equivilent to the negative feedback sound during the choice world task (seconds)
+    """
+    def make(self, key):
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        key['passive_beep_times'] = np.load(f'{datapath}_ns_passiveBeeps.times.npy')
+        key['passive_valve_click_times'] = np.load(f'{datapath}_ns_passiveValveClick.times.npy')
+        key['passive_white_noise_times'] = np.load(f'{datapath}_ns_passiveWhiteNoise.times.npy')
+
+        self.insert1(key)
