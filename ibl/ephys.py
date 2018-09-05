@@ -11,7 +11,7 @@ class Ephys(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    ephys_raw:              longblob     # Raw ephys: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
+    ephys_raw:              varchar(256)     # Path of Raw ephys file: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
     ephys_timestamps:       longblob     # Timestamps for raw ephys timeseries (seconds)
     ephys_start_time:       float        # (seconds)
     ephys_stop_time:       float        # (seconds)
@@ -21,10 +21,8 @@ class Ephys(dj.Imported):
 
     def make(self, key):
         datapath = path.join('/data', '{subject_id}-{session_start_time}/'.format(**key)).replace(':', '_')
-        ephys_raw = np.load('{}epyhs.raw.npy'.format(datapath))
+        ephys_raw = '{}ephys.raw.npy'.format(datapath)
         ephys_timestamps = np.load('{}ephys.timestamps.npy'.format(datapath))[:, 1]
-
-        assert ephys_raw.shape[0] == ephys_timestamps.shape[0], 'Raw ephys data and corresponding timestamps do not have the same number of samples.'
 
         key['ephys_raw'] = ephys_raw
         key['ephys_timestamps'] = ephys_timestamps
