@@ -26,7 +26,7 @@ class Eye(dj.Imported):
     """
     def make(self, key):
 
-        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key)).replace(':', '_')
         eye_area = np.load('{}eye.area.npy'.format(datapath))
         eye_blink = np.load('{}eye.blink.npy'.format(datapath))
         eye_xypos = np.load('{}eye.xyPos.npy'.format(datapath))
@@ -67,7 +67,7 @@ class Wheel(dj.Imported):
     wheel_sampling_rate:    float     # Samples per second
     """
     def make(self, key):
-        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key)).replace(':', '_')
         wheel_position = np.load('{}_ibl_wheel.position.npy'.format(datapath))
         wheel_timestamps = np.load('{}_ibl_wheel.timestamps.npy'.format(datapath))
 
@@ -105,7 +105,7 @@ class WheelMoveSet(dj.Imported):
     def make(self, key):
         wheel_move_key = key.copy()
 
-        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key)).replace(':', '_')
         wheel_moves_intervals = np.load('{}_ns_wheelMoves.intervals.npy'.format(datapath))
         wheel_moves_types = np.load('{}_ns_wheelMoves.type.npy'.format(datapath))
 
@@ -150,7 +150,7 @@ class SparseNoise(dj.Imported):
     sparse_noise_times:  longblob				# times of those stimulus squares appeared in universal seconds
     """
     def make(self, key):
-        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key)).replace(':', '_')
         sparse_noise_positions = np.load('{}_ns_sparseNoise.positions.npy'.format(datapath))
         sparse_noise_times = np.load('{}_ns_sparseNoise.times.npy'.format(datapath))
 
@@ -171,7 +171,7 @@ class ExtraRewards(dj.Imported):
     extra_rewards_times: longblob 			# times of extra rewards (seconds)
     """
     def make(self, key):
-        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key)).replace(':', '_')
         extra_rewards_times = np.load('{}_ibl_extraRewards.times.npy'.format(datapath))
 
         key['extra_rewards_times'] = extra_rewards_times
@@ -192,7 +192,7 @@ class SpontaneousTimeSet(dj.Imported):
     def make(self, key):
         spon_time_key = key.copy()
 
-        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key)).replace(':', '_')
         spontaneous_intervals = np.load('{}spontaneous.intervals.npy'.format(datapath))
 
         key['spontaneous_time_total_num'] = len(spontaneous_intervals)
@@ -233,7 +233,7 @@ class Lick(dj.Imported):
     """
     def make(self, key):
 
-        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key)).replace(':', '_')
         lick_times = np.load('{}licks.times.npy'.format(datapath))
         lick_piezo_raw = np.load('{}_ibl_lickPiezo.raw.npy'.format(datapath))
         lick_piezo_timestamps = np.load('{}_ibl_lickPiezo.timestamps.npy'.format(datapath))
@@ -268,7 +268,7 @@ class TrialSet(dj.Imported):
         trial_key = key.copy()
         excluded_trial_key = key.copy()
 
-        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key)).replace(':', '_')
         trials_feedback_times = np.load('{}_ns_trials.feedback_times.npy'.format(datapath))
         trials_feedback_types = np.load('{}_ns_trials.feedbackType.npy'.format(datapath))
         trials_gocue_times = np.load('{}_ns_trials.goCue_times.npy'.format(datapath))
@@ -379,7 +379,7 @@ class PassiveTrialSet(dj.Imported):
 
         passive_trial_key = key.copy()
 
-        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key)).replace(':', '_')
         passive_visual_stim_contrast_left = np.load('{}_ns_passiveVisual.contrastLeft.npy'.format(datapath))
         passive_visual_stim_contrast_right = np.load('{}_ns_passiveVisual.contrastRight.npy'.format(datapath))
         passive_visual_stim_times = np.load('{}_ns_passiveVisual.times.npy'.format(datapath))
@@ -435,7 +435,7 @@ class PassiveRecordings(dj.Imported):
     passive_white_noise_times:      longblob      # Times of white noise bursts, equivilent to the negative feedback sound during the choice world task (seconds)
     """
     def make(self, key):
-        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key)).replace(':', '_')
         key['passive_beep_times'] = np.load('{}_ns_passiveBeeps.times.npy'.format(datapath))
         key['passive_valve_click_times'] = np.load('{}_ns_passiveValveClick.times.npy'.format(datapath))
         key['passive_white_noise_times'] = np.load('{}_ns_passiveWhiteNoise.times.npy'.format(datapath))

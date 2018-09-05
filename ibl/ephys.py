@@ -20,7 +20,7 @@ class Ephys(dj.Imported):
     """
 
     def make(self, key):
-        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        datapath = path.join('/data', '{subject_id}-{session_start_time}/'.format(**key)).replace(':', '_')
         ephys_raw = np.load('{}epyhs.raw.npy'.format(datapath))
         ephys_timestamps = np.load('{}ephys.timestamps.npy'.format(datapath))[:, 1]
 
@@ -71,6 +71,7 @@ class ProbeSet(dj.Imported):
         axial_angle:       float
         distance_advanced: float
         """
+
 
 @schema
 class Channel(dj.Imported):
