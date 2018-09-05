@@ -1,4 +1,6 @@
 import datajoint as dj
+import numpy as np
+from os import path
 from . import acquisition
 from . import reference
 
@@ -16,6 +18,22 @@ class Ephys(dj.Imported):
     ephys_duration:         float        # (seconds)
     ephys_sampling_rate:    float        # samples per second
     """
+
+    def make(self, key):
+        datapath = path.join('data', '{subject_id}-{session_start_time}/'.format(**key))
+        ephys_raw = np.load('{}epyhs.raw.npy'.format(datapath))
+        ephys_timestamps = np.load('{}ephys.timestamps.npy'.format(datapath))[:, 1]
+
+        assert ephys_raw.shape[0] == ephys_timestamps.shape[0], 'Raw ephys data and corresponding timestamps do not have the same number of samples.'
+
+        key['ephys_raw'] = ephys_raw
+        key['ephys_timestamps'] = ephys_timestamps
+        key['ephys_start_time'] = ephys_timestamps[0]
+        key['ephys_stop_time'] = ephys_timestamps[-1]
+        key['ephys_duration'] = key['ephys_stop_time'] - key['ephys_start_time']
+        key['ephys_sampling_rate'] = 1 / np.median(np.diff(ephys_timestamps))
+
+        self.insert1(key)
 
 @schema
 class ProbeModel(dj.Lookup):
