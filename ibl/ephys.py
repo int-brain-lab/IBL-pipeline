@@ -11,7 +11,7 @@ class Ephys(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    ephys_raw:              varchar(256)     # Path of Raw ephys file: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
+    ephys_raw_dir:              varchar(256)     # Path of Raw ephys file: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
     ephys_timestamps:       longblob     # Timestamps for raw ephys timeseries (seconds)
     ephys_start_time:       float        # (seconds)
     ephys_stop_time:       float        # (seconds)
@@ -21,10 +21,10 @@ class Ephys(dj.Imported):
 
     def make(self, key):
         datapath = path.join(path.sep,'data', '{subject_id}-{session_start_time}'.format(**key)).replace(':', '_')
-        ephys_raw = path.join(datapath,'ephys.raw.npy')
+        ephys_raw_dir = path.join(datapath,'ephys.raw.npy')
         ephys_timestamps = np.load(path.join(datapath,'ephys.timestamps.npy'))[:, 1]
 
-        key['ephys_raw'] = ephys_raw
+        key['ephys_raw_dir'] = ephys_raw_dir
         key['ephys_timestamps'] = ephys_timestamps
         key['ephys_start_time'] = ephys_timestamps[0]
         key['ephys_stop_time'] = ephys_timestamps[-1]
