@@ -20,9 +20,9 @@ class Ephys(dj.Imported):
     """
 
     def make(self, key):
-        datapath = path.join('/data', '{subject_id}-{session_start_time}/'.format(**key)).replace(':', '_')
-        ephys_raw = '{}ephys.raw.npy'.format(datapath)
-        ephys_timestamps = np.load('{}ephys.timestamps.npy'.format(datapath))[:, 1]
+        datapath = path.join(path.sep,'data', '{subject_id}-{session_start_time}'.format(**key)).replace(':', '_')
+        ephys_raw = path.join(datapath,'ephys.raw.npy')
+        ephys_timestamps = np.load(path.join(datapath,'ephys.timestamps.npy'))[:, 1]
 
         key['ephys_raw'] = ephys_raw
         key['ephys_timestamps'] = ephys_timestamps
