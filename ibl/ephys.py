@@ -1,4 +1,6 @@
 import datajoint as dj
+import numpy as np
+from os import path
 from . import acquisition
 from . import reference
 
@@ -9,13 +11,27 @@ class Ephys(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    ephys_raw:              longblob     # Raw ephys: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
+    ephys_raw_dir:              varchar(256)     # Path of Raw ephys file: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
     ephys_timestamps:       longblob     # Timestamps for raw ephys timeseries (seconds)
     ephys_start_time:       float        # (seconds)
     ephys_stop_time:       float        # (seconds)
     ephys_duration:         float        # (seconds)
     ephys_sampling_rate:    float        # samples per second
     """
+
+    def make(self, key):
+        datapath = path.join(path.sep,'data', '{subject_id}-{session_start_time}'.format(**key)).replace(':', '_')
+        ephys_raw_dir = path.join(datapath,'ephys.raw.npy')
+        ephys_timestamps = np.load(path.join(datapath,'ephys.timestamps.npy'))[:, 1]
+
+        key['ephys_raw_dir'] = ephys_raw_dir
+        key['ephys_timestamps'] = ephys_timestamps
+        key['ephys_start_time'] = ephys_timestamps[0]
+        key['ephys_stop_time'] = ephys_timestamps[-1]
+        key['ephys_duration'] = key['ephys_stop_time'] - key['ephys_start_time']
+        key['ephys_sampling_rate'] = 1 / np.median(np.diff(ephys_timestamps))
+
+        self.insert1(key)
 
 @schema
 class ProbeModel(dj.Lookup):
@@ -53,6 +69,7 @@ class ProbeSet(dj.Imported):
         axial_angle:       float
         distance_advanced: float
         """
+
 
 @schema
 class Channel(dj.Imported):
