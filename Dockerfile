@@ -1,5 +1,5 @@
 FROM datajoint/jupyter
 
-ADD . /src/alyx-pipeline
+ADD . /src/ibl-pipeline
 
-RUN pip install -e /src/alyx-pipeline
+RUN pip install -e /src/ibl-pipeline

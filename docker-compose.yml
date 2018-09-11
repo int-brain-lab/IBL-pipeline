@@ -9,7 +9,7 @@ services:
     volumes:
       - ./notebooks:/notebooks
       - ./images:/images
-      - .:/src/alyx-pipeline
+      - .:/src/ibl-pipeline
       - ./data:/data
     links:
       - db
