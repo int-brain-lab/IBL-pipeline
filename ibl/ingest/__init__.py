@@ -13,9 +13,9 @@ data copying via insert from select (e.g: Foo.insert(Bar.fetch()))
 
 NOTE:
 
-Since downstream modules involve cross-module definitions, those modules
-should be imported as 'ds_module' in order to prevent accidental linkages
-to downstream tables in the upstream schema.
+Since downstream modules involve cross-module definitions, those modules should
+be imported as 'ds_module' in order to prevent the possibility of accidental
+linkages to downstream tables in the upstream schema.
 
 For example, in the scenario:
 
@@ -32,6 +32,8 @@ module. If foo/bar had been imported as ds_foo/ds_bar instead, the table
 definition syntax would not properly resolve any 'foo' in the scope of
 ingest.bar and the definition would fail, also failing to create the bad link.
 
+
+
 In this scheme, the 'correct' implementation would instead be:
 
   - foo.py defines Foo
@@ -46,4 +48,7 @@ Now, ingest.bar.Bar is able to use bar.Bar.definition, but the definition
 of ingest.bar.Bar is resolved within the scope of ingest.bar as pointing to
 ingest.foo.Foo, creating the proper link to the ingest related table.
 
+While this should not happen in the current architecture, following the pattern
+outlined here should prevent it in general and so is a good 'safe practice' to
+use for the ingest modules.
 '''
