@@ -1,6 +1,6 @@
 import datajoint as dj
 
-schema = dj.schema('ibl_reference')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_reference')
 
 @schema
 class User(dj.Lookup):

@@ -12,4 +12,5 @@ setup(
     author_email='support@vathes.com',
     packages=find_packages(exclude=[]),
     install_requires=['datajoint'],
+    scripts=['scripts/ibl-shell.py'],
 )

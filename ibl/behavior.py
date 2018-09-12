@@ -5,7 +5,8 @@ import logging
 from . import acquisition
 
 logger = logging.getLogger(__name__)
-schema = dj.schema('ibl_behavior')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
+
 
 @schema
 class Eye(dj.Imported):
