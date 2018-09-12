@@ -3,7 +3,7 @@ import datajoint as dj
 from . import subject
 from . import reference
 
-schema = dj.schema('ibl_acquisition')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_acquisition')
 
 '''
 To simplify from Alyx schema, dropping file repositories as core

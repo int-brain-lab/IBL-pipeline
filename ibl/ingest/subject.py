@@ -5,7 +5,7 @@ from . import reference
 
 from .. import subject as ds_subject
 
-schema = dj.schema('ibl_ingest_subject')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_subject')
 
 
 @schema
@@ -24,6 +24,11 @@ class Sequence(dj.Computed):
 
 
 @schema
+class Allele(dj.Computed):
+    definition = ds_subject.Allele.definition
+
+
+@schema
 class AlleleSequence(dj.Computed):
     definition = ds_subject.AlleleSequence.definition
 
@@ -39,6 +44,11 @@ class LineAllele(dj.Computed):
 
 
 @schema
+class Source(dj.Computed):
+    definition = ds_subject.Source.definition
+
+
+@schema
 class Subject(dj.Computed):
     definition = ds_subject.Subject.definition
 
@@ -51,6 +61,7 @@ class BreedingPair(dj.Computed):
 @schema
 class Litter(dj.Computed):
     definition = ds_subject.Litter.definition
+
 
 @schema
 class LitterSubject(dj.Computed):
@@ -113,11 +124,6 @@ class Reduction(dj.Computed):
 
 
 @schema
-class Reduction(dj.Computed):
-    definition = ds_subject.Reduction.definition
-
-
-@schema
 class OtherAction(dj.Computed):
     definition = ds_subject.OtherAction.definition
 
@@ -125,5 +131,3 @@ class OtherAction(dj.Computed):
 @schema
 class Death(dj.Computed):
     definition = ds_subject.Death.definition
-
-

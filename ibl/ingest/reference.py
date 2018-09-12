@@ -4,7 +4,7 @@ import datajoint as dj
 from .. import reference as ds_reference
 
 
-schema = dj.schema('ibl_ingest_reference')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_reference')
 
 
 @schema
@@ -25,5 +25,3 @@ class Note(dj.Computed):
 @schema
 class BrainLocationAcronym(dj.Computed):
     definition = ds_reference.BrainLocationAcronym.definition
-
-

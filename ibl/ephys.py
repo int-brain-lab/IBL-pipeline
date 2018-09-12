@@ -4,7 +4,7 @@ from os import path
 from . import acquisition
 from . import reference
 
-schema = dj.schema('ibl_ephys')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
 
 @schema
 class Ephys(dj.Imported):
