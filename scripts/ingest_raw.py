@@ -8,12 +8,12 @@ from ibl.ingest import alyxraw, InsertBuffer
 logger = logging.getLogger(__name__)
 
 dir_name = path.dirname(__file__)
-filename = path.join(dir_name, '../../data/alyx_dump/dump.uuid.json')
+filename = path.join(dir_name, '../data/alyx_dump/dump.uuid.json')
 
 with open(filename, 'r') as fid:
     keys = json.load(fid)
 
-# use Chris' insert buffer to speed up the insersion process
+# use insert buffer to speed up the insersion process
 ib_main = InsertBuffer(alyxraw.AlyxRaw)
 ib_part = InsertBuffer(alyxraw.AlyxRaw.Field)
 
@@ -24,7 +24,7 @@ for key in keys:
         logger.debug('Inserted 10000 raw tuples.')
     
 if ib_main.flush(skip_duplicates=True):
-    logger.debug('Inserted all raw tuples')
+    logger.debug('Inserted remaining raw tuples')
 
 # insert into the part table AlyxRaw.Field
 for key in keys:
@@ -36,9 +36,8 @@ for key in keys:
             key_field['value_idx'] = 0
             key_field['fvalue'] = json.dumps(field_value)
             ib_part.insert1(key_field)
-            continue
             
-        if field_value == [] or field_value == '' or (type(field_value)==float and math.isnan(field_value)):
+        elif field_value == [] or field_value == '' or (type(field_value)==float and math.isnan(field_value)):
             key_field['value_idx'] = 0
             key_field['fvalue'] = 'None'
             ib_part.insert1(key_field)
@@ -54,8 +53,8 @@ for key in keys:
                 key_field['fvalue'] = str(value)
                 ib_part.insert1(key_field)
      
-            if ib_part.flush(skip_duplicates=True, chunksz=10000):
-                logger.debug('Inserted 10000 raw field tuples')
+        if ib_part.flush(skip_duplicates=True, chunksz=10000):
+            logger.debug('Inserted 10000 raw field tuples')
 
 if ib_part.flush(skip_duplicates=True):
-    logger.debug('Inserted all raw field tuples')
+    logger.debug('Inserted all remaining raw field tuples')

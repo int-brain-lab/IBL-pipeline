@@ -88,7 +88,9 @@ class InsertBuffer(object):
                                  ignore_extra_fields=ignore_extra_fields,
                                  ignore_errors=ignore_errors)
                 self._queue.clear()
-                return True
+                return qlen
             except dj.DataJointError as e:
                 log.error('error in flush: {}'.format(e))
                 raise
+        else:
+            return 0
