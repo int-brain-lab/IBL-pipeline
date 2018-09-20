@@ -54,13 +54,15 @@ class Allele(dj.Lookup):
     ---
     standard_name=null:		varchar(255)	# standard name
     """
-    
+
+
 @schema
 class AlleleSequence(dj.Lookup):
     definition = """
     -> Allele
-    -> Sequence       
+    -> Sequence
     """
+
 
 @schema
 class Line(dj.Lookup):
@@ -76,12 +78,14 @@ class Line(dj.Lookup):
     is_active:				boolean		# is active
     """
 
+
 @schema
 class LineAllele(dj.Lookup):
     definition = """
     -> Line
     -> Allele
     """
+
 
 @schema
 class Source(dj.Lookup):
@@ -107,6 +111,7 @@ class Subject(dj.Manual):
     (responsible_user)          -> reference.User
     """
 
+
 @schema
 class BreedingPair(dj.Manual):
     # <class 'subjects.models.BreedingPair'>
@@ -121,7 +126,8 @@ class BreedingPair(dj.Manual):
     (mother1) 			-> Subject		# mother1
     (mother2)			-> [nullable] Subject	# mother2
     """
-    
+
+
 @schema
 class Litter(dj.Manual):
     # <class 'subjects.models.Litter'>
@@ -134,6 +140,7 @@ class Litter(dj.Manual):
     birth_date:			date		# birth date
     """
 
+
 @schema
 class LitterSubject(dj.Manual):
     # litter subject membership table
@@ -141,7 +148,8 @@ class LitterSubject(dj.Manual):
     -> Subject
     -> Litter
     """
-    
+
+
 @schema
 class Weighing(dj.Manual):
     # <class 'actions.models.Weighing'>
@@ -163,6 +171,7 @@ class WaterAdministration(dj.Manual):
     water_administered:		float			# water administered
     hydrogel=NULL:		boolean                 # hydrogel
     """
+
 
 @schema
 class WaterRestriction(dj.Manual):
@@ -211,6 +220,7 @@ class GenotypeTest(dj.Manual):
     test_result:		enum("Present", "Absent")		# test result
     """
 
+
 @schema
 class Zygosity(dj.Manual):
     # <class 'subjects.models.Subject'>
@@ -222,7 +232,8 @@ class Zygosity(dj.Manual):
     ---
     zygosity:		enum("Present", "Absent", "Homozygous", "Heterozygous") 		# zygosity
     """
-    
+
+
 @schema
 class Surgery(dj.Manual):
     # <class 'actions.models.Surgery'>
@@ -281,6 +292,7 @@ class Reduction(dj.Manual):
     reduced:			boolean			# reduced
     reduced_date:		date			# reduced date
     """
+
 
 @schema
 class OtherAction(dj.Manual):
