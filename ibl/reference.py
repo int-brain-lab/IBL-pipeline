@@ -3,23 +3,47 @@ import datajoint as dj
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_reference')
 
 @schema
-class User(dj.Lookup):
-    # <class 'misc.models.OrderedUser'>
-    # <class 'django.contrib.auth.models.User'>
+class Lab(dj.Lookup):
+    # <class 'misc.models.Lab'>
     definition = """
-    username:		varchar(255)	# username
+    lab_name:           varchar(255)  # name of lab
     ---
-    password:		varchar(255)	# password
-    email:		varchar(255)	# email address
-    last_login:		datetime	# last login
-    first_name:		varchar(255)	# first name
-    last_name:		varchar(255)	# last name
-    date_joined:	datetime	# date joined
-    is_active:		boolean		# active
-    is_staff:		boolean		# staff status
-    is_superuser:	boolean		# superuser status
+    lab_uuid:           varchar(36)
+    institution=null:   varchar(255)  
+    address=null:       varchar(255)
+    time_zone=null:     varchar(255)
     """
 
+@schema
+class LabMember(dj.Lookup):
+    # <class 'misc.models.LabMember'>
+    # <class 'django.contrib.auth.models.User'>
+    definition = """
+    username:		    varchar(255)	# username
+    ---
+    user_uuid:          varchar(36)     
+    password:		    varchar(255)	# password
+    email:		        varchar(255)	# email address
+    last_login=null:	datetime	    # last login
+    first_name:		    varchar(255)	# first name
+    last_name:		    varchar(255)	# last name
+    date_joined:	    datetime	    # date joined
+    is_active:		    boolean		    # active
+    is_staff:		    boolean		    # staff status
+    is_superuser:	    boolean		    # superuser status
+    """
+
+@schema
+class Location(dj.Lookup):
+    # <class 'misc.models.Location'>    
+    definition = """
+    # The physical location at which an session is performed or appliances are located.
+    # This could be a room, a bench, a rig, etc.
+    location_name:      varchar(255)    # name of the location
+    ---
+    location_uuid:      varchar(36)
+    -> [nullable] Lab
+    """
 
 @schema
 class Severity(dj.Lookup):
@@ -37,18 +61,17 @@ class Severity(dj.Lookup):
         (5, 'Non-recovery'),
     )
 
-
-
 @schema
 class Note(dj.Manual):
     # <class 'misc.models.Note'>
     # TODO: tagging arbitrary objects..
     definition = """
-    -> User
+    -> LabMember
     note_id:		int			# id
     ---
+    note_uuid:      varchar(36)
     date_time:		datetime		# date time
-    text:		varchar(255)		# text
+    text:		    varchar(255)		# text
     object_id:		char(32)		# object id
     """
 
