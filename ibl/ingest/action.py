@@ -76,7 +76,7 @@ class Surgery(dj.Computed):
         key['subject_uuid'] = (alyxraw.AlyxRaw.Field & key & 'fname="subject"').fetch1('fvalue')
         key['surgery_start_time'] = (alyxraw.AlyxRaw.Field & key & 'fname="start_time"').fetch1('fvalue')
         key['surgery_end_time'] = (alyxraw.AlyxRaw.Field & key & 'fname="end_time"').fetch1('fvalue')
-        key['outcome_type'] = (alyxraw.AlyxRaw.Field & key 'fname="outcome_type"').fetch1('fvalue')
+        key['outcome_type'] = (alyxraw.AlyxRaw.Field & key & 'fname="outcome_type"').fetch1('fvalue')
         key['narrative'] = (alyxraw.AlyxRaw.Field & key & 'fname="narrative"').fetch1('fvalue')
         key['lab_name'] = (alyxraw.AlyxRaw.Field & key & 'fname="lab_name"').fetch1('fvalue')
         
@@ -85,29 +85,6 @@ class Surgery(dj.Computed):
             key['location_name'] = (reference.Location & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
         self.insert1(key, skip_duplicates=True)
 
-
-    @schema
-class Implant(dj.Computed):
-     # <class 'subjects.models.Subject'>
-    definition = """
-    (implant_uuid) -> alyxraw.AlyxRaw
-    ---
-    subject_uuid:       varchar(36)         # inherited from Subject
-    implant_weight:		float			    # implant weight
-    protocol_number:	varchar(255)		# protocol number
-    description:		varchar(255)		# description
-    adverse_effects:	varchar(255)		# adverse effects
-    actual_severity:    tinyint             # actual severity, inherited from Severity
-    """
-    key_source = alyxraw.AlyxRaw & 'model = "subjects.subject"'
-    
-    def make(self, key):
-        key['subject_uuid'] = (alyxraw.AlyxRaw.Field & key & 'fname="uuid"').fetch1('fvalue')
-        key['implant_weight'] = (alyxraw.AlyxRaw.Field & key & 'fname="implant_weight"').fetch1('fvalue')
-        key['protocol_number'] = (alyxraw.AlyxRaw.Field & key & 'fname="protocol_number"').fetch1('fvalue')
-        key['description'] = (alyxraw.AlyxRaw.Field & key & 'fname="description"').fetch1('fvalue')
-        key['adverse_effects'] = (alyxraw.AlyxRaw.Field & key & 'fname="adverse_effects"').fetch1('fvalue')
-        self.insert1(key, skip_duplicates=True)
 
 @schema
 class VirusInjection(dj.Computed):
