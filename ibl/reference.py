@@ -67,12 +67,12 @@ class Note(dj.Manual):
     # TODO: tagging arbitrary objects..
     definition = """
     -> LabMember
-    note_id:		int			# id
-    ---
     note_uuid:      varchar(36)
+    ---
     date_time:		datetime		# date time
-    text:		    varchar(255)		# text
-    object_id:		char(32)		# object id
+    text:		    varchar(255)	# text
+    object_id:		varchar(36)		# object id
+    content_type:   varchar(8)
     """
 
 @schema
