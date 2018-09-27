@@ -17,6 +17,3 @@ class AlyxRaw(dj.Manual):
         ---
         fvalue=null: varchar(2048)  # field value in the position of value_idx
         '''
-    @staticmethod
-    def get_raw_fields(key):
-        return (AlyxRaw.Field & key).fetch1()

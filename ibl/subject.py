@@ -137,8 +137,15 @@ class Subject(dj.Manual):
     birth_date:			    date			    # birth date
     ear_mark=null:			varchar(255)		# ear mark
     -> Source
-    -> [nullable] Litter
     (responsible_user)          -> reference.User
+    """
+
+@schema
+class LitterSubject(dj.Manual):
+    # litter subject membership table
+    definition = """
+    -> Subject
+    -> Litter
     """
 
 

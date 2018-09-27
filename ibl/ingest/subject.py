@@ -292,7 +292,7 @@ class Caging(dj.Computed):
             json_dict = json.loads(json_content)       
             history = json_dict['history']
 
-            if 'lamis_cage' in history.keys(): 
+            if 'lamis_cage' in history: 
                 cages = history['lamis_cage'] 
                 for cage in cages:
                     key_cage_i = key_cage.copy()
@@ -332,7 +332,7 @@ class Culling(dj.Computed):
         key_cull = key.copy()
         key['uuid'] = key['subject_uuid']
         to_be_culled = grf(key, 'to_be_culled')
-        key_cull['to_be_culled'] = to_be_culled
+        key_cull['to_be_culled'] = to_be_culled == 'True'
         key_cull['cull_method'] = grf(key, 'cull_method')
         self.insert1(key_cull)
 
@@ -462,7 +462,7 @@ class Implant(dj.Computed):
         if description != 'None':
             key_implant['implant_description'] = description
         
-        adverse_effects = grf(key, 'adverse_effect')
+        adverse_effects = grf(key, 'adverse_effects')
         if adverse_effects != 'None':
             key_implant['adverse_effects'] = adverse_effects
         

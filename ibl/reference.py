@@ -76,14 +76,6 @@ class Note(dj.Manual):
     """
 
 @schema
-class ProcedureType(dj.Manual):
-    defintion = """
-    procedure_name:     varchar(255)
-    ---
-    description=null:   varchar(1024) # detailed description of the procedure.
-    """
-
-@schema
 class BrainLocationAcronym(dj.Lookup):
     definition = """
     acronym:  varchar(32) # acronym of a brain location
