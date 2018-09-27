@@ -29,10 +29,10 @@ class Species(dj.Lookup):
 class Strain(dj.Lookup):
     # <class 'subjects.models.Strain'>
     definition = """
-    strain_name:		varchar(255)	# strain name
+    strain_name:		        varchar(255)	# strain name
     ---
-    strain_uuid:        varchar(36)
-    description=null:   varchar(255)	# description
+    strain_uuid:                varchar(36)
+    strain_description=null:    varchar(255)	# description
     """
 
 
@@ -40,11 +40,11 @@ class Strain(dj.Lookup):
 class Sequence(dj.Lookup):
     # <class 'subjects.models.Sequence'>
     definition = """
-    sequence_name:		varchar(255)	# informal name
+    sequence_name:		        varchar(255)	# informal name
     ---
-    sequence_uuid:      varchar(36)
-    base_pairs=null:	varchar(255)	# base pairs
-    description=null:	varchar(255)	# description
+    sequence_uuid:              varchar(36)
+    base_pairs=null:	        varchar(255)	# base pairs
+    sequence_description=null:	varchar(255)	# description
     """
 
 
@@ -74,7 +74,7 @@ class Line(dj.Lookup):
     line_name:				varchar(255)	# name
     ---
     line_uuid：             varchar(36)
-    description=null:		varchar(255)	# description
+    line_description=null:	varchar(255)	# description
     target_phenotype=null:	varchar(255)	# target phenotype
     auto_name:				varchar(255)	# auto name
     is_active:				boolean		    # is active
@@ -94,9 +94,37 @@ class Source(dj.Lookup):
     source_name:				varchar(255)	# name of source
     ---
     source_uuid:                varchar(36)     
-    description=null:			varchar(255)	# description
+    source_description=null:	varchar(255)	# description
     """
 
+
+@schema
+class BreedingPair(dj.Manual):
+    # <class 'subjects.models.BreedingPair'>
+    definition = """
+    bp_name:			    varchar(255)		    # name
+    ---
+    -> [nullable] Line
+    bp_uuid:                varchar(36)
+    bp_description=null:	varchar(255)		    # description
+    start_date:			    			        # start date
+    end_date=null:		    date			        # end date
+    (father)			    -> Subject		        # father
+    (mother1) 			    -> Subject		        # mother1
+    (mother2)			    -> [nullable] Subject	# mother2
+    """
+    
+@schema
+class Litter(dj.Manual):
+    # <class 'subjects.models.Litter'>
+    definition = """
+    -> BreedingPair
+    litter_uuid:			    varchar(36)	    # litter uuid
+    ---
+    descriptive_name=null:		varchar(255)	# descriptive name
+    litter_description=null:	varchar(255)	# description
+    birth_date:			        date		    # birth date
+    """
 
 @schema
 class Subject(dj.Manual):
@@ -109,43 +137,8 @@ class Subject(dj.Manual):
     birth_date:			    date			    # birth date
     ear_mark=null:			varchar(255)		# ear mark
     -> Source
+    -> [nullable] Litter
     (responsible_user)          -> reference.User
-    """
-
-@schema
-class BreedingPair(dj.Manual):
-    # <class 'subjects.models.BreedingPair'>
-    definition = """
-    -> Line
-    bp_name:			varchar(255)		    # name
-    ---
-    bp_uuid:            varchar(36)
-    description=null:	varchar(255)		    # description
-    start_date:			date			        # start date
-    end_date=null:		date			        # end date
-    (father)			-> Subject		        # father
-    (mother1) 			-> Subject		        # mother1
-    (mother2)			-> [nullable] Subject	# mother2
-    """
-    
-@schema
-class Litter(dj.Manual):
-    # <class 'subjects.models.Litter'>
-    definition = """
-    -> BreedingPair
-    litter_uuid:			    varchar(36)	    # litter uuid
-    ---
-    descriptive_name=null:		varchar(255)	# descriptive name
-    description=null:			varchar(255)	# description
-    birth_date:			        date		    # birth date
-    """
-
-@schema
-class LitterSubject(dj.Manual):
-    # litter subject membership table
-    definition = """
-    -> Subject
-    -> Litter
     """
 
 
