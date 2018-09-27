@@ -54,9 +54,13 @@ use for the ingest modules.
 '''
 import logging
 import datajoint as dj
+from . import alyxraw
 
 
 log = logging.getLogger(__name__)
+
+def get_raw_field(key, field):
+    return (alyxraw.AlyxRaw.Field & key & 'fname="{}"'.format(field)).fetch1('fvalue')
 
 
 class InsertBuffer(object):

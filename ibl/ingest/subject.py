@@ -2,8 +2,8 @@
 import datajoint as dj
 import json
 
-from . import alyxraw
-from . import reference
+from ibl.ingest import alyxraw, reference
+from ibl.ingest import get_raw_field as grf
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_subject')
 
@@ -22,13 +22,13 @@ class Strain(dj.Computed):
     def make(self, key):
         key_strain = key.copy()
         key['uuid'] = key['strain_uuid']
-        key_strain['strain_name'] = (alyxraw.AlyxRaw.Field & key & 'fname="descriptive_name"').fetch1('fvalue')
+        key_strain['strain_name'] = grf(key, 'descriptive_name')
         
-        description = (alyxraw.AlyxRaw.Field & key & 'fname="description"').fetch1('fvalue')
+        description = grf(key, 'description')
         if description != 'None':
             key_strain['strain_description'] = description
         
-        self.insert1(key_strain, skip_duplicates=True)
+        self.insert1(key_strain)
 
 @schema
 class Sequence(dj.Computed):
@@ -45,17 +45,17 @@ class Sequence(dj.Computed):
     def make(self, key):
         key_seq = key.copy()
         key['uuid'] = key['sequence_uuid']
-        key_seq['sequence_name'] = (alyxraw.AlyxRaw.Field & key & 'fname="informal_name"').fetch1('fvalue')
+        key_seq['sequence_name'] = grf(key, 'informal_name')
         
-        base_pairs = (alyxraw.AlyxRaw.Field & key & 'fname="base_pairs"').fetch1('fvalue')
+        base_pairs = grf(key, 'base_pairs')
         if base_pairs != 'None':
-            key_seq['base_pairs'] = (alyxraw.AlyxRaw.Field & key & 'fname="base_pairs"').fetch1('fvalue')
+            key_seq['base_pairs'] = base_pairs
 
-        description = (alyxraw.AlyxRaw.Field & key & 'fname="description"').fetch1('fvalue')
+        description = grf(key, 'description')
         if description != 'None':
-            key_seq['sequence_description'] = (alyxraw.AlyxRaw.Field & key & 'fname="description"').fetch1('fvalue')
+            key_seq['sequence_description'] = description
         
-        self.insert1(key_seq, skip_duplicates=True)
+        self.insert1(key_seq)
 
 @schema
 class Allele(dj.Computed):
@@ -71,14 +71,13 @@ class Allele(dj.Computed):
     def make(self, key):
         key_allele = key.copy()
         key['uuid'] = key['allele_uuid']
-        key_allele['allele_name'] = (alyxraw.AlyxRaw.Field & key & 'fname="informal_name"').fetch1('fvalue')
-        key_allele['standard_name'] = (alyxraw.AlyxRaw.Field & key & 'fname="standard_name"').fetch1('fvalue')
+        key_allele['allele_name'] = grf(key, 'informal_name')
+        key_allele['standard_name'] = grf(key, 'standard_name')
         self.insert1(key_allele, skip_duplicates=True)
 
 #@schema
 #class AlleleSequence(dj.Computed):
 #    definition = ds_subject.AlleleSequence.definition
-
 
 @schema
 class Line(dj.Computed):
@@ -102,22 +101,22 @@ class Line(dj.Computed):
         key['uuid'] = key['line_uuid']
         key_line['binomial'] = 'Mus Musculus'
         
-        strain_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="strain"').fetch1('fvalue')
+        strain_uuid = grf(key, 'strain')
         if strain_uuid != 'None':
             key_line['strain_name'] = (Strain & 'strain_uuid="{}"'.format(strain_uuid)).fetch1('strain_name')
         
-        key_line['line_name'] = (alyxraw.AlyxRaw.Field & key & 'fname="name"').fetch1('fvalue')
+        key_line['line_name'] = grf(key, 'name')
 
-        description = (alyxraw.AlyxRaw.Field & key & 'fname="description"').fetch1('fvalue')
+        description = grf(key, 'description')
         if description != 'None':
             key_line['line_description'] = description
-        key_line['target_phenotype'] = (alyxraw.AlyxRaw.Field & key & 'fname="target_phenotype"').fetch1('fvalue')
-        key_line['auto_name'] = (alyxraw.AlyxRaw.Field & key & 'fname="auto_name"').fetch1('fvalue')
+        key_line['target_phenotype'] = grf(key, 'target_phenotype')
+        key_line['auto_name'] = grf(key, 'auto_name')
         
-        active = (alyxraw.AlyxRaw.Field & key & 'fname="is_active"').fetch1('fvalue')
-        key_line['is_active'] = True if active=="True" else False
+        active = grf(key, 'is_active')
+        key_line['is_active'] = active=="True"
         
-        self.insert1(key_line, skip_duplicates=True)
+        self.insert1(key_line)
 
 #@schema
 #class LineAllele(dj.Computed):
@@ -137,9 +136,9 @@ class Source(dj.Computed):
     def make(self, key):
         key_strain_source = key.copy()
         key['uuid'] = key['source_uuid']
-        key_strain_source['source_name'] = (alyxraw.AlyxRaw.Field & key & 'fname="name"').fetch1('fvalue')
+        key_strain_source['source_name'] = grf(key, 'name')
         
-        description = (alyxraw.AlyxRaw.Field & key & 'fname="description"').fetch1('fvalue')
+        description = grf(key, 'description')
         if description != 'None':
             key_strain_source['source_description'] = description
         self.insert1(key_strain_source, skip_duplicates=True)    
@@ -165,28 +164,28 @@ class BreedingPair(dj.Computed):
         key_bp = key.copy()
         key['uuid'] = key['bp_uuid']
         
-        line_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="line"').fetch1('fvalue')
+        line_uuid = grf(key, 'line')
         if line_uuid != 'None':
             key_bp['line_name'] = (Line & 'line_uuid="{}"'.format(line_uuid)).fetch1('line_name')
 
-        key_bp['bp_name'] = (alyxraw.AlyxRaw.Field & key & 'fname="name"').fetch1('fvalue')
+        key_bp['bp_name'] = grf(key, 'name')
 
-        description = (alyxraw.AlyxRaw.Field & key & 'fname="description"').fetch1('fvalue')
+        description = grf(key, 'description')
         if description != 'None':
             key_bp['bp_description'] = description
 
-        start_date = (alyxraw.AlyxRaw.Field & key & 'fname="start_date"').fetch1('fvalue')
+        start_date = grf(key, 'start_date')
         if start_date != 'None':
             key_bp['start_date'] = start_date
 
-        end_date = (alyxraw.AlyxRaw.Field & key & 'fname="end_date"').fetch1('fvalue')
+        end_date = grf(key, 'end_date')
         if end_date != 'None':
             key_bp['end_date'] = end_date
 
-        key_bp['father'] = (alyxraw.AlyxRaw.Field & key & 'fname="father"').fetch1('fvalue')
-        key_bp['mother1'] = (alyxraw.AlyxRaw.Field & key & 'fname="mother1"').fetch1('fvalue')
+        key_bp['father'] = grf(key, 'father')
+        key_bp['mother1'] = grf(key, 'mother1')
 
-        mother2 = (alyxraw.AlyxRaw.Field & key & 'fname="mother2"').fetch1('fvalue')
+        mother2 = grf(key, 'mother2')
         if mother2 != 'None':
             key_bp['mother2'] = mother2
 
@@ -208,22 +207,22 @@ class Litter(dj.Computed):
     def make(self, key):
         key_litter = key.copy()
         key['uuid'] = key['litter_uuid']
-        bp_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="breeding_pair"').fetch1('fvalue')
+        bp_uuid = grf(key, 'breeding_pair')
         if bp_uuid != 'None':
             key_litter['bp_name'] = (BreedingPair & 'bp_uuid="{}"'.format(bp_uuid)).fetch1('bp_name')
 
-        descriptive_name = (alyxraw.AlyxRaw.Field & key & 'fname="descriptive_name"').fetch1('fvalue')
+        descriptive_name = grf(key, 'descriptive_name')
         if descriptive_name != 'None':
             key_litter['descriptive_name'] = descriptive_name
         
-        description = (alyxraw.AlyxRaw.Field & key & 'fname="description"').fetch1('fvalue')
+        description = grf(key, 'description')
         if description != 'None':
             key_litter['litter_description'] = description
 
-        birth_date = (alyxraw.AlyxRaw.Field & key & 'fname="birth_date"').fetch1('fvalue')
+        birth_date = grf(key, 'birth_date')
         if birth_date != 'None':
             key_litter['litter_birth_date'] = birth_date
-        self.insert1(key_litter, skip_duplicates=True)
+        self.insert1(key_litter)
 
 @schema
 class Subject(dj.Computed):
@@ -246,35 +245,35 @@ class Subject(dj.Computed):
         key_subject = key.copy()
         key['uuid'] = key['subject_uuid']
 
-        nick_name = (alyxraw.AlyxRaw.Field & key & 'fname="nickname"').fetch1('fvalue')
+        nick_name = grf(key, 'nickname')
         if nick_name != 'None':
             key_subject['nickname'] = nick_name
         
-        sex = (alyxraw.AlyxRaw.Field & key & 'fname="sex"').fetch1('fvalue')
+        sex = grf(key, 'sex')
         if sex != 'None':
             key_subject['sex'] = sex
 
-        birth_date = (alyxraw.AlyxRaw.Field & key & 'fname="birth_date"').fetch1('fvalue')
+        birth_date = grf(key, 'birth_date')
         if birth_date != 'None':
             key_subject['subject_birth_date'] = birth_date
         
-        ear_mark = (alyxraw.AlyxRaw.Field & key & 'fname="ear_mark"').fetch1('fvalue')
+        ear_mark = grf(key, 'ear_mark')
         if ear_mark != 'None':
             key_subject['ear_mark'] = ear_mark
         
-        source_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="source"').fetch1('fvalue')
+        source_uuid = grf(key, 'source')
         if source_uuid != 'None':
             key_subject['source_name'] = (Source & 'source_uuid="{}"'.format(source_uuid)).fetch1('source_name')
 
-        user_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="responsible_user"').fetch1('fvalue')
+        user_uuid = grf(key, 'responsible_user')
         if user_uuid != 'None':
             key_subject['responsible_user'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('username')
 
-        litter_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="litter"').fetch1('fvalue')
+        litter_uuid = grf(key, 'litter')
         if litter_uuid != 'None':
             key_subject['litter_uuid'] = litter_uuid
 
-        self.insert1(key_subject, skip_duplicates=True)
+        self.insert1(key_subject)
 
 @schema
 class Caging(dj.Computed):
@@ -288,7 +287,7 @@ class Caging(dj.Computed):
     def make(self, key):
         key_cage = key.copy()
         key['uuid'] = key['subject_uuid']
-        json_content = (alyxraw.AlyxRaw.Field & key & 'fname="json"').fetch1('fvalue')
+        json_content = grf(key, 'json')
         if json_content != 'None':
             json_dict = json.loads(json_content)       
             history = json_dict['history']
@@ -300,7 +299,7 @@ class Caging(dj.Computed):
                     key_cage_i['caging_date'] = cage['date_time']
                     if cage['value'] != 'None':
                         key_cage_i['lamis_cage'] = cage['value']
-                    self.insert1(key_cage_i, skip_duplicates=True)
+                    self.insert1(key_cage_i)
 
 @schema
 class Weaning(dj.Computed):
@@ -313,11 +312,11 @@ class Weaning(dj.Computed):
         key_weaning = key.copy()
         key['uuid'] = key['subject_uuid']
         
-        wean_date = (alyxraw.AlyxRaw.Field & key & 'fname="wean_date"').fetch1('fvalue')
+        wean_date = grf(key, 'wean_date')
         if wean_date != 'None':
             key_weaning['wean_date'] = wean_date
 
-        self.insert1(key_weaning, skip_duplicates=True)
+        self.insert1(key_weaning)
 
 @schema
 class Culling(dj.Computed):
@@ -332,10 +331,10 @@ class Culling(dj.Computed):
     def make(self, key):
         key_cull = key.copy()
         key['uuid'] = key['subject_uuid']
-        to_be_culled = (alyxraw.AlyxRaw.Field & key & 'fname="to_be_culled"').fetch1('fvalue')
-        key_cull['to_be_culled'] = True if to_be_culled == 'True' else False
-        key_cull['cull_method'] = (alyxraw.AlyxRaw.Field & key & 'fname="cull_method"').fetch1('fvalue')
-        self.insert1(key_cull, skip_duplicates=True)
+        to_be_culled = grf(key, 'to_be_culled')
+        key_cull['to_be_culled'] = to_be_culled
+        key_cull['cull_method'] = grf(key, 'cull_method')
+        self.insert1(key_cull)
 
 @schema
 class Reduction(dj.Computed):
@@ -351,14 +350,14 @@ class Reduction(dj.Computed):
         key_reduction = key.copy()
         key['uuid'] = key['subject_uuid']
 
-        reduced = (alyxraw.AlyxRaw.Field & key & 'fname="reduced"').fetch1('fvalue')
-        key_reduction['reduced'] = True if reduced == 'True' else False
+        reduced = grf(key, 'reduced')
+        key_reduction['reduced'] = reduced == 'True'
         
-        reduced_date = (alyxraw.AlyxRaw.Field & key & 'fname="reduced_date"').fetch1('fvalue')
+        reduced_date = grf(key, 'reduced_date')
         if reduced_date != 'None':
             key_reduction['reduce_date'] = reduced_date
 
-        self.insert1(key_reduction, skip_duplicates=True)
+        self.insert1(key_reduction)
 
 @schema
 class Death(dj.Computed):
@@ -371,10 +370,10 @@ class Death(dj.Computed):
     def make(self, key):
         key_death = key.copy()
         key['uuid'] = key['subject_uuid']
-        death_date = (alyxraw.AlyxRaw.Field & key & 'fname="death_date"').fetch1('fvalue')
+        death_date = grf(key, 'death_date')
         if death_date != 'None':
             key_death['death_date'] = death_date
-            self.insert1(key_death, skip_duplicates=True)
+            self.insert1(key_death)
 
 @schema
 class GenotypeTest(dj.Computed):
@@ -394,11 +393,11 @@ class GenotypeTest(dj.Computed):
     def make(self, key):
         key_gt = key.copy()
         key['uuid'] = key['genotype_test_uuid']
-        key_gt['subject_uuid'] = (alyxraw.AlyxRaw.Field & key & 'fname="subject"').fetch1('fvalue')
-        key_gt['sequence_uuid'] = (alyxraw.AlyxRaw.Field & key & 'fname="sequence"').fetch1('fvalue')
-        test_result = (alyxraw.AlyxRaw.Field & key & 'fname="test_result"').fetch1('fvalue')
+        key_gt['subject_uuid'] = grf(key, 'subject')
+        key_gt['sequence_uuid'] = grf(key, 'sequence')
+        test_result = grf(key, 'test_result')
         key_gt['test_result'] = 'Present' if test_result else 'Absent'
-        self.insert1(key_gt, skip_duplicates=True)
+        self.insert1(key_gt)
 
 @schema
 class Zygosity(dj.Computed):
@@ -418,12 +417,12 @@ class Zygosity(dj.Computed):
 
         key_zg = key.copy()
         key['uuid'] = key['zygosity_uuid']
-        key_zg['subject_uuid'] = (alyxraw.AlyxRaw.Field & key & 'fname="subject"').fetch1('fvalue')
+        key_zg['subject_uuid'] = grf(key, 'subject')
         
-        allele_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="allele"').fetch1('fvalue')
+        allele_uuid = grf(key, 'allele')
         key_zg['allele_name'] = (Allele & 'allele_uuid="{}"'.format(allele_uuid)).fetch1('allele_name')
 
-        zygosity = (alyxraw.AlyxRaw.Field & key & 'fname="zygosity"').fetch1('fvalue') 
+        zygosity = grf(key, 'zygosity')
         if zygosity != 'None':
             zygosity_types = {
                 '0': 'Absent',
@@ -433,8 +432,7 @@ class Zygosity(dj.Computed):
             }
             key_zg['zygosity'] = zygosity_types[zygosity]
         
-        self.insert1(key_zg, skip_duplicates=True)
-
+        self.insert1(key_zg)
 
 @schema
 class Implant(dj.Computed):
@@ -454,25 +452,25 @@ class Implant(dj.Computed):
         key_implant = key.copy()
         key['uuid'] = key['subject_uuid']
     
-        implant_weight = (alyxraw.AlyxRaw.Field & key & 'fname="implant_weight"').fetch1('fvalue')
+        implant_weight = grf(key, 'implant_weight')
         if implant_weight != 'None':
             key_implant['implant_weight'] = float(implant_weight)
         
-        key_implant['protocol_number'] = int((alyxraw.AlyxRaw.Field & key & 'fname="protocol_number"').fetch1('fvalue'))
+        key_implant['protocol_number'] = int(grf(key, 'protocol_number'))
         
-        description = (alyxraw.AlyxRaw.Field & key & 'fname="description"').fetch1('fvalue')
+        description = grf(key, 'description')
         if description != 'None':
             key_implant['implant_description'] = description
         
-        adverse_effects = (alyxraw.AlyxRaw.Field & key & 'fname="adverse_effects"').fetch1('fvalue')
+        adverse_effects = grf(key, 'adverse_effect')
         if adverse_effects != 'None':
             key_implant['adverse_effects'] = adverse_effects
         
-        actual_severity = (alyxraw.AlyxRaw.Field & key & 'fname="actual_severity"').fetch1('fvalue')
+        actual_severity = grf(key, 'actual_severity')
         if actual_severity != 'None':
             key_implant['actual_severity'] = int(actual_severity)
 
-        self.insert1(key_implant, skip_duplicates=True)
+        self.insert1(key_implant)
 
 
 

@@ -1,8 +1,8 @@
 
 import datajoint as dj
 
-from . import alyxraw
-from . import reference
+from ibl.ingest import alyxraw
+from ibl.ingest import get_raw_field as grf
 
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_reference')
@@ -42,28 +42,28 @@ class LabMember(dj.Computed):
     def make(self, key):
         key_lab_member = key.copy()
         key['uuid'] = key['user_uuid']
-        key_lab_member['username'] = (alyxraw.AlyxRaw.Field & key & 'fname="username"').fetch1('fvalue')
-        key_lab_member['password'] = (alyxraw.AlyxRaw.Field & key & 'fname="password"').fetch1('fvalue')
-        key_lab_member['email'] = (alyxraw.AlyxRaw.Field & key & 'fname="email"').fetch1('fvalue')
+        key_lab_member['username'] = grf(key, 'username')
+        key_lab_member['password'] = grf(key, 'password')
+        key_lab_member['email'] = grf(key, 'email')
         
-        last_login = (alyxraw.AlyxRaw.Field & key & 'fname="last_login"').fetch1('fvalue')
+        last_login = grf(key, 'last_login')
         if last_login != 'None':
             key_lab_member['last_login'] = last_login
 
-        key_lab_member['first_name'] = (alyxraw.AlyxRaw.Field & key & 'fname="first_name"').fetch1('fvalue')
-        key_lab_member['last_name'] = (alyxraw.AlyxRaw.Field & key & 'fname="last_name"').fetch1('fvalue')
-        key_lab_member['date_joined'] = (alyxraw.AlyxRaw.Field & key & 'fname="date_joined"').fetch1('fvalue')
+        key_lab_member['first_name'] = grf(key, 'first_name')
+        key_lab_member['last_name'] = grf(key, 'last_name')
+        key_lab_member['date_joined'] = grf(key, 'date_joined')
         
-        is_active = (alyxraw.AlyxRaw.Field & key & 'fname="is_active"').fetch1('fvalue')
-        key_lab_member['is_active'] = True if is_active == 'True' else False
+        is_active = grf(key, 'is_active')
+        key_lab_member['is_active'] = is_active == 'True'
         
-        is_staff = (alyxraw.AlyxRaw.Field & key & 'fname="is_staff"').fetch1('fvalue')
-        key_lab_member['is_staff'] = True if is_staff == 'True' else False
+        is_staff = grf(key, 'is_staff')
+        key_lab_member['is_staff'] = is_staff == 'True'
         
-        is_superuser = (alyxraw.AlyxRaw.Field & key & 'fname="is_superuser"').fetch1('fvalue')
-        key_lab_member['is_superuser'] = True if is_superuser == 'True' else False
+        is_superuser = grf(key, 'is_superuser')
+        key_lab_member['is_superuser'] = is_superuser == 'True'
 
-        self.insert1(key_lab_member, skip_duplicates=True)
+        self.insert1(key_lab_member)
 
 @schema
 class Location(dj.Computed):
@@ -78,13 +78,13 @@ class Location(dj.Computed):
     def make(self, key):
         key_loc = key.copy()
         key['uuid'] = key['location_uuid']
-        key_loc['location_name'] = (alyxraw.AlyxRaw.Field & key & 'fname="name"').fetch1('fvalue')
+        key_loc['location_name'] = grf(key, 'name')
 
         #lab_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="lab"').fetch1('fvalue')
         #if lab_uuid != 'None':
         #    key_loc['lab_name'] = (Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
 
-        self.insert1(key_loc, skip_duplicates=True)
+        self.insert1(key_loc)
 
 
 @schema
@@ -96,17 +96,17 @@ class Note(dj.Computed):
     date_time:		datetime		    # date time
     text:		    varchar(255)		# text
     object_id:		varchar(36)		    # object id
-    content_type:   varchar(8)          # content type
+    content_type:   varchar(36)          # content type
     """
     key_source = (alyxraw.AlyxRaw & 'model = "misc.note"').proj(note_uuid='uuid')
 
     def make(self, key):
         key_note = key.copy()
         key['uuid'] = key['note_uuid']
-        key_note['user_uuid'] = (alyxraw.AlyxRaw.Field & key & 'fname="user"').fetch1('fvalue')
-        key_note['date_time'] = (alyxraw.AlyxRaw.Field & key & 'fname="date_time"').fetch1('fvalue')
-        key_note['text'] = (alyxraw.AlyxRaw.Field & key & 'fname="text"').fetch1('fvalue')
-        key_note['object_id'] = (alyxraw.AlyxRaw.Field & key & 'fname="object_id"').fetch1('fvalue')
-        key_note['content_type'] = (alyxraw.AlyxRaw.Field & key & 'fname="content_type"').fetch1('fvalue')
+        key_note['user_uuid'] = grf(key, 'user')
+        key_note['date_time'] = grf(key, 'date_time')
+        key_note['text'] = grf(key, 'text')
+        key_note['object_id'] = grf(key, 'object_id')
+        key_note['content_type'] = grf(key, 'content_type')
 
-        self.insert1(key_note, skip_duplicates=True)
+        self.insert1(key_note)

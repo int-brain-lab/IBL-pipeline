@@ -1,6 +1,7 @@
 import datajoint as dj
-from . import reference
-from . import alyxraw
+from ibl.ingest import alyxraw, reference
+from ibl.ingest import get_raw_field as grf
+
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_action')
 
@@ -18,13 +19,13 @@ class ProcedureType(dj.Computed):
         key_pt = key.copy()
         key['uuid'] = key['procedure_type_uuid']
 
-        key_pt['procedure_type_name'] = (alyxraw.AlyxRaw.Field & key & 'fname="name"').fetch1('fvalue')
+        key_pt['procedure_type_name'] = grf(key, 'name')
 
-        description = (alyxraw.AlyxRaw.Field & key & 'fname="description"').fetch1('fvalue')
+        description = grf(key, 'description')
         if description != 'None':
             key_pt['procedure_type_description'] = description
         
-        self.insert1(key_pt, skip_duplicates=True)
+        self.insert1(key_pt)
 
 @schema
 class Weighing(dj.Computed):
@@ -42,14 +43,14 @@ class Weighing(dj.Computed):
         key_weigh = key.copy()
         key['uuid'] = key['weigh_uuid']
         
-        key_weigh['subject_uuid'] = (alyxraw.AlyxRaw.Field & key & 'fname="subject"').fetch1('fvalue')
-        key_weigh['weighing_time'] = (alyxraw.AlyxRaw.Field & key & 'fname="date_time"').fetch1('fvalue')
+        key_weigh['subject_uuid'] = grf(key, 'subject')
+        key_weigh['weighing_time'] = grf(key, 'date_time')
 
-        weight = (alyxraw.AlyxRaw.Field & key & 'fname="weight"').fetch1('fvalue')
+        weight = grf(key, 'weight')
         if weight != 'None':
             key_weigh['weight'] = float(weight)
         
-        self.insert1(key_weigh, skip_duplicates=True)
+        self.insert1(key_weigh)
 
 @schema
 class WaterAdministration(dj.Computed):
@@ -68,13 +69,15 @@ class WaterAdministration(dj.Computed):
         key_wa = key.copy()
         key['uuid'] = key['wateradmin_uuid']
         
-        key_wa['subject_uuid'] = (alyxraw.AlyxRaw.Field & key & 'fname="subject"').fetch1('fvalue')
-        key_wa['administration_time'] = (alyxraw.AlyxRaw.Field & key & 'fname="date_time"').fetch1('fvalue')
-        key_wa['water_administered'] = (alyxraw.AlyxRaw.Field & key & 'fname="water_administered"').fetch1('fvalue')
-        hydrogel = (alyxraw.AlyxRaw.Field & key & 'fname="hydrogel"').fetch1('fvalue')
+        key_wa['subject_uuid'] = grf(key, 'subject')
+        key_wa['administration_time'] = grf(key, 'date_time')
+        key_wa['water_administered'] = grf(key, 'water_administered')
+
+        hydrogel = grf(key, 'hydrogel')
         if hydrogel != 'None':
-            key_wa['hydrogel'] = True if hydrogel == "True" else False
-        self.insert1(key_wa, skip_duplicates=True)
+            key_wa['hydrogel'] = hydrogel == "True"
+        
+        self.insert1(key_wa)
 
 @schema
 class WaterRestriction(dj.Computed):
@@ -95,26 +98,26 @@ class WaterRestriction(dj.Computed):
         key_res = key.copy()
         key['uuid'] = key['restriction_uuid']
         
-        key_res['subject_uuid'] = (alyxraw.AlyxRaw.Field & key & 'fname="subject"').fetch1('fvalue')
-        key_res['restriction_start_time'] = (alyxraw.AlyxRaw.Field & key & 'fname="start_time"').fetch1('fvalue')
+        key_res['subject_uuid'] = grf(key, 'subject')
+        key_res['restriction_start_time'] = grf(key, 'start_time')
         
-        end_time = (alyxraw.AlyxRaw.Field & key & 'fname="end_time"').fetch1('fvalue')
+        end_time = grf(key, 'end_time')
         if end_time != 'None':
             key_res['restriction_end_time'] = end_time
         
-        procedure_type_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="procedures"').fetch1('fvalue')
+        procedure_type_uuid = grf(key, 'procedures')
         if procedure_type_uuid != 'None':
             key_res['procedure_type_uuid'] = procedure_type_uuid
         
-        narrative = (alyxraw.AlyxRaw.Field & key & 'fname="narrative"').fetch1('fvalue')
+        narrative = grf(key, 'narrative')
         if narrative != 'None':
             key_res['restriction_narrative'] = narrative
 
-        location_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="location"').fetch1('fvalue')
+        location_uuid = grf(key, 'location')
         if location_uuid != 'None':
             key_res['location_name'] = (reference.Location & key & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
 
-        self.insert1(key_res, skip_duplicates=True)
+        self.insert1(key_res)
 
 @schema
 class Surgery(dj.Computed):
@@ -137,31 +140,31 @@ class Surgery(dj.Computed):
         key_surgery = key.copy()
         key['uuid'] = key['surgery_uuid']
 
-        key_surgery['subject_uuid'] = (alyxraw.AlyxRaw.Field & key & 'fname="subject"').fetch1('fvalue')
+        key_surgery['subject_uuid'] = grf(key, 'subject')
 
-        surgery_start_time = (alyxraw.AlyxRaw.Field & key & 'fname="start_time"').fetch1('fvalue')
-        if surgery_start_time != 'None':
-            key_surgery['surgery_start_time'] = surgery_start_time
+        start_time = grf(key, 'start_time')
+        if start_time != 'None':
+            key_surgery['surgery_start_time'] = start_time
 
-        surgery_end_time = (alyxraw.AlyxRaw.Field & key & 'fname="end_time"').fetch1('fvalue')
-        if surgery_end_time != 'None':
-            key_surgery['surgery_end_time'] = surgery_end_time
+        end_time = grf(key, 'end_time')
+        if end_time != 'None':
+            key_surgery['surgery_end_time'] = end_time
 
-        key_surgery['outcome_type'] = (alyxraw.AlyxRaw.Field & key & 'fname="outcome_type"').fetch1('fvalue')
+        key_surgery['outcome_type'] = grf(key, 'outcome_type')
 
-        narrative = (alyxraw.AlyxRaw.Field & key & 'fname="narrative"').fetch1('fvalue')
+        narrative = grf(key, 'narrative')
         if narrative != 'None':
             key_surgery['surgery_narrative'] = narrative
 
-        lab_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="lab"').fetch1('fvalue')
+        lab_uuid = grf(key, 'lab')
         if lab_uuid != 'None':
             key_surgery['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('location_name')
         
-        location_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="location"').fetch1('fvalue')
+        location_uuid = grf(key, 'location')
         if location_uuid != 'None':
             key['location_name'] = (reference.Location & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
         
-        self.insert1(key_surgery, skip_duplicates=True)
+        self.insert1(key_surgery)
 
 
 @schema
@@ -195,20 +198,20 @@ class OtherAction(dj.Computed):
     def make(self, key):
         key_other = key.copy()
         key['uuid'] = key['other_action_uuid']
-        key_other['subject_uuid'] = (alyxraw.AlyxRaw.Field & key & 'fname="subject"').fetch1('fvalue')
-        key_other['other_action_start_time'] = (alyxraw.AlyxRaw.Field & key & 'fname="start_time"').fetch1('fvalue')
+        key_other['subject_uuid'] = grf(key, 'subject')
+        key_other['other_action_start_time'] = grf(key, 'start_time')
         
-        end_time = (alyxraw.AlyxRaw.Field & key & 'fname="end_time"').fetch1('fvalue')
+        end_time = grf(key, 'end_time')
         if end_time != 'None':
             key_other['other_action_end_time'] = end_time
 
-        location_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="location"').fetch1('fvalue')
+        location_uuid = grf(key, 'location')
         if location_uuid != 'None':
             key_other['location_name'] = (reference.Location & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
         
-        procedure_uuid = (alyxraw.AlyxRaw.Field & key & 'fname="procedures"').fetch1('fvalue')
+        procedure_uuid = grf(key, 'procedures')
         if procedure_uuid != 'None':
             key_other['procedure_name'] = (ProcedureType & 'procedure_type_uuid = "{}"'.format(procedure_uuid)).fetch1('procedure_type_name')
 
-        self.insert1(key_other, skip_duplicates=True)
+        self.insert1(key_other)
 
