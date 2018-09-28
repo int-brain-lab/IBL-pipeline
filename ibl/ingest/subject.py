@@ -73,7 +73,7 @@ class Allele(dj.Computed):
         key['uuid'] = key['allele_uuid']
         key_allele['allele_name'] = grf(key, 'informal_name')
         key_allele['standard_name'] = grf(key, 'standard_name')
-        self.insert1(key_allele, skip_duplicates=True)
+        self.insert1(key_allele)
 
 #@schema
 #class AlleleSequence(dj.Computed):
@@ -141,7 +141,7 @@ class Source(dj.Computed):
         description = grf(key, 'description')
         if description != 'None':
             key_strain_source['source_description'] = description
-        self.insert1(key_strain_source, skip_duplicates=True)    
+        self.insert1(key_strain_source)    
 
 @schema
 class BreedingPair(dj.Computed):
@@ -189,7 +189,7 @@ class BreedingPair(dj.Computed):
         if mother2 != 'None':
             key_bp['mother2'] = mother2
 
-        self.insert1(key_bp, skip_duplicates=True)
+        self.insert1(key_bp)
 
 @schema
 class Litter(dj.Computed):
