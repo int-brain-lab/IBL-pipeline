@@ -53,7 +53,8 @@ class Session(dj.Manual):
     session_number:             integer		# number
     session_start_time:         datetime	# start time
     ---
+    session_uuid:               varchar(36)
     session_end_time:           datetime	# end time
-    session_type:		varchar(255)	# type
-    -> reference.User
+    session_type:		            varchar(255)	# type
+    -> reference.LabMember
     """
