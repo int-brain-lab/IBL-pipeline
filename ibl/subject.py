@@ -29,9 +29,10 @@ class Species(dj.Lookup):
 class Strain(dj.Lookup):
     # <class 'subjects.models.Strain'>
     definition = """
-    strain_name:		varchar(255)	# strain name
+    strain_name:		        varchar(255)	# strain name
     ---
-    description=null:    		varchar(255)	# description
+    strain_uuid:                varchar(36)
+    strain_description=null:    varchar(255)	# description
     """
 
 
@@ -39,10 +40,11 @@ class Strain(dj.Lookup):
 class Sequence(dj.Lookup):
     # <class 'subjects.models.Sequence'>
     definition = """
-    sequence_name:		varchar(255)	# informal name
+    sequence_name:		        varchar(255)	# informal name
     ---
-    base_pairs=null:			varchar(255)	# base pairs
-    description=null:		varchar(255)	# description
+    sequence_uuid:              varchar(36)
+    base_pairs=null:	        varchar(255)	# base pairs
+    sequence_description=null:	varchar(255)	# description
     """
 
 
@@ -52,6 +54,7 @@ class Allele(dj.Lookup):
     definition = """
     allele_name:			varchar(255)             # informal name
     ---
+    allele_uuid:            varchar(36)
     standard_name=null:		varchar(255)	# standard name
     """
 
@@ -70,12 +73,13 @@ class Line(dj.Lookup):
     definition = """
     -> Species
     -> Strain # this is nullable
-    name:				varchar(255)	# name
+    line_name:				varchar(255)	# name
     ---
-    description=null:			varchar(255)	# description
-    target_phenotype=null:			varchar(255)	# target phenotype
-    auto_names:				varchar(255)	# auto name
-    is_active:				boolean		# is active
+    line_uuid：             varchar(36)
+    line_description=null:	varchar(255)	# description
+    target_phenotype=null:	varchar(255)	# target phenotype
+    auto_name:				varchar(255)	# auto name
+    is_active:				boolean		    # is active
     """
 
 
@@ -93,22 +97,8 @@ class Source(dj.Lookup):
     definition = """
     source_name:				varchar(255)	# name of source
     ---
-    description=null:			varchar(255)	# description
-    """
-
-
-@schema
-class Subject(dj.Manual):
-    # <class 'subjects.models.Subject'>
-    definition = """
-    subject_id:			int                     # subject id
-    ---
-    nickname=null:			varchar(255)		# nickname
-    sex:			enum("M", "F", "U")	# sex
-    birth_date:			date			# birth date
-    ear_mark=null:			varchar(255)		# ear mark
-    -> Source
-    (responsible_user)          -> reference.User
+    source_uuid:                varchar(36)
+    source_description=null:	varchar(255)	# description
     """
 
 
@@ -116,15 +106,16 @@ class Subject(dj.Manual):
 class BreedingPair(dj.Manual):
     # <class 'subjects.models.BreedingPair'>
     definition = """
-    -> Line
-    name:			varchar(255)		# name
+    bp_name:			    varchar(255)		    # name
     ---
-    description=null:		varchar(255)		# description
-    start_date:			date			# start date
-    end_date=null:			date			# end date
-    (father)			-> Subject		# father
-    (mother1) 			-> Subject		# mother1
-    (mother2)			-> [nullable] Subject	# mother2
+    -> [nullable] Line
+    bp_uuid:                varchar(36)
+    bp_description=null:	varchar(255)		    # description
+    start_date:			    			        # start date
+    end_date=null:		    date			        # end date
+    (father)			    -> Subject		        # father
+    (mother1) 			    -> Subject		        # mother1
+    (mother2)			    -> [nullable] Subject	# mother2
     """
 
 
@@ -133,11 +124,25 @@ class Litter(dj.Manual):
     # <class 'subjects.models.Litter'>
     definition = """
     -> BreedingPair
-    litter_id:			char(32)	# litter id
+    litter_uuid:			    varchar(36)	    # litter uuid
     ---
     descriptive_name=null:		varchar(255)	# descriptive name
-    description=null:			varchar(255)	# description
-    birth_date:			date		# birth date
+    litter_description=null:	varchar(255)	# description
+    birth_date:			        date		    # birth date
+    """
+
+@schema
+class Subject(dj.Manual):
+    # <class 'subjects.models.Subject'>
+    definition = """
+    subject_uuid:           varchar(36)
+    ---
+    nickname=null:			varchar(255)		# nickname
+    sex:			        enum("M", "F", "U")	# sex
+    birth_date:			    date			    # birth date
+    ear_mark=null:			varchar(255)		# ear mark
+    -> Source
+    (responsible_user)          -> reference.User
     """
 
 
@@ -147,41 +152,6 @@ class LitterSubject(dj.Manual):
     definition = """
     -> Subject
     -> Litter
-    """
-
-
-@schema
-class Weighing(dj.Manual):
-    # <class 'actions.models.Weighing'>
-    definition = """
-    -> Subject
-    weighing_time:		datetime		# date time
-    ---
-    weight:			float			# weight
-    """
-
-
-@schema
-class WaterAdministration(dj.Manual):
-    # <class 'actions.models.WaterAdministration'>
-    definition = """
-    -> Subject
-    administration_time:	datetime		# date time
-    ---
-    water_administered:		float			# water administered
-    hydrogel=NULL:		boolean                 # hydrogel
-    """
-
-
-@schema
-class WaterRestriction(dj.Manual):
-    # <class 'actions.models.WaterRestriction'>
-    definition = """
-    -> Subject
-    restriction_start_time:     datetime	# start time
-    ---
-    restriction_end_time:       datetime	# end time
-#    -> equipment.LabLocation # equipment removed
     """
 
 
@@ -214,10 +184,10 @@ class GenotypeTest(dj.Manual):
     definition = """
     -> Subject
     -> Sequence
-    genotype_test_id:		int     	# genotype test id
+    genotype_test_uuid:		    varchar(36)     # genotype test id
     ---
     genotype_test_date:         date            # genotype date
-    test_result:		enum("Present", "Absent")		# test result
+    test_result:		        enum("Present", "Absent")		# test result
     """
 
 
@@ -230,22 +200,9 @@ class Zygosity(dj.Manual):
     -> Subject
     -> Allele
     ---
-    zygosity:		enum("Present", "Absent", "Homozygous", "Heterozygous") 		# zygosity
+    zygosity_uuid:      varchar(36)
+    zygosity:		    enum("Present", "Absent", "Homozygous", "Heterozygous") 		# zygosity
     """
-
-
-@schema
-class Surgery(dj.Manual):
-    # <class 'actions.models.Surgery'>
-    definition = """
-    -> Subject
-    surgery_start_time:		datetime        # surgery start time
-    ---
-    surgery_end_time:		datetime        # surgery end time
-    outcome_type:		varchar(255)	# outcome type
-    narrative:			varchar(255)	# narrative
-    """
-
 
 @schema
 class Implant(dj.Manual):
@@ -253,25 +210,12 @@ class Implant(dj.Manual):
     definition = """
     -> Subject
     ---
-    implant_weight:		float			# implant weight
+    implant_uuid:           varchar(36)
+    implant_weight:		    float			    # implant weight
     protocol_number:		varchar(255)		# protocol number
-    description:		varchar(255)		# description
+    description:		    varchar(255)		# description
     adverse_effects:		varchar(255)		# adverse effects
     (actual_severity)		-> reference.Severity   # actual severity
-    """
-
-
-@schema
-class VirusInjection(dj.Manual):
-    # <class 'actions.models.VirusInjection'>
-    # XXX: user was m2m field in django
-    definition = """
-    -> Subject
-    injection_time:		datetime        	# injection time
-    ---
-    injection_volume:		float   		# injection volume
-    rate_of_injection:		float                   # rate of injection
-    injection_type:		varchar(255)    	# injection type
     """
 
 
@@ -289,21 +233,9 @@ class Culling(dj.Manual):
 @schema
 class Reduction(dj.Manual):
     definition = """
+    -> Subject
     reduced:			boolean			# reduced
     reduced_date:		date			# reduced date
-    """
-
-
-@schema
-class OtherAction(dj.Manual):
-    # <class 'actions.models.OtherAction'>
-    definition = """
-    -> Subject
-    other_action_start_time:    datetime	# start time
-    ---
-    other_action_end_time:      datetime	# end time
-    descrption:                 varchar(255)    # description
-    # -> equipment.LabLocation # equipment removed
     """
 
 
