@@ -5,7 +5,7 @@ schema = dj.schema('alyx_raw')
 @schema
 class AlyxRaw(dj.Manual):
     definition= '''
-    uuid: varchar(36)  # pk field (uuid string repr)
+    uuid: varchar(64)  # pk field (uuid string repr)
     ---
     model: varchar(255)  # alyx 'model'
     '''
