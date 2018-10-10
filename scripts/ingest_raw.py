@@ -42,7 +42,7 @@ for key in keys:
             key_field['fvalue'] = 'None'
             ib_part.insert1(key_field)
         
-        elif type(field_value) is list and type(field_value[0]) is dict:
+        elif type(field_value) is list and (type(field_value[0]) is dict or type(field_value[0]) is str):
             for value_idx, value in enumerate(field_value):
                 key_field['value_idx'] = value_idx
                 key_field['fvalue'] = str(value)

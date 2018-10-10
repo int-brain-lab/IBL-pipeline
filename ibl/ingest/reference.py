@@ -151,7 +151,42 @@ class LabLocation(dj.Computed):
 
         self.insert1(key_loc)
 
+@schema
+class Project(dj.Computed):
+    definition = """
+    (project_uuid) -> alyxraw.AlyxRaw
+    ---
+    project_name:                varchar(255)
+    project_description=null:    varchar(1024)
+    """
+    key_source = (alyxraw.AlyxRaw & 'model="subjects.project"').proj(project_uuid='uuid')
 
+    def make(self, key):
+        key_proj = key.copy()
+        key['uuid'] = key['project_uuid']
+        
+        key_proj['project_name'] = grf(key, 'name')
+        key_proj['project_description'] = grf(key, 'description')
+        self.insert('')
+
+@schema
+class ProjectLabMember(dj.Computed):
+    definition = """
+    -> Project
+    -> LabMember
+    """
+    key_source = (alyxraw.AlyxRaw & 'model="subjects.project"').proj(project_uuid='uuid')
+    
+    def make(self, key):
+        key_pl_temp = key.copy()
+        key['uuid'] = key['project_uuid']
+        
+        user_uuids = grf(key, 'users', multiple_entries=True)
+        for user_uuid in user_uuids:
+            key_pl = key_pl_temp.copy()
+            key_pl['user_name'] = (LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
+            self.insert(key_pl)
+        
 @schema
 class Note(dj.Computed):
     definition = """

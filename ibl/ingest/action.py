@@ -33,9 +33,10 @@ class Weighing(dj.Computed):
     definition = """
     (weigh_uuid) -> alyxraw.AlyxRaw
     ---
-    subject_uuid:       varchar(36)     # inherited from Subject
+    subject_uuid:       varchar(64)     # inherited from Subject
     weighing_time:		datetime		# date time
-    weight=null:	    float			# weight in grams
+    weight:	            float			# weight in grams
+    user_name=null:     varchar(255)
     """
     key_source = (alyxraw.AlyxRaw & 'model="actions.weighing"').proj(weigh_uuid='uuid')
 
@@ -49,6 +50,10 @@ class Weighing(dj.Computed):
         weight = grf(key, 'weight')
         if weight != 'None':
             key_weigh['weight'] = float(weight)
+
+        user_uuid = grf(key, 'user')
+        if user_uuid != 'None':
+            key_weigh['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format('user_uuid')).fetch1('user_name')
         
         self.insert1(key_weigh)
 
@@ -58,7 +63,8 @@ class WaterAdministration(dj.Computed):
     definition = """
     (wateradmin_uuid) -> alyxraw.AlyxRaw
     ---
-    subject_uuid:           varchar(36)
+    subject_uuid:           varchar(64)
+    user_name=null:         varchar(255)
     administration_time:	datetime		# date time
     water_administered:		float			# water administered
     hydrogel=null:		    boolean         # hydrogel, to be changed in future release of alyx
@@ -115,7 +121,7 @@ class WaterRestriction(dj.Computed):
 
         location_uuid = grf(key, 'location')
         if location_uuid != 'None':
-            key_res['location_name'] = (reference.Location & key & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
+            key_res['location_name'] = (reference.LabLocation & key & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
 
         self.insert1(key_res)
 
@@ -126,10 +132,8 @@ class Surgery(dj.Computed):
     (surgery_uuid) -> alyxraw.AlyxRaw
     ---
     subject_uuid:               varchar(36)     # inherited from Subject
-    lab_name=null:              varchar(255)    # inherited from reference.Lab in the future?
-    user_name=null:             varchar(255)    # inherited from reference.LabMember
     location_name=null:         varchar(255)    # foreign key inherited from reference.Location
-    surgery_start_time=null:	datetime        # surgery start time
+    surgery_start_time:	        datetime        # surgery start time
     surgery_end_time=null:	    datetime        # surgery end time
     outcome_type:		        enum('None', 'a', 'n', 'r')	    # outcome type
     surgery_narrative=null:     varchar(2048)    	# narrative
@@ -155,18 +159,33 @@ class Surgery(dj.Computed):
         narrative = grf(key, 'narrative')
         if narrative != 'None':
             key_surgery['surgery_narrative'] = narrative
-
-        lab_uuid = grf(key, 'lab')
-        if lab_uuid != 'None':
-            key_surgery['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('location_name')
         
         location_uuid = grf(key, 'location')
         if location_uuid != 'None':
-            key['location_name'] = (reference.Location & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
+            key['location_name'] = (reference.LabLocation & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
         
         self.insert1(key_surgery)
 
+@schema
+class SurgeryLabMember(dj.Computed):
+    definition = """
+    -> Surgery
+    -> reference.LabMember
+    """
+    key_source = (alyxraw.AlyxRaw & 'model = "actions.surgery"').proj(surgery_uuid='uuid')
 
+    def make(self, key):
+        key_surgery = key.copy()
+        key['uuid'] = key['surgery_uuid']
+        
+        user_uuids = grf(key, 'user')
+        if user_uuids != 'None':
+            for user_uuid in user_uuids:
+                key_su = key_surgery.copy()
+                key['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
+                self.insert1(key_su)
+        
+        
 @schema
 class VirusInjection(dj.Computed):
     # <class 'actions.models.VirusInjection'>
@@ -207,7 +226,7 @@ class OtherAction(dj.Computed):
 
         location_uuid = grf(key, 'location')
         if location_uuid != 'None':
-            key_other['location_name'] = (reference.Location & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
+            key_other['location_name'] = (reference.LabLocation & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
         
         procedure_uuid = grf(key, 'procedures')
         if procedure_uuid != 'None':

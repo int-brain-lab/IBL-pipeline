@@ -59,8 +59,11 @@ from . import alyxraw
 
 log = logging.getLogger(__name__)
 
-def get_raw_field(key, field):
-    return (alyxraw.AlyxRaw.Field & key & 'fname="{}"'.format(field)).fetch1('fvalue')
+def get_raw_field(key, field, multiple_entries=False):
+    if multiple_entries == True:
+        return (alyxraw.AlyxRaw.Field & key & 'fname="{}"'.format(field)).fetch('fvalue')
+    else:
+        return (alyxraw.AlyxRaw.Field & key & 'fname="{}"'.format(field)).fetch1('fvalue')
 
 
 class InsertBuffer(object):

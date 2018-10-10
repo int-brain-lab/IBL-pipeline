@@ -12,6 +12,7 @@ class Weighing(dj.Manual):
     ---
     weigh_uuid:        varchar(36)
     weight:			    float			# weight
+    -> [nullable] reference.LabMember
     """
 
 @schema
@@ -24,6 +25,7 @@ class WaterAdministration(dj.Manual):
     wateradmin_uuid:        varchar(36)     
     water_administered:		float			# water administered
     hydrogel=null:		    boolean         # hydrogel
+    -> [nullable] reference.LabMember
     """
 
 @schema
@@ -35,7 +37,7 @@ class WaterRestriction(dj.Manual):
     ---
     restriction_uuid:           varchar(36) 
     restriction_end_time:       datetime	# end time
-    -> reference.Location     
+    -> reference.LabLocation     
     """
     
 @schema
@@ -48,7 +50,14 @@ class Surgery(dj.Manual):
     surgery_end_time:		datetime        # surgery end time
     -> reference.LabMember
     outcome_type:		    enum('None', 'a', 'n', 'r')	    # outcome type
-    narrative:			    varchar(255)	# narrative
+    surgery_narrative:      varchar(255)	# narrative
+    """
+
+@schema
+class SurgeryLabMember(dj.Manual):
+    definition = """
+    -> Surgery
+    -> reference.LabMember
     """
 
 @schema

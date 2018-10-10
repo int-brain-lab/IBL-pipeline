@@ -37,18 +37,6 @@ class LabMember(dj.Manual):
     """
 
 @schema
-class LabLocation(dj.Manual):
-    # <class 'misc.models.LabLocation'>    
-    definition = """
-    # The physical location at which an session is performed or appliances are located.
-    # This could be a room, a bench, a rig, etc.
-    location_name:      varchar(255)    # name of the location
-    ---
-    location_uuid:      varchar(64)
-    -> Lab
-    """
-
-@schema
 class LabMembership(dj.Manual):
     definition = """
     -> Lab
@@ -59,7 +47,40 @@ class LabMembership(dj.Manual):
     mem_start_date=null:    date
     mem_end_date=null:      date
     """
-    
+@schema
+class LabLocation(dj.Manual):
+    # <class 'misc.models.LabLocation'>    
+    definition = """
+    # The physical location at which an session is performed or appliances are located.
+    # This could be a room, a bench, a rig, etc.
+    -> Lab
+    location_name:      varchar(255)    # name of the location
+    ---
+    location_uuid:      varchar(64)
+    """
+
+@schema
+class Project(dj.Lookup):
+    definition = """
+    project_name:               varchar(255)
+    ---
+    project_uuid:               varchar(64)
+    project_description=null:   varchar(1024)
+    """
+
+@schema 
+class ProjectLabMember(dj.Manual):
+    definition = """
+    -> Project
+    -> LabMember
+    """
+
+@schema
+class ProjectRepository(dj.Computed):
+    definition = """
+    -> Project
+    -> data.DataRepository
+    """
 
 @schema
 class Severity(dj.Lookup):

@@ -66,13 +66,23 @@ class AlleleSequence(dj.Lookup):
     """
 
 @schema
+class Source(dj.Lookup):
+    # <class 'subjects.models.Source'>
+    definition = """
+    source_name:				varchar(255)	# name of source
+    ---
+    source_uuid:                varchar(36)     
+    source_description=null:	varchar(255)	# description
+    """
+
+@schema
 class Line(dj.Lookup):
     # <class 'subjects.models.Line'>
     definition = """
     -> Species
-    -> Strain # this is nullable
     line_name:				varchar(255)	# name
     ---
+    -> [nullable] Strain
     line_uuid：             varchar(36)
     line_description=null:	varchar(255)	# description
     target_phenotype=null:	varchar(255)	# target phenotype
@@ -87,16 +97,6 @@ class LineAllele(dj.Lookup):
     -> Allele
     """
 
-@schema
-class Source(dj.Lookup):
-    # <class 'subjects.models.Source'>
-    definition = """
-    source_name:				varchar(255)	# name of source
-    ---
-    source_uuid:                varchar(36)     
-    source_description=null:	varchar(255)	# description
-    """
-
 
 @schema
 class BreedingPair(dj.Manual):
@@ -109,8 +109,8 @@ class BreedingPair(dj.Manual):
     bp_description=null:	varchar(255)		    # description
     start_date:			    			        # start date
     end_date=null:		    date			        # end date
-    (father)			    -> Subject		        # father
-    (mother1) 			    -> Subject		        # mother1
+    (father)			    -> [nullable] Subject		        # father
+    (mother1) 			    -> [nullable] Subject		        # mother1
     (mother2)			    -> [nullable] Subject	# mother2
     """
     
@@ -119,11 +119,11 @@ class Litter(dj.Manual):
     # <class 'subjects.models.Litter'>
     definition = """
     -> BreedingPair
-    litter_uuid:			    varchar(36)	    # litter uuid
+    litter_uuid:			        varchar(36)	    # litter uuid
     ---
-    descriptive_name=null:		varchar(255)	# descriptive name
-    litter_description=null:	varchar(255)	# description
-    birth_date:			        date		    # birth date
+    litter_descriptive_name=null:	varchar(255)	# descriptive name
+    litter_description=null:	    varchar(255)	# description
+    birth_date:			            date		    # birth date
     """
 
 @schema
@@ -134,10 +134,11 @@ class Subject(dj.Manual):
     ---
     nickname=null:			varchar(255)		# nickname
     sex:			        enum("M", "F", "U")	# sex
-    birth_date:			    date			    # birth date
+    birth_date=null:			    date			    # birth date
     ear_mark=null:			varchar(255)		# ear mark
-    -> Source
-    (responsible_user)          -> reference.User
+    -> [nullable] Source
+    -> [nullable] Lab
+    (responsible_user)          -> [nullable] reference.LabMember
     """
 
 @schema
@@ -148,6 +149,12 @@ class LitterSubject(dj.Manual):
     -> Litter
     """
 
+@schema
+class SubjectProject(dj.Manual):
+    definition = """
+    -> Subject
+    -> Project
+    """
 
 @schema
 class Caging(dj.Manual):
@@ -180,7 +187,6 @@ class GenotypeTest(dj.Manual):
     -> Sequence
     genotype_test_uuid:		    varchar(36)     # genotype test id
     ---
-    genotype_test_date:         date            # genotype date
     test_result:		        enum("Present", "Absent")		# test result
     """
 
