@@ -160,24 +160,12 @@ class Line(dj.Computed):
         self.insert1(key_line)
 
 @schema
-class LineAllele(dj.Computed):
+class LineAllele(dj.Manual):
     definition = """
     binomial:               varchar(255)	# binomial, inherited from Species          
     line_name:				varchar(255)	# name
     allele_name:			varchar(255)             # informal name
     """
-    key_source = (alyxraw.AlyxRaw & 'model="subjects.line"').proj(line_uuid='uuid')
-    def make(self, key):
-        key_l = dict()
-        key_l['binomial'], key_l['line_name'] = (Line & key).fetch1('binomial', 'line_name')
-        key['uuid'] = key['line_uuid']
-        alleles = grf(key, 'alleles')
-        if alleles != 'None':
-            for allele in alleles:
-                key_la = key_l.copy()
-                key_la['allele_name'] = (Allele & 'allele_uuid="{}"'.format(allele)).fetch1('allele_name')
-                self.insert1(key_la)
-
 
 @schema
 class BreedingPair(dj.Computed):
@@ -318,7 +306,7 @@ class Subject(dj.Computed):
 class LitterSubject(dj.Computed):
     definition = """
     bp_name:        varchar(255)
-    litter_name:    varchar(255)
+    litter_uuid:    varchar(64)
     subject_uuid:   varchar(64)
     """
     key_source = (alyxraw.AlyxRaw & 'model = "subjects.subject"').proj(subject_uuid='uuid')
@@ -328,7 +316,7 @@ class LitterSubject(dj.Computed):
         key['uuid'] = key['subject_uuid']
         litter = grf(key, 'litter')
         if litter != 'None':
-            key_ls['bp_name'], key_ls['litter_uuid'] = (Litter & 'litter_uuid="{}"'.format('litter')).fetch1('bp_name', 'litter_uuid')
+            key_ls['bp_name'], key_ls['litter_uuid'] = (Litter & 'litter_uuid="{}"'.format(litter)).fetch1('bp_name', 'litter_uuid')
             self.insert1(key_ls)
 
 @schema

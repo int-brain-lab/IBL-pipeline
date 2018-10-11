@@ -4,6 +4,15 @@ from . import reference
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_reference')
 
 @schema
+class ProcedureType(dj.Manual):
+    definition = """
+    procedure_type_name:                varchar(255)
+    ---
+    procedure_type_uuid:                varchar(64)
+    procedure_type_description=null:    varchar(1024)
+    """
+
+@schema
 class Weighing(dj.Manual):
     # <class 'actions.models.Weighing'>
     definition = """
@@ -58,6 +67,12 @@ class SurgeryLabMember(dj.Manual):
     definition = """
     -> Surgery
     -> reference.LabMember
+    """
+
+class SurgeryProcedure(dj.Manual):
+    definition = """
+    -> Surgery
+    -> ProcedureType
     """
 
 @schema

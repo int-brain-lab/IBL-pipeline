@@ -97,24 +97,12 @@ class DataRepository(dj.Computed):
         self.insert1(key_repo)
 
 @schema
-class ProjectRepository(dj.Computed):
+class ProjectRepository(dj.Manual):
     definition = """
     project_name:       varchar(255)
     repo_name:          varchar(255)
     """
-    key_source = (alyxraw.AlyxRaw & 'model="subjects.project"').proj(project_uuid='uuid')
-
-    def make(self, key):
-        key_p = dict()
-        key_p['project_name'] = (reference.Project & key).fetch1('project_name')
-        key['uuid'] = key['project_uuid']
-
-        repo_uuids = grf(key, 'repositories', multiple_entries=True)
-        for repo_uuid in repo_uuids:
-            key_pr = key_p.copy()
-            key_pr['repo_name'] = (DataRepository & 'repo_uuid="{}"'.format(repo_uuid)).fetch1('repo_name')
-            self.insert1(key_pr)
-
+    
 @schema
 class DataSetType(dj.Computed):
     definition = """

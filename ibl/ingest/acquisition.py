@@ -60,65 +60,28 @@ class Session(dj.Computed):
 
 
 @schema
-class ChildSession(dj.Computed):
+class ChildSession(dj.Manual):
     definition = """
     subject_uuid:               varchar(64)
     session_start_time:         datetime
     ---
     parent_session_start_time:  datetime
     """
-    key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(session_uuid='uuid')
-
-    def make(self, key):
-        key_cs = dict()
-        key['uuid'] = key['session_uuid']
-
-        key_cs['subject_uuid'], key_cs['session_number'], key_cs['session_start_time'] = \
-            (Session & key).fetch1('subject_uuid', 'session_number', 'session_start_time')
-        
-        parent_session = grf(key, 'parent_session')
-        if parent_session != 'None':
-            key_cs['parent_session_number'], key['parent_session_start_time'] = \
-                (Session & 'session_uuid="{}"'.format(parent_session)).fetch1('session_number')
-
-        self.insert1(key_cs)
-
-@schema
-class SessionLabMember(dj.Computed):
-    definition = """
-    -> Session
-    -> reference.LabMember
-    """
-    key_source = (alyxraw.AlyxRaw & 'model = "actions.Session"').proj(session_uuid = 'uuid')
     
-    def make(self, key):
-        key_su_temp = key.copy()
-        key['uuid'] = key['session_uuid']
-
-        user_uuids = grf(key, 'users', multiple_entries=True)
-
-        for user_uuid in user_uuids:
-            key_su = key_su_temp.copy()
-            key_su['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
-            self.insert1(key_su)
+@schema
+class SessionLabMember(dj.Manual):
+    definition = """
+    subject_uuid:           varchar(64)
+    session_start_time:     datetime
+    user_name:              varchar(255)
+    """
 
 
 @schema
-class SessionProcedureType(dj.Computed):  
+class SessionProcedureType(dj.Manual):  
     definition = """
-    -> Session
-    -> action.ProcedureType
+    subject_uuid:           varchar(64)
+    session_start_time:     datetime
+    procedure_type_name:    varchar(255)
     """
-    key_source = (alyxraw.AlyxRaw & 'model = "actions.Session"').proj(session_uuid = 'uuid')
-
-    def make(self, key):
-        key_su_temp = key.copy()
-        key['uuid'] = key['session_uuid']
-
-        users_uuids = (alyxraw.AlyxRaw.Field & key & 'fname="{}"'.format('users')).fetch('fvalue')
-
-        for user_uuid in users_uuids:
-            key_su = key_su_temp.copy()
-            key_su['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
-            self.insert1(key_su)
    

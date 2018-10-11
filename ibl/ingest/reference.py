@@ -170,19 +170,8 @@ class Project(dj.Computed):
         self.insert1(key_proj)
 
 @schema
-class ProjectLabMember(dj.Computed):
+class ProjectLabMember(dj.Manual):
     definition = """
     project_name:   varchar(255)
     user_name:      varchar(255)
     """
-    
-    def make(self, key): 
-        key_p = dict()
-        key_p['project_name'] = (Project & key).fetch1('project_name')
-        
-        user_uuids = grf(key, 'users', multiple_entries=True)
-        for user_uuid in user_uuids:
-            key_pl = key_p.copy()
-            key_pl['user_name'] = (LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
-            self.insert1(key_pl)
-    

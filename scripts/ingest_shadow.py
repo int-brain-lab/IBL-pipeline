@@ -1,32 +1,46 @@
 import datajoint as dj
-from ibl.ingest import alyxraw, reference, subject, action
+from ibl.ingest import alyxraw, reference, subject, action, acquisition,data
 
-reference.LabMember().populate()
-reference.Location().populate()
-reference.Note().populate()
+# reference tables
+reference.Lab.populate()
+reference.LabMember.populate()
+reference.LabMembership().populate()
+reference.LabLocation().populate()
+reference.Project().populate()
 
-subject.Source().populate()
-subject.Strain().populate()
-subject.Sequence().populate()
-subject.Allele().populate()
-subject.Line().populate()
-subject.BreedingPair().populate()
-subject.Litter().populate()
-subject.Subject().populate()
-subject.Caging().populate()
-subject.Weaning().populate()
-subject.Culling().populate()
-subject.Reduction().populate()
-subject.Death().populate()
-subject.GenotypeTest().populate()
-subject.Zygosity().populate()
-subject.Implant().populate()
+# subject tables
+subject.Species.populate()
+subject.Strain.populate()
+subject.Source.populate()
+subject.Strain.populate()
+subject.Sequence.populate()
+subject.Allele.populate()
+subject.Line.populate()
+subject.BreedingPair.populate()
+subject.Litter.populate()
+subject.Subject.populate()
+subject.LitterSubject.populate()
+subject.Weaning.populate()
+subject.Death.populate()
+subject.GenotypeTest.populate()
+subject.Zygosity.populate()
+subject.Implant.populate()
 
+# action tables
+action.ProcedureType.populate()
+action.Weighing.populate()
+action.WaterAdministration.populate()
+action.WaterRestriction.populate()
+action.Surgery.populate()
+action.OtherAction.populate()
 
-action.ProcedureType().populate()
-action.Weighing().populate()
-action.WaterAdministration().populate()
-action.WaterRestriction().populate()
-action.Surgery().populate()
-action.OtherAction().populate()
+# acquisition tables
+acquisition.Session.populate()
+
+# data tables
+data.DataFormat().populate()
+data.DataRepositoryType.populate()
+data.DataRepository.populate()
+data.DataSetType.populate()
+data.DataSet.populate()
 

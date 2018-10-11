@@ -167,26 +167,21 @@ class Surgery(dj.Computed):
         self.insert1(key_surgery)
 
 @schema
-class SurgeryLabMember(dj.Computed):
+class SurgeryLabMember(dj.Manual):
     definition = """
     subject_uuid:       varchar(64)
     surgery_start_time: datetime
     user_name:          varchar(255)
     """
-    key_source = (alyxraw.AlyxRaw & 'model = "actions.surgery"').proj(surgery_uuid='uuid')
 
-    def make(self, key):
-
-        key_s = dict()
-        key_s['surgery_start_time'] = (Surgery & key).fetch1('surgery_start_time')
-        key['uuid'] = key['surgery_uuid']
-        user_uuids = grf(key, 'user', multiple_entries=True)
-        if user_uuids != 'None':
-            for user_uuid in user_uuids:
-                key_sl = key_s.copy()
-                key['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
-                self.insert1(key_sl)
-        
+@schema
+class SurgeryProcedure(dj.Manual):
+    definition = """
+    subject_uuid:       varchar(64)
+    surgery_start_time: datetime
+    procedure_type_name:     varchar(255)
+    """
+    
         
 @schema
 class VirusInjection(dj.Computed):
