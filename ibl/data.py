@@ -37,6 +37,13 @@ class DataRepository(dj.Lookup):
     data_url=null:      varchar(255)
     globus_is_personal: boolean
     """
+
+@schema
+class ProjectRepository(dj.Computed):
+    definition = """
+    -> reference.Project
+    -> DataRepository
+    """
    
 @schema
 class DataSetType(dj.Lookup):

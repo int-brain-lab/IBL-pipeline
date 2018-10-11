@@ -139,7 +139,7 @@ class Line(dj.Computed):
         key_line = key.copy()
         key['uuid'] = key['line_uuid']
 
-        species_uuid = grf(key, 'binomial')
+        species_uuid = grf(key, 'species')
         key_line['binomial'] = (Species & 'species_uuid="{}"'.format(species_uuid)).fetch1('binomial')
         
         strain_uuid = grf(key, 'strain')
@@ -162,13 +162,14 @@ class Line(dj.Computed):
 @schema
 class LineAllele(dj.Computed):
     definition = """
-    -> Line
-    -> Allele
+    binomial:               varchar(255)	# binomial, inherited from Species          
+    line_name:				varchar(255)	# name
+    allele_name:			varchar(255)             # informal name
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.line"').proj(line_uuid='uuid')
     def make(self, key):
         key_l = dict()
-        key_l['line_name'] = (Line & key).fetch1('line_name')
+        key_l['binomial'], key_l['line_name'] = (Line & key).fetch1('binomial', 'line_name')
         key['uuid'] = key['line_uuid']
         alleles = grf(key, 'alleles')
         if alleles != 'None':
@@ -264,7 +265,7 @@ class Subject(dj.Computed):
     definition = """
     (subject_uuid) -> alyxraw.AlyxRaw
     --- 
-    lab_name:                   varchar(255)
+    lab_name=null:              varchar(255)
     nickname:			        varchar(255)		# nickname
     sex:			            enum("M", "F", "U")	# sex
     subject_birth_date=null:    date			    # birth date
@@ -305,7 +306,7 @@ class Subject(dj.Computed):
 
         user_uuid = grf(key, 'responsible_user')
         if user_uuid != 'None':
-            key_subject['responsible_user'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('username')
+            key_subject['responsible_user'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
 
         litter_uuid = grf(key, 'litter')
         if litter_uuid != 'None':
@@ -314,21 +315,38 @@ class Subject(dj.Computed):
         self.insert1(key_subject)
 
 @schema
+class LitterSubject(dj.Computed):
+    definition = """
+    bp_name:        varchar(255)
+    litter_name:    varchar(255)
+    subject_uuid:   varchar(64)
+    """
+    key_source = (alyxraw.AlyxRaw & 'model = "subjects.subject"').proj(subject_uuid='uuid')
+    
+    def make(self, key):
+        key_ls = key.copy()
+        key['uuid'] = key['subject_uuid']
+        litter = grf(key, 'litter')
+        if litter != 'None':
+            key_ls['bp_name'], key_ls['litter_uuid'] = (Litter & 'litter_uuid="{}"'.format('litter')).fetch1('bp_name', 'litter_uuid')
+            self.insert1(key_ls)
+
+@schema
 class SubjectProject(dj.Computed):
     definition = """
-    -> Subject
-    -> reference.Project
+    subject_uuid:       varchar(64)
+    project_name:       varchar(255)
     """
     key_source = (alyxraw.AlyxRaw & 'model = "subjects.subject"').proj(subject_uuid='uuid')
 
     def make(self, key):
-        key_subject = key.copy()
+        key_s = key.copy()
         key['uuid'] = key['subject_uuid']
 
-        proj_uuids = grf(key, 'projects')
+        proj_uuids = grf(key, 'projects', multiple_entries=True)
         if proj_uuids != 'None':
             for proj_uuid in proj_uuids:
-                key_sp = key_subject.copy()
+                key_sp = key_s.copy()
                 key_sp['project_name'] = (reference.Project & 'project_uuid="{}"'.format(proj_uuid)).fetch1('project_name')
                 self.insert1(key_sp)
 
@@ -381,46 +399,6 @@ class Weaning(dj.Computed):
             key_weaning['wean_date'] = wean_date
             self.insert1(key_weaning)
 
-@schema
-class Culling(dj.Computed):
-    # need to be parsed when ingesting into the real table
-    definition = """
-    -> Subject
-    ---
-    to_be_culled:       boolean       
-    cull_method=null:   varchar(255)   # like a description
-    """
-
-    def make(self, key):
-        key_cull = key.copy()
-        key['uuid'] = key['subject_uuid']
-        to_be_culled = grf(key, 'to_be_culled')
-        key_cull['to_be_culled'] = to_be_culled == 'True'
-        key_cull['cull_method'] = grf(key, 'cull_method')
-        self.insert1(key_cull)
-
-@schema
-class Reduction(dj.Computed):
-    # need to be parsed when ingesting into the real table
-    definition = """
-    -> Subject
-    ---
-    reduced:                boolean
-    reduce_date=null:       date
-    """
-    
-    def make(self, key):
-        key_reduction = key.copy()
-        key['uuid'] = key['subject_uuid']
-
-        reduced = grf(key, 'reduced')
-        key_reduction['reduced'] = reduced == 'True'
-        
-        reduced_date = grf(key, 'reduced_date')
-        if reduced_date != 'None':
-            key_reduction['reduce_date'] = reduced_date
-
-        self.insert1(key_reduction)
 
 @schema
 class Death(dj.Computed):

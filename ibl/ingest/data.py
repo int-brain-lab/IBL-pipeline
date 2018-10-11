@@ -21,7 +21,7 @@ class DataFormat(dj.Computed):
 
     def make(self, key):
         key_format = key.copy()
-        key_format['uuid'] = key['format_uuid']
+        key['uuid'] = key['format_uuid']
 
         key_format['format_name'] = grf(key, 'name')
         
@@ -79,35 +79,40 @@ class DataRepository(dj.Computed):
         key['uuid'] = key['repo_uuid']
         
         key_repo['repo_name'] = grf(key, 'name')
-        key_repo['repotype_name'] = grf(key, 'repository_type')
+        
+        repotype_uuid = grf(key, 'repository_type')
+        key_repo['repotype_name'] = (DataRepositoryType & 'repotype_uuid="{}"'.format(repotype_uuid)).fetch1('repotype_name')
         key_repo['repo_time_zone'] = grf(key, 'timezone')
         key_repo['repo_dns'] = grf(key, 'dns')
         key_repo['globus_endpoint_id'] = grf(key, 'globus_endpoint_id')
         key_repo['globus_path'] = grf(key, 'globus_path')
-        key_repo['globus_is_personal'] = grf(key, 'globus_is_personal')
+
+        is_personal = grf(key, 'globus_is_personal')
+        key_repo['globus_is_personal'] = True if is_personal else False
 
         url = grf(key, 'data_url')
         if url != 'None':
             key_repo['data_url'] = url
-        
+
         self.insert1(key_repo)
 
 @schema
 class ProjectRepository(dj.Computed):
     definition = """
-    -> reference.Project
-    -> DataRepository
+    project_name:       varchar(255)
+    repo_name:          varchar(255)
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.project"').proj(project_uuid='uuid')
 
     def make(self, key):
-        key_pr_temp = key.copy()
+        key_p = dict()
+        key_p['project_name'] = (reference.Project & key).fetch1('project_name')
         key['uuid'] = key['project_uuid']
 
         repo_uuids = grf(key, 'repositories', multiple_entries=True)
         for repo_uuid in repo_uuids:
-            key_pr = key_pr_temp.copy()
-            key_pr['repo_name'] = (data.DataRepository & 'repo_uuid="{}"'.format(repo_uuid)).fetch1('repo_name')
+            key_pr = key_p.copy()
+            key_pr['repo_name'] = (DataRepository & 'repo_uuid="{}"'.format(repo_uuid)).fetch1('repo_name')
             self.insert1(key_pr)
 
 @schema
@@ -115,10 +120,10 @@ class DataSetType(dj.Computed):
     definition = """
     (dataset_type_uuid) -> alyxraw.AlyxRaw
     ---
-    dataset_type_name:                   varchar(255)
+    dataset_type_name:              varchar(255)
     user_name=null:                 varchar(255)
     filename_pattern:               varchar(255)
-    dataset_type_description=null:   varchar(1024)
+    dataset_type_description=null:  varchar(1024)
     """
     key_source = (alyxraw.AlyxRaw & 'model="data.datasettype"').proj(dataset_type_uuid='uuid')
     def make(self, key):
@@ -130,11 +135,11 @@ class DataSetType(dj.Computed):
         user_uuid = grf(key, 'created_by')
         if user_uuid != 'None':
             key_dst['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
-        
-        key_dst['file_name_pattern'] = grf(key, 'file_name_pattern')
+    
+        key_dst['filename_pattern'] = grf(key, 'filename_pattern')
         key_dst['dataset_type_description'] = grf(key, 'description')
         
-        self.insert(key_dst)
+        self.insert1(key_dst)
 
 
 @schema
@@ -199,7 +204,7 @@ class DataSet(dj.Computed):
 @schema
 class FileRecord(dj.Computed):
     definition = """
-    (record_uuid) -> alyx.AlyxRaw
+    (record_uuid) -> alyxraw.AlyxRaw
     ---
     exists:                     boolean
     subject_uuid:               varchar(64)

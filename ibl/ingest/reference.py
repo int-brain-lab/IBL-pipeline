@@ -137,8 +137,8 @@ class LabLocation(dj.Computed):
     definition = """
     (location_uuid) -> alyxraw.AlyxRaw
     ---
-    location_name:      varchar(255)    # name of the location
     lab_name:           varchar(64)
+    location_name:      varchar(255)    # name of the location
     """
     key_source = (alyxraw.AlyxRaw & 'model = "misc.lablocation"').proj(location_uuid='uuid')
 
@@ -167,56 +167,22 @@ class Project(dj.Computed):
         
         key_proj['project_name'] = grf(key, 'name')
         key_proj['project_description'] = grf(key, 'description')
-        self.insert('')
+        self.insert1(key_proj)
 
 @schema
 class ProjectLabMember(dj.Computed):
     definition = """
-    -> Project
-    -> LabMember
+    project_name:   varchar(255)
+    user_name:      varchar(255)
     """
-    key_source = (alyxraw.AlyxRaw & 'model="subjects.project"').proj(project_uuid='uuid')
     
-    def make(self, key):
-        key_pl_temp = key.copy()
-        key['uuid'] = key['project_uuid']
+    def make(self, key): 
+        key_p = dict()
+        key_p['project_name'] = (Project & key).fetch1('project_name')
         
         user_uuids = grf(key, 'users', multiple_entries=True)
         for user_uuid in user_uuids:
-            key_pl = key_pl_temp.copy()
+            key_pl = key_p.copy()
             key_pl['user_name'] = (LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
-            self.insert(key_pl)
-        
-@schema
-class Note(dj.Computed):
-    definition = """
-    (note_uuid) -> alyxraw.AlyxRaw
-    ---
-    user_name:      varchar(64)         # refer to LabMember
-    date_time:		datetime		    # date time
-    text=null:		varchar(1024)       # text
-    object_id:		varchar(64)		    # object id
-    content_type:   varchar(8)   
-    image=null:     longblob
-    """
-    key_source = (alyxraw.AlyxRaw & 'model = "misc.note"').proj(note_uuid='uuid')
-
-    def make(self, key):
-        key_note = key.copy()
-        key['uuid'] = key['note_uuid']
-        user_uuid = grf(key, 'user')
-        key_note['user_name'] = (LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
-        key_note['date_time'] = grf(key, 'date_time')
-
-        text = grf(key, 'text')
-        if text != 'None':
-            key_note['text'] = text
-
-        image = grf(key, 'image')
-        if image != 'None':
-            key_note['image'] = image
-
-        key_note['object_id'] = grf(key, 'object_id')
-        key_note['content_type'] = grf(key, 'content_type')
-
-        self.insert1(key_note)
+            self.insert1(key_pl)
+    

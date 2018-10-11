@@ -76,13 +76,6 @@ class ProjectLabMember(dj.Manual):
     """
 
 @schema
-class ProjectRepository(dj.Computed):
-    definition = """
-    -> Project
-    -> data.DataRepository
-    """
-
-@schema
 class Severity(dj.Lookup):
     definition = """
     severity:			tinyint			# severity
@@ -97,22 +90,6 @@ class Severity(dj.Lookup):
         (4, 'Severe'),
         (5, 'Non-recovery'),
     )
-
-@schema
-class Note(dj.Manual):
-    # <class 'misc.models.Note'>
-    # TODO: tagging arbitrary objects..
-    definition = """
-    -> LabMember
-    note_uuid:      varchar(64)
-    ---
-    date_time:		datetime		# date time
-    text=null:		varchar(255)	# text
-    object_id:		varchar(64)		# object id
-    content_type:   varchar(8)
-    text=null:      varchar(1024)    
-    image=null:     longblob
-    """
 
 @schema
 class BrainLocationAcronym(dj.Lookup):

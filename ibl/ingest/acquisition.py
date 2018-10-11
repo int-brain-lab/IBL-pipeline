@@ -15,7 +15,7 @@ class Session(dj.Computed):
     ---
     session_number:             int
     subject_uuid:               varchar(64)
-    project_name:               varchar(255)
+    project_name=null:          varchar(255)
     session_start_time:         datetime
     session_end_time=null:      datetime
     lab_name=null:              varchar(255)
@@ -62,17 +62,19 @@ class Session(dj.Computed):
 @schema
 class ChildSession(dj.Computed):
     definition = """
-    -> Session
+    subject_uuid:               varchar(64)
+    session_start_time:         datetime
     ---
-    (parent_session_number, parent_session_start_time) -> Session(session_number, session_start_time)
+    parent_session_start_time:  datetime
     """
     key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(session_uuid='uuid')
 
     def make(self, key):
-        key_cs = key.copy()
+        key_cs = dict()
         key['uuid'] = key['session_uuid']
 
-        key_cs['subject_uuid'] = (Session & key).fetch1('subject_uuid')
+        key_cs['subject_uuid'], key_cs['session_number'], key_cs['session_start_time'] = \
+            (Session & key).fetch1('subject_uuid', 'session_number', 'session_start_time')
         
         parent_session = grf(key, 'parent_session')
         if parent_session != 'None':

@@ -53,7 +53,7 @@ class Weighing(dj.Computed):
 
         user_uuid = grf(key, 'user')
         if user_uuid != 'None':
-            key_weigh['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format('user_uuid')).fetch1('user_name')
+            key_weigh['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
         
         self.insert1(key_weigh)
 
@@ -169,21 +169,23 @@ class Surgery(dj.Computed):
 @schema
 class SurgeryLabMember(dj.Computed):
     definition = """
-    -> Surgery
-    -> reference.LabMember
+    subject_uuid:       varchar(64)
+    surgery_start_time: datetime
+    user_name:          varchar(255)
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.surgery"').proj(surgery_uuid='uuid')
 
     def make(self, key):
-        key_surgery = key.copy()
+
+        key_s = dict()
+        key_s['surgery_start_time'] = (Surgery & key).fetch1('surgery_start_time')
         key['uuid'] = key['surgery_uuid']
-        
-        user_uuids = grf(key, 'user')
+        user_uuids = grf(key, 'user', multiple_entries=True)
         if user_uuids != 'None':
             for user_uuid in user_uuids:
-                key_su = key_surgery.copy()
+                key_sl = key_s.copy()
                 key['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
-                self.insert1(key_su)
+                self.insert1(key_sl)
         
         
 @schema

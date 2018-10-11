@@ -49,10 +49,10 @@ class Session(dj.Manual):
     # <class 'actions.models.Session'>
     definition = """
     -> subject.Subject
-    session_number:             integer		# number
     session_start_time:         datetime	# start time
     ---
     session_uuid:               varchar(36)
+    session_number:             int     	# number
     session_end_time:           datetime	# end time
     -> [nullable] reference.Project
     -> [nullable] reference.LabLocation
@@ -65,7 +65,7 @@ class ChildSession(dj.Manual):
     definition = """
     -> Session
     ---
-    (parent_session_number, parent_session_start_time) -> Session(session_number, session_start_time)
+    (parent_session_start_time) -> Session(session_start_time)
     """
 
 @schema

@@ -134,11 +134,11 @@ class Subject(dj.Manual):
     ---
     nickname=null:			varchar(255)		# nickname
     sex:			        enum("M", "F", "U")	# sex
-    birth_date=null:			    date			    # birth date
+    birth_date=null:	    date			    # birth date
     ear_mark=null:			varchar(255)		# ear mark
     -> [nullable] Source
     -> [nullable] Lab
-    (responsible_user)          -> [nullable] reference.LabMember
+    (responsible_user)      -> [nullable] reference.LabMember
     """
 
 @schema
@@ -166,7 +166,6 @@ class Caging(dj.Manual):
     lamis_cage:			int			# lamis cage
     """
 
-
 @schema
 class Weaning(dj.Manual):
     # <class 'subjects.models.Subject'>
@@ -175,7 +174,6 @@ class Weaning(dj.Manual):
     ---
     wean_date:			date			# wean date
     """
-
 
 @schema
 class GenotypeTest(dj.Manual):
@@ -216,27 +214,6 @@ class Implant(dj.Manual):
     adverse_effects:		varchar(255)		# adverse effects
     (actual_severity)		-> reference.Severity   # actual severity
     """
-
-
-@schema
-class Culling(dj.Manual):
-    # <class 'subjects.models.Subject'>
-    definition = """
-    -> Subject
-    ---
-    cull_date:          date                # cull date
-    cull_method:		varchar(255)		# cull method
-    """
-
-
-@schema
-class Reduction(dj.Manual):
-    definition = """
-    -> Subject
-    reduced:			boolean			# reduced
-    reduced_date:		date			# reduced date
-    """
-
 
 @schema
 class Death(dj.Manual):
