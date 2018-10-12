@@ -70,8 +70,8 @@ class DataSet(dj.Computed):
     created_datetime:           datetime
     generating_software=null:   varchar(255)
     provenance_directory=null:  varchar(255)
-    md5:                        varchar(255)
-    file_size:                  float
+    md5=null:                   varchar(255)
+    file_size=null:             float
     """
 
 @schema

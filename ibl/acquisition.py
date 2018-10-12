@@ -1,7 +1,7 @@
 import datajoint as dj
 
 from . import subject
-from . import reference
+from . import reference, subject, action
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_acquisition')
 
@@ -53,10 +53,10 @@ class Session(dj.Manual):
     ---
     session_uuid:               varchar(36)
     session_number:             int     	# number
-    session_end_time:           datetime	# end time
+    session_end_time=null:      datetime	# end time
     -> [nullable] reference.Project
     -> [nullable] reference.LabLocation
-    session_type:		            varchar(255)	# type
+    session_type:		        varchar(255)	# type
     session_narrative=null:     varchar(1024)
     """
 

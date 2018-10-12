@@ -91,12 +91,12 @@ class WaterRestriction(dj.Computed):
     definition = """
     (restriction_uuid) -> alyxraw.AlyxRaw
     ---
-    subject_uuid:               varchar(36)
+    subject_uuid:               varchar(64)
     restriction_start_time:     datetime	# start time
     restriction_end_time=null:  datetime	# end time
-    restriction_narrative=null: varchar(256)
-    procedure_type_uuid=null:   varchar(36)
-    location_name=null:         varchar(256)   
+    restriction_narrative=null: varchar(1024)
+    procedure_type_name=null:   varchar(64)
+    location_name=null:         varchar(255)   
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.waterrestriction"').proj(restriction_uuid='uuid')
     
@@ -113,7 +113,7 @@ class WaterRestriction(dj.Computed):
         
         procedure_type_uuid = grf(key, 'procedures')
         if procedure_type_uuid != 'None':
-            key_res['procedure_type_uuid'] = procedure_type_uuid
+            key_res['procedure_type'] = (ProcedureType & 'procedure_type_uuid="{}"'.format(procedure)).fetch1('procedure_type_name')
         
         narrative = grf(key, 'narrative')
         if narrative != 'None':
@@ -131,7 +131,7 @@ class Surgery(dj.Computed):
     definition = """
     (surgery_uuid) -> alyxraw.AlyxRaw
     ---
-    subject_uuid:               varchar(36)     # inherited from Subject
+    subject_uuid:               varchar(64)     # inherited from Subject
     location_name=null:         varchar(255)    # foreign key inherited from reference.Location
     surgery_start_time:	        datetime        # surgery start time
     surgery_end_time=null:	    datetime        # surgery end time
@@ -188,7 +188,7 @@ class VirusInjection(dj.Computed):
     # <class 'actions.models.VirusInjection'>
     definition = """
     (virus_injection_uuid) -> alyxraw.AlyxRaw
-    subject_uuid:           varchar(36)         # inherited from Subject
+    subject_uuid:           varchar(64)         # inherited from Subject
     injection_time:		    datetime        	# injection time
     injection_volume:		float   		    # injection volume
     rate_of_injection:		float               # rate of injection
@@ -203,7 +203,7 @@ class OtherAction(dj.Computed):
     definition = """
     (other_action_uuid) -> alyxraw.AlyxRaw
     ---
-    subject_uuid:               varchar(36)
+    subject_uuid:               varchar(64)
     other_action_start_time:    datetime	    # start time
     other_action_end_time=null: datetime	    # end time
     location_name=null:         varchar(255)    # refer to reference.Location

@@ -136,7 +136,6 @@ class DataSet(dj.Computed):
     (dataset_uuid) -> alyxraw.AlyxRaw
     ---
     subject_uuid:               varchar(64)
-    session_number:             int
     session_start_time:         datetime
     user_name:                  varchar(255)
     dataset_name:               varchar(255)
@@ -155,8 +154,8 @@ class DataSet(dj.Computed):
         key['uuid'] = key['dataset_uuid']
 
         session_uuid = grf(key, 'session')
-        key_ds['subject_uuid'], key_ds['session_number'], key_ds['session_start_time'] = \
-            (acquisition.Session & 'session_uuid="{}"'.format(session_uuid)).fetch1('subject_uuid', 'session_number', 'session_start_time')
+        key_ds['subject_uuid'], key_ds['session_start_time'] = \
+            (acquisition.Session & 'session_uuid="{}"'.format(session_uuid)).fetch1('subject_uuid', 'session_start_time')
 
         key_ds['dataset_name'] = grf(key, 'name')
 
@@ -196,8 +195,8 @@ class FileRecord(dj.Computed):
     ---
     exists:                     boolean
     subject_uuid:               varchar(64)
-    session_number:             int
     session_start_time:         datetime
+    dataset_name:              varchar(255)
     repo_name:                  varchar(255)
     relative_path:              varchar(255)
     """
@@ -206,9 +205,11 @@ class FileRecord(dj.Computed):
     def make(self, key):
         key_fr = key.copy()
         key['uuid'] = key['record_uuid']
+        exists = grf(key, 'exists')
+        key_fr['exists'] = True if exists=="True" else False
         dataset_uuid = grf(key, 'dataset')
-        key_fr['subject_uuid'], key_fr['session_number'], key_fr['session_start_time'] = \
-            (DataSet & 'dataset_uuid="{}"'.format(dataset_uuid)).fetch1('subject_uuid', 'session_number', 'session_start_time')
+        key_fr['subject_uuid'], key_fr['session_start_time'], key_fr['dataset_name'] = \
+            (DataSet & 'dataset_uuid="{}"'.format(dataset_uuid)).fetch1('subject_uuid', 'session_start_time', 'dataset_name')
 
         repo_uuid = grf(key, 'data_repository')
         key_fr['repo_name'] = (DataRepository & 'repo_uuid="{}"'.format(repo_uuid)).fetch1('repo_name')
