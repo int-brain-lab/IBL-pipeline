@@ -39,7 +39,7 @@ class DataRepository(dj.Lookup):
     """
 
 @schema
-class ProjectRepository(dj.Computed):
+class ProjectRepository(dj.Manual):
     definition = """
     -> reference.Project
     -> DataRepository
@@ -58,7 +58,7 @@ class DataSetType(dj.Lookup):
 
 
 @schema
-class DataSet(dj.Computed):
+class DataSet(dj.Manual):
     definition = """
     -> acquisition.Session
     dataset_name:               varchar(255)
@@ -75,7 +75,7 @@ class DataSet(dj.Computed):
     """
 
 @schema
-class FileRecord(dj.Computed):
+class FileRecord(dj.Manual):
     definition = """
     -> DataSet
     ---

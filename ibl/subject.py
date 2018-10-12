@@ -116,6 +116,7 @@ class Subject(dj.Manual):
     -> [nullable] reference.Lab
     (responsible_user)          -> [nullable] reference.LabMember
     protocol_number:            tinyint         	# protocol number
+    subject_description=null:   varchar(1024)
     """
 
 @schema
@@ -213,8 +214,7 @@ class Implant(dj.Manual):
     -> Subject
     ---
     implant_weight:		    float			    # implant weight
-    protocol_number:		varchar(255)		# protocol number
-    description:		    varchar(255)		# description
+    protocol_number:        tinyint		        # protocol number
     adverse_effects=null:   varchar(255)		# adverse effects
     (actual_severity)		-> [nullable] reference.Severity   # actual severity
     """

@@ -189,6 +189,7 @@ class Subject(dj.Computed):
     ear_mark=null:			    varchar(255)		# ear mark
     subject_source=null:        varchar(255)        # source name, inherited from Source
     responsible_user=null:      varchar(255)        # user_name, inherited from reference.LabMember
+    subject_description=null:   varchar(1024)
     """
     key_source = (alyxraw.AlyxRaw & 'model = "subjects.subject"').proj(subject_uuid='uuid')
 
@@ -222,6 +223,10 @@ class Subject(dj.Computed):
         user_uuid = grf(key, 'responsible_user')
         if user_uuid != 'None':
             key_subject['responsible_user'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
+
+        description = grf(key, 'description')
+        if description != 'None':
+            key_subject['subject_description'] = description
 
         self.insert1(key_subject)
 
@@ -480,7 +485,8 @@ class Implant(dj.Computed):
     subject_uuid:               varchar(64)         # inherited from Subject
     implant_weight=null:		float			    # implant weight
     adverse_effects=null:	    varchar(1024)		# adverse effects
-    actual_severity=null:       tinyint             # actual severity, inherited from Severity
+    actual_severity=null:       tinyint             # actual severity, inherited from Severity 
+    protocol_number:            tinyint      
     """
     
     def make(self, key):
@@ -500,6 +506,8 @@ class Implant(dj.Computed):
         actual_severity = grf(key, 'actual_severity')
         if actual_severity != 'None':
             key_implant['actual_severity'] = int(actual_severity)
+
+        key_implant['protocol_number'] = int(grf(key, 'protocol_number'))
 
         self.insert1(key_implant)
 
