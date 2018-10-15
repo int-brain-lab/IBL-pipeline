@@ -6,6 +6,7 @@ from . import get_raw_field as grf
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_data')
 
+
 @schema
 class DataFormat(dj.Computed):
     definition = """
@@ -24,7 +25,7 @@ class DataFormat(dj.Computed):
         key['uuid'] = key['format_uuid']
 
         key_format['format_name'] = grf(key, 'name')
-        
+
         file_extension = grf(key, 'file_extension')
         if file_extension != 'None':
             key_format['file_extension'] = file_extension
@@ -32,7 +33,7 @@ class DataFormat(dj.Computed):
         matlab_loader_function = grf(key, 'matlab_loader_function')
         if matlab_loader_function != 'None':
             key_format['matlab_loader_function'] = matlab_loader_function
-        
+
         python_loader_function = grf(key, 'python_loader_function')
         if python_loader_function != 'None':
             key_format['python_loader_function'] = python_loader_function
@@ -40,8 +41,9 @@ class DataFormat(dj.Computed):
         format_description = grf(key, 'description')
         if format_description != 'None':
             key_format['format_description'] = format_description
-        
+
         self.insert1(key_format)
+
 
 @schema
 class DataRepositoryType(dj.Computed):
@@ -51,12 +53,13 @@ class DataRepositoryType(dj.Computed):
     repotype_name: varchar(255)
     """
     key_source = (alyxraw.AlyxRaw & 'model="data.datarepositorytype"').proj(repotype_uuid='uuid')
-    
-    def make(self,key):
+
+    def make(self, key):
         key_repotype = key.copy()
         key['uuid'] = key['repotype_uuid']
         key_repotype['repotype_name'] = grf(key, 'name')
         self.insert1(key_repotype)
+
 
 @schema
 class DataRepository(dj.Computed):
@@ -77,9 +80,9 @@ class DataRepository(dj.Computed):
     def make(self, key):
         key_repo = key.copy()
         key['uuid'] = key['repo_uuid']
-        
+
         key_repo['repo_name'] = grf(key, 'name')
-        
+
         repotype_uuid = grf(key, 'repository_type')
         key_repo['repotype_name'] = (DataRepositoryType & 'repotype_uuid="{}"'.format(repotype_uuid)).fetch1('repotype_name')
         key_repo['repo_time_zone'] = grf(key, 'timezone')
@@ -96,13 +99,15 @@ class DataRepository(dj.Computed):
 
         self.insert1(key_repo)
 
+
 @schema
 class ProjectRepository(dj.Manual):
     definition = """
     project_name:       varchar(255)
     repo_name:          varchar(255)
     """
-    
+
+
 @schema
 class DataSetType(dj.Computed):
     definition = """
@@ -114,19 +119,20 @@ class DataSetType(dj.Computed):
     dataset_type_description=null:  varchar(1024)
     """
     key_source = (alyxraw.AlyxRaw & 'model="data.datasettype"').proj(dataset_type_uuid='uuid')
+
     def make(self, key):
         key_dst = key.copy()
         key['uuid'] = key['dataset_type_uuid']
 
         key_dst['dataset_type_name'] = grf(key, 'name')
-        
+
         user_uuid = grf(key, 'created_by')
         if user_uuid != 'None':
             key_dst['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
-    
+
         key_dst['filename_pattern'] = grf(key, 'filename_pattern')
         key_dst['dataset_type_description'] = grf(key, 'description')
-        
+
         self.insert1(key_dst)
 
 
@@ -148,7 +154,7 @@ class DataSet(dj.Computed):
     file_size=null:             float
     """
     key_source = (alyxraw.AlyxRaw & 'model="data.dataset"').proj(dataset_uuid="uuid")
-    
+
     def make(self, key):
         key_ds = key.copy()
         key['uuid'] = key['dataset_uuid']
@@ -164,20 +170,20 @@ class DataSet(dj.Computed):
 
         user_uuid = grf(key, 'created_by')
         key_ds['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
-        
+
         format_uuid = grf(key, 'data_format')
         key_ds['format_name'] = (DataFormat & 'format_uuid="{}"'.format(format_uuid)).fetch1('format_name')
 
         key_ds['created_datetime'] = grf(key, 'created_datetime')
-        
+
         software = grf(key, 'generating_software')
         if software != 'None':
             key_ds['generating_software'] = software
-        
+
         directory = grf(key, 'provenance_directory')
         if directory != 'None':
             key_ds['provenance_directory'] = directory
-        
+
         md5 = grf(key, 'md5')
         if md5 != 'None':
             key_ds['md5'] = md5
@@ -185,8 +191,9 @@ class DataSet(dj.Computed):
         file_size = grf(key, 'file_size')
         if file_size != 'None':
             key_ds['file_size'] = file_size
-        
+
         self.insert1(key_ds)
+
 
 @schema
 class FileRecord(dj.Computed):
@@ -216,4 +223,3 @@ class FileRecord(dj.Computed):
 
         key_fr['relative_path'] = grf(key, 'relative_path')
         self.insert1(key_fr)
-

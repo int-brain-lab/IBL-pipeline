@@ -2,6 +2,7 @@ import datajoint as dj
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_reference')
 
+
 @schema
 class Lab(dj.Lookup):
     # <class 'misc.models.Lab'>
@@ -13,6 +14,7 @@ class Lab(dj.Lookup):
     address:            varchar(255)
     time_zone:          varchar(255)
     """
+
 
 @schema
 class LabMember(dj.Manual):
@@ -36,6 +38,7 @@ class LabMember(dj.Manual):
     user_permissions=null:   blob            #
     """
 
+
 @schema
 class LabMembership(dj.Manual):
     definition = """
@@ -47,9 +50,11 @@ class LabMembership(dj.Manual):
     mem_start_date=null:    date
     mem_end_date=null:      date
     """
+
+
 @schema
 class LabLocation(dj.Manual):
-    # <class 'misc.models.LabLocation'>    
+    # <class 'misc.models.LabLocation'>
     definition = """
     # The physical location at which an session is performed or appliances are located.
     # This could be a room, a bench, a rig, etc.
@@ -58,6 +63,7 @@ class LabLocation(dj.Manual):
     ---
     location_uuid:      varchar(64)
     """
+
 
 @schema
 class Project(dj.Lookup):
@@ -68,12 +74,14 @@ class Project(dj.Lookup):
     project_description=null:   varchar(1024)
     """
 
-@schema 
+
+@schema
 class ProjectLabMember(dj.Manual):
     definition = """
     -> Project
     -> LabMember
     """
+
 
 @schema
 class Severity(dj.Lookup):
@@ -90,6 +98,7 @@ class Severity(dj.Lookup):
         (4, 'Severe'),
         (5, 'Non-recovery'),
     )
+
 
 @schema
 class BrainLocationAcronym(dj.Lookup):

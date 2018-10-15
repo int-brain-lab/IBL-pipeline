@@ -25,6 +25,7 @@ class Species(dj.Lookup):
     display_name:		varchar(255)	# display name
     """
 
+
 @schema
 class Source(dj.Lookup):
     # <class 'subjects.models.Source'>
@@ -34,6 +35,7 @@ class Source(dj.Lookup):
     source_uuid:                varchar(64)     
     source_description=null:	varchar(255)	# description
     """
+
 
 @schema
 class Strain(dj.Lookup):
@@ -45,6 +47,7 @@ class Strain(dj.Lookup):
     strain_description=null:    varchar(255)	# description
     """
 
+
 @schema
 class Sequence(dj.Lookup):
     # <class 'subjects.models.Sequence'>
@@ -55,6 +58,7 @@ class Sequence(dj.Lookup):
     base_pairs=null:	        varchar(255)	# base pairs
     sequence_description=null:	varchar(255)	# description
     """
+
 
 @schema
 class Allele(dj.Lookup):
@@ -70,14 +74,14 @@ class Allele(dj.Lookup):
     source_url=null:            varchar(255)    # link to the line information
     expression_data_url=null:   varchar(255)    # link to the expression pattern from Allen institute brain atlas
     """
-    
+
+
 @schema
 class AlleleSequence(dj.Lookup):
     definition = """
     -> Allele
-    -> Sequence       
+    -> Sequence
     """
-
 
 
 @schema
@@ -95,12 +99,14 @@ class Line(dj.Lookup):
     is_active:				boolean		    # is active
     """
 
+
 @schema
 class LineAllele(dj.Lookup):
     definition = """
     -> Line
     -> Allele
     """
+
 
 @schema
 class Subject(dj.Manual):
@@ -119,6 +125,7 @@ class Subject(dj.Manual):
     subject_description=null:   varchar(1024)
     """
 
+
 @schema
 class BreedingPair(dj.Manual):
     # <class 'subjects.models.BreedingPair'>
@@ -134,7 +141,8 @@ class BreedingPair(dj.Manual):
     (mother1) 			    -> [nullable] Subject   # mother1
     (mother2)			    -> [nullable] Subject	# mother2
     """
-    
+
+
 @schema
 class Litter(dj.Manual):
     # <class 'subjects.models.Litter'>
@@ -147,6 +155,7 @@ class Litter(dj.Manual):
     litter_birth_date:			    date		    # birth date
     """
 
+
 @schema
 class LitterSubject(dj.Manual):
     # litter subject membership table
@@ -155,12 +164,14 @@ class LitterSubject(dj.Manual):
     -> Litter
     """
 
+
 @schema
 class SubjectProject(dj.Manual):
     definition = """
     -> Subject
     -> reference.Project
     """
+
 
 @schema
 class Caging(dj.Manual):
@@ -172,6 +183,7 @@ class Caging(dj.Manual):
     lamis_cage:			int			# lamis cage
     """
 
+
 @schema
 class Weaning(dj.Manual):
     # <class 'subjects.models.Subject'>
@@ -180,6 +192,7 @@ class Weaning(dj.Manual):
     ---
     wean_date:			date			# wean date
     """
+
 
 @schema
 class GenotypeTest(dj.Manual):
@@ -194,6 +207,7 @@ class GenotypeTest(dj.Manual):
     test_result:		        enum("Present", "Absent")		# test result
     """
 
+
 @schema
 class Zygosity(dj.Manual):
     # <class 'subjects.models.Subject'>
@@ -204,8 +218,9 @@ class Zygosity(dj.Manual):
     -> Allele
     ---
     zygosity_uuid:      varchar(64)
-    zygosity:		    enum("Present", "Absent", "Homozygous", "Heterozygous") 		# zygosity
+    zygosity:		    enum("Present", "Absent", "Homozygous", "Heterozygous")  # zygosity
     """
+
 
 @schema
 class Implant(dj.Manual):
@@ -218,6 +233,7 @@ class Implant(dj.Manual):
     adverse_effects=null:   varchar(255)		# adverse effects
     (actual_severity)		-> [nullable] reference.Severity   # actual severity
     """
+
 
 @schema
 class Death(dj.Manual):

@@ -25,6 +25,7 @@ class Eye(dj.Imported):
     eye_start_time:     float           # (seconds)
     eye_end_time:       float           # (seconds)
     """
+
     def make(self, key):
 
         datapath = path.join(path.sep,'data', '{subject_id}-{session_start_time}'.format(**key)).replace(':', '_')
@@ -52,6 +53,7 @@ class Eye(dj.Imported):
         self.insert1(key)
         logger.info('Populated an Eye tuple for subject {subject_id} on {session_start_time}'.format(**key))
 
+
 @schema
 class Wheel(dj.Imported):
     definition = """
@@ -67,6 +69,7 @@ class Wheel(dj.Imported):
     wheel_duration:         float     # Duration time of wheel recording (seconds)
     wheel_sampling_rate:    float     # Samples per second
     """
+
     def make(self, key):
         datapath = path.join(path.sep,'data', '{subject_id}-{session_start_time}'.format(**key)).replace(':', '_')
         wheel_position = np.load(path.join(datapath, '_ibl_wheel.position.npy'))
@@ -88,12 +91,14 @@ class Wheel(dj.Imported):
         self.insert1(key)
         logger.info('Populated a Wheel tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))
 
+
 @schema
 class WheelMoveType(dj.Lookup):
     definition = """
     wheel_move_type:   varchar(64)   # movement type
     """
     contents = [['CW'], ['CCW'], ['Flinch'], ['Other']]
+
 
 @schema
 class WheelMoveSet(dj.Imported):
@@ -103,6 +108,7 @@ class WheelMoveSet(dj.Imported):
     ---
     wheel_move_number : int     # total number of movements in this set
     """
+
     def make(self, key):
         wheel_move_key = key.copy()
 
@@ -150,6 +156,7 @@ class SparseNoise(dj.Imported):
     sparse_noise_y_pos:  longblob				# y coordiate on screen of sparse noise stimulus squares (WHAT UNIT?)
     sparse_noise_times:  longblob				# times of those stimulus squares appeared in universal seconds
     """
+
     def make(self, key):
         datapath = path.join(path.sep,'data', '{subject_id}-{session_start_time}'.format(**key)).replace(':', '_')
         sparse_noise_positions = np.load(path.join(datapath, '_ns_sparseNoise.positions.npy'))
@@ -163,6 +170,7 @@ class SparseNoise(dj.Imported):
         self.insert1(key)
         logger.info('Populated a SparseNoise tuple for subject {subject_id} in session started at {session_start_time}'.format(**key))
 
+
 @schema
 class ExtraRewards(dj.Imported):
     definition = """
@@ -171,6 +179,7 @@ class ExtraRewards(dj.Imported):
     ---
     extra_rewards_times: longblob 			# times of extra rewards (seconds)
     """
+
     def make(self, key):
         datapath = path.join(path.sep,'data', '{subject_id}-{session_start_time}'.format(**key)).replace(':', '_')
         extra_rewards_times = np.load(path.join(datapath, '_ibl_extraRewards.times.npy'))
@@ -190,6 +199,7 @@ class SpontaneousTimeSet(dj.Imported):
     ---
     spontaneous_time_total_num:   int   # total number of the spontaneous time periods
     """
+
     def make(self, key):
         spon_time_key = key.copy()
 
@@ -218,6 +228,7 @@ class SpontaneousTimeSet(dj.Imported):
         spontaneous_time_duration:  float    # (seconds)
         """
 
+
 @schema
 class Lick(dj.Imported):
     definition = """
@@ -232,6 +243,7 @@ class Lick(dj.Imported):
     lick_end_time:          float     # recording end time (seconds)]
     lick_sampling_rate:     float     # number of samples per second
     """
+
     def make(self, key):
 
         datapath = path.join(path.sep,'data', '{subject_id}-{session_start_time}'.format(**key)).replace(':', '_')
@@ -265,6 +277,7 @@ class TrialSet(dj.Imported):
     trials_start_time:  float            # start time of the trial set (seconds)
     trials_end_time:    float            # end time of the trial set (seconds)
     """
+
     def make(self, key):
         trial_key = key.copy()
         excluded_trial_key = key.copy()
@@ -367,6 +380,7 @@ class TrialSet(dj.Imported):
         -> TrialSet.Trial
         """
 
+
 @schema
 class PassiveTrialSet(dj.Imported):
     definition = """
@@ -376,6 +390,7 @@ class PassiveTrialSet(dj.Imported):
     passive_trials_start_time : float
     passive_trials_end_time : float
     """
+
     def make(self, key):
 
         passive_trial_key = key.copy()

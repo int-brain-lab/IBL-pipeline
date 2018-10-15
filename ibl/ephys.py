@@ -6,6 +6,7 @@ from . import reference
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
 
+
 @schema
 class Ephys(dj.Imported):
     definition = """
@@ -33,6 +34,7 @@ class Ephys(dj.Imported):
 
         self.insert1(key)
 
+
 @schema
 class ProbeModel(dj.Lookup):
     definition = """
@@ -41,6 +43,7 @@ class ProbeModel(dj.Lookup):
     ---
     channel_counts: smallint            # number of channels in the probe
     """
+
     class Channel(dj.Part):
         definition = """
         -> master
@@ -50,11 +53,13 @@ class ProbeModel(dj.Lookup):
         channel_y_pos:  float   # y position relative to the tip of the probe (um)
         """
 
+
 @schema
 class ProbeSet(dj.Imported):
     definition = """
     -> Ephys
     """
+
     class Probe(dj.Part):
         definition = """
         -> master
@@ -86,12 +91,14 @@ class Channel(dj.Imported):
     """
     key_source = Ephys
 
+
 @schema
 class ClusterGroup(dj.Imported):
     definition = """
     -> ProbeSet
     ---
     """
+
     class Cluster(dj.Part):
         definition = """
         -> master
@@ -107,6 +114,7 @@ class ClusterGroup(dj.Imported):
         cluster_phy_annotation:     tinyint       # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
         """
 
+
 @schema
 class ClusterSpikes(dj.Imported):
     definition = """
@@ -117,6 +125,7 @@ class ClusterSpikes(dj.Imported):
     cluster_spike_amps:     longblob        # Amplitude of each spike (µV)
     """
     key_source = Ephys
+
 
 @schema
 class LFP(dj.Imported):

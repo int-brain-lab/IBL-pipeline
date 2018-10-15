@@ -6,6 +6,7 @@ from ibl.ingest import get_raw_field as grf
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_subject')
 
+
 @schema
 class Species(dj.Computed):
     definition = """
@@ -15,18 +16,19 @@ class Species(dj.Computed):
     display_name:       varchar(255)         
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.species"').proj(species_uuid="uuid")
-    
+
     def make(self, key):
         key_species = key.copy()
         key['uuid'] = key['species_uuid']
         key_species['binomial'] = grf(key, 'binomial')
         key_species['display_name'] = grf(key, 'display_name')
-        
+
         self.insert1(key_species)
+
 
 @schema
 class Strain(dj.Computed):
-     # <class 'subjects.models.Strain'>
+    # <class 'subjects.models.Strain'>
     definition = """
     (strain_uuid) -> alyxraw.AlyxRaw
     ---
@@ -39,12 +41,13 @@ class Strain(dj.Computed):
         key_strain = key.copy()
         key['uuid'] = key['strain_uuid']
         key_strain['strain_name'] = grf(key, 'descriptive_name')
-        
+
         description = grf(key, 'description')
         if description != 'None':
             key_strain['strain_description'] = description
-        
+
         self.insert1(key_strain)
+
 
 @schema
 class Source(dj.Computed):
@@ -61,11 +64,12 @@ class Source(dj.Computed):
         key_animal_source = key.copy()
         key['uuid'] = key['source_uuid']
         key_animal_source['source_name'] = grf(key, 'name')
-        
+
         description = grf(key, 'description')
         if description != 'None':
             key_animal_source['source_description'] = description
         self.insert1(key_animal_source)
+
 
 @schema
 class Sequence(dj.Computed):
@@ -78,12 +82,12 @@ class Sequence(dj.Computed):
     sequence_description=null:	varchar(255)	# description
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.sequence"').proj(sequence_uuid="uuid")
-    
+
     def make(self, key):
         key_seq = key.copy()
         key['uuid'] = key['sequence_uuid']
         key_seq['sequence_name'] = grf(key, 'informal_name')
-        
+
         base_pairs = grf(key, 'base_pairs')
         if base_pairs != 'None':
             key_seq['base_pairs'] = base_pairs
@@ -91,8 +95,9 @@ class Sequence(dj.Computed):
         description = grf(key, 'description')
         if description != 'None':
             key_seq['sequence_description'] = description
-        
+
         self.insert1(key_seq)
+
 
 @schema
 class Allele(dj.Computed):
@@ -108,7 +113,7 @@ class Allele(dj.Computed):
     expression_data_url=null:   varchar(255)    # link to the expression pattern from Allen institute brain atlas
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.allele"').proj(allele_uuid='uuid')
-    
+
     def make(self, key):
         key_allele = key.copy()
         key['uuid'] = key['allele_uuid']
@@ -120,9 +125,9 @@ class Allele(dj.Computed):
 
         self.insert1(key_allele)
 
-#@schema
-#class AlleleSequence(dj.Computed):
-#    definition = ds_subject.AlleleSequence.definition    
+# @schema
+# class AlleleSequence(dj.Computed):
+#    definition = ds_subject.AlleleSequence.definition
 
 
 @schema
@@ -148,11 +153,11 @@ class Line(dj.Computed):
 
         species_uuid = grf(key, 'species')
         key_line['binomial'] = (Species & 'species_uuid="{}"'.format(species_uuid)).fetch1('binomial')
-        
+
         strain_uuid = grf(key, 'strain')
         if strain_uuid != 'None':
             key_line['strain_name'] = (Strain & 'strain_uuid="{}"'.format(strain_uuid)).fetch1('strain_name')
-        
+
         key_line['line_name'] = grf(key, 'name')
 
         description = grf(key, 'description')
@@ -160,26 +165,28 @@ class Line(dj.Computed):
             key_line['line_description'] = description
         key_line['target_phenotype'] = grf(key, 'target_phenotype')
         key_line['auto_name'] = grf(key, 'auto_name')
-        
+
         active = grf(key, 'is_active')
-        key_line['is_active'] = active=="True"
-        
+        key_line['is_active'] = active == "True"
+
         self.insert1(key_line)
+
 
 @schema
 class LineAllele(dj.Manual):
     definition = """
-    binomial:               varchar(255)	# binomial, inherited from Species          
+    binomial:               varchar(255)	# binomial, inherited from Species
     line_name:				varchar(255)	# name
     allele_name:			varchar(255)             # informal name
     """
+
 
 @schema
 class Subject(dj.Computed):
     # <class 'subjects.models.Subject'>
     definition = """
     (subject_uuid) -> alyxraw.AlyxRaw
-    --- 
+    ---
     lab_name=null:              varchar(255)
     nickname:			        varchar(255)		# nickname
     sex:			            enum("M", "F", "U")	# sex
@@ -200,7 +207,7 @@ class Subject(dj.Computed):
         nick_name = grf(key, 'nickname')
         if nick_name != 'None':
             key_subject['nickname'] = nick_name
-        
+
         sex = grf(key, 'sex')
         if sex != 'None':
             key_subject['sex'] = sex
@@ -208,13 +215,13 @@ class Subject(dj.Computed):
         birth_date = grf(key, 'birth_date')
         if birth_date != 'None':
             key_subject['subject_birth_date'] = birth_date
-        
+
         key_subject['protocol_number'] = grf(key, 'protocol_number')
-        
+
         ear_mark = grf(key, 'ear_mark')
         if ear_mark != 'None':
             key_subject['ear_mark'] = ear_mark
-        
+
         source_uuid = grf(key, 'source')
         if source_uuid != 'None':
             key_subject['subject_source'] = (Source & 'source_uuid="{}"'.format(source_uuid)).fetch1('source_name')
@@ -250,7 +257,7 @@ class BreedingPair(dj.Computed):
     def make(self, key):
         key_bp = key.copy()
         key['uuid'] = key['bp_uuid']
-        
+
         line_uuid = grf(key, 'line')
         if line_uuid != 'None':
             key_bp['line_name'] = (Line & 'line_uuid="{}"'.format(line_uuid)).fetch1('line_name')
@@ -270,7 +277,7 @@ class BreedingPair(dj.Computed):
         father = grf(key, 'father')
         if father != 'None':
             key_bp['father'] = father
-        
+
         mother1 = grf(key, 'mother1')
         if mother1 != 'None':
             key_bp['mother1'] = mother1
@@ -281,9 +288,10 @@ class BreedingPair(dj.Computed):
 
         self.insert1(key_bp)
 
+
 @schema
 class Litter(dj.Computed):
-     # <class 'subjects.models.Litter'>
+    # <class 'subjects.models.Litter'>
     definition = """
     (litter_uuid) -> alyxraw.AlyxRaw
     ---
@@ -303,7 +311,7 @@ class Litter(dj.Computed):
         descriptive_name = grf(key, 'descriptive_name')
         if descriptive_name != 'None':
             key_litter['litter_descriptive_name'] = descriptive_name
-        
+
         description = grf(key, 'description')
         if description != 'None':
             key_litter['litter_description'] = description
@@ -321,7 +329,7 @@ class LitterSubject(dj.Computed):
     subject_uuid:   varchar(64)
     """
     key_source = (alyxraw.AlyxRaw & 'model = "subjects.subject"').proj(subject_uuid='uuid')
-    
+
     def make(self, key):
         key_ls = key.copy()
         key['uuid'] = key['subject_uuid']
@@ -329,6 +337,7 @@ class LitterSubject(dj.Computed):
         if litter != 'None':
             key_ls['bp_name'], key_ls['litter_uuid'] = (Litter & 'litter_uuid="{}"'.format(litter)).fetch1('bp_name', 'litter_uuid')
             self.insert1(key_ls)
+
 
 @schema
 class SubjectProject(dj.Computed):
@@ -348,6 +357,7 @@ class SubjectProject(dj.Computed):
                 key_sp = key_s.copy()
                 key_sp['project_name'] = (reference.Project & 'project_uuid="{}"'.format(proj_uuid)).fetch1('project_name')
                 self.insert1(key_sp)
+
 
 @schema
 class Caging(dj.Computed):
@@ -380,7 +390,7 @@ class Caging(dj.Computed):
                         self.insert1(key_cage_i)
                         if cage['value'] != 'None':
                             key_cage_i['lamis_cage'] = cage['value']
-                        
+
 
 @schema
 class Weaning(dj.Computed):
@@ -389,10 +399,11 @@ class Weaning(dj.Computed):
     ---
     wean_date=null:			date			# wean date
     """
+
     def make(self, key):
         key_weaning = key.copy()
         key['uuid'] = key['subject_uuid']
-        
+
         wean_date = grf(key, 'wean_date')
         if wean_date != 'None':
             key_weaning['wean_date'] = wean_date
@@ -415,6 +426,7 @@ class Death(dj.Computed):
             key_death['death_date'] = death_date
             self.insert1(key_death)
 
+
 @schema
 class GenotypeTest(dj.Computed):
     # <class 'subjects.models.Subject'>
@@ -433,7 +445,7 @@ class GenotypeTest(dj.Computed):
         key_gt = key.copy()
         key['uuid'] = key['genotype_test_uuid']
         key_gt['subject_uuid'] = grf(key, 'subject')
-        
+
         sequence_uuid = grf(key, 'sequence')
         key_gt['sequence_name'] = (Sequence & 'sequence_uuid="{}"'.format(sequence_uuid)).fetch1('sequence_name')
 
@@ -441,13 +453,14 @@ class GenotypeTest(dj.Computed):
         key_gt['test_result'] = 'Present' if test_result else 'Absent'
         self.insert1(key_gt)
 
+
 @schema
 class Zygosity(dj.Computed):
     # <class 'subjects.models.Subject'>
     # <class 'subjects.models.Zygosity'>
     # genotype = models.ManyToManyField('Allele', through='Zygosity')
     definition = """
-    (zygosity_uuid) -> alyxraw.AlyxRaw    
+    (zygosity_uuid) -> alyxraw.AlyxRaw
     ---
     subject_uuid:       varchar(64)             # inherited from Subject
     allele_name:        varchar(255)            # inherited from Allele
@@ -460,7 +473,7 @@ class Zygosity(dj.Computed):
         key_zg = key.copy()
         key['uuid'] = key['zygosity_uuid']
         key_zg['subject_uuid'] = grf(key, 'subject')
-        
+
         allele_uuid = grf(key, 'allele')
         key_zg['allele_name'] = (Allele & 'allele_uuid="{}"'.format(allele_uuid)).fetch1('allele_name')
 
@@ -472,32 +485,33 @@ class Zygosity(dj.Computed):
             '3': 'Present'
         }
         key_zg['zygosity'] = zygosity_types[zygosity]
-    
+
         self.insert1(key_zg)
+
 
 @schema
 class Implant(dj.Computed):
-     # <class 'subjects.models.Subject'>
+    # <class 'subjects.models.Subject'>
     definition = """
     (subject_uuid) -> alyxraw.AlyxRaw
     ---
     implant_weight:		        float			    # implant weight
     adverse_effects=null:	    varchar(1024)		# adverse effects
     actual_severity=null:       tinyint             # actual severity, inherited from Severity 
-    protocol_number:            tinyint      
+    protocol_number:            tinyint
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.subject"' & (alyxraw.AlyxRaw.Field & 'fname = "implant_weight" and fvalue != "None"')).proj(subject_uuid='uuid')
-    
+
     def make(self, key):
         key_implant = key.copy()
         key['uuid'] = key['subject_uuid']
-    
+
         key_implant['implant_weight'] = float(grf(key, 'implant_weight'))
-        
+
         adverse_effects = grf(key, 'adverse_effects')
         if adverse_effects != 'None':
             key_implant['adverse_effects'] = adverse_effects
-        
+
         actual_severity = grf(key, 'actual_severity')
         if actual_severity != 'None':
             key_implant['actual_severity'] = int(actual_severity)
@@ -505,10 +519,3 @@ class Implant(dj.Computed):
         key_implant['protocol_number'] = int(grf(key, 'protocol_number'))
 
         self.insert1(key_implant)
-
-    
-
-
-
-
-

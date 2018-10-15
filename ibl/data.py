@@ -3,18 +3,20 @@ from . import reference, acquisition
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_data')
 
+
 @schema
 class DataFormat(dj.Lookup):
     definition = """
     format_name:                    varchar(255)
-    ---    
+    ---
     format_uuid:                    varchar(64)
     file_extension='':              varchar(255)
     matlab_loader_function=null:    varchar(255)
     python_loader_function=null:    varchar(255)
     format_description=null:        varchar(255)
     """
-    
+
+
 @schema
 class DataRepositoryType(dj.Lookup):
     definition = """
@@ -22,6 +24,7 @@ class DataRepositoryType(dj.Lookup):
     ---
     repotype_uuid:  varchar(64)
     """
+
 
 @schema
 class DataRepository(dj.Lookup):
@@ -38,13 +41,15 @@ class DataRepository(dj.Lookup):
     globus_is_personal: boolean
     """
 
+
 @schema
 class ProjectRepository(dj.Manual):
     definition = """
     -> reference.Project
     -> DataRepository
     """
-   
+
+
 @schema
 class DataSetType(dj.Lookup):
     definition = """
@@ -73,6 +78,7 @@ class DataSet(dj.Manual):
     md5=null:                   varchar(255)
     file_size=null:             float
     """
+
 
 @schema
 class FileRecord(dj.Manual):

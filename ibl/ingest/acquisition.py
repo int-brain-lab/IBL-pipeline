@@ -34,7 +34,7 @@ class Session(dj.Computed):
         proj_uuid = grf(key, 'project')
         if proj_uuid != 'None':
             key_session['project_name'] = (reference.Project & 'project_uuid="{}"'.format(proj_uuid)).fetch1('project_name')
-        
+
         key_session['session_start_time'] = grf(key, 'start_time')
 
         end_time = grf(key, 'end_time')
@@ -44,13 +44,13 @@ class Session(dj.Computed):
         lab_uuid = grf(key, 'lab')
         if lab_uuid != 'None':
             key_session['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
-            
+
         location_uuid = grf(key, 'location')
         if location_uuid != 'None':
             key_session['location_name'] = (reference.LabLocation & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
 
         key_session['session_type'] = grf(key, 'type')
-        
+
         narrative = grf(key, 'narrative')
         if narrative != 'None':
             key_session['session_narrative'] = grf(key, 'narrative')
@@ -66,7 +66,8 @@ class ChildSession(dj.Manual):
     ---
     parent_session_start_time:  datetime
     """
-    
+
+
 @schema
 class SessionLabMember(dj.Manual):
     definition = """
@@ -83,4 +84,3 @@ class SessionProcedureType(dj.Manual):
     session_start_time:     datetime
     procedure_type_name:    varchar(255)
     """
-   

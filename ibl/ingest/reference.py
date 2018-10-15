@@ -7,6 +7,7 @@ from . import get_raw_field as grf
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_reference')
 
+
 @schema
 class Lab(dj.Computed):
     # <class 'misc.models.Lab'>
@@ -28,6 +29,7 @@ class Lab(dj.Computed):
         key_lab['address'] = grf(key, 'address')
         key_lab['time_zone'] = grf(key, 'timezone')
         self.insert1(key_lab)
+
 
 @schema
 class LabMember(dj.Computed):
@@ -58,7 +60,7 @@ class LabMember(dj.Computed):
         key_lab_member['user_name'] = grf(key, 'username')
         key_lab_member['password'] = grf(key, 'password')
         key_lab_member['email'] = grf(key, 'email')
-        
+
         last_login = grf(key, 'last_login')
         if last_login != 'None':
             key_lab_member['last_login'] = last_login
@@ -66,19 +68,19 @@ class LabMember(dj.Computed):
         first_name = grf(key, 'first_name')
         if first_name != 'None':
             key_lab_member['first_name'] = first_name
-        
+
         last_name = grf(key, 'last_name')
         if last_name != 'None':
             key_lab_member['last_name'] = last_name
 
         key_lab_member['date_joined'] = grf(key, 'date_joined')
-        
+
         is_active = grf(key, 'is_active')
         key_lab_member['is_active'] = is_active == 'True'
-        
+
         is_staff = grf(key, 'is_staff')
         key_lab_member['is_staff'] = is_staff == 'True'
-        
+
         is_superuser = grf(key, 'is_superuser')
         key_lab_member['is_superuser'] = is_superuser == 'True'
 
@@ -95,6 +97,7 @@ class LabMember(dj.Computed):
 
         self.insert1(key_lab_member)
 
+
 @schema
 class LabMembership(dj.Computed):
     definition = """
@@ -107,6 +110,7 @@ class LabMembership(dj.Computed):
     mem_end_date=null:      date
     """
     key_source = (alyxraw.AlyxRaw & 'model="misc.labmembership"').proj(lab_membership_uuid='uuid')
+
     def make(self, key):
         key_mem = key.copy()
         key['uuid'] = key['lab_membership_uuid']
@@ -120,7 +124,7 @@ class LabMembership(dj.Computed):
         role = grf(key, 'role')
         if role != 'None':
             key_mem['role'] = role
-        
+
         start_date = grf(key, 'start_date')
         if start_date != 'None':
             key_mem['start_date'] = start_date
@@ -128,7 +132,7 @@ class LabMembership(dj.Computed):
         end_date = grf(key, 'end_date')
         if end_date != 'None':
             key_mem['end_date'] = end_date
-        
+
         self.insert1(key_mem)
 
 
@@ -151,6 +155,7 @@ class LabLocation(dj.Computed):
 
         self.insert1(key_loc)
 
+
 @schema
 class Project(dj.Computed):
     definition = """
@@ -164,10 +169,11 @@ class Project(dj.Computed):
     def make(self, key):
         key_proj = key.copy()
         key['uuid'] = key['project_uuid']
-        
+
         key_proj['project_name'] = grf(key, 'name')
         key_proj['project_description'] = grf(key, 'description')
         self.insert1(key_proj)
+
 
 @schema
 class ProjectLabMember(dj.Manual):

@@ -3,6 +3,7 @@ from . import reference, subject
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_action')
 
+
 @schema
 class ProcedureType(dj.Manual):
     definition = """
@@ -11,6 +12,7 @@ class ProcedureType(dj.Manual):
     procedure_type_uuid:                varchar(64)
     procedure_type_description=null:    varchar(1024)
     """
+
 
 @schema
 class Weighing(dj.Manual):
@@ -23,6 +25,7 @@ class Weighing(dj.Manual):
     weight:			    float			# weight
     -> [nullable] reference.LabMember
     """
+
 
 @schema
 class WaterAdministration(dj.Manual):
@@ -37,6 +40,7 @@ class WaterAdministration(dj.Manual):
     -> [nullable] reference.LabMember
     """
 
+
 @schema
 class WaterRestriction(dj.Manual):
     # <class 'actions.models.WaterRestriction'>
@@ -44,13 +48,14 @@ class WaterRestriction(dj.Manual):
     -> subject.Subject
     restriction_start_time:     datetime	# start time
     ---
-    restriction_uuid:           varchar(64) 
+    restriction_uuid:           varchar(64)
     restriction_end_time=null:  datetime	# end time
     restriction_narrative=null: varchar(1024)
     -> [nullable] ProcedureType
-    -> [nullable] reference.LabLocation     
+    -> [nullable] reference.LabLocation
     """
-    
+
+
 @schema
 class Surgery(dj.Manual):
     # <class 'actions.models.Surgery'>
@@ -65,19 +70,22 @@ class Surgery(dj.Manual):
     surgery_narrative=null: varchar(2048)	# narrative
     """
 
+
 @schema
 class SurgeryLabMember(dj.Manual):
     definition = """
     -> Surgery
     -> reference.LabMember
     """
-    
+
+
 @schema
 class SurgeryProcedure(dj.Manual):
     definition = """
     -> Surgery
     -> ProcedureType
     """
+
 
 @schema
 class VirusInjection(dj.Manual):
@@ -92,6 +100,7 @@ class VirusInjection(dj.Manual):
     rate_of_injection:		float           # rate of injection
     injection_type:		    varchar(255)    # injection type
     """
+
 
 @schema
 class OtherAction(dj.Manual):

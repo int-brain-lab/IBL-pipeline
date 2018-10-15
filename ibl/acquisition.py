@@ -60,6 +60,7 @@ class Session(dj.Manual):
     session_narrative=null:     varchar(1024)
     """
 
+
 @schema
 class ChildSession(dj.Manual):
     definition = """
@@ -68,6 +69,7 @@ class ChildSession(dj.Manual):
     (parent_session_start_time) -> Session(session_start_time)
     """
 
+
 @schema
 class SessionLabMember(dj.Manual):
     definition = """
@@ -75,8 +77,9 @@ class SessionLabMember(dj.Manual):
     -> reference.LabMember
     """
 
+
 @schema
-class SessionProcedureType(dj.Manual):  
+class SessionProcedureType(dj.Manual):
     definition = """
     -> Session
     -> action.ProcedureType
