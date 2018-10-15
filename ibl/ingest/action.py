@@ -135,7 +135,7 @@ class Surgery(dj.Computed):
     location_name=null:         varchar(255)    # foreign key inherited from reference.Location
     surgery_start_time:	        datetime        # surgery start time
     surgery_end_time=null:	    datetime        # surgery end time
-    outcome_type:		        enum('None', 'a', 'n', 'r')	    # outcome type
+    surgery_outcome_type:		enum('None', 'a', 'n', 'r')	    # outcome type
     surgery_narrative=null:     varchar(2048)    	# narrative
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.surgery"').proj(surgery_uuid='uuid')
@@ -154,7 +154,7 @@ class Surgery(dj.Computed):
         if end_time != 'None':
             key_surgery['surgery_end_time'] = end_time
 
-        key_surgery['outcome_type'] = grf(key, 'outcome_type')
+        key_surgery['surgery_outcome_type'] = grf(key, 'outcome_type')
 
         narrative = grf(key, 'narrative')
         if narrative != 'None':

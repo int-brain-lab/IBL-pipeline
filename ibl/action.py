@@ -61,7 +61,7 @@ class Surgery(dj.Manual):
     surgery_uuid:           varchar(64)
     surgery_end_time=null:  datetime        # surgery end time
     -> [nullable] reference.LabLocation
-    outcome_type:		    enum('None', 'a', 'n', 'r')	    # outcome type
+    surgery_outcome_type:   enum('None', 'a', 'n', 'r')	    # outcome type
     surgery_narrative=null: varchar(2048)	# narrative
     """
 
