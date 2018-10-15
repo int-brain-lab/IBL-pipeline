@@ -1,3 +1,5 @@
+doc = 'This script inserts membership tuples into the membership shadow tables, which cannot be inserted with auto-population.'
+
 import datajoint as dj
 from ibl.ingest import alyxraw, reference, subject, action, acquisition, data
 from ibl.ingest import get_raw_field as grf

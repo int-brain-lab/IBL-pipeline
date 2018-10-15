@@ -1,3 +1,5 @@
+doc = 'This script load the json dump and insert the tuples into the alyxraw table.'
+
 import datajoint as dj
 import json
 import logging
@@ -5,10 +7,11 @@ import math
 import os.path as path
 from ibl.ingest import alyxraw, InsertBuffer
 
+
 logger = logging.getLogger(__name__)
 
 dir_name = path.dirname(__file__)
-filename = path.join(dir_name, '../data/alyx_dump/2018-10-04_alyxfull.json')
+filename = path.join(dir_name, '..', 'data', 'alyx_dump','2018-10-04_alyxfull.json')
 
 with open(filename, 'r') as fid:
     keys = json.load(fid)

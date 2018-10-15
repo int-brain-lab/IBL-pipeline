@@ -51,7 +51,7 @@ class Session(dj.Manual):
     -> subject.Subject
     session_start_time:         datetime	# start time
     ---
-    session_uuid:               varchar(36)
+    session_uuid:               varchar(64)
     session_number:             int     	# number
     session_end_time=null:      datetime	# end time
     -> [nullable] reference.Project

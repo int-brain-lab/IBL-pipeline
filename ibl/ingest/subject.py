@@ -1,4 +1,3 @@
-
 import datajoint as dj
 import json
 
@@ -480,24 +479,20 @@ class Zygosity(dj.Computed):
 class Implant(dj.Computed):
      # <class 'subjects.models.Subject'>
     definition = """
-    -> Subject
+    (subject_uuid) -> alyxraw.AlyxRaw
     ---
-    subject_uuid:               varchar(64)         # inherited from Subject
-    implant_weight=null:		float			    # implant weight
+    implant_weight:		        float			    # implant weight
     adverse_effects=null:	    varchar(1024)		# adverse effects
     actual_severity=null:       tinyint             # actual severity, inherited from Severity 
     protocol_number:            tinyint      
     """
+    key_source = (alyxraw.AlyxRaw & 'model="subjects.subject"' & (alyxraw.AlyxRaw.Field & 'fname = "implant_weight" and fvalue != "None"')).proj(subject_uuid='uuid')
     
     def make(self, key):
         key_implant = key.copy()
         key['uuid'] = key['subject_uuid']
     
-        implant_weight = grf(key, 'implant_weight')
-        if implant_weight == 'None':
-            return
-        else:
-            key_implant['implant_weight'] = float(implant_weight)
+        key_implant['implant_weight'] = float(grf(key, 'implant_weight'))
         
         adverse_effects = grf(key, 'adverse_effects')
         if adverse_effects != 'None':

@@ -12,7 +12,7 @@ class DataFormat(dj.Computed):
     (format_uuid) -> alyxraw.AlyxRaw
     ---
     format_name:                    varchar(255)
-    file_extension=null:            varchar(255)
+    file_extension='':              varchar(255)
     matlab_loader_function=null:    varchar(255)
     python_loader_function=null:    varchar(255)
     format_description=null:        varchar(255)

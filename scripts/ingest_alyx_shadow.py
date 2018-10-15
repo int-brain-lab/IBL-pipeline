@@ -1,3 +1,5 @@
+doc = 'This script inserts tuples in the alyxraw table into the shadow tables via auto-populating.'
+
 import datajoint as dj
 from ibl.ingest import alyxraw, reference, subject, action, acquisition,data
 
