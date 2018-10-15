@@ -1,6 +1,6 @@
 import datajoint as dj
-from ibl.ingest import alyxraw, reference
-from ibl.ingest import get_raw_field as grf
+from . import alyxraw, reference
+from . import get_raw_field as grf
 
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_action')

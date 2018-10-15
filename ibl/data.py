@@ -1,5 +1,5 @@
 import datajoint as dj
-from ibl import reference, acquisition
+from . import reference, acquisition
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_data')
 
@@ -9,7 +9,7 @@ class DataFormat(dj.Lookup):
     format_name:                    varchar(255)
     ---    
     format_uuid:                    varchar(64)
-    file_extension='':            varchar(255)
+    file_extension='':              varchar(255)
     matlab_loader_function=null:    varchar(255)
     python_loader_function=null:    varchar(255)
     format_description=null:        varchar(255)
