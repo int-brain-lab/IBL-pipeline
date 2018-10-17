@@ -8,12 +8,19 @@ import logging
 import math
 import os.path as path
 from ibl.ingest import alyxraw, InsertBuffer
+import sys
 
 
 logger = logging.getLogger(__name__)
 
 dir_name = path.dirname(__file__)
-filename = path.join(dir_name, '..', 'data', 'alyx_dump','2018-10-04_alyxfull.json')
+
+
+if len(sys.argv) < 2:  # no arguments given
+    # if no argument given, assume a canonical file location and name
+    filename = path.join(dir_name, '..', 'data', 'alyx_dump', 'alyxfull.json')
+else:
+    filename = path.join(dir_name, sys.argv[1])
 
 with open(filename, 'r') as fid:
     keys = json.load(fid)
