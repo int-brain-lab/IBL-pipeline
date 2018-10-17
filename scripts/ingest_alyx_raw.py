@@ -1,4 +1,6 @@
-doc = 'This script load the json dump and insert the tuples into the alyxraw table.'
+'''
+This script load the json dump and insert the tuples into the alyxraw table.
+'''
 
 import datajoint as dj
 import json

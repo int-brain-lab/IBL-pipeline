@@ -1,4 +1,6 @@
-doc = 'This script copy tuples in the shadow tables into the real tables for alyx.'
+'''
+This script copy tuples in the shadow tables into the real tables for alyx.
+'''
 
 import datajoint as dj
 from ibl.ingest import reference as reference_ingest
