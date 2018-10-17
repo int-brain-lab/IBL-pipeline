@@ -36,29 +36,28 @@ for key in keys:
     key_field = dict(uuid=key['pk'])
     for field_name, field_value in key['fields'].items():
         key_field = dict(key_field, fname=field_name)
-        
+
         if field_name == 'json' and field_value is not None:
             key_field['value_idx'] = 0
             key_field['fvalue'] = json.dumps(field_value)
             ib_part.insert1(key_field)
-            
+
         elif field_value == [] or field_value == '' or (type(field_value)==float and math.isnan(field_value)):
             key_field['value_idx'] = 0
             key_field['fvalue'] = 'None'
             ib_part.insert1(key_field)
-        
+
         elif type(field_value) is list and (type(field_value[0]) is dict or type(field_value[0]) is str):
             for value_idx, value in enumerate(field_value):
                 key_field['value_idx'] = value_idx
                 key_field['fvalue'] = str(value)
                 ib_part.insert1(key_field)   
-            
+
         else:
             key_field['value_idx'] = 0
             key_field['fvalue'] = str(field_value)
             ib_part.insert1(key_field)
-            
-     
+
         if ib_part.flush(skip_duplicates=True, chunksz=10000):
             logger.debug('Inserted 10000 raw field tuples')
 

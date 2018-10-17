@@ -1,5 +1,5 @@
 '''
-This script copy tuples in the shadow tables into the real tables for alyx.
+This script copies tuples in the shadow tables into the real tables for alyx.
 '''
 
 import datajoint as dj
@@ -9,6 +9,12 @@ from ibl.ingest import action as action_ingest
 from ibl.ingest import acquisition as acquisition_ingest
 from ibl.ingest import data as data_ingest
 from ibl import reference, subject, action, acquisition, data
+
+
+def copy_table(target_schema, src_schema, table_name):
+    target_table = getattr(target_schema, table_name)
+    src_table = getattr(src_schema, table_name)
+    target_table.insert(src_table, skip_duplicates=True)
 
 REF_TABLES = (
     'Lab',
@@ -21,7 +27,7 @@ REF_TABLES = (
 
 for table in REF_TABLES:
     print(table)
-    eval('reference.{table_name}.insert(reference_ingest.{table_name}(), skip_duplicates=True)'.format(table_name=table))
+    copy_table(reference, reference_ingest, table)
 
 SUBJECT_TABLES = (
     'Species',
@@ -44,7 +50,8 @@ SUBJECT_TABLES = (
 
 for table in SUBJECT_TABLES:
     print(table)
-    eval('subject.{table_name}.insert(subject_ingest.{table_name}(), skip_duplicates=True)'.format(table_name=table))
+    copy_table(subject, subject_ingest, table)
+
 
 ACTION_TABLES = (
     'ProcedureType',
@@ -58,7 +65,7 @@ ACTION_TABLES = (
 
 for table in ACTION_TABLES:
     print(table)
-    eval('action.{table_name}.insert(action_ingest.{table_name}(), skip_duplicates=True)'.format(table_name=table))
+    copy_table(action, action_ingest, table)
 
 ACQUISITION_TABLES = (
     'Session',
@@ -69,7 +76,8 @@ ACQUISITION_TABLES = (
 
 for table in ACQUISITION_TABLES:
     print(table)
-    eval('acquisition.{table_name}.insert(acquisition_ingest.{table_name}(), skip_duplicates=True)'.format(table_name=table))
+    copy_table(acquisition, acquisition_ingest, table)
+
 
 DATA_TABLES = (
     'DataFormat',
@@ -83,4 +91,4 @@ DATA_TABLES = (
 
 for table in DATA_TABLES:
     print(table)
-    eval('data.{table_name}.insert(data_ingest.{table_name}(), skip_duplicates=True)'.format(table_name=table))
+    copy_table(data, data_ingest, table)
