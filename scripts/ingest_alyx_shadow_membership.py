@@ -16,8 +16,6 @@ for key in keys:
 
     user_uuids = grf(key, 'users', multiple_entries=True) 
 
-    if user_uuids is []:
-        continue
     for user_uuid in user_uuids:
         key_pl = key_p.copy()
         key_pl['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
@@ -31,10 +29,7 @@ for key in keys:
     key_l['binomial'], key_l['line_name'] = (subject.Line & key).fetch1('binomial', 'line_name')
     key['uuid'] = key['line_uuid']
     alleles = grf(key, 'alleles', multiple_entries=True)
-    
-    if alleles is []:
-        continue
-    
+
     for allele in alleles:
         if allele != 'None':
             key_la = key_l.copy()
@@ -48,8 +43,7 @@ for key in keys:
     key_s['subject_uuid'], key_s['surgery_start_time'] = (action.Surgery & key).fetch1('subject_uuid', 'surgery_start_time')
     key['uuid'] = key['surgery_uuid']
     user_uuids = grf(key, 'users', multiple_entries=True)
-    if user_uuid is []:
-        continue
+
     for user_uuid in user_uuids:
         if user_uuid != 'None':
             key_sl = key_s.copy()
@@ -63,8 +57,7 @@ for key in keys:
     key_s['subject_uuid'], key_s['surgery_start_time'] = (action.Surgery & key).fetch1('subject_uuid', 'surgery_start_time')
     key['uuid'] = key['surgery_uuid']
     procedures = grf(key, 'procedures', multiple_entries=True)
-    if procedures is []:
-        continue
+
     for procedure in procedures:
         if procedure != 'None':
             key_sp = key_s.copy()
@@ -95,8 +88,6 @@ for key in keys:
         (acquisition.Session & key).fetch1('subject_uuid', 'session_start_time')
 
     user_uuids = grf(key, 'users', multiple_entries=True)
-    if user_uuids is []:
-        continue
 
     for user_uuid in user_uuids:
         if user_uuid != 'None':
@@ -109,14 +100,12 @@ keys = (alyxraw.AlyxRaw & 'model = "actions.Session"').proj(session_uuid = 'uuid
 for key in keys:
     key_s = dict()
     key['uuid'] = key['session_uuid']
-    
+
     key_s['subject_uuid'], key_s['session_start_time'] = \
         (acquisition.Session & key).fetch1('subject_uuid', 'session_start_time')
 
     procedures = grf(key, 'procedures', multiple_entries=True)
-    if procedures is []:
-        continue
-    
+
     for procedure in procedures:
         if procedure != 'None':
             key_sp = key_s.copy()
@@ -131,9 +120,7 @@ for key in keys:
     key['uuid'] = key['project_uuid']
 
     repo_uuids = grf(key, 'repositories', multiple_entries=True)
-    
-    if repo_uuids is []:
-        continue
+
     for repo_uuid in repo_uuids:
         if repo_uuid != 'None':
             key_pr = key_p.copy()
