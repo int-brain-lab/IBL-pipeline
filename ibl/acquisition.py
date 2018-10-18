@@ -1,7 +1,7 @@
 import datajoint as dj
 
 from . import subject
-from . import reference
+from . import reference, subject, action
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_acquisition')
 
@@ -47,14 +47,40 @@ TimeScale not yet defined
 @schema
 class Session(dj.Manual):
     # <class 'actions.models.Session'>
-    # XXX: session_type table?
     definition = """
     -> subject.Subject
-    session_number:             integer		# number
     session_start_time:         datetime	# start time
     ---
-    session_uuid:               varchar(36)
-    session_end_time:           datetime	# end time
-    session_type:		            varchar(255)	# type
+    session_uuid:               varchar(64)
+    session_number:             int     	# number
+    session_end_time=null:      datetime	# end time
+    -> [nullable] reference.Project
+    -> [nullable] reference.LabLocation
+    session_type:		        varchar(255)	# type
+    session_narrative=null:     varchar(1024)
+    """
+
+
+@schema
+class ChildSession(dj.Manual):
+    definition = """
+    -> Session
+    ---
+    (parent_session_start_time) -> Session(session_start_time)
+    """
+
+
+@schema
+class SessionLabMember(dj.Manual):
+    definition = """
+    -> Session
     -> reference.LabMember
+    """
+
+
+@schema
+class SessionProcedureType(dj.Manual):
+    definition = """
+    -> Session
+    -> action.ProcedureType
     """

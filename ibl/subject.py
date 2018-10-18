@@ -21,7 +21,19 @@ class Species(dj.Lookup):
     definition = """
     binomial:			varchar(255)	# binomial
     ---
+    species_uuid:       varchar(64)
     display_name:		varchar(255)	# display name
+    """
+
+
+@schema
+class Source(dj.Lookup):
+    # <class 'subjects.models.Source'>
+    definition = """
+    source_name:				varchar(255)	# name of source
+    ---
+    source_uuid:                varchar(64)     
+    source_description=null:	varchar(255)	# description
     """
 
 
@@ -31,7 +43,7 @@ class Strain(dj.Lookup):
     definition = """
     strain_name:		        varchar(255)	# strain name
     ---
-    strain_uuid:                varchar(36)
+    strain_uuid:                varchar(64)
     strain_description=null:    varchar(255)	# description
     """
 
@@ -42,7 +54,7 @@ class Sequence(dj.Lookup):
     definition = """
     sequence_name:		        varchar(255)	# informal name
     ---
-    sequence_uuid:              varchar(36)
+    sequence_uuid:              varchar(64)
     base_pairs=null:	        varchar(255)	# base pairs
     sequence_description=null:	varchar(255)	# description
     """
@@ -52,33 +64,41 @@ class Sequence(dj.Lookup):
 class Allele(dj.Lookup):
     # <class 'subjects.models.Allele'>
     definition = """
-    allele_name:			varchar(255)             # informal name
+    allele_name:			    varchar(255)    # informal name
     ---
-    allele_uuid:            varchar(36)
-    standard_name=null:		varchar(255)	# standard name
+    allele_uuid:                varchar(64)
+    standard_name=null:		    varchar(255)	# standard name
+    -> [nullable] Source
+    allele_source=null:         varchar(255)    # source of the allele
+    source_identifier=null:     varchar(255)    # id inside the line provider
+    source_url=null:            varchar(255)    # link to the line information
+    expression_data_url=null:   varchar(255)    # link to the expression pattern from Allen institute brain atlas
     """
-    
+
+
 @schema
 class AlleleSequence(dj.Lookup):
     definition = """
     -> Allele
-    -> Sequence       
+    -> Sequence
     """
+
 
 @schema
 class Line(dj.Lookup):
     # <class 'subjects.models.Line'>
     definition = """
     -> Species
-    -> Strain # this is nullable
     line_name:				varchar(255)	# name
     ---
-    line_uuid：             varchar(36)
-    line_description=null:	varchar(255)	# description
+    -> [nullable] Strain
+    line_uuid:              varchar(64)
+    line_description=null:	varchar(1024)	# description
     target_phenotype=null:	varchar(255)	# target phenotype
     auto_name:				varchar(255)	# auto name
     is_active:				boolean		    # is active
     """
+
 
 @schema
 class LineAllele(dj.Lookup):
@@ -87,14 +107,22 @@ class LineAllele(dj.Lookup):
     -> Allele
     """
 
+
 @schema
-class Source(dj.Lookup):
-    # <class 'subjects.models.Source'>
+class Subject(dj.Manual):
+    # <class 'subjects.models.Subject'>
     definition = """
-    source_name:				varchar(255)	# name of source
+    subject_uuid:               varchar(64)
     ---
-    source_uuid:                varchar(36)     
-    source_description=null:	varchar(255)	# description
+    nickname=null:			    varchar(255)		# nickname
+    sex:			            enum("M", "F", "U")	# sex
+    subject_birth_date=null:	date			    # birth date
+    ear_mark=null:			    varchar(255)		# ear mark
+    (subject_source)            -> [nullable] Source
+    -> [nullable] reference.Lab
+    (responsible_user)          -> [nullable] reference.LabMember
+    protocol_number:            tinyint         	# protocol number
+    subject_description=null:   varchar(1024)
     """
 
 
@@ -105,40 +133,28 @@ class BreedingPair(dj.Manual):
     bp_name:			    varchar(255)		    # name
     ---
     -> [nullable] Line
-    bp_uuid:                varchar(36)
+    bp_uuid:                varchar(64)
     bp_description=null:	varchar(255)		    # description
-    start_date:			    			        # start date
+    start_date:			    date		            # start date
     end_date=null:		    date			        # end date
-    (father)			    -> Subject		        # father
-    (mother1) 			    -> Subject		        # mother1
+    (father)			    -> [nullable] Subject   # father
+    (mother1) 			    -> [nullable] Subject   # mother1
     (mother2)			    -> [nullable] Subject	# mother2
     """
-    
+
+
 @schema
 class Litter(dj.Manual):
     # <class 'subjects.models.Litter'>
     definition = """
     -> BreedingPair
-    litter_uuid:			    varchar(36)	    # litter uuid
+    litter_uuid:			        varchar(64)	    # litter uuid
     ---
-    descriptive_name=null:		varchar(255)	# descriptive name
-    litter_description=null:	varchar(255)	# description
-    birth_date:			        date		    # birth date
+    litter_descriptive_name=null:	varchar(255)	# descriptive name
+    litter_description=null:	    varchar(255)	# description
+    litter_birth_date:			    date		    # birth date
     """
 
-@schema
-class Subject(dj.Manual):
-    # <class 'subjects.models.Subject'>
-    definition = """
-    subject_uuid:           varchar(36)
-    ---
-    nickname=null:			varchar(255)		# nickname
-    sex:			        enum("M", "F", "U")	# sex
-    birth_date:			    date			    # birth date
-    ear_mark=null:			varchar(255)		# ear mark
-    -> Source
-    (responsible_user)          -> reference.User
-    """
 
 @schema
 class LitterSubject(dj.Manual):
@@ -150,11 +166,19 @@ class LitterSubject(dj.Manual):
 
 
 @schema
+class SubjectProject(dj.Manual):
+    definition = """
+    -> Subject
+    -> reference.Project
+    """
+
+
+@schema
 class Caging(dj.Manual):
     # <class 'subjects.models.Subject'>
     definition = """
     -> Subject
-    caging_date:                datetime                # caging date
+    caging_date:        datetime                # caging date
     ---
     lamis_cage:			int			# lamis cage
     """
@@ -178,11 +202,11 @@ class GenotypeTest(dj.Manual):
     definition = """
     -> Subject
     -> Sequence
-    genotype_test_uuid:		    varchar(36)     # genotype test id
+    genotype_test_uuid:		    varchar(64)     # genotype test id
     ---
-    genotype_test_date:         date            # genotype date
     test_result:		        enum("Present", "Absent")		# test result
     """
+
 
 @schema
 class Zygosity(dj.Manual):
@@ -193,9 +217,10 @@ class Zygosity(dj.Manual):
     -> Subject
     -> Allele
     ---
-    zygosity_uuid:      varchar(36)
-    zygosity:		    enum("Present", "Absent", "Homozygous", "Heterozygous") 		# zygosity
+    zygosity_uuid:      varchar(64)
+    zygosity:		    enum("Present", "Absent", "Homozygous", "Heterozygous")  # zygosity
     """
+
 
 @schema
 class Implant(dj.Manual):
@@ -203,32 +228,10 @@ class Implant(dj.Manual):
     definition = """
     -> Subject
     ---
-    implant_uuid:           varchar(36)
     implant_weight:		    float			    # implant weight
-    protocol_number:		varchar(255)		# protocol number
-    description:		    varchar(255)		# description
-    adverse_effects:		varchar(255)		# adverse effects
-    (actual_severity)		-> reference.Severity   # actual severity
-    """
-
-
-@schema
-class Culling(dj.Manual):
-    # <class 'subjects.models.Subject'>
-    definition = """
-    -> Subject
-    ---
-    cull_date:          date                # cull date
-    cull_method:		varchar(255)		# cull method
-    """
-
-
-@schema
-class Reduction(dj.Manual):
-    definition = """
-    -> Subject
-    reduced:			boolean			# reduced
-    reduced_date:		date			# reduced date
+    protocol_number:        tinyint		        # protocol number
+    adverse_effects=null:   varchar(255)		# adverse effects
+    (actual_severity)		-> [nullable] reference.Severity   # actual severity
     """
 
 

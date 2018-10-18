@@ -1,14 +1,26 @@
+'''
+This script load the json dump and insert the tuples into the alyxraw table.
+'''
+
 import datajoint as dj
 import json
 import logging
 import math
 import os.path as path
 from ibl.ingest import alyxraw, InsertBuffer
+import sys
+
 
 logger = logging.getLogger(__name__)
 
 dir_name = path.dirname(__file__)
-filename = path.join(dir_name, '../data/alyx_dump/dump.uuid.json')
+
+
+if len(sys.argv) < 2:  # no arguments given
+    # if no argument given, assume a canonical file location and name
+    filename = path.join(dir_name, '..', 'data', 'alyx_dump', 'alyxfull.json')
+else:
+    filename = path.join(dir_name, sys.argv[1])
 
 with open(filename, 'r') as fid:
     keys = json.load(fid)
@@ -31,28 +43,28 @@ for key in keys:
     key_field = dict(uuid=key['pk'])
     for field_name, field_value in key['fields'].items():
         key_field = dict(key_field, fname=field_name)
-        
+
         if field_name == 'json' and field_value is not None:
             key_field['value_idx'] = 0
             key_field['fvalue'] = json.dumps(field_value)
             ib_part.insert1(key_field)
-            
+
         elif field_value == [] or field_value == '' or (type(field_value)==float and math.isnan(field_value)):
             key_field['value_idx'] = 0
             key_field['fvalue'] = 'None'
             ib_part.insert1(key_field)
-        
-        elif type(field_value) is not list:
-            key_field['value_idx'] = 0
-            key_field['fvalue'] = str(field_value)
-            ib_part.insert1(key_field)
-            
-        else:
+
+        elif type(field_value) is list and (type(field_value[0]) is dict or type(field_value[0]) is str):
             for value_idx, value in enumerate(field_value):
                 key_field['value_idx'] = value_idx
                 key_field['fvalue'] = str(value)
-                ib_part.insert1(key_field)
-     
+                ib_part.insert1(key_field)   
+
+        else:
+            key_field['value_idx'] = 0
+            key_field['fvalue'] = str(field_value)
+            ib_part.insert1(key_field)
+
         if ib_part.flush(skip_duplicates=True, chunksz=10000):
             logger.debug('Inserted 10000 raw field tuples')
 
