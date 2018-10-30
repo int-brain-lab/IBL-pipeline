@@ -61,6 +61,23 @@ class Weighing(dj.Computed):
 
 
 @schema
+class WaterType(dj.Computed):
+    definition = """
+    (watertype_uuid) -> alyxraw.AlyxRaw
+    ---
+    watertype_name:     varchar(255)
+    """
+    key_source = (alyxraw.AlyxRaw & 'model = "actions.watertype"').proj(watertype_uuid='uuid')
+
+    def make(self, key):
+        key_type = key.copy()
+        key['uuid'] = key['watertype_uuid']
+
+        key_type['watertype_name'] = grf(key, 'name')
+        self.insert1(key_type)
+
+
+@schema
 class WaterAdministration(dj.Computed):
     # <class 'actions.models.WaterAdministration'>
     definition = """
@@ -70,7 +87,7 @@ class WaterAdministration(dj.Computed):
     user_name=null:         varchar(255)
     administration_time:	datetime		# date time
     water_administered:		float			# water administered
-    hydrogel=null:		    boolean         # hydrogel, to be changed in future release of alyx
+    watertype_name:		    varchar(255)    # type of water
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.wateradministration"').proj(wateradmin_uuid='uuid')
 
@@ -82,9 +99,8 @@ class WaterAdministration(dj.Computed):
         key_wa['administration_time'] = grf(key, 'date_time')
         key_wa['water_administered'] = grf(key, 'water_administered')
 
-        hydrogel = grf(key, 'hydrogel')
-        if hydrogel != 'None':
-            key_wa['hydrogel'] = hydrogel == "True"
+        water_type = grf(key, 'water_type')
+        key_wa['watertype_name'] = (WaterType & 'watertype_uuid="{}"'.format(water_type)).fetch1('watertype_name')
 
         self.insert1(key_wa)
 
@@ -100,7 +116,7 @@ class WaterRestriction(dj.Computed):
     restriction_end_time=null:  datetime	# end time
     restriction_narrative=null: varchar(1024)
     procedure_type_name=null:   varchar(64)
-    location_name=null:         varchar(255)   
+    location_name=null:         varchar(255)
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.waterrestriction"').proj(restriction_uuid='uuid')
 

@@ -15,7 +15,7 @@ class Lab(dj.Computed):
     (lab_uuid) -> alyxraw.AlyxRaw
     ---
     lab_name:           varchar(255)  # name of lab
-    institution:        varchar(255)  
+    institution:        varchar(255)
     address:            varchar(255)
     time_zone:          varchar(255)
     """

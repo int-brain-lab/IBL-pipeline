@@ -19,10 +19,10 @@ schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_subject')
 class Species(dj.Lookup):
     # <class 'subjects.models.Species'>
     definition = """
-    binomial:			varchar(255)	# binomial
+    binomial:			    varchar(255)	# binomial
     ---
-    species_uuid:       varchar(64)
-    display_name:		varchar(255)	# display name
+    species_uuid:           varchar(64)
+    species_nickname:		varchar(255)	# nick name
     """
 
 
@@ -95,7 +95,7 @@ class Line(dj.Lookup):
     line_uuid:              varchar(64)
     line_description=null:	varchar(1024)	# description
     target_phenotype=null:	varchar(255)	# target phenotype
-    auto_name:				varchar(255)	# auto name
+    line_nickname:		    varchar(255)	# nickname
     is_active:				boolean		    # is active
     """
 
@@ -114,7 +114,7 @@ class Subject(dj.Manual):
     definition = """
     subject_uuid:               varchar(64)
     ---
-    nickname=null:			    varchar(255)		# nickname
+    subject_nickname=null:		varchar(255)		# nickname
     sex:			            enum("M", "F", "U")	# sex
     subject_birth_date=null:	date			    # birth date
     ear_mark=null:			    varchar(255)		# ear mark
@@ -161,6 +161,7 @@ class LitterSubject(dj.Manual):
     # litter subject membership table
     definition = """
     -> Subject
+    ---
     -> Litter
     """
 
@@ -178,9 +179,9 @@ class Caging(dj.Manual):
     # <class 'subjects.models.Subject'>
     definition = """
     -> Subject
-    caging_date:        datetime                # caging date
+    caging_date:        datetime    # caging date
     ---
-    lamis_cage:			int			# lamis cage
+    cage_number:	    int			# cage
     """
 
 
