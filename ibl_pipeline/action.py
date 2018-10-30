@@ -28,15 +28,24 @@ class Weighing(dj.Manual):
 
 
 @schema
+class WaterType(dj.Computed):
+    definition = """
+    watertype_name:     varchar(255)
+    ---
+    watertype_uuid:     varchar(64)
+    """
+
+
+@schema
 class WaterAdministration(dj.Manual):
     # <class 'actions.models.WaterAdministration'>
     definition = """
     -> subject.Subject
     administration_time:	datetime		# date time
     ---
-    wateradmin_uuid:        varchar(64)     
+    wateradmin_uuid:        varchar(64)
     water_administered:		float			# water administered
-    hydrogel=null:		    boolean         # hydrogel
+    -> WaterType
     -> [nullable] reference.LabMember
     """
 

@@ -5,7 +5,7 @@ from os import path
 here = path.abspath(path.dirname(__file__))
 
 setup(
-    name='alyx-pipeline',
+    name='ibl_pipeline',
     version='0.0.0',
     description='Datajoint schemas for IBL',
     author='Vathes',

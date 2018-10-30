@@ -3,12 +3,12 @@ This script copies tuples in the shadow tables into the real tables for alyx.
 '''
 
 import datajoint as dj
-from ibl.ingest import reference as reference_ingest
-from ibl.ingest import subject as subject_ingest
-from ibl.ingest import action as action_ingest
-from ibl.ingest import acquisition as acquisition_ingest
-from ibl.ingest import data as data_ingest
-from ibl import reference, subject, action, acquisition, data
+from ibl_pipeline.ingest import reference as reference_ingest
+from ibl_pipeline.ingest import subject as subject_ingest
+from ibl_pipeline.ingest import action as action_ingest
+from ibl_pipeline.ingest import acquisition as acquisition_ingest
+from ibl_pipeline.ingest import data as data_ingest
+from ibl_pipeline import reference, subject, action, acquisition, data
 
 
 def copy_table(target_schema, src_schema, table_name):
@@ -35,6 +35,7 @@ SUBJECT_TABLES = (
     'Source',
     'Sequence',
     'Allele',
+    'AlleleSequence',
     'Line',
     'LineAllele',
     'Subject',
@@ -56,6 +57,7 @@ for table in SUBJECT_TABLES:
 ACTION_TABLES = (
     'ProcedureType',
     'Weighing',
+    'WaterType',
     'WaterAdministration',
     'WaterRestriction',
     'Surgery',

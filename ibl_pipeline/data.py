@@ -34,7 +34,7 @@ class DataRepository(dj.Lookup):
     -> DataRepositoryType
     repo_uuid:          varchar(64)
     repo_time_zone:     varchar(255)
-    repo_dns:           varchar(255)
+    repo_hostname:      varchar(255)
     globus_endpoint_id: varchar(255)
     globus_path:        varchar(255)
     data_url=null:      varchar(255)

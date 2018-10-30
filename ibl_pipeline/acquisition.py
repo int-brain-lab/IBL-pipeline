@@ -52,11 +52,12 @@ class Session(dj.Manual):
     session_start_time:         datetime	# start time
     ---
     session_uuid:               varchar(64)
-    session_number:             int     	# number
+    session_number=null:        int     	# number
     session_end_time=null:      datetime	# end time
     -> [nullable] reference.Project
     -> [nullable] reference.LabLocation
-    session_type:		        varchar(255)	# type
+    task_protocol=null:         int
+    session_type=null:		    varchar(255)	# type
     session_narrative=null:     varchar(1024)
     """
 
