@@ -4,4 +4,4 @@ ADD . /src/ibl-pipeline
 
 RUN pip install -e /src/ibl-pipeline
 
-RUN pip install git+https://github.com/shenshan/openNeuroData.git@dev
+RUN pip install "git+https://github.com/int-brain-lab/ibllib.git#egg=ibllib&subdirectory=python"
