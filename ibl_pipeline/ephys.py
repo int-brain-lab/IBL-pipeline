@@ -6,7 +6,6 @@ from . import reference
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
 
-
 @schema
 class Ephys(dj.Imported):
     definition = """
