@@ -10,7 +10,7 @@ class Lab(dj.Lookup):
     lab_name:           varchar(255)  # name of lab
     ---
     lab_uuid:           varchar(64)
-    institution:        varchar(255)  
+    institution:        varchar(255)
     address:            varchar(255)
     time_zone:          varchar(255)
     """

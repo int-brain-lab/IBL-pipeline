@@ -7,7 +7,7 @@ import json
 import logging
 import math
 import os.path as path
-from ibl.ingest import alyxraw, InsertBuffer
+from ibl_pipeline.ingest import alyxraw, InsertBuffer
 import sys
 
 

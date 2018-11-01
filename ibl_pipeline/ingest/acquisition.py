@@ -12,15 +12,16 @@ class Session(dj.Computed):
     definition = """
     (session_uuid) -> alyxraw.AlyxRaw
     ---
-    session_number:             int
+    session_number=null:        int
     subject_uuid:               varchar(64)
     project_name=null:          varchar(255)
     session_start_time:         datetime
     session_end_time=null:      datetime
     lab_name=null:              varchar(255)
     location_name=null:         varchar(255)
-    session_type:               varchar(255)
+    session_type=null:          varchar(255)
     session_narrative=null:     varchar(1024)
+    task_protocol=null:         int
     """
     key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(session_uuid='uuid')
 
@@ -28,7 +29,10 @@ class Session(dj.Computed):
         key_session = key.copy()
         key['uuid'] = key['session_uuid']
 
-        key_session['session_number'] = grf(key, 'number')
+        session_number = grf(key, 'number')
+        if session_number != 'None':
+            key_session['session_number'] = session_number
+
         key_session['subject_uuid'] = grf(key, 'subject')
 
         proj_uuid = grf(key, 'project')
@@ -49,11 +53,17 @@ class Session(dj.Computed):
         if location_uuid != 'None':
             key_session['location_name'] = (reference.LabLocation & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
 
-        key_session['session_type'] = grf(key, 'type')
+        session_type = grf(key, 'type')
+        if session_type != 'None':
+            key_session['session_type'] = session_type
 
         narrative = grf(key, 'narrative')
-        if narrative != 'None':
-            key_session['session_narrative'] = grf(key, 'narrative')
+        if narrative != 'None' and narrative != "":
+            key_session['session_narrative'] = narrative
+
+        protocol = grf(key, 'task_protocol')
+        if protocol != 'None':
+            key_session['task_protocol'] = protocol
 
         self.insert1(key_session)
 

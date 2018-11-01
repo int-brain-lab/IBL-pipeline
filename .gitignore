@@ -112,3 +112,12 @@ venv.bak/
 
 # json file
 dj_local_conf.json
+
+# raw data file
+data/*
+
+# svg file
+*.svg
+
+# others
+clear_things_up.txt

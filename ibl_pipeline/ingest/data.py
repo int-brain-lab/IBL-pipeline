@@ -69,7 +69,7 @@ class DataRepository(dj.Computed):
     repo_name:          varchar(255)
     repotype_name:      varchar(255)
     repo_time_zone:     varchar(255)
-    repo_dns:           varchar(255)
+    repo_hostname:      varchar(255)
     globus_endpoint_id: varchar(255)
     globus_path:        varchar(255)
     data_url=null:      varchar(255)
@@ -86,7 +86,7 @@ class DataRepository(dj.Computed):
         repotype_uuid = grf(key, 'repository_type')
         key_repo['repotype_name'] = (DataRepositoryType & 'repotype_uuid="{}"'.format(repotype_uuid)).fetch1('repotype_name')
         key_repo['repo_time_zone'] = grf(key, 'timezone')
-        key_repo['repo_dns'] = grf(key, 'dns')
+        key_repo['repo_hostname'] = grf(key, 'hostname')
         key_repo['globus_endpoint_id'] = grf(key, 'globus_endpoint_id')
         key_repo['globus_path'] = grf(key, 'globus_path')
 

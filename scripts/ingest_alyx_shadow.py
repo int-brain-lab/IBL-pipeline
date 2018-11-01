@@ -4,7 +4,7 @@ via auto-populating.
 '''
 
 import datajoint as dj
-from ibl.ingest import alyxraw, reference, subject, action, acquisition, data
+from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data
 
 # reference tables
 reference.Lab.populate()
@@ -33,6 +33,7 @@ subject.Implant.populate()
 # action tables
 action.ProcedureType.populate()
 action.Weighing.populate()
+action.WaterType.populate()
 action.WaterAdministration.populate()
 action.WaterRestriction.populate()
 action.Surgery.populate()

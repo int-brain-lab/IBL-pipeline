@@ -1,8 +1,8 @@
 import datajoint as dj
 import json
 
-from ibl.ingest import alyxraw, reference
-from ibl.ingest import get_raw_field as grf
+from . import alyxraw, reference
+from . import get_raw_field as grf
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_subject')
 
@@ -13,15 +13,15 @@ class Species(dj.Computed):
     (species_uuid) -> alyxraw.AlyxRaw
     ---
     binomial:           varchar(255)
-    display_name:       varchar(255)         
+    species_nickname:   varchar(255)
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.species"').proj(species_uuid="uuid")
 
     def make(self, key):
         key_species = key.copy()
         key['uuid'] = key['species_uuid']
-        key_species['binomial'] = grf(key, 'binomial')
-        key_species['display_name'] = grf(key, 'display_name')
+        key_species['binomial'] = grf(key, 'name')
+        key_species['species_nickname'] = grf(key, 'nickname')
 
         self.insert1(key_species)
 
@@ -40,7 +40,7 @@ class Strain(dj.Computed):
     def make(self, key):
         key_strain = key.copy()
         key['uuid'] = key['strain_uuid']
-        key_strain['strain_name'] = grf(key, 'descriptive_name')
+        key_strain['strain_name'] = grf(key, 'name')
 
         description = grf(key, 'description')
         if description != 'None':
@@ -86,7 +86,7 @@ class Sequence(dj.Computed):
     def make(self, key):
         key_seq = key.copy()
         key['uuid'] = key['sequence_uuid']
-        key_seq['sequence_name'] = grf(key, 'informal_name')
+        key_seq['sequence_name'] = grf(key, 'name')
 
         base_pairs = grf(key, 'base_pairs')
         if base_pairs != 'None':
@@ -117,17 +117,21 @@ class Allele(dj.Computed):
     def make(self, key):
         key_allele = key.copy()
         key['uuid'] = key['allele_uuid']
-        key_allele['allele_name'] = grf(key, 'informal_name')
+        key_allele['allele_name'] = grf(key, 'nickname')
 
-        standard_name = grf(key, 'standard_name')
+        standard_name = grf(key, 'name')
         if standard_name != 'None':
             key_allele['standard_name'] = standard_name
 
         self.insert1(key_allele)
 
-# @schema
-# class AlleleSequence(dj.Computed):
-#    definition = ds_subject.AlleleSequence.definition
+
+@schema
+class AlleleSequence(dj.Computed):
+    definition = """
+    allele_name:        varchar(255)    # allele name, inherited from Allele
+    sequence_name:      varchar(255)    # sequence name, inherited from Sequence
+    """
 
 
 @schema
@@ -141,7 +145,7 @@ class Line(dj.Computed):
     line_name:				    varchar(255)	# line name
     line_description=null:		varchar(1024)	# description
     target_phenotype=null:		varchar(255)	# target phenotype
-    auto_name:				    varchar(255)	# auto name
+    line_nickname:				varchar(255)	# auto name
     is_active:				    boolean		    # is active
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.line"').proj(line_uuid='uuid')
@@ -164,7 +168,7 @@ class Line(dj.Computed):
         if description != 'None':
             key_line['line_description'] = description
         key_line['target_phenotype'] = grf(key, 'target_phenotype')
-        key_line['auto_name'] = grf(key, 'auto_name')
+        key_line['line_nickname'] = grf(key, 'nickname')
 
         active = grf(key, 'is_active')
         key_line['is_active'] = active == "True"
@@ -177,7 +181,7 @@ class LineAllele(dj.Manual):
     definition = """
     binomial:               varchar(255)	# binomial, inherited from Species
     line_name:				varchar(255)	# name
-    allele_name:			varchar(255)             # informal name
+    allele_name:			varchar(255)    # informal name
     """
 
 
@@ -188,7 +192,7 @@ class Subject(dj.Computed):
     (subject_uuid) -> alyxraw.AlyxRaw
     ---
     lab_name=null:              varchar(255)
-    nickname:			        varchar(255)		# nickname
+    subject_nickname:			varchar(255)		# nickname
     sex:			            enum("M", "F", "U")	# sex
     subject_birth_date=null:    date			    # birth date
     protocol_number:	        tinyint         	# protocol number
@@ -204,9 +208,9 @@ class Subject(dj.Computed):
         key_subject = key.copy()
         key['uuid'] = key['subject_uuid']
 
-        nick_name = grf(key, 'nickname')
-        if nick_name != 'None':
-            key_subject['nickname'] = nick_name
+        nickname = grf(key, 'nickname')
+        if nickname != 'None':
+            key_subject['subject_nickname'] = nickname
 
         sex = grf(key, 'sex')
         if sex != 'None':
@@ -308,7 +312,7 @@ class Litter(dj.Computed):
         bp_uuid = grf(key, 'breeding_pair')
         key_litter['bp_name'] = (BreedingPair & 'bp_uuid="{}"'.format(bp_uuid)).fetch1('bp_name')
 
-        descriptive_name = grf(key, 'descriptive_name')
+        descriptive_name = grf(key, 'name')
         if descriptive_name != 'None':
             key_litter['litter_descriptive_name'] = descriptive_name
 
@@ -324,9 +328,10 @@ class Litter(dj.Computed):
 @schema
 class LitterSubject(dj.Computed):
     definition = """
+    subject_uuid:   varchar(64)
+    ---
     bp_name:        varchar(255)
     litter_uuid:    varchar(64)
-    subject_uuid:   varchar(64)
     """
     key_source = (alyxraw.AlyxRaw & 'model = "subjects.subject"').proj(subject_uuid='uuid')
 
@@ -363,7 +368,7 @@ class SubjectProject(dj.Computed):
 class Caging(dj.Computed):
     definition = """
     -> Subject
-    lamis_cage:             int
+    cage_number:            int
     ---
     caging_date:            datetime
     """
@@ -371,25 +376,26 @@ class Caging(dj.Computed):
     def make(self, key):
         key_cage = key.copy()
         key['uuid'] = key['subject_uuid']
-        cage = grf(key, 'lamis_cage')
+        cage = grf(key, 'cage')
         if cage == 'None':
             return
         else:
-            key_cage['lamis_cage'] = cage
+            key_cage['cage_number'] = cage
             json_content = grf(key, 'json')
             if json_content != 'None':
-                json_dict = json.loads(json_content)       
+                json_dict = json.loads(json_content)
                 history = json_dict['history']
                 if 'lamis_cage' not in history:
                     self.insert1(key_cage)
                 else:
-                    cages = history['lamis_cage'] 
+                    cages = history['lamis_cage']
                     key_cage_i = key_cage.copy()
                     for cage in cages[::-1]:
-                        key_cage_i['caging_date'] = cage['date_time']
+                        cage_time = cage['date_time']
+                        key_cage_i['caging_date'] = cage_time[:-6]
                         self.insert1(key_cage_i)
                         if cage['value'] != 'None':
-                            key_cage_i['lamis_cage'] = cage['value']
+                            key_cage_i['cage_number'] = cage['value']
 
 
 @schema

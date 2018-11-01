@@ -1,6 +1,6 @@
 import datajoint as dj
 
-schema = dj.schema('alyx_raw')
+schema = dj.schema('ibl_alyxraw')
 
 
 @schema

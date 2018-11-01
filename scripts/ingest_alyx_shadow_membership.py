@@ -3,8 +3,8 @@ This script inserts membership tuples into the membership shadow tables, \
 which cannot be inserted with auto-population.
 '''
 import datajoint as dj
-from ibl.ingest import alyxraw, reference, subject, action, acquisition, data
-from ibl.ingest import get_raw_field as grf
+from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data
+from ibl_pipeline.ingest import get_raw_field as grf
 
 
 # reference.ProjectLabMember
@@ -14,13 +14,26 @@ for key in keys:
     key_p = dict()
     key_p['project_name'] = (reference.Project & key).fetch1('project_name')
 
-    user_uuids = grf(key, 'users', multiple_entries=True) 
+    user_uuids = grf(key, 'users', multiple_entries=True)
 
     for user_uuid in user_uuids:
         key_pl = key_p.copy()
         key_pl['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
         reference.ProjectLabMember.insert1(key_pl, skip_duplicates=True)
 
+
+# subject.AlleleSequence
+keys = (alyxraw.AlyxRaw & 'model="subjects.allele"').proj(allele_uuid='uuid')
+for key in keys:
+    key_a = dict()
+    key_a['allele_name'] = (subject.Allele & key).fetch1('allele_name')
+    key['uuid'] = key['allele_uuid']
+    sequences = grf(key, 'sequences', multiple_entries=True)
+    for sequence in sequences:
+        if sequence != 'None':
+            key_as = key_a.copy()
+            key_as['sequence_name'] = (subject.Sequence & 'sequence_uuid="{}"'.format(sequence)).fetch1('sequence_name')
+            subject.AlleleSequence.insert1(key_as, skip_duplicates=True)
 
 # subject.LineAllele
 keys = (alyxraw.AlyxRaw & 'model="subjects.line"').proj(line_uuid='uuid')

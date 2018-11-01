@@ -2,7 +2,8 @@ import datajoint as dj
 import numpy as np
 from os import path
 import logging
-from . import acquisition
+from . import acquisition, data
+from one_ibl.one import ONE
 
 logger = logging.getLogger(__name__)
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
@@ -28,7 +29,7 @@ class Eye(dj.Imported):
 
     def make(self, key):
 
-        datapath = path.join(path.sep,'data', '{subject_id}-{session_start_time}'.format(**key)).replace(':', '_')
+        datapath = path.join(path.sep, 'data', '{subject_id}-{session_start_time}'.format(**key)).replace(':', '_')
         eye_area = np.load(path.join(datapath, 'eye.area.npy'))
         eye_blink = np.load(path.join(datapath, 'eye.blink.npy'))
         eye_xypos = np.load(path.join(datapath, 'eye.xyPos.npy'))
@@ -70,17 +71,22 @@ class Wheel(dj.Imported):
     wheel_sampling_rate:    float     # Samples per second
     """
 
+    key_source = acquisition.Session & (data.DataSet & 'dataset_name in \
+                    ("_ibl_wheel.position.npy", "_ibl_wheel.velocity.npy", "_ibl_wheel.timestamps.npy")')
+
     def make(self, key):
-        datapath = path.join(path.sep,'data', '{subject_id}-{session_start_time}'.format(**key)).replace(':', '_')
-        wheel_position = np.load(path.join(datapath, '_ibl_wheel.position.npy'))
-        wheel_timestamps = np.load(path.join(datapath, '_ibl_wheel.timestamps.npy'))
+
+        session_uuid = (acquisition.Session & key).fetch1('session_uuid')
+        eID = 'https://dev.alyx.internationalbrainlab.org/sessions/{}'.format(session_uuid)
+        wheel_position, wheel_velocity, wheel_timestamps = \
+            ONE().load(eID, dataset_types=['_ibl_wheel.position', '_ibl_wheel.velocity', '_ibl_wheel.timestamps'])
 
         wheel_sample_ids = wheel_timestamps[:, 0]
         wheel_timestamps = wheel_timestamps[:, 1]
         wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
 
         key['wheel_position'] = wheel_position
-        key['wheel_velocity'] = np.diff(wheel_position)*wheel_sampling_rate
+        key['wheel_velocity'] = wheel_velocity
         key['wheel_sample_ids'] = wheel_sample_ids
         key['wheel_timestamps'] = wheel_timestamps
         key['wheel_start_time'] = wheel_timestamps[0]
