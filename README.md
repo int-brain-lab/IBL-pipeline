@@ -12,7 +12,7 @@ Schema of `behavior`
 
 
 
-# Running Instructions
+# Instructions to insert Alyx data into local database
 
 To run an local instance of database in the background, run the docker-compose command as follows:
 
@@ -33,3 +33,5 @@ bash /src/ibl-pipeline/scripts/ingest_alyx.sh ../data/alyx_dump/2018-10-30_alyxf
 ```
 
 Make sure that the json file is in the correct directory.
+
+# 
