@@ -1,6 +1,8 @@
-FROM datajoint/jupyter
+FROM datajoint/jupyter:python3.6
 
 ADD . /src/ibl-pipeline
+
+ADD root /root
 
 RUN pip install -e /src/ibl-pipeline
 

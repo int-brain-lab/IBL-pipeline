@@ -34,7 +34,15 @@ bash /src/ibl-pipeline/scripts/ingest_alyx.sh ../data/alyx_dump/2018-10-30_alyxf
 
 Make sure that the json file is in the correct directory as shown above.
 
-# 
+To turn stop the containers, run:
+
+```bash
+docker-compose -f docker-compose-local.yml down
+```
+
+
+
+
 
 # Instructions to ingest Alyx data into Amazon RDS
 
