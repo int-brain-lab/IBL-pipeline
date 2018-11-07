@@ -12,7 +12,7 @@ Schema of `behavior`
 
 
 
-# Running Instructions
+# Instructions to ingest Alyx data into local database
 
 To run an local instance of database in the background, run the docker-compose command as follows:
 
@@ -32,4 +32,24 @@ Now we are in the docker, and run the bash script for the ingestion:
 bash /src/ibl-pipeline/scripts/ingest_alyx.sh ../data/alyx_dump/2018-10-30_alyxfull.json
 ```
 
-Make sure that the json file is in the correct directory.
+Make sure that the json file is in the correct directory as shown above.
+
+# 
+
+# Instructions to ingest Alyx data into Amazon RDS
+
+To insert Alyx data into the remote Amazon RDS, create a .env file in the same directory of your `docker-compose.yml`. Here are the contents in the .env file:
+
+```bash
+DJ_HOST=datajoint-rds.cyuksi65nrdq.us-east-1.rds.amazonaws.com
+DJ_USER=YOUR_USERNAME
+DJ_PASS=YOUR_PASSWORD
+```
+
+Now run the docker-compose as follows, it will by default run through the file `docker-compose.yml`
+
+```bash
+docker-compose -f up -d
+```
+
+This will create a docker container and link to the remote Amazon RDS. Then follow the same instruction of ingestion to the local database.
