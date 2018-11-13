@@ -8,5 +8,5 @@ from oneibl.one import ONE
 
 
 behavior.Wheel.populate()
-behavior.WheelMoveSet.populate()
+# behavior.WheelMoveSet.populate()
 behavior.TrialSet.populate()

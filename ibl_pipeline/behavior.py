@@ -1,5 +1,6 @@
 import datajoint as dj
 import numpy as np
+import pandas as pd
 from os import path
 import logging
 from . import reference, subject, acquisition, data
