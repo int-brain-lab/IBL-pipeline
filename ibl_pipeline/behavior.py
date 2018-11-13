@@ -352,7 +352,7 @@ class TrialSet(dj.Imported):
         key['trials_start_time'] = trials_intervals[0, 0]
         key['trials_end_time'] = trials_intervals[-1, 1]
 
-        self.insert1(key)
+        self.insert1(key, ignore_error=True)
 
         for idx_trial in range(len(trials_response_choice)):
 
@@ -388,11 +388,11 @@ class TrialSet(dj.Imported):
             trial_key['trial_feedback_type'] = int(trials_feedback_types[idx_trial])
             trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
 
-            self.Trial().insert1(trial_key)
+            self.Trial().insert1(trial_key, ignore_error=True)
 
             if trials_included[idx_trial] is False:
                 excluded_trial_key['trial_id'] = idx_trial + 1
-                self.ExcludedTrial().insert1(excluded_trial_key)
+                self.ExcludedTrial().insert1(excluded_trial_key, ignore_error=True)
 
         logger.info('Populated a TrialSet tuple, all Trial tuples and Excluded Trial tuples for subject {subject_uuid} in session started at {session_start_time}'.format(**key))
 
