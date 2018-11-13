@@ -110,8 +110,9 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# json file
+# credential file
 dj_local_conf.json
+root/.one_params
 
 # raw data file
 data/*

@@ -1,5 +1,5 @@
 '''
-This script copies tuples in the shadow tables into the real tables for alyx.
+This script copies tuples in the shadow tables into the real tables for alyx, for fresh ingestion.
 '''
 
 import datajoint as dj
@@ -9,12 +9,8 @@ from ibl_pipeline.ingest import action as action_ingest
 from ibl_pipeline.ingest import acquisition as acquisition_ingest
 from ibl_pipeline.ingest import data as data_ingest
 from ibl_pipeline import reference, subject, action, acquisition, data
+from ingest_utils import copy_table
 
-
-def copy_table(target_schema, src_schema, table_name):
-    target_table = getattr(target_schema, table_name)
-    src_table = getattr(src_schema, table_name)
-    target_table.insert(src_table, skip_duplicates=True)
 
 REF_TABLES = (
     'Lab',
