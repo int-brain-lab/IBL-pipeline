@@ -84,9 +84,9 @@ class DataSet(dj.Manual):
 class FileRecord(dj.Manual):
     definition = """
     -> DataSet
+    -> DataRepository
     ---
     record_uuid:        varchar(64)
     exists:             boolean
-    -> DataRepository
     relative_path:      varchar(255)
     """
