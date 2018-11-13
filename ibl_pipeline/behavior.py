@@ -27,8 +27,8 @@ class Eye(dj.Imported):
     eye_end_time:       float           # (seconds)
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'dataset_name in \
-                    ("_ibl_eye.area.npy", "_ibl_eye.blink.npy", "_ibl_eye.xyPos.npy", "_ibl_eye.timestamps.npy")' & 'exists=True')
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
+                    ("_ibl_eye.area.npy", "_ibl_eye.blink.npy", "_ibl_eye.xyPos.npy", "_ibl_eye.timestamps.npy")')
 
     def make(self, key):
 
@@ -73,7 +73,7 @@ class Wheel(dj.Imported):
     wheel_sampling_rate:    float     # Samples per second
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
                     ("_ibl_wheel.position.npy", "_ibl_wheel.velocity.npy", "_ibl_wheel.timestamps.npy")')
 
     def make(self, key):
@@ -115,7 +115,7 @@ class WheelMoveSet(dj.Imported):
     ---
     wheel_move_number : int     # total number of movements in this set
     """
-    key_source = acquisition.Session & (data.FileRecord & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
                     ("_ibl_wheelMoves.intervals.npy", "_ibl_wheelMoves.type.npy")')
 
     def make(self, key):
@@ -168,7 +168,7 @@ class SparseNoise(dj.Imported):
     sparse_noise_times:  longblob				# times of those stimulus squares appeared in universal seconds
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
                     ("_ibl_sparseNoise.positions.npy", "_ibl_sparseNoise.times.npy")')
 
     def make(self, key):
@@ -196,7 +196,7 @@ class ExtraRewards(dj.Imported):
     extra_rewards_times: longblob 			# times of extra rewards (seconds)
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
                     ("_ibl_extraRewards.times.npy")')
 
     def make(self, key):
@@ -222,7 +222,7 @@ class SpontaneousTimeSet(dj.Imported):
     spontaneous_time_total_num:   int   # total number of the spontaneous time periods
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
                     ("_ibl_spontaneous.intervals.npy")')
 
     def make(self, key):
@@ -271,7 +271,7 @@ class Lick(dj.Imported):
     lick_sampling_rate:     float     # number of samples per second
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
                     ("_ibl_licks.times.npy", "_ibl_lickPiezo.raw.npy", "_ibl_lickPiezo.timestamps.npy")')
 
     def make(self, key):
@@ -308,7 +308,7 @@ class TrialSet(dj.Imported):
     trials_end_time:    float            # end time of the trial set (seconds)
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
                     ("_ibl_trials.feedback_times.npy", "_ibl_trials.feedbackType.npy", \
                     "_ibl_trials.goCue_times.npy", "_ibl_trials.intervals.npy", "_ibl_trials.repNum.npy", \
                     "_ibl_trials.choice.npy", "_ibl_trials.response_times.npy", \
@@ -431,7 +431,7 @@ class PassiveTrialSet(dj.Imported):
     passive_trials_end_time : float
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
                     ("_ibl_passiveVisual.contrastLeft.npy", "_ibl_passiveVisual.contrastRight.npy", "_ibl_lickPiezo.timestamps.npy")')
 
     def make(self, key):
@@ -496,7 +496,7 @@ class PassiveRecordings(dj.Imported):
     passive_white_noise_times:      longblob      # Times of white noise bursts, equivilent to the negative feedback sound during the choice world task (seconds)
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
                     ("_ibl_passiveBeeps.times.npy", "_ibl_passiveValveClick.times.npy", "_ibl_passiveWhiteNoise.times.npy")')
 
     def make(self, key):
