@@ -32,7 +32,7 @@ class Source(dj.Lookup):
     definition = """
     source_name:				varchar(255)	# name of source
     ---
-    source_uuid:                varchar(64)     
+    source_uuid:                varchar(64)
     source_description=null:	varchar(255)	# description
     """
 
@@ -154,6 +154,7 @@ class Litter(dj.Manual):
     litter_description=null:	    varchar(255)	# description
     litter_birth_date:			    date		    # birth date
     """
+
 
 
 @schema
