@@ -74,7 +74,7 @@ class Wheel(dj.Imported):
     wheel_sampling_rate:    float     # Samples per second
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
                     ("_ibl_wheel.position.npy", "_ibl_wheel.velocity.npy", "_ibl_wheel.timestamps.npy")')
 
     def make(self, key):
@@ -116,7 +116,7 @@ class WheelMoveSet(dj.Imported):
     ---
     wheel_move_number : int     # total number of movements in this set
     """
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
                     ("_ibl_wheelMoves.intervals.npy", "_ibl_wheelMoves.type.npy")')
 
     def make(self, key):
@@ -169,7 +169,7 @@ class SparseNoise(dj.Imported):
     sparse_noise_times:  longblob				# times of those stimulus squares appeared in universal seconds
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
                     ("_ibl_sparseNoise.positions.npy", "_ibl_sparseNoise.times.npy")')
 
     def make(self, key):
@@ -197,7 +197,7 @@ class ExtraRewards(dj.Imported):
     extra_rewards_times: longblob 			# times of extra rewards (seconds)
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
                     ("_ibl_extraRewards.times.npy")')
 
     def make(self, key):
@@ -223,7 +223,7 @@ class SpontaneousTimeSet(dj.Imported):
     spontaneous_time_total_num:   int   # total number of the spontaneous time periods
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
                     ("_ibl_spontaneous.intervals.npy")')
 
     def make(self, key):
@@ -272,7 +272,7 @@ class Lick(dj.Imported):
     lick_sampling_rate:     float     # number of samples per second
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
                     ("_ibl_licks.times.npy", "_ibl_lickPiezo.raw.npy", "_ibl_lickPiezo.timestamps.npy")')
 
     def make(self, key):
@@ -309,7 +309,7 @@ class TrialSet(dj.Imported):
     trials_end_time:    float            # end time of the trial set (seconds)
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
                     ("_ibl_trials.feedback_times.npy", "_ibl_trials.feedbackType.npy", \
                     "_ibl_trials.goCue_times.npy", "_ibl_trials.intervals.npy", "_ibl_trials.repNum.npy", \
                     "_ibl_trials.choice.npy", "_ibl_trials.response_times.npy", \
@@ -352,7 +352,7 @@ class TrialSet(dj.Imported):
         key['trials_start_time'] = trials_intervals[0, 0]
         key['trials_end_time'] = trials_intervals[-1, 1]
 
-        self.insert1(key, ignore_error=True)
+        self.insert1(key)
 
         for idx_trial in range(len(trials_response_choice)):
 
@@ -388,11 +388,11 @@ class TrialSet(dj.Imported):
             trial_key['trial_feedback_type'] = int(trials_feedback_types[idx_trial])
             trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
 
-            self.Trial().insert1(trial_key, ignore_error=True)
+            self.Trial().insert1(trial_key)
 
             if trials_included[idx_trial] is False:
                 excluded_trial_key['trial_id'] = idx_trial + 1
-                self.ExcludedTrial().insert1(excluded_trial_key, ignore_error=True)
+                self.ExcludedTrial().insert1(excluded_trial_key)
 
         logger.info('Populated a TrialSet tuple, all Trial tuples and Excluded Trial tuples for subject {subject_uuid} in session started at {session_start_time}'.format(**key))
 
@@ -432,7 +432,7 @@ class PassiveTrialSet(dj.Imported):
     passive_trials_end_time : float
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
                     ("_ibl_passiveVisual.contrastLeft.npy", "_ibl_passiveVisual.contrastRight.npy", "_ibl_lickPiezo.timestamps.npy")')
 
     def make(self, key):
@@ -497,7 +497,7 @@ class PassiveRecordings(dj.Imported):
     passive_white_noise_times:      longblob      # Times of white noise bursts, equivilent to the negative feedback sound during the choice world task (seconds)
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
+    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
                     ("_ibl_passiveBeeps.times.npy", "_ibl_passiveValveClick.times.npy", "_ibl_passiveWhiteNoise.times.npy")')
 
     def make(self, key):
