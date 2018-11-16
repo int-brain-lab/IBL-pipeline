@@ -12,22 +12,22 @@ Schema of `behavior`
 
 # Connecting to the pipeline
 
-1. Email austin@vathes.com for a database username
-2. Clone the repository (https://github.com/int-brain-lab/IBL-pipeline)
-3. Install Docker (https://www.docker.com/)
-4. Create a .env file in the cloned directory and modify user and password values per Step 1
+1. Email austin@vathes.com for a database username.
+2. Clone the repository (https://github.com/int-brain-lab/IBL-pipeline).
+3. Install Docker (https://www.docker.com/). Linux users also need to install Docker Compose separately.
+4. Create a .env file in the cloned directory and **modify user and password values** per Step 1.
 
-File contents of ``.env``:
-```
-DJ_HOST=datajoint-rds.cyuksi65nrdq.us-east-1.rds.amazonaws.com
-DJ_USER=username
-DJ_PASS=password
-```
+  File contents of ``.env``:
+  ```
+  DJ_HOST=datajoint.internationalbrainlab.org
+  DJ_USER=username
+  DJ_PASS=password
+  ```
 
-5. Run ``docker-compose up -d`` from the cloned directory
-6. Go to http://localhost:8888/tree
-7. Open "Datajoint pipeline query tutorial.ipynb"
-8. Run through the notebook and feel free to experiment
+5. Move into the cloned directory in a terminal, then run `docker-compose up -d`.
+6. Go to http://localhost:8888/tree in your favorite browser to open the Jupyter Notebook.
+7. Open "Datajoint pipeline query tutorial.ipynb".
+8. Run through the notebook and feel free to experiment.
 
 # Instructions to ingest Alyx data into local database
 
@@ -66,7 +66,7 @@ docker-compose -f docker-compose-local.yml down
 To insert Alyx data into the remote Amazon RDS, create a .env file in the same directory of your `docker-compose.yml`. Here are the contents in the .env file:
 
 ```bash
-DJ_HOST=datajoint-rds.cyuksi65nrdq.us-east-1.rds.amazonaws.com
+DJ_HOST=datajoint.internationalbrainlab.org
 DJ_USER=YOUR_USERNAME
 DJ_PASS=YOUR_PASSWORD
 ```
@@ -74,7 +74,7 @@ DJ_PASS=YOUR_PASSWORD
 Now run the docker-compose as follows, it will by default run through the file `docker-compose.yml`
 
 ```bash
-docker-compose -f up -d
+docker-compose up -d
 ```
 
 This will create a docker container and link to the remote Amazon RDS. Then follow the same instruction of ingestion to the local database.
