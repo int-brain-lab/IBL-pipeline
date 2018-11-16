@@ -10,7 +10,24 @@ Schema of `ephys`
 Schema of `behavior`
 ![Behavior erd](images/behavior_erd.png)
 
+# Connecting to the pipeline
 
+1. Email austin@vathes.com for a database username
+2. Clone the repository (https://github.com/int-brain-lab/IBL-pipeline)
+3. Install Docker (https://www.docker.com/)
+4. Create a .env file in the cloned directory and modify user and password values per Step 1
+
+File contents of ``.env``:
+```
+DJ_HOST=datajoint-rds.cyuksi65nrdq.us-east-1.rds.amazonaws.com
+DJ_USER=username
+DJ_PASS=password
+```
+
+5. Run ``docker-compose up -d`` from the cloned directory
+6. Go to http://localhost:8888/tree
+7. Open "Datajoint pipeline query tutorial.ipynb"
+8. Run through the notebook and feel free to experiment
 
 # Instructions to ingest Alyx data into local database
 
