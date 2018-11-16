@@ -6,31 +6,31 @@ from os.path import isfile, join
 import re
 from IPython import embed as shell
 
-one = ONE() # initialize
+#one = ONE() # initialize
 
 def load_behavior(ref, rootDir=None):
     """
     Load the trials for a given experiment reference
-    
+
     Example:
         df = load_behaviour('2018-09-11_1_MOUSE', rootDir = r'\\server1\Subjects')
         df.head()
-        
-    Args: 
+
+    Args:
         subject (str): The subject name
         rootDir (str): The root directory, i.e. where the subject data are stored.
                        If rootDir is None, the current working directory is used.
-        
+
     Returns:
-        df (DataFrame): DataFrame constructed from the trials object of the ALF 
+        df (DataFrame): DataFrame constructed from the trials object of the ALF
                         files located in the experiment directory
-    
+
     TODO: return multi-level data frame
-           
+
     @author: Miles
     """
 
-    
+
     if rootDir is None:
         rootDir = getcwd()
     path = dat.exp_path(ref, rootDir)
@@ -65,20 +65,20 @@ def load_behavior(ref, rootDir=None):
 def get_weight_records(subjects, ai):
     """
     Determine whether the mouse has met the criteria for having learned
-    
+
     Example:
         baseURL = 'https://alyx.internationalbrainlab.org/'
         ai = AlyxClient(username='miles', password=pwd, base_url=baseURL)
         records, info = get_weight_records(['ALK081', 'LEW010'], ai)
-        
-    Args: 
+
+    Args:
         subjects (list): List of subjects.
         ai (AlyxClient): An instance of the AlyxClient
-        
+
     Returns:
         records (Data Frame): Data frame of weight and water records
         info (Data Frame): Data frame of subject information
-        
+
     """
     s = ai.get('subjects?stock=False')
     rmKeys = ['actions_sessions','water_administrations','weighings','genotype']
@@ -102,16 +102,16 @@ def get_weight_records(subjects, ai):
             df = pd.DataFrame(wr['records'])
             df = (df.set_index(pd.DatetimeIndex(df['date']))
                   .drop('date', axis=1)
-                  .assign(pct_weight = lambda x: 
+                  .assign(pct_weight = lambda x:
                           (x['weight_measured']-iw) /
-                          (x['weight_expected']-iw) 
-                          if 'weight_measured' in x.columns.values 
+                          (x['weight_expected']-iw)
+                          if 'weight_measured' in x.columns.values
                           else np.nan))
             records.append(df)
             wr.pop('records', None)
         weight_info.append(wr)
 
-    
+
     info = (pd.DataFrame(weight_info)
             .merge(pd.DataFrame(subject_info), left_on='subject', right_on='nickname')
            .set_index('subject'))
@@ -125,7 +125,7 @@ def get_weight_records(subjects, ai):
 
 
 def get_metadata(mousename):
-    
+
     metadata = {'date_birth': one._alyxClient.get('/weighings?nickname=%s' %mousename),
         'cage': one._alyxClient.get('/cage?nickname=%s' %mousename)}
 
@@ -138,7 +138,7 @@ def get_weights(mousename):
     wei['date_time'] = pd.to_datetime(wei.date_time)
     wei.sort_values('date_time', inplace=True)
     wei.reset_index(drop=True, inplace=True)
-    wei['date'] = wei['date_time'].dt.floor('D')  
+    wei['date'] = wei['date_time'].dt.floor('D')
     wei['days'] = wei.date - wei.date[0]
     wei['days'] = wei.days.dt.days # convert to number of days from start of the experiment
 
@@ -153,7 +153,7 @@ def get_water(mousename):
     # wei['date_time'] = isostr2date(wei['date_time'])
     wei.sort_values('date_time', inplace=True)
     wei.reset_index(drop=True, inplace=True)
-    wei['date'] = wei['date_time'].dt.floor('D')  
+    wei['date'] = wei['date_time'].dt.floor('D')
 
     wei['days'] = wei.date - wei.date[0]
     wei['days'] = wei.days.dt.days # convert to number of days from start of the experiment
@@ -161,7 +161,7 @@ def get_water(mousename):
     # wei = wei.set_index('date')
     # wei.index = pd.to_datetime(wei.index)
 
-    wa_unstacked = wei.pivot_table(index='date', 
+    wa_unstacked = wei.pivot_table(index='date',
         columns='water_type', values='water_administered', aggfunc='sum').reset_index()
     # wa_unstacked = wa_unstacked.set_index('date')
     # wa_unstacked.index = pd.to_datetime(wa_unstacked.index)
@@ -187,7 +187,7 @@ def get_behavior(mousename, **kwargs):
     types2      = [item for sublist in types for item in sublist]
     types2      = list(set(types2)) # take unique by converting to a set and back to list
     dataset_types = [s for i, s in enumerate(types2) if '_ibl_trials' in s]
-    
+
     # load data over sessions
     for ix, eidx in enumerate(eid):
         dat = one.load(eidx, dataset_types=dataset_types, dclass_output=True)
@@ -198,7 +198,7 @@ def get_behavior(mousename, **kwargs):
         else:
             if len(dat.data[0]) < 10:
                 continue
-    
+
         # pull out a dict with variables and their values
         tmpdct = {}
         for vi, var in enumerate(dat.dataset_type):
@@ -227,7 +227,7 @@ def get_behavior(mousename, **kwargs):
 
     # convert to number of days from start of the experiment
     df['days']       = df.date - df.date[0]
-    df['days']       = df.days.dt.days 
+    df['days']       = df.days.dt.days
 
     # add some more handy things
     df['rt']        = df['response_times'] - df['stimOn_times']
@@ -255,5 +255,3 @@ def get_water_weight(mousename):
     combined['days'] = combined.days.dt.days # convert to number of days from start of the experiment
 
     return combined
-
- 
