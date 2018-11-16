@@ -25,7 +25,7 @@ Schema of `behavior`
     ```
 
 5. Move into the cloned directory in a terminal, then run `docker-compose up -d`.
-6. Go to http://localhost:8888/tree in your favorite browser to open the Jupyter Notebook.
+6. Go to http://localhost:8888/tree in your favorite browser to open Jupyter Notebook.
 7. Open "Datajoint pipeline query tutorial.ipynb".
 8. Run through the notebook and feel free to experiment.
 
