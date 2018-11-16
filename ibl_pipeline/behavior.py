@@ -4,7 +4,10 @@ import pandas as pd
 from os import path
 import logging
 from . import reference, subject, acquisition, data
-from oneibl.one import ONE
+try:
+    from oneibl.one import ONE
+except:
+    pass
 
 logger = logging.getLogger(__name__)
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
