@@ -10,7 +10,7 @@ Schema of `ephys`
 Schema of `behavior`
 ![Behavior erd](images/behavior_erd.png)
 
-# Connecting to the pipeline
+# Instructions for connecting to the IBL pipeline
 
 1. Email austin@vathes.com for a database username.
 2. Clone the repository (https://github.com/int-brain-lab/IBL-pipeline).
@@ -63,13 +63,7 @@ docker-compose -f docker-compose-local.yml down
 
 # Instructions to ingest Alyx data into Amazon RDS
 
-To insert Alyx data into the remote Amazon RDS, create a .env file in the same directory of your `docker-compose.yml`. Here are the contents in the .env file:
-
-```bash
-DJ_HOST=datajoint.internationalbrainlab.org
-DJ_USER=YOUR_USERNAME
-DJ_PASS=YOUR_PASSWORD
-```
+To insert Alyx data into the remote Amazon RDS, create a .env file in the same directory of your `docker-compose.yml`, as instructed in Step 4 above. 
 
 Now run the docker-compose as follows, it will by default run through the file `docker-compose.yml`
 
