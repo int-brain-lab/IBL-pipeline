@@ -17,12 +17,12 @@ Schema of `behavior`
 3. Install Docker (https://www.docker.com/). Linux users also need to install Docker Compose separately.
 4. Create a .env file in the cloned directory and **modify user and password values** per Step 1.
 
-  File contents of ``.env``:
-  ```
-  DJ_HOST=datajoint.internationalbrainlab.org
-  DJ_USER=username
-  DJ_PASS=password
-  ```
+    File contents of ``.env``:
+    ```
+    DJ_HOST=datajoint.internationalbrainlab.org
+    DJ_USER=username
+    DJ_PASS=password
+    ```
 
 5. Move into the cloned directory in a terminal, then run `docker-compose up -d`.
 6. Go to http://localhost:8888/tree in your favorite browser to open the Jupyter Notebook.
