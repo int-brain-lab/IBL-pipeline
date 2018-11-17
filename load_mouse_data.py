@@ -6,7 +6,7 @@ from os.path import isfile, join
 import re
 from IPython import embed as shell
 
-#one = ONE() # initialize
+one = ONE() # initialize
 
 def load_behavior(ref, rootDir=None):
     """
