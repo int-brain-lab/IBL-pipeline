@@ -303,9 +303,9 @@ class Lick(dj.Imported):
 
 
 @schema
-class CompleteSession(dj.Computed):
+class CompleteTrialSession(dj.Computed):
     definition = """
-    # sessions that are complete and thus may be ingested (i.e. has all files needed by TrialSet)
+    # sessions that are complete with trial information and thus may be ingested
     -> acquisition.Session
     ---
     session_complete: bool              # whether the session is complete
@@ -336,7 +336,7 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    key_source = CompleteSession & 'session_complete = 1'
+    key_source = CompleteTrialSession & 'session_complete = 1'
 
     def make(self, key):
         trial_key = key.copy()
