@@ -7,6 +7,7 @@ from . import reference, subject, acquisition, data
 try:
     from oneibl.one import ONE
 except:
+    # TODO: consider issuing a warning about not being able to perform ingestion without ONE access
     pass
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,23 @@ class Eye(dj.Imported):
 
 
 @schema
+class CompleteWheelSession(dj.Computed):
+    definition = """
+    # sessions that are complete with wheel related information and thus may be ingested
+    -> acquisition.Session
+    ---
+    wheel_session_complete: bool              # whether the session is complete
+    """
+
+    required_datasets =  ["_ibl_wheel.position.npy", "_ibl_wheel.velocity.npy", "_ibl_wheel.timestamps.npy"]
+
+    def make(self, key):
+        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {'exists': 1}).fetch('dataset_name')
+        key['wheel_session_complete'] = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
+        self.insert1(key)
+
+
+@schema
 class Wheel(dj.Imported):
     definition = """
     # raw wheel recording
@@ -77,8 +95,7 @@ class Wheel(dj.Imported):
     wheel_sampling_rate:    float     # Samples per second
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
-                    ("_ibl_wheel.position.npy", "_ibl_wheel.velocity.npy", "_ibl_wheel.timestamps.npy")')
+    key_source = CompleteWheelSession & 'wheel_session_complete = 1'
 
     def make(self, key):
 
@@ -302,6 +319,28 @@ class Lick(dj.Imported):
 
 
 @schema
+class CompleteTrialSession(dj.Computed):
+    definition = """
+    # sessions that are complete with trial information and thus may be ingested
+    -> acquisition.Session
+    ---
+    trial_session_complete: bool              # whether the session is complete
+    """
+
+    required_datasets =  ["_ibl_trials.feedback_times.npy", "_ibl_trials.feedbackType.npy", \
+                            "_ibl_trials.goCue_times.npy", "_ibl_trials.intervals.npy", "_ibl_trials.repNum.npy", \
+                            "_ibl_trials.choice.npy", "_ibl_trials.response_times.npy", \
+                            "_ibl_trials.contrastLeft.npy", "_ibl_trials.contrastRight.npy", \
+                            "_ibl_trials.stimOn_times.npy", "_ibl_trials.included.npy",\
+                            "_ibl_trials.probabilityLeft.npy"]
+
+    def make(self, key):
+        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {'exists': 1}).fetch('dataset_name')
+        key['trial_session_complete'] = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
+        self.insert1(key)
+
+
+@schema
 class TrialSet(dj.Imported):
     definition = """
     # information about behavioral trials
@@ -312,12 +351,8 @@ class TrialSet(dj.Imported):
     trials_end_time:    float            # end time of the trial set (seconds)
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
-                    ("_ibl_trials.feedback_times.npy", "_ibl_trials.feedbackType.npy", \
-                    "_ibl_trials.goCue_times.npy", "_ibl_trials.intervals.npy", "_ibl_trials.repNum.npy", \
-                    "_ibl_trials.choice.npy", "_ibl_trials.response_times.npy", \
-                    "_ibl_trials.contrastLeft.npy", "_ibl_trials.contrastRight.npy", \
-                    "_ibl_trials.stimOn_times.npy", "_ibl_trials.included.npy")')
+    # Knowledge based hack to be formalized better later
+    key_source = CompleteTrialSession & 'trial_session_complete = 1'
 
     def make(self, key):
         trial_key = key.copy()
@@ -332,12 +367,14 @@ class TrialSet(dj.Imported):
         trials_feedback_times, trials_feedback_types, trials_gocue_times, \
             trials_intervals, trials_rep_num, trials_response_choice, trials_response_times, \
             trials_contrast_left, trials_contrast_right, \
-            trials_visual_stim_times, trials_included = \
+            trials_visual_stim_times, trials_included, \
+            trials_p_left = \
             ONE().load(eID, dataset_types=['_ibl_trials.feedback_times', '_ibl_trials.feedbackType',
                                            '_ibl_trials.goCue_times', '_ibl_trials.intervals', '_ibl_trials.repNum',
                                            '_ibl_trials.choice', '_ibl_trials.response_times',
                                            '_ibl_trials.contrastLeft', '_ibl_trials.contrastRight',
-                                           '_ibl_trials.stimOn_times', '_ibl_trials.included'])
+                                           '_ibl_trials.stimOn_times', '_ibl_trials.included',
+                                           '_ibl_trials.probabilityLeft'])
 
         assert len(np.unique(np.array([len(trials_feedback_times),
                                        len(trials_feedback_types),
@@ -349,7 +386,9 @@ class TrialSet(dj.Imported):
                                        len(trials_contrast_left),
                                        len(trials_contrast_right),
                                        len(trials_visual_stim_times),
-                                       len(trials_included)]))) == 1, 'Loaded trial files do not have the same length'
+                                       len(trials_included),
+                                       len(trials_p_left)
+                                       ]))) == 1, 'Loaded trial files do not have the same length'
 
         key['trials_total_num'] = len(trials_response_choice)
         key['trials_start_time'] = trials_intervals[0, 0]
@@ -390,6 +429,7 @@ class TrialSet(dj.Imported):
             trial_key['trial_feedback_time'] = float(trials_feedback_times[idx_trial])
             trial_key['trial_feedback_type'] = int(trials_feedback_types[idx_trial])
             trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
+            trial_key['trial_stim_prob_left'] = float(trials_p_left[idx_trial])
 
             self.Trial().insert1(trial_key)
 
@@ -416,6 +456,7 @@ class TrialSet(dj.Imported):
         trial_feedback_time:        float         # Time of feedback delivery (reward or not) in choiceworld
         trial_feedback_type:        tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
         trial_rep_num:              int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
+        trial_stim_prob_left:       float         # probability of the stimulus being present on left
         """
 
     class ExcludedTrial(dj.Part):
