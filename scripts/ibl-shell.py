@@ -8,11 +8,11 @@ import logging
 from code import interact
 
 # BOOKMARK: ensure loading
-from ibl import reference
-from ibl import subject
-from ibl import acquisition
-from ibl import behavior
-from ibl import ephys
+from ibl_pipeline import reference
+from ibl_pipeline import subject
+from ibl_pipeline import acquisition
+from ibl_pipeline import behavior
+from ibl_pipeline import ephys
 
 
 log = logging.getLogger(__name__)
@@ -42,9 +42,9 @@ def shell(*args):
 
 def ingest(*args):
     # local import so db is only created created/accessed if/when ingesting
-    from ibl.ingest import reference as ingest_reference
-    from ibl.ingest import subject as ingest_subject
-    from ibl.ingest import acquisition as ingest_acquisition
+    from ibl_pipeline.ingest import (reference as ingest_reference,
+                                    subject as ingest_subject,
+                                    acquisition as ingest_acquisition)
     for mod in [ingest_reference, ingest_subject, ingest_acquisition]:
         pass
 
