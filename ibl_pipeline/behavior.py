@@ -63,6 +63,23 @@ class Eye(dj.Imported):
 
 
 @schema
+class CompleteWheelSession(dj.Computed):
+    definition = """
+    # sessions that are complete with wheel related information and thus may be ingested
+    -> acquisition.Session
+    ---
+    wheel_session_complete: bool              # whether the session is complete
+    """
+
+    required_datasets =  ["_ibl_wheel.position.npy", "_ibl_wheel.velocity.npy", "_ibl_wheel.timestamps.npy"]
+
+    def make(self, key):
+        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {'exists': 1}).fetch('dataset_name')
+        key['wheel_session_complete'] = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
+        self.insert1(key)
+
+
+@schema
 class Wheel(dj.Imported):
     definition = """
     # raw wheel recording
@@ -78,8 +95,7 @@ class Wheel(dj.Imported):
     wheel_sampling_rate:    float     # Samples per second
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
-                    ("_ibl_wheel.position.npy", "_ibl_wheel.velocity.npy", "_ibl_wheel.timestamps.npy")')
+    key_source = CompleteWheelSession & 'wheel_session_complete = 1'
 
     def make(self, key):
 
@@ -308,7 +324,7 @@ class CompleteTrialSession(dj.Computed):
     # sessions that are complete with trial information and thus may be ingested
     -> acquisition.Session
     ---
-    session_complete: bool              # whether the session is complete
+    trial_session_complete: bool              # whether the session is complete
     """
 
     required_datasets =  ["_ibl_trials.feedback_times.npy", "_ibl_trials.feedbackType.npy", \
@@ -320,7 +336,7 @@ class CompleteTrialSession(dj.Computed):
 
     def make(self, key):
         datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {'exists': 1}).fetch('dataset_name')
-        key['session_complete'] = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
+        key['trial_session_complete'] = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
         self.insert1(key)
 
 
@@ -336,7 +352,7 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    key_source = CompleteTrialSession & 'session_complete = 1'
+    key_source = CompleteTrialSession & 'trial_session_complete = 1'
 
     def make(self, key):
         trial_key = key.copy()
