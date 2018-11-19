@@ -201,18 +201,26 @@ def plot_perf_heatmap(dfs, ax=None):
         ax = plt.gca()
 
     import copy; cmap=copy.copy(plt.get_cmap('bwr'))
-    cmap.set_bad('grey',1.)
+    cmap.set_bad(color='grey')
 
     if not isinstance(dfs, (list,)):
 
         # Anne's version
-        pp  = dfs.groupby(['signedContrast', 'date']).agg({'choice2':'mean'}).reset_index()
-        pp2 = pp.pivot("signedContrast", "date",  "choice2").sort_values(by='signedContrast', ascending=False)
-        sns.heatmap(pp2, linewidths=.5, ax=ax, vmin=0, vmax=1, cmap=cmap, cbar=False)
+        pp  = dfs.groupby(['signedContrast', 'days']).agg({'choice2':'mean'}).reset_index()
+        pp2 = pp.pivot("signedContrast", "days",  "choice2").sort_values(by='signedContrast', ascending=False)
+        sns.heatmap(pp2, linewidths=.5, ax=ax, vmin=0, vmax=1, cmap=cmap, cbar=True,
+            cbar_kws={'label': 'Choose right (%)', 'shrink': 0.8, 'ticks': []})
         ax.set(ylabel="Contrast (%)")
 
-        ax.set_xticklabels([dt.strftime('%b-%d') if dt.weekday() is 0 else "" for dt in pp.date])
-        #ax.set_xticks([dt for dt in pp.date if dt.weekday() is 0])
+        # fix the date axis
+        dates  = dfs.date.unique()
+        xpos   = np.arange(len(dates)) + 0.5 # the tick locations for each day
+        xticks = [i for i, dt in enumerate(dates) if pd.to_datetime(dt).weekday() is 0]
+        ax.set_xticks(np.array(xticks) + 0.5)
+
+        xticklabels = [pd.to_datetime(dt).strftime('%b-%d') for i, dt in enumerate(dates) if pd.to_datetime(dt).weekday() is 0]
+        ax.set_xticklabels(xticklabels)
+
         for item in ax.get_xticklabels():
             item.set_rotation(60)
 
