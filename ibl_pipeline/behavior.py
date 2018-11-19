@@ -446,15 +446,15 @@ class TrialSet(dj.Imported):
         -> master
         trial_id:               int           # trial identification number
         ---
-        trial_start_time:           float         # beginning of quiescent period time (seconds)
-        trial_end_time:             float         # end of iti (seconds)
-        trial_go_cue_time:          float         # Time of go cue in choiceworld (seconds)
-        trial_response_time:        float         # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
+        trial_start_time:           double         # beginning of quiescent period time (seconds)
+        trial_end_time:             double         # end of iti (seconds)
+        trial_go_cue_time:          double         # Time of go cue in choiceworld (seconds)
+        trial_response_time:        double         # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
         trial_choice:               enum("CCW", "CW", "No Go")       # which choice was made in choiceworld
-        trial_stim_on_time:         float         # Time of stimulus in choiceworld (seconds)
+        trial_stim_on_time:         double         # Time of stimulus in choiceworld (seconds)
         trial_stim_contrast_left:   float	      # contrast of the stimulus on the left
         trial_stim_contrast_right:  float         # contrast of the stimulus on the right
-        trial_feedback_time:        float         # Time of feedback delivery (reward or not) in choiceworld
+        trial_feedback_time:        double         # Time of feedback delivery (reward or not) in choiceworld
         trial_feedback_type:        tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
         trial_rep_num:              int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
         trial_stim_prob_left:       float         # probability of the stimulus being present on left
