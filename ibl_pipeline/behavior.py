@@ -430,12 +430,13 @@ class TrialSet(dj.Imported):
             trial_key['trial_feedback_type'] = int(trials_feedback_types[idx_trial])
             trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
             trial_key['trial_stim_prob_left'] = float(trials_p_left[idx_trial])
+            trial_key['trial_included'] = bool(trials_included[idx_trial])
 
             self.Trial().insert1(trial_key)
-
-            if trials_included[idx_trial] is False:
-                excluded_trial_key['trial_id'] = idx_trial + 1
-                self.ExcludedTrial().insert1(excluded_trial_key)
+            #
+            # if trials_included[idx_trial] is False:
+            #     excluded_trial_key['trial_id'] = idx_trial + 1
+            #     self.ExcludedTrial().insert1(excluded_trial_key)
 
         logger.info('Populated a TrialSet tuple, all Trial tuples and Excluded Trial tuples for subject {subject_uuid} in session started at {session_start_time}'.format(**key))
 
@@ -457,6 +458,7 @@ class TrialSet(dj.Imported):
         trial_feedback_type:        tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
         trial_rep_num:              int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
         trial_stim_prob_left:       float         # probability of the stimulus being present on left
+        trial_included:             bool          # whether the trial should be included
         """
 
     class ExcludedTrial(dj.Part):
