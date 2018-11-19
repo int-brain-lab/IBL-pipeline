@@ -5,7 +5,7 @@ Created on Tue Sep 11 18:39:52 2018
 @author: Miles
 """
 
-import psychofit as psy
+#import psychofit as psy
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -14,44 +14,44 @@ import scipy as sp
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 #from matplotlib.dates import MONDAY
-from psychofit import psychofit as psy # https://github.com/cortex-lab/psychofit
-import seaborn as sns 
+from ibl_pipeline.analyses import psychofit as psy # https://github.com/cortex-lab/psychofit
+import seaborn as sns
 import pandas as pd
 from IPython import embed as shell
 
 def plot_psychometric(df, ax=None, color="black"):
     """
     Plots psychometric data for a given DataFrame of behavioural trials
-    
+
     If the data contains more than six different contrasts (or > three per side)
-    the data are fit with an erf function.  The x-axis is percent contrast and 
-    the y-axis is the proportion of 'rightward choices', i.e. trials where the 
+    the data are fit with an erf function.  The x-axis is percent contrast and
+    the y-axis is the proportion of 'rightward choices', i.e. trials where the
     subject turned the wheel clockwise to threshold.
-    
+
     Example:
         df = alf.load_behaviour('2018-09-11_1_Mouse1', r'\\server\SubjectData')
         plot_psychometric(df)
-        
+
     Args:
         df (DataFrame): DataFrame constructed from an ALF trials object.
         ax (Axes): Axes to plot to.  If None, a new figure is created.
-        
+
     Returns:
         ax (Axes): The plot axes
-    
+
     TODO Process three response types
     TODO Better titling of figure
     TODO Return fit pars if available
     TODO May as well reuse perf_per_contrast?
     TODO: Change plot_psychometric to split by side prob
     """
-    
+
     contrastSet = np.sort(df['signedContrast'].unique())
     #choiceSet = np.array(set(df['choice']))
     nn = np.array([sum((df['signedContrast']==c) & (df['included']==True)) for c in contrastSet])
     pp = np.array([sum((df['signedContrast']==c) & (df['included']==True) & (df['choice']==1)) for c in contrastSet])/nn
     # ci = 1.96*np.sqrt(pp*(1-pp)/nn) # TODO: this is not the binomial CI
-    
+
     def binom_interval(success, total, confint=0.95):
         quantile = (1 - confint) / 2
         lower = sp.stats.beta.ppf(quantile, success, total - success + 1)
@@ -67,13 +67,13 @@ def plot_psychometric(df, ax=None, color="black"):
         # ax.cla()
 
     if contrastSet.size > 4:
-        pars, L = psy.mle_fit_psycho(np.vstack((contrastSet,nn,pp)), 
+        pars, L = psy.mle_fit_psycho(np.vstack((contrastSet,nn,pp)),
                                      P_model='erf_psycho_2gammas',
                                      parstart=np.array([np.mean(contrastSet), 3., 0.05, 0.05]),
-                                     parmin=np.array([np.min(contrastSet), 10., 0., 0.]), 
+                                     parmin=np.array([np.min(contrastSet), 10., 0., 0.]),
                                      parmax=np.array([np.max(contrastSet), 30., .4, .4]))
 
-        
+
         ax.plot(np.arange(-100,100), psy.erf_psycho_2gammas( pars, np.arange(-100,100)) , color=color)
 
     # when there are not enough contrasts, still fit the same errorbar
@@ -89,22 +89,22 @@ def plot_psychometric(df, ax=None, color="black"):
     ax.set_xlabel('Contrast (%)')
 
     return ax
-    
+
 def plot_RTs(df, ax=None):
     """
     Scatter plot of responses, given a data frame of trials
-    
+
     On the x-axis is trial number and on the y-axis, the response time in seconds,
     defined as the time between the go cue and a response being recorded.
-    
+
     Example:
         df = alf.load_behaviour('2018-09-11_1_Mouse1', r'\\server\SubjectData')
         plot_RTs(df)
-        
+
     Args:
         df (DataFrame): DataFrame constructed from an ALF trials object.
         ax (Axes): Axes to plot to.  If None, a new figure is created.
-        
+
     Returns:
         ax (Axes): The plot axes
     """
@@ -149,21 +149,21 @@ def perf_per_contrast(df):
     Returns the proportion of 'rightward chocies', given a dataframe of trials.
     Each value corresponds to a contrast, going from highest contrast on the left
     to highest contrast on the right.
-        
+
     Example:
         df = alf.load_behaviour('2018-09-11_1_Mouse1', r'\\server\SubjectData')
         pp = perf_per_contrast(df)
         >> [0., 0.2, 0., 0.8, 0.9]
-        
+
     Args:
         df (DataFrame): DataFrame constructed from an ALF trials object.
-        
+
     Returns:
-        pp (numpy.Array): An array of the size (n,) where n is the number of 
-                          contrasts.  Each value is the proportion of 
-                          'rightward choices', i.e. trials where the subject 
+        pp (numpy.Array): An array of the size (n,) where n is the number of
+                          contrasts.  Each value is the proportion of
+                          'rightward choices', i.e. trials where the subject
                           turned the wheel clockwise to threshold
-    
+
     TODO: Optional contrast set input
     """
     contrastSet = (-100., -50., -25., -12.5, -0.06, 0., 0.06, 12.5, 25., 50., 100.)
@@ -176,23 +176,23 @@ def perf_per_contrast(df):
 def plot_perf_heatmap(dfs, ax=None):
     """
     Plots a heat-map of performance for each contrast per session.
-    
-    The x-axis is the contrast, going from highest contrast on the left to 
-    highest contrast on the right. The y-axis is the session number, ordered 
-    from most recent.  
-        
+
+    The x-axis is the contrast, going from highest contrast on the left to
+    highest contrast on the right. The y-axis is the session number, ordered
+    from most recent.
+
     Example:
         refs, date, seq = dat.list_exps('Mouse1', rootDir = r'\\server\Data')
         dfs = [load_behaviour(ref[0]) for ref in refs]
         plot_perf_heatmap(dfs)
-        
+
     Args:
         dfs (List): List of data frames constructed from an ALF trials object.
         ax (Axes): Axes to plot to.  If None, a new figure is created.
-        
+
     Returns:
         ax (Axes): The plot axes
-    
+
     TODO: Optional contrast set input
     """
 
@@ -244,26 +244,26 @@ def plot_perf_heatmap(dfs, ax=None):
     #ax.spines['left'].set_position(('outward',10))
     #ax.spines['bottom'].set_position(('outward',10))
     return ax
-    
+
 def plot_windowed_perf(df, window=10, ax=None):
     """
     Plots the windowed performance over a session.
-    
-    The x-axis is the trial number over which the trial window is centered.  The 
-    y-axis is the performance calculated across the window.  
-        
+
+    The x-axis is the trial number over which the trial window is centered.  The
+    y-axis is the performance calculated across the window.
+
     Example:
         df = alf.load_behaviour('2018-09-11_1_Mouse1', r'\\server\SubjectData')
         plot_windowed_perf(df)
-        
+
     Args:
         df (Data Frame): Data frame of trials for a given session
         window (int): Width of sliding window (number of trials)
         ax (Axes): Axes to plot to.  If None, a new figure is created
-        
+
     Returns:
         ax (Axes): The plot axes
-    
+
     TODO: Optional contrast set input
     TODO: Worth plotting only the easy contrast trials?
     TODO: Add second x-axis to show time
@@ -289,30 +289,30 @@ def plot_windowed_perf(df, window=10, ax=None):
     ax.spines['left'].set_position(('outward',10))
     ax.spines['bottom'].set_position(('outward',10))
     return ax
-    
+
 def plot_learning(dfs, ax=None):
     """
     Plots the performance across the sessions for a data frame set.
-    
+
     The x-axis is the session number.  The y-axis is the performance.
-        
+
     Example:
         refs, date, seq = dat.list_exps('Mouse1', rootDir = r'\\server\Data')
         dfs = [load_behaviour(ref[0]) for ref in refs]
         plot_learning(dfs)
-        
+
     Args:
         dfs (List): List of data frames constructed from an ALF trials object.
         ax (Axes): Axes to plot to.  If None, a new figure is created.
-                
+
     Returns:
         ax (Axes): The plot axes
     """
-    nn = np.array([sum((df['signedContrast']>=.5) & 
-                       (df['included']==True)) 
+    nn = np.array([sum((df['signedContrast']>=.5) &
+                       (df['included']==True))
                    for df in dfs])
-    pp = np.array([sum((df['signedContrast']>=.5) & 
-                       (df['feedbackType']==1) & 
+    pp = np.array([sum((df['signedContrast']>=.5) &
+                       (df['feedbackType']==1) &
                        (df['included']==True))
                    for df in dfs]) / nn
     ci = 1.96*np.sqrt(pp*(1-pp)/nn)
@@ -345,21 +345,21 @@ def plot_repeats(dfs, max_repeats=4, normalize=False, ax=None):
     """
     Plots the number of correct trials for each attempt number (repeatNum) over
     each session.
-    
-    The x-axis is the session number.  The y-axis is the number (or proportion) 
+
+    The x-axis is the session number.  The y-axis is the number (or proportion)
     of trials.
-        
+
     Example:
         refs, date, seq = dat.list_exps('Mouse1', rootDir = r'\\server\Data')
         dfs = [load_behaviour(ref[0]) for ref in refs]
         plot_repeats(dfs, max_repeats=3, normalize=True)
-        
+
     Args:
         dfs (List): List of data frames constructed from an ALF trials object.
         max_repeats (int): The attempt number at which to pool sucessful responses.
         normalize (bool): When true, the y-axis becomes the proportion of trials.
         ax (Axes): Axes to plot to.  If None, a new figure is created.
-                
+
     Returns:
         ax (Axes): The plot axes
     """
@@ -367,14 +367,14 @@ def plot_repeats(dfs, max_repeats=4, normalize=False, ax=None):
         plt.figure()
         ax = plt.gca()
     ax.cla()
-    counts = np.array([[sum(df['feedbackType'].where(df['repNum']==val)==1) if val < max_repeats 
+    counts = np.array([[sum(df['feedbackType'].where(df['repNum']==val)==1) if val < max_repeats
                         else sum(df['feedbackType'].where(df['repNum'] >= val)==1)
                         for val in range(1,max_repeats+1)]
                        for df in dfs])
     max_trials = max([sum(n) for n in counts])
     if normalize is True:
         counts= np.stack([n / sum(n) for n in counts])
-    
+
     bar_l = range(1,counts.shape[0]+1)
     bottom = np.zeros_like(bar_l).astype('float')
     for i in range(0,max_repeats):
@@ -397,20 +397,20 @@ def plot_repeats(dfs, max_repeats=4, normalize=False, ax=None):
         pass
     ax.legend()
     return ax
-    
+
 def plot_choice_by_side(df, ax=None):
 # TODO: Make look like fig 1F of Lak et al. 2018
     if ax is None:
         plt.figure()
         ax = plt.gca()
-    ax.scatter(df['contrast'][df['choice']==1], 
-                df.index.values[df['choice']==1]+1, 
+    ax.scatter(df['contrast'][df['choice']==1],
+                df.index.values[df['choice']==1]+1,
                 s=100, marker='_', c='r')
-    ax.scatter(df['contrast'][df['choice']==-1], 
-                df.index.values[df['choice']==-1]+1, 
+    ax.scatter(df['contrast'][df['choice']==-1],
+                df.index.values[df['choice']==-1]+1,
                 s=100, marker='_', c='b')
     return ax
-    
+
 def plot_choice_windowed(df, window=10, ax=None):
 # TODO: Make look like fig 1F of Lak et al. 2018
     if ax is None:
@@ -425,7 +425,7 @@ def plot_choice_windowed(df, window=10, ax=None):
 
 
 def fix_date_axis(ax):
-    # deal with date axis and make nice looking 
+    # deal with date axis and make nice looking
     ax.xaxis_date()
     ax.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=mdates.MONDAY))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
@@ -448,7 +448,7 @@ def plot_chronometric(df, ax, color):
     qlow = df.groupby(['signedContrast']).agg(f).reset_index()
 
     # sns.pointplot(x="signedContrast", y="rt", color=color, estimator=np.median, ci=None, join=True, data=df, ax=ax)
-    ax.errorbar(df2['signedContrast'], df2['rt'], df2['rt']-qlow['rt']['q1'], 
+    ax.errorbar(df2['signedContrast'], df2['rt'], df2['rt']-qlow['rt']['q1'],
         qlow['rt']['q2']-df2['rt'], 'o-', color=color, mec="white")
     ax.set(xlabel="Contrast (%)", ylabel="RT (s)")
     ax.grid(True)
