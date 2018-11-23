@@ -95,7 +95,7 @@ class Wheel(dj.Imported):
     wheel_sampling_rate:    float     # Samples per second
     """
 
-    #key_source = CompleteWheelSession & 'wheel_session_complete = 1'
+    key_source = CompleteWheelSession & 'wheel_session_complete = 1'
 
     def make(self, key):
 
@@ -153,7 +153,7 @@ class WheelMoveSet(dj.Imported):
     ---
     wheel_move_number : int     # total number of movements in this set
     """
-    #key_source = CompleteWheelMoveSession & 'wheelmove_session_complete = 1'
+    key_source = CompleteWheelMoveSession & 'wheelmove_session_complete = 1'
 
     def make(self, key):
         wheel_move_key = key.copy()
@@ -370,7 +370,7 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    #key_source = CompleteTrialSession & 'trial_session_complete = 1'
+    key_source = CompleteTrialSession & 'trial_session_complete = 1'
 
     def make(self, key):
         trial_key = key.copy()
