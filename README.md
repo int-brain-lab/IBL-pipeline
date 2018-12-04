@@ -1,6 +1,6 @@
 # IBL pipeline schemas
 
-Alyx-corresponding schemas, including, `reference`, `subject`, `action`, `acquisition`, and `data`
+Alyx-corresponding schemas, including, `referenall_erd.save('/images/all_erd.png')ce`, `subject`, `action`, `acquisition`, and `data`
 
 ![Alyx_corresponding erd](images/alyx_erd.png)
 
