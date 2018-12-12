@@ -13,8 +13,11 @@ Schema of `behavior`
 # Instructions for connecting to the IBL pipeline
 
 1. Email austin@vathes.com for a database username.
+
 2. Clone the repository (https://github.com/int-brain-lab/IBL-pipeline).
+
 3. Install Docker (https://www.docker.com/). Linux users also need to install Docker Compose separately.
+
 4. Create a .env file in the cloned directory and **modify user and password values** per Step 1.
 
     File contents of ``.env``:
@@ -25,9 +28,20 @@ Schema of `behavior`
     ```
 
 5. Move into the cloned directory in a terminal, then run `docker-compose up -d`.
+
 6. Go to http://localhost:8888/tree in your favorite browser to open Jupyter Notebook.
+
 7. Open "Datajoint pipeline query tutorial.ipynb".
+
 8. Run through the notebook and feel free to experiment.
+
+9. If the user would like to enter the docker and run scripts through the terminal, first get the docker container ID with `docker ps`, then run:
+
+    ```bash
+    docker exec -it CONTAINER_ID /bin/bash
+    ```
+
+    Now the user should be inside the docker and is able to run scripts as needed.
 
 # Instructions to ingest Alyx data into local database
 
