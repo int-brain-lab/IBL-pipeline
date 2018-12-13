@@ -43,13 +43,7 @@ Schema of `behavior`
 
 ### To run your own Python scripts ###
 
-9. If the user would like to enter the docker and run scripts through the terminal, run `docker-compose up -d`, then get the docker container ID with `docker ps`, copy `CONTAINER-ID` and then run:
-
-    ```bash
-    docker exec -it CONTAINER_ID /bin/bash
-    ```
-
-    Now the user should be inside the docker and is able to run scripts as needed.
+9. If the user would like to enter the docker and run scripts through the terminal, run `docker-compose up -d`, then  run `docker exec -it ibl-pipeline_datajoint_1 /bin/bash`. Now the user should be inside the docker and is able to run scripts as needed. Go to your scripts using `cd /src/ibl-pipeline/ibl_pipeline/analyses`.
 
 # Instructions to ingest Alyx data into local database
 

@@ -1,12 +1,12 @@
 {
-    "ALYX_LOGIN": ALYX_USERNAME,
-    "ALYX_PWD": ALYX_PASSWORD,
+    "ALYX_LOGIN": "anneu",
+    "ALYX_PWD": "Riviera64",
     "ALYX_URL": "https://alyx.internationalbrainlab.org",
-    "CACHE_DIR": "/src/ibl-pipeline/data/FlatIron",
-    "FTP_DATA_SERVER": "ftp://ibl.flatironinstitute.com",
+    "CACHE_DIR": "/Users/urai/Data/FlatIron",
+    "FTP_DATA_SERVER": "ftp://ibl.flatironinstitute.org",
     "FTP_DATA_SERVER_LOGIN": "iblftp",
-    "FTP_DATA_SERVER_PWD": null,
-    "HTTP_DATA_SERVER": "http://ibl.flatironinstitute.com",
-    "HTTP_DATA_SERVER_LOGIN": FLATIRON_USERNAME,
-    "HTTP_DATA_SERVER_PWD": FLATIRON_PASSWORD
+    "FTP_DATA_SERVER_PWD": "GrayMatter19",
+    "HTTP_DATA_SERVER": "http://ibl.flatironinstitute.org",
+    "HTTP_DATA_SERVER_LOGIN": "iblmember",
+    "HTTP_DATA_SERVER_PWD": "GrayMatter19"
 }
