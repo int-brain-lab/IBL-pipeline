@@ -129,15 +129,31 @@ class WheelMoveType(dj.Lookup):
 
 
 @schema
+class CompleteWheelMoveSession(dj.Computed):
+    definition = """
+    # sessions that are complete with wheel related information and thus may be ingested
+    -> acquisition.Session
+    ---
+    wheelmove_session_complete: bool              # whether the session is complete
+    """
+
+    required_datasets = ["_ibl_wheelMoves.intervals.npy", "_ibl_wheelMoves.type.csv"]
+
+    def make(self, key):
+        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {'exists': 1}).fetch('dataset_name')
+        key['wheelmove_session_complete'] = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
+        self.insert1(key)
+
+
+@schema
 class WheelMoveSet(dj.Imported):
     definition = """
     # detected wheel movements
-    -> Wheel
+    -> acquisition.Session
     ---
     wheel_move_number : int     # total number of movements in this set
     """
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
-                    ("_ibl_wheelMoves.intervals.npy", "_ibl_wheelMoves.type.npy")')
+    key_source = CompleteWheelMoveSession & 'wheelmove_session_complete = 1'
 
     def make(self, key):
         wheel_move_key = key.copy()
@@ -146,15 +162,9 @@ class WheelMoveSet(dj.Imported):
         wheel_moves_intervals, wheel_moves_types = \
             ONE().load(eID, dataset_types=['_ibl_wheelMoves.intervals', '_ibl_wheelMoves.type'])
 
-        print(len(wheel_moves_intervals))
-        print(len(wheel_moves_types))
-        assert len(np.unique(np.array([len(wheel_moves_intervals), len(wheel_moves_types)]))) == 1, 'Loaded wheel move files do not have the same length'
+        wheel_moves_types = wheel_moves_types.columns
 
-        wheel_moves_types_str = np.array(["" for x in range(len(wheel_moves_types))], dtype='<U10')
-        # mapping between numbers and "CW" etc need to be confirmed
-        wheel_moves_types_str[wheel_moves_types.ravel() == 0] = "CW"
-        wheel_moves_types_str[wheel_moves_types.ravel() == 1] = "CCW"
-        wheel_moves_types_str[wheel_moves_types.ravel() == 2] = "Flinch"
+        assert len(np.unique(np.array([len(wheel_moves_intervals), len(wheel_moves_types)]))) == 1, 'Loaded wheel move files do not have the same length'
 
         key['wheel_move_number'] = len(wheel_moves_types)
         self.insert1(key)
@@ -163,7 +173,15 @@ class WheelMoveSet(dj.Imported):
             wheel_move_key['wheel_move_id'] = idx_move + 1
             wheel_move_key['wheel_move_start_time'] = wheel_moves_intervals[idx_move, 0]
             wheel_move_key['wheel_move_end_time'] = wheel_moves_intervals[idx_move, 1]
-            wheel_move_key['wheel_move_type'] = wheel_moves_types_str[idx_move]
+
+            wheel_move_type = wheel_moves_types[idx_move]
+            if 'CCW' in wheel_move_type:
+                wheel_move_key['wheel_move_type'] = 'CCW'
+            elif 'flinch' in wheel_move_type:
+                wheel_move_key['wheel_move_type'] = 'flinch'
+            else:
+                wheel_move_key['wheel_move_type'] = 'CW'
+
             self.WheelMove().insert1(wheel_move_key)
 
         logger.info('Populated a WheelMoveSet and all WheelMove tuples for subject {subject_uuid} in session started at {session_start_time}'.format(**key))
@@ -352,7 +370,7 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    #key_source = CompleteTrialSession & 'trial_session_complete = 1'
+    key_source = CompleteTrialSession & 'trial_session_complete = 1'
 
     def make(self, key):
         trial_key = key.copy()

@@ -208,6 +208,10 @@ class Subject(dj.Computed):
         key_subject = key.copy()
         key['uuid'] = key['subject_uuid']
 
+        lab_uuid = grf(key, 'lab')
+        if lab_uuid != 'None':
+            key_subject['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
+
         nickname = grf(key, 'nickname')
         if nickname != 'None':
             key_subject['subject_nickname'] = nickname

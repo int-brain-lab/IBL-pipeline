@@ -18,7 +18,7 @@ dir_name = path.dirname(__file__)
 
 if len(sys.argv) < 2:  # no arguments given
     # if no argument given, assume a canonical file location and name
-    filename = path.join(dir_name, '..', 'data', 'alyx_dump', 'alyxfull.json')
+    filename = path.join(dir_name, '..', 'data', 'alyxfull.json')
 else:
     filename = path.join(dir_name, sys.argv[1])
 
