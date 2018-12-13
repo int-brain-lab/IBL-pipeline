@@ -14,11 +14,13 @@ Schema of `behavior`
 
 1. Email austin@vathes.com for a database username.
 
-2. Clone the repository (https://github.com/int-brain-lab/IBL-pipeline).
+2. Install Docker (https://www.docker.com/). Linux users also need to install Docker Compose separately.
 
-3. Install Docker (https://www.docker.com/). Linux users also need to install Docker Compose separately.
+3a. Fork the repository (https://github.com/int-brain-lab/IBL-pipeline) onto your own GitHub account.
 
-4. Create a .env file in the cloned directory and **modify user and password values** per Step 1.
+3b. Clone the forked repository.
+
+4a. Create a .env file in the cloned directory and **modify user and password values** per Step 1.
 
     File contents of ``.env``:
     ```
@@ -27,7 +29,11 @@ Schema of `behavior`
     DJ_PASS=password
     ```
 
+4b. Copy your `.one_params` file into `IBL-pipeline/root` to not be prompted for Alyx login.
+
 5. Move into the cloned directory in a terminal, then run `docker-compose up -d`.
+
+### To run example notebooks ###
 
 6. Go to http://localhost:8888/tree in your favorite browser to open Jupyter Notebook.
 
@@ -35,7 +41,9 @@ Schema of `behavior`
 
 8. Run through the notebook and feel free to experiment.
 
-9. If the user would like to enter the docker and run scripts through the terminal, first get the docker container ID with `docker ps`, then run:
+### To run your own Python scripts ###
+
+9. If the user would like to enter the docker and run scripts through the terminal, run `docker-compose up -d`, then get the docker container ID with `docker ps`, copy `CONTAINER-ID` and then run:
 
     ```bash
     docker exec -it CONTAINER_ID /bin/bash
