@@ -28,6 +28,7 @@ import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 # get folder to save plots
 path = fig_path()
+path = 'tmpfig/'
 if not os.path.exists(path):
     os.mkdir(path)
 
@@ -41,8 +42,11 @@ sns.set_context(context="paper")
 
 # get a list of all mice that are currently training
 subjects = pd.DataFrame.from_dict(subject.Subject().fetch(as_dict=True)) 
+
 # all mice that are alive and on water restriction
-subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & action.WaterRestriction()).fetch(as_dict=True))
+subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 
+	action.WaterRestriction().proj()).fetch(as_dict=True, order_by='lab_name'))
+print(subjects['subject_nickname'].unique())
 
 for i, mouse in enumerate(subjects['subject_nickname']):
 
@@ -58,7 +62,7 @@ for i, mouse in enumerate(subjects['subject_nickname']):
 		# GENERAL METADATA, use DJ variable names
 		# ============================================= #
 
-		fig.suptitle('Mouse %s (%s), born %s, user %s (%s) \n%s' %(subjects['subject_nickname'][i],
+		fig.suptitle('Mouse %s (%s), born %s, user %s (%s), %s' %(subjects['subject_nickname'][i],
 		 subjects['sex'][i], subjects['subject_birth_date'][i],
 		 subjects['responsible_user'][i], subjects['lab_name'][i],
 		 subjects['subject_description'][i]))
@@ -255,6 +259,6 @@ for i, mouse in enumerate(subjects['subject_nickname']):
 		print("%s failed to run" %mouse)
 		plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 		# fig.savefig(join(path + '%s_overview.pdf'%mouse))
-		raise
+		pass
 
 

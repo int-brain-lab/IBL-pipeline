@@ -16,8 +16,10 @@ from ibl_pipeline import reference, subject, action, acquisition, data, behavior
 def get_weights(mousename):
 
     mouse = (subject.Subject() & 'subject_nickname = "%s"'%mousename )
+
+    wei = {}
     wei['date_time'], wei['weight'] = (action.Weighing() & mouse).fetch('weighing_time', 
-        'weight', order_by='weighing_time', as_dict=True)
+        'weight', order_by='weighing_time')
 
     # now organize in a pandas dataframe
     wei = pd.DataFrame.from_dict(wei)
@@ -34,9 +36,10 @@ def get_water(mousename):
 
     mouse = (subject.Subject() & 'subject_nickname = "%s"'%mousename )
     wei = (action.WaterAdministration() & mouse).fetch(as_dict=True)
-    wei = pd.DataFrame(wei)
 
-    wei.rename(columns={'administration_time':'date_time'}, inplace=True)
+    wei = pd.DataFrame(wei)
+    wei.rename(columns={'administration_time':'date_time', 'watertype_name':'water_type'}, inplace=True)
+
     wei['date_time'] = pd.to_datetime(wei.date_time)
     wei.sort_values('date_time', inplace=True)
     wei.reset_index(drop=True, inplace=True)
@@ -57,20 +60,21 @@ def get_water_weight(mousename):
     # TODO: is this possible in DataJoint?
 
     # make sure that NaNs are entered for days with only water or weight but not both
-    combined = pd.merge(wei, wa, on="date", how='outer')
+    combined = pd.merge(wei, wa, on="date", how='outer')   
     combined = combined[['date', 'weight', 'water_administered', 'water_type']]
 
-    # only if the mouse is on water restriction, add its baseline weight
-    if restr['last_water_restriction']:
+    # # only if the mouse is on water restriction, add its baseline weight
+    # if restr['last_water_restriction']:
         
-        # remove those weights below current water restriction start
-        if restr['responsible_user'] == 'valeria':
-            combined = combined[combined.date >= pd.to_datetime(restr['last_water_restriction'])]
+    #     # remove those weights below current water restriction start
+    #     if restr['responsible_user'] == 'valeria':
+    #         combined = combined[combined.date >= pd.to_datetime(restr['last_water_restriction'])]
 
-        baseline = pd.DataFrame.from_dict({'date': pd.to_datetime(restr['last_water_restriction']), 
-            'weight': restr['reference_weight'], 'index':[0]})
-    else:
-        baseline = pd.DataFrame.from_dict({'date': None, 'weight': combined.date[0], 'index':[0]})
+    #     baseline = pd.DataFrame.from_dict({'date': pd.to_datetime(restr['last_water_restriction']), 
+    #         'weight': restr['reference_weight'], 'index':[0]})
+    # else:
+
+    baseline = pd.DataFrame.from_dict({'date': None, 'weight': combined.weight[0], 'index':[0]})
 
     combined = combined.sort_values(by='date')
     combined['date'] = combined['date'].dt.floor("D") # round the time of the baseline weight down to the day
@@ -86,14 +90,21 @@ def get_water_weight(mousename):
 
 def get_behavior(mousename, **kwargs):
 
-    b = behavior.TrialSet.Trial & mouse = (subject.Subject() & 'subject_nickname = "%s"'%mousename )
+    b = behavior.TrialSet.Trial & (subject.Subject() & 'subject_nickname = "%s"'%mousename )
+    # (subject.Subject() & 'subject_nickname = "%s"'%mousename )
     behav = pd.DataFrame(b.fetch(order_by='session_start_time, trial_id'))
 
     # TODO: harmonize the datajoint attribute names to Alf?
     # https://github.com/shenshan/IBL-pipeline/blob/master/notebooks/Behavioral%20overview%20snapshot.ipynb
-    behav['start_time']         = behav['session_start_time']
+    behav['start_time']         = pd.to_datetime(behav['session_start_time'])
+
+    # DJ doesn't return session_end_time
+    try:
+        behav['end_time']       = pd.to_datetime(behav['session_end_time'])
+    except: # will set the end_time to be the same as start_time, 0 minute session
+        behav['end_time']       = pd.to_datetime(behav['session_start_time'])
+
     behav['trial']              = behav['trial_id'] - 1
-    behav['session_start_time'] = pd.to_datetime(behav.session_start_time)
     behav['date']               = behav['session_start_time'].dt.floor("D")
 
     behav['days']               = behav.date - behav.date[0]
