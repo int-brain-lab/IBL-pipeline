@@ -26,11 +26,8 @@ from behavior_plots import *
 from load_mouse_data_datajoint import * # this has all plotting functions
 import psychofit as psy # https://github.com/cortex-lab/psychofit
 
-# get folder to save plots
-path = fig_path()
-path = 'tmpfig/'
-if not os.path.exists(path):
-    os.mkdir(path)
+# folder to save plots, from DataJoint
+path = '/Snapshot_DataJoint'
 
 # ============================================= #
 # START BIG OVERVIEW PLOT

@@ -90,8 +90,10 @@ def get_water_weight(mousename):
 
 def get_behavior(mousename, **kwargs):
 
-    b = behavior.TrialSet.Trial & (subject.Subject() & 'subject_nickname = "%s"'%mousename )
-    # (subject.Subject() & 'subject_nickname = "%s"'%mousename )
+    # b = (behavior.TrialSet.Trial * acquisition.Session.session_end_time.proj(ac_lab='lab_name') 
+    #     * subject.Subject) & 'subject_nickname = "%s"'%mousename
+
+    b = (behavior.TrialSet.Trial * subject.Subject) & 'subject_nickname = "%s"'%mousename
     behav = pd.DataFrame(b.fetch(order_by='session_start_time, trial_id'))
 
     # TODO: harmonize the datajoint attribute names to Alf?

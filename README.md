@@ -35,10 +35,10 @@ Schema of `behavior`
 
 Note: if you first build the docker container and then add `.one_params`, running ONE() in Python may still prompt you for your Alyx and FlatIron login details. In this case, do
 ```
-`docker-compose down`
-`docker image rm ibl-pipeline_datajoint:latest`
-`docker-compose up -d`
-`docker exec -it ibl-pipeline_datajoint_1 /bin/bash`
+docker-compose down
+docker image rm ibl-pipeline_datajoint:latest
+docker-compose up -d
+docker exec -it ibl-pipeline_datajoint_1 /bin/bash
 ```
 
 ### To run example notebooks ###
@@ -51,7 +51,22 @@ Note: if you first build the docker container and then add `.one_params`, runnin
 
 ### To run your own Python scripts ###
 
-8. If the user would like to enter the docker and run scripts through the terminal, run `docker-compose up -d`, then  run `docker exec -it ibl-pipeline_datajoint_1 /bin/bash`. Now the user should be inside the docker and is able to run scripts as needed. Go to your scripts using `cd /src/ibl-pipeline/ibl_pipeline/analyses`.
+8. If the user would like to enter the docker and run scripts through the terminal, run 
+```
+docker-compose up -d
+docker exec -it ibl-pipeline_datajoint_1 /bin/bash
+cd /src/ibl-pipeline/ibl_pipeline/analyses
+```
+
+To save figures into AlyxPlots on the Google Drive, you can mount this path to somewhere inside the docker. The save the figs into the docker folder. The saved results will be automatically present in the outside folder you mounted.
+
+a. `docker-compose down`
+b. open `docker-compose.yml`
+c. add `/Users/urai/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/:/Snapshot_DataJoint` in to the volumes:
+d. close the file
+e. `docker-compose up -d`
+
+Then save the plots into `/AlyxPlots` inside the docker, then you’ll see that the plots are in the folder you want.
 
 # Instructions to ingest Alyx data into local database
 
