@@ -23,7 +23,7 @@ class Weighing(dj.Manual):
     ---
     weigh_uuid:        varchar(64)
     weight:			    float			# weight
-    -> [nullable] reference.LabMember
+    -> [nullable] reference.LabMember.proj(weighing_user="user_name")
     """
 
 
@@ -41,12 +41,12 @@ class WaterAdministration(dj.Manual):
     # <class 'actions.models.WaterAdministration'>
     definition = """
     -> subject.Subject
-    administration_time:	datetime		# date time
+    administration_time:	    datetime		# date time
     ---
-    wateradmin_uuid:        varchar(64)
-    water_administered:		float			# water administered
+    wateradmin_uuid:            varchar(64)
+    water_administered=null:    float			# water administered
     -> WaterType
-    -> [nullable] reference.LabMember
+    -> [nullable] reference.LabMember.proj(administration_user="user_name")
     """
 
 
@@ -61,9 +61,22 @@ class WaterRestriction(dj.Manual):
     restriction_end_time=null:  datetime	# end time
     restriction_narrative=null: varchar(1024)
     -> [nullable] ProcedureType
-    -> [nullable] reference.LabLocation
+    -> [nullable] reference.LabLocation.proj(restriction_lab='lab_name', restriction_location='location_name')
     """
 
+@schema
+class WaterRestrictionUser(dj.Manual):
+    definition = """
+    -> WaterRestriction
+    -> reference.LabMember
+    """
+
+@schema
+class WaterRestrictionProcedure(dj.Manual):
+    definition = """
+    -> WaterRestriction
+    -> ProcedureType
+    """   
 
 @schema
 class Surgery(dj.Manual):
@@ -74,14 +87,15 @@ class Surgery(dj.Manual):
     ---
     surgery_uuid:           varchar(64)
     surgery_end_time=null:  datetime        # surgery end time
-    -> [nullable] reference.LabLocation
+    surgery_time:           varchar(255)    # surgery time
+    -> [nullable] reference.LabLocation.proj(surgery_lab='lab_name', surgery_location='location_name')
     surgery_outcome_type:   enum('None', 'a', 'n', 'r')	    # outcome type
     surgery_narrative=null: varchar(2048)	# narrative
     """
 
 
 @schema
-class SurgeryLabMember(dj.Manual):
+class SurgeryUser(dj.Manual):
     definition = """
     -> Surgery
     -> reference.LabMember

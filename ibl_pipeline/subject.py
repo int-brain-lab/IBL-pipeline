@@ -55,7 +55,7 @@ class Sequence(dj.Lookup):
     sequence_name:		        varchar(255)	# informal name
     ---
     sequence_uuid:              varchar(64)
-    base_pairs=null:	        varchar(255)	# base pairs
+    base_pairs=null:	        varchar(1024)	# base pairs
     sequence_description=null:	varchar(255)	# description
     """
 
@@ -93,7 +93,7 @@ class Line(dj.Lookup):
     ---
     -> [nullable] Strain
     line_uuid:              varchar(64)
-    line_description=null:	varchar(1024)	# description
+    line_description=null:	varchar(2048)	# description
     target_phenotype=null:	varchar(255)	# target phenotype
     line_nickname:		    varchar(255)	# nickname
     is_active:				boolean		    # is active
@@ -112,15 +112,16 @@ class LineAllele(dj.Lookup):
 class Subject(dj.Manual):
     # <class 'subjects.models.Subject'>
     definition = """
-    subject_uuid:               varchar(64)
+    -> reference.Lab
+    subject_nickname:		    varchar(255)		# nickname
     ---
-    subject_nickname=null:		varchar(255)		# nickname
+    subject_uuid:               varchar(64)
     sex:			            enum("M", "F", "U")	# sex
     subject_birth_date=null:	date			    # birth date
     ear_mark=null:			    varchar(255)		# ear mark
-    (subject_source)            -> [nullable] Source
-    -> [nullable] reference.Lab
-    (responsible_user)          -> [nullable] reference.LabMember
+    -> [nullable] Line.proj(subject_line="line_name")
+    -> [nullable] Source.proj(subject_source='source_name')
+    -> [nullable] reference.LabMember.proj(responsible_user='user_name')
     protocol_number:            tinyint         	# protocol number
     subject_description=null:   varchar(1024)
     """
@@ -132,14 +133,14 @@ class BreedingPair(dj.Manual):
     definition = """
     bp_name:			    varchar(255)		    # name
     ---
-    -> [nullable] Line
+    -> [nullable] Line.proj(bp_line='line_name')
     bp_uuid:                varchar(64)
-    bp_description=null:	varchar(255)		    # description
-    start_date:			    date		            # start date
-    end_date=null:		    date			        # end date
-    (father)			    -> [nullable] Subject   # father
-    (mother1) 			    -> [nullable] Subject   # mother1
-    (mother2)			    -> [nullable] Subject	# mother2
+    bp_description=null:	varchar(2048)		    # description
+    bp_start_date=null:	    date		            # start date
+    bp_end_date=null:		date			        # end date
+    -> [nullable] Subject.proj(father='subject_nickname')   # father
+    -> [nullable] Subject.proj(mother1='subject_nickname')   # mother1
+    -> [nullable] Subject.proj(mother2='subject_nickname')	# mother2
     """
 
 
@@ -147,14 +148,15 @@ class BreedingPair(dj.Manual):
 class Litter(dj.Manual):
     # <class 'subjects.models.Litter'>
     definition = """
-    -> BreedingPair
-    litter_uuid:			        varchar(64)	    # litter uuid
+    litter_name:                    varchar(255)
     ---
+    -> [nullable] BreedingPair
+    -> Line
+    litter_uuid:			        varchar(64)	    # litter uuid
     litter_descriptive_name=null:	varchar(255)	# descriptive name
     litter_description=null:	    varchar(255)	# description
-    litter_birth_date:			    date		    # birth date
+    litter_birth_date=null:			date		    # birth date
     """
-
 
 
 @schema
@@ -180,9 +182,18 @@ class Caging(dj.Manual):
     # <class 'subjects.models.Subject'>
     definition = """
     -> Subject
-    caging_date:        datetime    # caging date
+    cage_name:          varchar(255)        # cage name
     ---
-    cage_number:	    int			# cage
+    cage_time=null:	    datetime			# cage 
+    """
+
+@schema
+class UserHistory(dj.Computed):
+    definition = """
+    -> Subject
+    -> reference.LabMember
+    ---
+    user_change_time=null:   datetime      # time when changed to this user
     """
 
 

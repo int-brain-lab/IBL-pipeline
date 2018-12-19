@@ -6,7 +6,6 @@ from . import get_raw_field as grf
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_subject')
 
-
 @schema
 class Species(dj.Computed):
     definition = """
@@ -78,7 +77,7 @@ class Sequence(dj.Computed):
     (sequence_uuid) -> alyxraw.AlyxRaw
     ---
     sequence_name:		        varchar(255)	# informal name
-    base_pairs=null:	        varchar(255)	# base pairs
+    base_pairs=null:	        varchar(1024)	# base pairs
     sequence_description=null:	varchar(255)	# description
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.sequence"').proj(sequence_uuid="uuid")
@@ -143,7 +142,7 @@ class Line(dj.Computed):
     binomial:                   varchar(255)	# binomial, inherited from Species          
     strain_name=null:           varchar(255)    # strain name, inherited from Strain
     line_name:				    varchar(255)	# line name
-    line_description=null:		varchar(1024)	# description
+    line_description=null:		varchar(2048)	# description
     target_phenotype=null:		varchar(255)	# target phenotype
     line_nickname:				varchar(255)	# auto name
     is_active:				    boolean		    # is active
@@ -191,17 +190,20 @@ class Subject(dj.Computed):
     definition = """
     (subject_uuid) -> alyxraw.AlyxRaw
     ---
-    lab_name=null:              varchar(255)
+    lab_name:                   varchar(255)
     subject_nickname:			varchar(255)		# nickname
     sex:			            enum("M", "F", "U")	# sex
     subject_birth_date=null:    date			    # birth date
+    subject_line=null:          varchar(255)        # line of the subject
     protocol_number:	        tinyint         	# protocol number
     ear_mark=null:			    varchar(255)		# ear mark
     subject_source=null:        varchar(255)        # source name, inherited from Source
     responsible_user=null:      varchar(255)        # user_name, inherited from reference.LabMember
     subject_description=null:   varchar(1024)
     """
-    key_source = (alyxraw.AlyxRaw & 'model = "subjects.subject"').proj(subject_uuid='uuid')
+    
+    subjects = alyxraw.AlyxRaw.Field & 'model="subjects.subject"' & 'fname="lab"' & 'fvalue!="None"'
+    key_source = (alyxraw.AlyxRaw & subjects).proj(subject_uuid='uuid')
 
     def make(self, key):
 
@@ -209,8 +211,7 @@ class Subject(dj.Computed):
         key['uuid'] = key['subject_uuid']
 
         lab_uuid = grf(key, 'lab')
-        if lab_uuid != 'None':
-            key_subject['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
+        key_subject['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
 
         nickname = grf(key, 'nickname')
         if nickname != 'None':
@@ -223,6 +224,10 @@ class Subject(dj.Computed):
         birth_date = grf(key, 'birth_date')
         if birth_date != 'None':
             key_subject['subject_birth_date'] = birth_date
+        
+        line_uuid = grf(key, 'line')
+        if line_uuid != 'None':
+            key_subject['subject_line'] = (Line & 'line_uuid="{}"'.format(line_uuid)).fetch1('line_name')
 
         key_subject['protocol_number'] = grf(key, 'protocol_number')
 
@@ -251,14 +256,14 @@ class BreedingPair(dj.Computed):
     definition = """
     (bp_uuid) -> alyxraw.AlyxRaw
     ---
-    line_name=null:         varchar(255)        # line name, inherited from Line
-    bp_name:			    varchar(255)		# name
-    bp_description=null:	varchar(1024)		# description
-    start_date:		        date			    # start date
-    end_date=null:		    date			    # end date
-    father=null:            varchar(64)         # subject uuid of dad, inherited from subject
-    mother1=null:           varchar(64)         # subject uuid of mom, inherited from subject
-    mother2=null:		    varchar(64)         # subject uuid of mom2, if has one, inherited from subject
+    bp_line=null:           varchar(255)        # line name, inherited from Line
+    bp_name:			    varchar(255)		# name of the breeding pair
+    bp_description=null:	varchar(2048)		# description
+    bp_start_date=null:		date			    # start date
+    bp_end_date=null:		date			    # end date
+    father=null:            varchar(64)         # subject nickname of dad, inherited from subject
+    mother1=null:           varchar(64)         # subject nickname of mom, inherited from subject
+    mother2=null:		    varchar(64)         # subject nickname of mom2, if has one, inherited from subject
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.breedingpair"').proj(bp_uuid='uuid')
 
@@ -268,7 +273,7 @@ class BreedingPair(dj.Computed):
 
         line_uuid = grf(key, 'line')
         if line_uuid != 'None':
-            key_bp['line_name'] = (Line & 'line_uuid="{}"'.format(line_uuid)).fetch1('line_name')
+            key_bp['bp_line'] = (Line & 'line_uuid="{}"'.format(line_uuid)).fetch1('line_name')
 
         key_bp['bp_name'] = grf(key, 'name')
 
@@ -276,11 +281,13 @@ class BreedingPair(dj.Computed):
         if description != 'None':
             key_bp['bp_description'] = description
 
-        key_bp['start_date'] = grf(key, 'start_date')
+        start_date = grf(key, 'start_date')
+        if start_date != 'None':
+            key_bp['bp_start_date'] = grf(key, 'start_date')
 
         end_date = grf(key, 'end_date')
         if end_date != 'None':
-            key_bp['end_date'] = end_date
+            key_bp['bp_end_date'] = end_date
 
         father = grf(key, 'father')
         if father != 'None':
@@ -303,138 +310,95 @@ class Litter(dj.Computed):
     definition = """
     (litter_uuid) -> alyxraw.AlyxRaw
     ---
-    bp_name:                        varchar(255)    # name of the breedingpair, inherited from BreedingPair
-    litter_descriptive_name=null:   varchar(255)	# descriptive name
+    litter_name:                    varchar(255)    # name of the litter
+    bp_name=null:                   varchar(255)    # name of the breedingpair, inherited from BreedingPair
+    litter_line:                    varchar(255)    # line of the litter
     litter_description=null:        varchar(255)	# description
-    litter_birth_date:		        date		    # birth date
+    litter_birth_date=null:		    date		    # birth date
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.litter"').proj(litter_uuid='uuid')
 
     def make(self, key):
         key_litter = key.copy()
         key['uuid'] = key['litter_uuid']
+        
         bp_uuid = grf(key, 'breeding_pair')
-        key_litter['bp_name'] = (BreedingPair & 'bp_uuid="{}"'.format(bp_uuid)).fetch1('bp_name')
+        if bp_uuid != 'None':
+            key_litter['bp_name'] = (BreedingPair & 'bp_uuid="{}"'.format(bp_uuid)).fetch1('bp_name')
 
-        descriptive_name = grf(key, 'name')
-        if descriptive_name != 'None':
-            key_litter['litter_descriptive_name'] = descriptive_name
+        key_litter['litter_name'] = grf(key, 'name')
+
+        line_uuid = grf(key, 'line')
+        key_litter['litter_line'] = (Line & 'line_uuid="{}"'.format(line_uuid)).fetch1('line_name')
 
         description = grf(key, 'description')
         if description != 'None':
             key_litter['litter_description'] = description
 
         birth_date = grf(key, 'birth_date')
-        key_litter['litter_birth_date'] = birth_date
+        if birth_date != 'None':
+            key_litter['litter_birth_date'] = birth_date
         self.insert1(key_litter)
 
 
 @schema
-class LitterSubject(dj.Computed):
+class LitterSubject(dj.Manual):
     definition = """
-    subject_uuid:   varchar(64)
+    lab_name:           varchar(255)
+    subject_nickname:   varchar(255)
     ---
-    bp_name:        varchar(255)
-    litter_uuid:    varchar(64)
+    litter_name:        varchar(255)
     """
-    key_source = (alyxraw.AlyxRaw & 'model = "subjects.subject"').proj(subject_uuid='uuid')
-
-    def make(self, key):
-        key_ls = key.copy()
-        key['uuid'] = key['subject_uuid']
-        litter = grf(key, 'litter')
-        if litter != 'None':
-            key_ls['bp_name'], key_ls['litter_uuid'] = (Litter & 'litter_uuid="{}"'.format(litter)).fetch1('bp_name', 'litter_uuid')
-            self.insert1(key_ls)
 
 
 @schema
-class SubjectProject(dj.Computed):
+class SubjectProject(dj.Manual):
     definition = """
-    subject_uuid:       varchar(64)
-    project_name:       varchar(255)
+    lab_name:               varchar(255)
+    subject_nickname:       varchar(255)
+    project_name:           varchar(255)
     """
-    key_source = (alyxraw.AlyxRaw & 'model = "subjects.subject"').proj(subject_uuid='uuid')
-
-    def make(self, key):
-        key_s = key.copy()
-        key['uuid'] = key['subject_uuid']
-
-        proj_uuids = grf(key, 'projects', multiple_entries=True)
-        if proj_uuids != 'None':
-            for proj_uuid in proj_uuids:
-                key_sp = key_s.copy()
-                key_sp['project_name'] = (reference.Project & 'project_uuid="{}"'.format(proj_uuid)).fetch1('project_name')
-                self.insert1(key_sp)
-
+    
 
 @schema
-class Caging(dj.Computed):
+class Caging(dj.Manual):
     definition = """
-    -> Subject
-    cage_number:            int
+    lab_name:               varchar(255)
+    subject_nickname:       varchar(255)
+    cage_name:              varchar(255)
     ---
-    caging_date:            datetime
+    caging_time=null:       datetime    # time when changed to this cage
     """
 
-    def make(self, key):
-        key_cage = key.copy()
-        key['uuid'] = key['subject_uuid']
-        cage = grf(key, 'cage')
-        if cage == 'None':
-            return
-        else:
-            key_cage['cage_number'] = cage
-            json_content = grf(key, 'json')
-            if json_content != 'None':
-                json_dict = json.loads(json_content)
-                history = json_dict['history']
-                if 'lamis_cage' not in history:
-                    self.insert1(key_cage)
-                else:
-                    cages = history['lamis_cage']
-                    key_cage_i = key_cage.copy()
-                    for cage in cages[::-1]:
-                        cage_time = cage['date_time']
-                        key_cage_i['caging_date'] = cage_time[:-6]
-                        self.insert1(key_cage_i)
-                        if cage['value'] != 'None':
-                            key_cage_i['cage_number'] = cage['value']
+@schema
+class UserHistory(dj.Manual):
+    definition = """
+    lab_name:               varchar(255)
+    subject_nickname: varchar(255)
+    user_name:        varchar(255)  # username 
+    ---
+    user_change_time=null:   datetime      # time when changed to this user
+    """
 
 
 @schema
-class Weaning(dj.Computed):
+class Weaning(dj.Manual):
     definition = """
-    -> Subject
+    lab_name:               varchar(255)
+    subject_nickname:       varchar(255)
     ---
     wean_date=null:			date			# wean date
     """
 
-    def make(self, key):
-        key_weaning = key.copy()
-        key['uuid'] = key['subject_uuid']
-
-        wean_date = grf(key, 'wean_date')
-        if wean_date != 'None':
-            key_weaning['wean_date'] = wean_date
-            self.insert1(key_weaning)
-
 
 @schema
-class Death(dj.Computed):
+class Death(dj.Manual):
     definition = """
-    -> Subject
+    lab_name:               varchar(255)
+    subject_nickname:        varchar(255)
     ---
     death_date=null:         date
     """
-
-    def make(self, key):
-        key_death = key.copy()
-        key['uuid'] = key['subject_uuid']
-        death_date = grf(key, 'death_date')
-        if death_date != 'None':
-            key_death['death_date'] = death_date
-            self.insert1(key_death)
 
 
 @schema
@@ -445,7 +409,8 @@ class GenotypeTest(dj.Computed):
     definition = """
     (genotype_test_uuid) -> alyxraw.AlyxRaw
     ---
-    subject_uuid:               varchar(64)                     # inherited from Subject
+    lab_name:                   varchar(255)
+    subject_nickname:           varchar(64)                     # inherited from Subject
     sequence_name:              varchar(64)                     # inherited from Sequence
     test_result:		        enum("Present", "Absent")		# test result
     """
@@ -454,7 +419,8 @@ class GenotypeTest(dj.Computed):
     def make(self, key):
         key_gt = key.copy()
         key['uuid'] = key['genotype_test_uuid']
-        key_gt['subject_uuid'] = grf(key, 'subject')
+        subject_uuid = grf(key, 'subject')
+        key_gt['lab_name'], key_gt['subject_nickname'] = (Subject & 'subject_uuid="{}"'.format(subject_uuid)).fetch1('lab_name', 'subject_nickname')
 
         sequence_uuid = grf(key, 'sequence')
         key_gt['sequence_name'] = (Sequence & 'sequence_uuid="{}"'.format(sequence_uuid)).fetch1('sequence_name')
@@ -472,7 +438,8 @@ class Zygosity(dj.Computed):
     definition = """
     (zygosity_uuid) -> alyxraw.AlyxRaw
     ---
-    subject_uuid:       varchar(64)             # inherited from Subject
+    lab_name:           varchar(255)            # inherited from Subject
+    subject_nickname:   varchar(64)             # inherited from Subject
     allele_name:        varchar(255)            # inherited from Allele
     zygosity:           enum("Present", "Absent", "Homozygous", "Heterozygous") 		# zygosity
     """
@@ -482,7 +449,8 @@ class Zygosity(dj.Computed):
 
         key_zg = key.copy()
         key['uuid'] = key['zygosity_uuid']
-        key_zg['subject_uuid'] = grf(key, 'subject')
+        subject_uuid = grf(key, 'subject')
+        key_zg['lab_name'], key_zg['subject_nickname'] = (Subject & 'subject_uuid="{}"'.format(subject_uuid)).fetch1('lab_name', 'subject_nickname')
 
         allele_uuid = grf(key, 'allele')
         key_zg['allele_name'] = (Allele & 'allele_uuid="{}"'.format(allele_uuid)).fetch1('allele_name')
@@ -500,32 +468,14 @@ class Zygosity(dj.Computed):
 
 
 @schema
-class Implant(dj.Computed):
+class Implant(dj.Manual):
     # <class 'subjects.models.Subject'>
     definition = """
-    (subject_uuid) -> alyxraw.AlyxRaw
+    lab_name:                   varchar(255)        # inherited from Subject
+    subject_nickname:           varchar(255)        # inherited from Subject
     ---
     implant_weight:		        float			    # implant weight
     adverse_effects=null:	    varchar(1024)		# adverse effects
     actual_severity=null:       tinyint             # actual severity, inherited from Severity 
     protocol_number:            tinyint
     """
-    key_source = (alyxraw.AlyxRaw & 'model="subjects.subject"' & (alyxraw.AlyxRaw.Field & 'fname = "implant_weight" and fvalue != "None"')).proj(subject_uuid='uuid')
-
-    def make(self, key):
-        key_implant = key.copy()
-        key['uuid'] = key['subject_uuid']
-
-        key_implant['implant_weight'] = float(grf(key, 'implant_weight'))
-
-        adverse_effects = grf(key, 'adverse_effects')
-        if adverse_effects != 'None':
-            key_implant['adverse_effects'] = adverse_effects
-
-        actual_severity = grf(key, 'actual_severity')
-        if actual_severity != 'None':
-            key_implant['actual_severity'] = int(actual_severity)
-
-        key_implant['protocol_number'] = int(grf(key, 'protocol_number'))
-
-        self.insert1(key_implant)

@@ -72,7 +72,7 @@ class ChildSession(dj.Manual):
 
 
 @schema
-class SessionLabMember(dj.Manual):
+class SessionUser(dj.Manual):
     definition = """
     -> Session
     -> reference.LabMember
@@ -80,8 +80,16 @@ class SessionLabMember(dj.Manual):
 
 
 @schema
-class SessionProcedureType(dj.Manual):
+class SessionProcedure(dj.Manual):
     definition = """
     -> Session
     -> action.ProcedureType
+    """
+
+@schema
+class WaterAdministrationSession(dj.Manual):
+    definition = """
+    -> action.WaterAdministration
+    ---
+    -> Session
     """

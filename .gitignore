@@ -121,4 +121,5 @@ data/*
 *.svg
 
 # others
+notebooks/notebooks_dev/*
 clear_things_up.txt

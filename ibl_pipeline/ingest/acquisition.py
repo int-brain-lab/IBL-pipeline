@@ -13,12 +13,13 @@ class Session(dj.Computed):
     (session_uuid) -> alyxraw.AlyxRaw
     ---
     session_number=null:        int
-    subject_uuid:               varchar(64)
+    lab_name:                   varchar(255)
+    subject_nickname:           varchar(255)
     project_name=null:          varchar(255)
     session_start_time:         datetime
     session_end_time=null:      datetime
-    lab_name=null:              varchar(255)
-    location_name=null:         varchar(255)
+    session_lab=null:           varchar(255)
+    session_location=null:      varchar(255)
     session_type=null:          varchar(255)
     session_narrative=null:     varchar(1024)
     task_protocol=null:         int
@@ -71,7 +72,8 @@ class Session(dj.Computed):
 @schema
 class ChildSession(dj.Manual):
     definition = """
-    subject_uuid:               varchar(64)
+    lab_name:                   varchar(255)      
+    subject_nickname:           varchar(255)
     session_start_time:         datetime
     ---
     parent_session_start_time:  datetime
@@ -79,18 +81,29 @@ class ChildSession(dj.Manual):
 
 
 @schema
-class SessionLabMember(dj.Manual):
+class SessionUser(dj.Manual):
     definition = """
-    subject_uuid:           varchar(64)
+    lab_name:                   varchar(255)          
+    subject_nickname:       varchar(255)
     session_start_time:     datetime
     user_name:              varchar(255)
     """
 
 
 @schema
-class SessionProcedureType(dj.Manual):  
+class SessionProcedure(dj.Manual):  
     definition = """
+    lab_name:                   varchar(255)          
     subject_uuid:           varchar(64)
     session_start_time:     datetime
     procedure_type_name:    varchar(255)
+    """
+
+@schema
+class WaterAdministrationSession(dj.Manual):
+    definition = """
+    lab_name:               varchar(255)
+    subject_nickname:       varchar(255)
+    ---
+    session_start_time:     datetime
     """
