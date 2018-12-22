@@ -91,9 +91,7 @@ def plot_chronometric(df, ax, color):
     ax.set_xticks([-100, -50, 0, 50, 100])
     ax.set_xticklabels(['-100', '-50', '0', '50', '100'])
 
-def plot_water_weight_curve(weight_water, baseline, ax):
-
-    xlims = [weight_water.date.min()-timedelta(days=2), weight_water.date.max()+timedelta(days=2)]
+def plot_water_weight_curve(weight_water, baseline, ax, xlims):
 
     # use pandas plot for a stacked bar - water types
     wa_unstacked = weight_water.pivot_table(index='days',
@@ -126,13 +124,14 @@ def plot_water_weight_curve(weight_water, baseline, ax):
     ax.set(ylabel="Water intake (mL)", xlabel='', xlim=xlims)
     ax.yaxis.label.set_color("#0072B2")
 
-    # overlay the weight curve
+    # OVERLAY THE WEIGHT CURVE
     weight_water2 = weight_water.groupby('days').mean().reset_index()
     weight_water2 = weight_water2.dropna(subset=['weight'])
     righty = ax.twinx()
 
     # add a line for 85% of baseline weight
-    righty.axhline(y=baseline.weight.item()*0.85, color='k', linestyle='--', linewidth=0.5)
+    if baseline.date.item():
+        righty.axhline(y=baseline.weight.item()*0.85, color='k', linestyle='--', linewidth=0.5)
 
     # plot weight curve
     sns.lineplot(x=weight_water2.days, y=weight_water2.weight, ax=righty, color='.15', marker='o')
