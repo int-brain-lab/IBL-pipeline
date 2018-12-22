@@ -365,10 +365,10 @@ class TrialSet(dj.Imported):
     # information about behavioral trials
     -> acquisition.Session
     ---
-    n_trials:           int              # total trial numbers in this set
-    n_correct_trials:   int              # number of the correct trials
-    trials_start_time:  float            # start time of the trial set (seconds)
-    trials_end_time:    float            # end time of the trial set (seconds)
+    n_trials:                int              # total trial numbers in this set
+    n_correct_trials=null:   int              # number of the correct trials
+    trials_start_time:       float            # start time of the trial set (seconds)
+    trials_end_time:         float            # end time of the trial set (seconds)
     """
 
     # Knowledge based hack to be formalized better later
@@ -376,12 +376,7 @@ class TrialSet(dj.Imported):
 
     def make(self, key):
         trial_key = key.copy()
-        # excluded_trial_key = key.copy()
-
-        subject_name = (subject.Subject & key).fetch1('subject_nickname')
-        print(subject_name)
-        print(key)
-
+        # excluded_trial_key = key.copy()      
         eID = (acquisition.Session & key).fetch1('session_uuid')
 
         trials_feedback_times, trials_feedback_types, trials_gocue_times, \
@@ -416,11 +411,14 @@ class TrialSet(dj.Imported):
         key_session['model'] = 'actions.session'
         key_session['uuid'] = (acquisition.Session & key).fetch1('session_uuid')
         
-        key['n_correct_trials'] = grf(key_session, 'n_correct_trials')
+        n_correct_trials = grf(key_session, 'n_correct_trials')
+        if n_correct_trials != 'None':
+            key['n_correct_trials'] = n_correct_trials
 
         key['trials_start_time'] = trials_intervals[0, 0]
         key['trials_end_time'] = trials_intervals[-1, 1]
 
+        print(key)
         self.insert1(key)
 
         for idx_trial in range(len(trials_response_choice)):
