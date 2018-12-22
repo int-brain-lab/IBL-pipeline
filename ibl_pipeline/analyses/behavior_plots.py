@@ -93,6 +93,8 @@ def plot_chronometric(df, ax, color):
 
 def plot_water_weight_curve(weight_water, baseline, ax, xlims):
 
+    weight_water.loc[weight_water['adlib'] == 1, 'water_administered'] = 3
+
     # use pandas plot for a stacked bar - water types
     wa_unstacked = weight_water.pivot_table(index='days',
         columns='water_type', values='water_administered', aggfunc='sum').reset_index()
@@ -102,11 +104,6 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     wa_unstacked.columns = wa_unstacked.columns.str.replace("Sucrose", "Sucr")
     wa_unstacked.columns = wa_unstacked.columns.str.replace("Citric Acid", "CA")
     wa_unstacked.columns = wa_unstacked.columns.str.replace("Hydrogel", "Hdrg")
-
-    # mark the citric acid columns to indicate adlib amount
-    for ic, c in enumerate(wa_unstacked.columns):
-        if 'CA' in c:
-            wa_unstacked[c].replace({0:2}, inplace=True)
 
     # https://stackoverflow.com/questions/44250445/pandas-bar-plot-with-continuous-x-axis
     plotvar       = wa_unstacked

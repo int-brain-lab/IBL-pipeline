@@ -92,9 +92,12 @@ def get_water_weight(mousename):
                                                'weight': restr['reference_weight'], 'index': [0]})
             # also show the value that we're using as the baseline with a different marker
             baseline.sort_index(inplace=True)
-            baseline['day'] = combined.loc[combined['date'] == baseline['date'][0], 'days'].item()
 
-
+            # if the restriction is within the range of weight/water values, show it
+            if baseline['date'][0] in combined['date']:
+                baseline['day'] = combined.loc[combined['date'] == baseline['date'][0], 'days'].item()
+            else:
+                baseline = pd.DataFrame.from_dict({'date': None, 'weight': combined.weight[0], 'day': np.nan, 'index': [0]})
     else:
         combined = pd.DataFrame()
         baseline = pd.DataFrame()
@@ -109,7 +112,6 @@ def get_behavior(mousename, **kwargs):
 
     if not behav.empty:
 
-        # TODO: harmonize the datajoint attribute names to Alf?
         # https://github.com/shenshan/IBL-pipeline/blob/master/notebooks/Behavioral%20overview%20snapshot.ipynb
         behav['start_time'] = pd.to_datetime(behav['session_start_time'])
 
