@@ -56,8 +56,10 @@ ACTION_TABLES = (
     'WaterType',
     'WaterAdministration',
     'WaterRestriction',
+    'WaterRestrictionUser',
+    'WaterRestrictionProcedure',
     'Surgery',
-    'SurgeryLabMember',
+    'SurgeryUser',
     'SurgeryProcedure'
 )
 
@@ -68,8 +70,8 @@ for table in ACTION_TABLES:
 ACQUISITION_TABLES = (
     'Session',
     'ChildSession',
-    'SessionLabMember',
-    'SessionProcedureType'
+    'SessionUser',
+    'SessionProcedure'
 )
 
 for table in ACQUISITION_TABLES:

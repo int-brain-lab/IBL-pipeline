@@ -41,7 +41,7 @@ for key in keys:
 keys = (alyxraw.AlyxRaw & 'model="subjects.line"').proj(line_uuid='uuid')
 for key in keys:
     key_l = dict()
-    key_l['binomial'], key_l['line_name'] = (subject.Line & key).fetch1('binomial', 'line_name')
+    key_l['line_name'] = (subject.Line & key).fetch1('line_name')
     key['uuid'] = key['line_uuid']
     alleles = grf(key, 'alleles', multiple_entries=True)
 
@@ -254,27 +254,31 @@ for key in keys:
             action.SurgeryProcedure.insert1(key_sp, skip_duplicates=True)
 
 # acquisition.ChildSession
-keys = (alyxraw.AlyxRaw & 'model="actions.session"').proj(session_uuid='uuid')
+sessions = (alyxraw.AlyxRaw.Field & 'model="actions.session"' & 'fname="parent_session"' & 'fvalue!="None"')
+keys = (alyxraw.AlyxRaw & sessions & 'model="actions.session"').proj(session_uuid='uuid')
 for key in keys:
     key_cs = dict()
     key['uuid'] = key['session_uuid']
 
-    key_cs['subject_uuid'], key_cs['session_start_time'] = \
-        (acquisition.Session & key).fetch1('subject_uuid', 'session_start_time')
-
+    key_cs['lab_name'], key_cs['subject_nickname'], key_cs['session_start_time'] = \
+        (acquisition.Session & key).fetch1('lab_name', 'subject_nickname', 'session_start_time')
     parent_session = grf(key, 'parent_session')
     if parent_session != 'None':
         key_cs['parent_session_start_time'] = \
             (acquisition.Session & 'session_uuid="{}"'.format(parent_session)).fetch1('session_start_time')
         acquisition.ChildSession.insert1(key_cs, skip_duplicates=True)
 
-# acquisition.SessionLabMember
-keys = (alyxraw.AlyxRaw & 'model = "actions.Session"').proj(session_uuid = 'uuid')
+# acquisition.SessionUser
+keys = (alyxraw.AlyxRaw & 'model = "actions.session"').proj(session_uuid = 'uuid')
 for key in keys:
     key_s = dict()
     key['uuid'] = key['session_uuid']
-    key_s['subject_uuid'], key_s['session_start_time'] = \
-        (acquisition.Session & key).fetch1('subject_uuid', 'session_start_time')
+    try:
+        key_s['lab_name'], key_s['subject_nickname'], key_s['session_start_time'] = \
+            (acquisition.Session & key).fetch1('lab_name', 'subject_nickname', 'session_start_time')
+    except:
+        print('session', key['session_uuid'])
+        continue
 
     user_uuids = grf(key, 'users', multiple_entries=True)
 
@@ -282,16 +286,20 @@ for key in keys:
         if user_uuid != 'None':
             key_su = key_s.copy()
             key_su['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
-            acquisition.SessionLabMember.insert1(key_su, skip_duplicates=True)
+            acquisition.SessionUser.insert1(key_su, skip_duplicates=True)
 
-# acquisition.SessionProcedureType
-keys = (alyxraw.AlyxRaw & 'model = "actions.Session"').proj(session_uuid = 'uuid')
+# acquisition.SessionProcedure
+procedure = alyxraw.AlyxRaw.Field & 'model="actions.session"' & 'fname="procedure"' & 'fvalue!="None"'
+keys = (alyxraw.AlyxRaw & 'model="actions.session"').proj(session_uuid='uuid')
 for key in keys:
     key_s = dict()
     key['uuid'] = key['session_uuid']
-
-    key_s['subject_uuid'], key_s['session_start_time'] = \
-        (acquisition.Session & key).fetch1('subject_uuid', 'session_start_time')
+    try:
+        key_s['lab_name'], key_s['subject_nickname'], key_s['session_start_time'] = \
+            (acquisition.Session & key).fetch1('lab_name', 'subject_nickname', 'session_start_time')
+    except:
+        print('session', key['session_uuid'])
+        continue
 
     procedures = grf(key, 'procedures', multiple_entries=True)
 
@@ -299,7 +307,25 @@ for key in keys:
         if procedure != 'None':
             key_sp = key_s.copy()
             key_sp['procedure_type_name'] = (action.ProcedureType & 'procedure_type_uuid="{}"'.format(procedure)).fetch1('procedure_type_name')
-            acquisition.SessionProcedureType.insert1(key_sp, skip_duplicates=True)
+            acquisition.SessionProcedure.insert1(key_sp, skip_duplicates=True)
+
+# acquisition.WaterAdminstrationSession
+admin = alyxraw.AlyxRaw.Field & 'model="actions.wateradministration"' & 'fname="session"' & 'fvalue!="None"'
+keys = (alyxraw.AlyxRaw & admin).proj(wateradmin_uuid='uuid')
+for key in keys:
+    key_w = dict()
+    key['uuid'] = key['wateradmin_uuid']
+    
+    try:
+        key_w['lab_name'], key_w['subject_nickname'], key_w['administration_time'] = \
+            (action.WaterAdministration & key).fetch1('lab_name', 'subject_nickname', 'administration_time')
+    except:
+        print('wateradimin', key['wateradmin_uuid'])
+        continue
+    session_uuid = grf(key, 'session', multiple_entries=False)
+    key_ws = key_w.copy()
+    key_ws['session_start_time'] = (acquisition.Session & 'session_uuid="{}"'.format(session_uuid)).fetch1('session_start_time')
+    action.WaterAdministrationSession.insert1(key_ws, skip_duplicates=True)
 
 # data.ProjectRepository
 keys = (alyxraw.AlyxRaw & 'model="subjects.project"').proj(project_uuid='uuid')

@@ -33,7 +33,7 @@ class DataRepository(dj.Lookup):
     ---
     -> DataRepositoryType
     repo_uuid:          varchar(64)
-    repo_time_zone:     varchar(255)
+    repo_timezone:      varchar(255)
     repo_hostname:      varchar(255)
     globus_endpoint_id: varchar(255)
     globus_path:        varchar(255)
@@ -56,7 +56,7 @@ class DataSetType(dj.Lookup):
     dataset_type_name:              varchar(255)
     ---
     dataset_type_uuid:              varchar(64)
-    user_name=null:                 varchar(255)
+    -> [nullable] reference.LabMember.proj(dataset_type_created_by='user_name')
     filename_pattern:               varchar(255)
     dataset_type_description=null:  varchar(1024)
     """
@@ -69,7 +69,7 @@ class DataSet(dj.Manual):
     dataset_name:               varchar(255)
     ---
     dataset_uuid:               varchar(64)
-    -> reference.LabMember
+    -> reference.LabMember.proj(dataset_created_by='user_name')
     -> DataSetType
     -> DataFormat
     created_datetime:           datetime

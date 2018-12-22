@@ -68,7 +68,7 @@ class DataRepository(dj.Computed):
     ---
     repo_name:          varchar(255)
     repotype_name:      varchar(255)
-    repo_time_zone:     varchar(255)
+    repo_timezone:     varchar(255)
     repo_hostname:      varchar(255)
     globus_endpoint_id: varchar(255)
     globus_path:        varchar(255)
@@ -85,7 +85,7 @@ class DataRepository(dj.Computed):
 
         repotype_uuid = grf(key, 'repository_type')
         key_repo['repotype_name'] = (DataRepositoryType & 'repotype_uuid="{}"'.format(repotype_uuid)).fetch1('repotype_name')
-        key_repo['repo_time_zone'] = grf(key, 'timezone')
+        key_repo['repo_timezone'] = grf(key, 'timezone')
         key_repo['repo_hostname'] = grf(key, 'hostname')
         key_repo['globus_endpoint_id'] = grf(key, 'globus_endpoint_id')
         key_repo['globus_path'] = grf(key, 'globus_path')
@@ -114,7 +114,7 @@ class DataSetType(dj.Computed):
     (dataset_type_uuid) -> alyxraw.AlyxRaw
     ---
     dataset_type_name:              varchar(255)
-    user_name=null:                 varchar(255)
+    dataset_type_created_by=null:   varchar(255)
     filename_pattern:               varchar(255)
     dataset_type_description=null:  varchar(1024)
     """
@@ -128,7 +128,7 @@ class DataSetType(dj.Computed):
 
         user_uuid = grf(key, 'created_by')
         if user_uuid != 'None':
-            key_dst['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
+            key_dst['dataset_type_created_by'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
 
         key_dst['filename_pattern'] = grf(key, 'filename_pattern')
         key_dst['dataset_type_description'] = grf(key, 'description')
@@ -141,9 +141,10 @@ class DataSet(dj.Computed):
     definition = """
     (dataset_uuid) -> alyxraw.AlyxRaw
     ---
-    subject_uuid:               varchar(64)
+    lab_name:                   varchar(255)
+    subject_nickname:           varchar(255)
     session_start_time:         datetime
-    user_name:                  varchar(255)
+    dataset_created_by:         varchar(255)
     dataset_name:               varchar(255)
     dataset_type_name:          varchar(255)
     format_name:                varchar(255)
@@ -160,8 +161,8 @@ class DataSet(dj.Computed):
         key['uuid'] = key['dataset_uuid']
 
         session_uuid = grf(key, 'session')
-        key_ds['subject_uuid'], key_ds['session_start_time'] = \
-            (acquisition.Session & 'session_uuid="{}"'.format(session_uuid)).fetch1('subject_uuid', 'session_start_time')
+        key_ds['lab_name'], key_ds['subject_nickname'], key_ds['session_start_time'] = \
+            (acquisition.Session & 'session_uuid="{}"'.format(session_uuid)).fetch1('lab_name', 'subject_nickname', 'session_start_time')
 
         key_ds['dataset_name'] = grf(key, 'name')
 
@@ -169,7 +170,7 @@ class DataSet(dj.Computed):
         key_ds['dataset_type_name'] = (DataSetType & 'dataset_type_uuid="{}"'.format(dt_uuid)).fetch1('dataset_type_name')
 
         user_uuid = grf(key, 'created_by')
-        key_ds['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
+        key_ds['dataset_created_by'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
 
         format_uuid = grf(key, 'data_format')
         key_ds['format_name'] = (DataFormat & 'format_uuid="{}"'.format(format_uuid)).fetch1('format_name')
@@ -201,9 +202,10 @@ class FileRecord(dj.Computed):
     (record_uuid) -> alyxraw.AlyxRaw
     ---
     exists:                     boolean
-    subject_uuid:               varchar(64)
+    lab_name:                   varchar(255)
+    subject_nickname:           varchar(255)
     session_start_time:         datetime
-    dataset_name:              varchar(255)
+    dataset_name:               varchar(255)
     repo_name:                  varchar(255)
     relative_path:              varchar(255)
     """
@@ -215,8 +217,8 @@ class FileRecord(dj.Computed):
         exists = grf(key, 'exists')
         key_fr['exists'] = True if exists=="True" else False
         dataset_uuid = grf(key, 'dataset')
-        key_fr['subject_uuid'], key_fr['session_start_time'], key_fr['dataset_name'] = \
-            (DataSet & 'dataset_uuid="{}"'.format(dataset_uuid)).fetch1('subject_uuid', 'session_start_time', 'dataset_name')
+        key_fr['lab_name'], key_fr['subject_nickname'], key_fr['session_start_time'], key_fr['dataset_name'] = \
+            (DataSet & 'dataset_uuid="{}"'.format(dataset_uuid)).fetch1('lab_name', 'subject_nickname', 'session_start_time', 'dataset_name')
 
         repo_uuid = grf(key, 'data_repository')
         key_fr['repo_name'] = (DataRepository & 'repo_uuid="{}"'.format(repo_uuid)).fetch1('repo_name')

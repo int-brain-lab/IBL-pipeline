@@ -88,9 +88,9 @@ class AlleleSequence(dj.Lookup):
 class Line(dj.Lookup):
     # <class 'subjects.models.Line'>
     definition = """
-    -> Species
     line_name:				varchar(255)	# name
     ---
+    -> Species
     -> [nullable] Strain
     line_uuid:              varchar(64)
     line_description=null:	varchar(2048)	# description
@@ -151,7 +151,7 @@ class Litter(dj.Manual):
     litter_name:                    varchar(255)
     ---
     -> [nullable] BreedingPair
-    -> Line
+    -> Line.proj(litter_line='line_name')
     litter_uuid:			        varchar(64)	    # litter uuid
     litter_descriptive_name=null:	varchar(255)	# descriptive name
     litter_description=null:	    varchar(255)	# description
@@ -243,7 +243,7 @@ class Implant(dj.Manual):
     ---
     implant_weight:		    float			    # implant weight
     protocol_number:        tinyint		        # protocol number
-    adverse_effects=null:   varchar(255)		# adverse effects
+    adverse_effects=null:   varchar(2048)		# adverse effects
     (actual_severity)		-> [nullable] reference.Severity   # actual severity
     """
 

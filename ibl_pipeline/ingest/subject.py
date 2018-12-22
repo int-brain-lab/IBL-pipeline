@@ -178,7 +178,6 @@ class Line(dj.Computed):
 @schema
 class LineAllele(dj.Manual):
     definition = """
-    binomial:               varchar(255)	# binomial, inherited from Species
     line_name:				varchar(255)	# name
     allele_name:			varchar(255)    # informal name
     """
@@ -475,7 +474,7 @@ class Implant(dj.Manual):
     subject_nickname:           varchar(255)        # inherited from Subject
     ---
     implant_weight:		        float			    # implant weight
-    adverse_effects=null:	    varchar(1024)		# adverse effects
+    adverse_effects=null:	    varchar(2048)		# adverse effects
     actual_severity=null:       tinyint             # actual severity, inherited from Severity 
     protocol_number:            tinyint
     """

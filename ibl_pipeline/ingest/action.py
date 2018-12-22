@@ -116,7 +116,7 @@ class WaterAdministration(dj.Computed):
         if user_uuid != 'None':
             key_wa['administration_user'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
 
-        key_wa['adlib'] = grf(key, 'adlib')== 'True'
+        key_wa['adlib'] = grf(key, 'adlib')=='True'
 
         self.insert1(key_wa)
 
@@ -157,7 +157,7 @@ class WaterRestriction(dj.Computed):
         location_uuid = grf(key, 'location')
         if location_uuid != 'None':
             key_res['restriction_lab'], key_res['restriction_location'] = \
-                (reference.LabLocation & key & 'location_uuid="{}"'.format(location_uuid)).fetch1('lab_name', 'location_name')
+                (reference.LabLocation & key & 'location_uuid="{}"'.format(location_uuid)).fetch1('lab_name', 'slocation_name')
 
         key_res['reference_weight'] = grf(key, 'reference_weight')
 
@@ -178,7 +178,7 @@ class WaterRestrictionProcedure(dj.Manual):
     lab_name:               varchar(255)
     subject_nickname:       varchar(255)
     restriction_start_time: varchar(255)   
-    percedure_type_name:    varchar(255)
+    procedure_type_name:    varchar(255)
     """
 
 @schema
@@ -189,7 +189,7 @@ class Surgery(dj.Computed):
     ---
     lab_name:                   varchar(255)    # inherited from Subject
     subject_nickname:           varchar(255)    # inherited from Subject
-    surgery_lab=null:           varchar(255)    # foreign key inherited from reference.LabLocation
+    surgery_lab=null:           varchar(255)    # lab for sugery
     surgery_location=null:      varchar(255)    # foreign key inherited from reference.LabLocation
     surgery_start_time:	        datetime        # surgery start time
     surgery_end_time=null:	    datetime        # surgery end time
@@ -273,7 +273,8 @@ class OtherAction(dj.Computed):
     subject_nickname:           varchar(255)
     other_action_start_time:    datetime	    # start time
     other_action_end_time=null: datetime	    # end time
-    location_name=null:         varchar(255)    # refer to reference.Location
+    other_action_lab=null:      varchar(255)
+    other_action_location=null: varchar(255)    # refer to reference.Location
     procedure_name=null:        varchar(255)    # refer to action.Procedure
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.otheraction"').proj(other_action_uuid='uuid')
@@ -282,7 +283,7 @@ class OtherAction(dj.Computed):
         key_other = key.copy()
         key['uuid'] = key['other_action_uuid']
         subject_uuid = grf(key, 'subject')
-        key_other['lab_name'], key_other['subject_nickname'] = \
+        key_other['lab_name'], key_other['subject_nickname'] =\
             (subject.Subject & 'subject_uuid="{}"'.format(subject_uuid)).fetch1('lab_name', 'subject_nickname')
         key_other['other_action_start_time'] = grf(key, 'start_time')
 
@@ -292,7 +293,8 @@ class OtherAction(dj.Computed):
 
         location_uuid = grf(key, 'location')
         if location_uuid != 'None':
-            key_other['location_name'] = (reference.LabLocation & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
+            key_other['other_action_lab'], key_other['other_action_location'] =\
+                (reference.LabLocation & 'location_uuid="{}"'.format(location_uuid)).fetch1('lab_name', 'location_name')
 
         procedure_uuid = grf(key, 'procedures')
         if procedure_uuid != 'None':

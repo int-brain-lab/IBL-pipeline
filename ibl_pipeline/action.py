@@ -45,6 +45,7 @@ class WaterAdministration(dj.Manual):
     ---
     wateradmin_uuid:            varchar(64)
     water_administered=null:    float			# water administered
+    adlib:                      boolean
     -> WaterType
     -> [nullable] reference.LabMember.proj(administration_user="user_name")
     """
@@ -59,8 +60,8 @@ class WaterRestriction(dj.Manual):
     ---
     restriction_uuid:           varchar(64)
     restriction_end_time=null:  datetime	# end time
+    reference_weight:           float
     restriction_narrative=null: varchar(1024)
-    -> [nullable] ProcedureType
     -> [nullable] reference.LabLocation.proj(restriction_lab='lab_name', restriction_location='location_name')
     """
 
@@ -87,7 +88,6 @@ class Surgery(dj.Manual):
     ---
     surgery_uuid:           varchar(64)
     surgery_end_time=null:  datetime        # surgery end time
-    surgery_time:           varchar(255)    # surgery time
     -> [nullable] reference.LabLocation.proj(surgery_lab='lab_name', surgery_location='location_name')
     surgery_outcome_type:   enum('None', 'a', 'n', 'r')	    # outcome type
     surgery_narrative=null: varchar(2048)	# narrative
@@ -135,5 +135,5 @@ class OtherAction(dj.Manual):
     other_action_uuid:          varchar(64)
     other_action_end_time:      datetime	# end time
     description:                varchar(255)    # description
-    -> reference.LabLocation
+    -> [nullable] reference.LabLocation.proj(other_action_lab='lab_name', other_action_location='location_name')
     """

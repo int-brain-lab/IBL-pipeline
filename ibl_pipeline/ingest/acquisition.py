@@ -1,7 +1,7 @@
 import datajoint as dj
 import json
 
-from . import alyxraw, reference, acquisition
+from . import alyxraw, reference, subject, action
 from . import get_raw_field as grf
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_acquisition')
@@ -30,11 +30,15 @@ class Session(dj.Computed):
         key_session = key.copy()
         key['uuid'] = key['session_uuid']
 
+        subject_uuid = grf(key, 'subject')
+        try:
+            key_session['lab_name'], key_session['subject_nickname'] = (subject.Subject & 'subject_uuid="{}"'.format(subject_uuid)).fetch1('lab_name', 'subject_nickname')
+        except:
+            return
+
         session_number = grf(key, 'number')
         if session_number != 'None':
             key_session['session_number'] = session_number
-
-        key_session['subject_uuid'] = grf(key, 'subject')
 
         proj_uuid = grf(key, 'project')
         if proj_uuid != 'None':
@@ -46,13 +50,10 @@ class Session(dj.Computed):
         if end_time != 'None':
             key_session['session_end_time'] = end_time
 
-        lab_uuid = grf(key, 'lab')
-        if lab_uuid != 'None':
-            key_session['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
-
         location_uuid = grf(key, 'location')
         if location_uuid != 'None':
-            key_session['location_name'] = (reference.LabLocation & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
+            key_session['session_lab'], key_session['session_location'] = \
+                (reference.LabLocation & 'location_uuid="{}"'.format(location_uuid)).fetch1('lab_name', 'location_name')
 
         session_type = grf(key, 'type')
         if session_type != 'None':
@@ -83,7 +84,7 @@ class ChildSession(dj.Manual):
 @schema
 class SessionUser(dj.Manual):
     definition = """
-    lab_name:                   varchar(255)          
+    lab_name:               varchar(255)          
     subject_nickname:       varchar(255)
     session_start_time:     datetime
     user_name:              varchar(255)
@@ -93,8 +94,8 @@ class SessionUser(dj.Manual):
 @schema
 class SessionProcedure(dj.Manual):  
     definition = """
-    lab_name:                   varchar(255)          
-    subject_uuid:           varchar(64)
+    lab_name:               varchar(255)          
+    subject_nickname:       varchar(255)
     session_start_time:     datetime
     procedure_type_name:    varchar(255)
     """
