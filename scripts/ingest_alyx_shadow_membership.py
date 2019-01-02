@@ -325,7 +325,7 @@ for key in keys:
     session_uuid = grf(key, 'session', multiple_entries=False)
     key_ws = key_w.copy()
     key_ws['session_start_time'] = (acquisition.Session & 'session_uuid="{}"'.format(session_uuid)).fetch1('session_start_time')
-    action.WaterAdministrationSession.insert1(key_ws, skip_duplicates=True)
+    acquisition.WaterAdministrationSession.insert1(key_ws, skip_duplicates=True)
 
 # data.ProjectRepository
 keys = (alyxraw.AlyxRaw & 'model="subjects.project"').proj(project_uuid='uuid')
