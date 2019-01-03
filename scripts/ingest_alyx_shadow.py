@@ -23,12 +23,8 @@ subject.Line.populate()
 subject.Subject.populate()
 subject.BreedingPair.populate()
 subject.Litter.populate()
-subject.LitterSubject.populate()
-subject.Weaning.populate()
-subject.Death.populate()
 subject.GenotypeTest.populate()
 subject.Zygosity.populate()
-subject.Implant.populate()
 
 # action tables
 action.ProcedureType.populate()

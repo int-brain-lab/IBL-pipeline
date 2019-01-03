@@ -7,12 +7,14 @@ schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_reference')
 class Lab(dj.Lookup):
     # <class 'misc.models.Lab'>
     definition = """
-    lab_name:           varchar(255)  # name of lab
+    lab_name:               varchar(255)  # name of lab
     ---
-    lab_uuid:           varchar(64)
-    institution:        varchar(255)
-    address:            varchar(255)
-    time_zone:          varchar(255)
+    lab_uuid:               varchar(64)
+    institution:            varchar(255)
+    address:                varchar(255)
+    time_zone:              varchar(255)
+    reference_weight_pct:   float
+    zscore_weight_pct:      float
     """
 
 

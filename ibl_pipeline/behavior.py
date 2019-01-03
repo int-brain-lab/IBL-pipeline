@@ -4,6 +4,7 @@ import pandas as pd
 from os import path
 import logging
 from . import reference, subject, acquisition, data
+from .ingest import get_raw_field as grf
 try:
     from oneibl.one import ONE
 except:
@@ -59,7 +60,7 @@ class Eye(dj.Imported):
         key['eye_end_time'] = eye_timestamps[-1]
 
         self.insert1(key)
-        logger.info('Populated an Eye tuple for subject {subject_uuid} on {session_start_time}'.format(**key))
+        logger.info('Populated an Eye tuple for subject {subject_nickname} on {session_start_time}'.format(**key))
 
 
 @schema
@@ -117,7 +118,7 @@ class Wheel(dj.Imported):
         key['wheel_sampling_rate'] = wheel_sampling_rate
 
         self.insert1(key)
-        logger.info('Populated a Wheel tuple for subject {subject_uuid} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a Wheel tuple for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
 
 
 @schema
@@ -184,7 +185,7 @@ class WheelMoveSet(dj.Imported):
 
             self.WheelMove().insert1(wheel_move_key)
 
-        logger.info('Populated a WheelMoveSet and all WheelMove tuples for subject {subject_uuid} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a WheelMoveSet and all WheelMove tuples for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
 
     class WheelMove(dj.Part):
         definition = """
@@ -223,7 +224,7 @@ class SparseNoise(dj.Imported):
         key['sparse_noise_y_pos'] = sparse_noise_positions[:, 1],
         key['sparse_noise_times'] = sparse_noise_times
         self.insert1(key)
-        logger.info('Populated a SparseNoise tuple for subject {subject_uuid} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a SparseNoise tuple for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
 
 
 @schema
@@ -249,7 +250,7 @@ class ExtraRewards(dj.Imported):
 
         self.insert1(key)
 
-        logger.info('Populated an ExtraRewards tuple for subject {subject_uuid} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated an ExtraRewards tuple for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
 
 
 @schema
@@ -282,7 +283,7 @@ class SpontaneousTimeSet(dj.Imported):
             spon_time_key['spontaneous_time_duration'] = float(np.diff(spontaneous_intervals[idx_spon, :]))
             self.SpontaneousTime().insert1(spon_time_key)
 
-        logger.info('Populated a SpontaneousTimeSet tuple and all Spontaneoustime tuples for subject {subject_uuid} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a SpontaneousTimeSet tuple and all Spontaneoustime tuples for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
 
     class SpontaneousTime(dj.Part):
         definition = """
@@ -333,7 +334,7 @@ class Lick(dj.Imported):
 
         self.insert1(key)
 
-        logger.info('Populated a Lick tuple for subject {subject_uuid} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a Lick tuple for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
 
 
 @schema
@@ -364,9 +365,10 @@ class TrialSet(dj.Imported):
     # information about behavioral trials
     -> acquisition.Session
     ---
-    trials_total_num:   int              # total trial numbers in this set
-    trials_start_time:  float            # start time of the trial set (seconds)
-    trials_end_time:    float            # end time of the trial set (seconds)
+    n_trials:                int              # total trial numbers in this set
+    n_correct_trials=null:   int              # number of the correct trials
+    trials_start_time:       float            # start time of the trial set (seconds)
+    trials_end_time:         float            # end time of the trial set (seconds)
     """
 
     # Knowledge based hack to be formalized better later
@@ -374,12 +376,7 @@ class TrialSet(dj.Imported):
 
     def make(self, key):
         trial_key = key.copy()
-        excluded_trial_key = key.copy()
-
-        subject_name = (subject.Subject & key).fetch1('subject_nickname')
-        print(subject_name)
-        print(key)
-
+        # excluded_trial_key = key.copy()      
         eID = (acquisition.Session & key).fetch1('session_uuid')
 
         trials_feedback_times, trials_feedback_types, trials_gocue_times, \
@@ -408,10 +405,20 @@ class TrialSet(dj.Imported):
                                        len(trials_p_left)
                                        ]))) == 1, 'Loaded trial files do not have the same length'
 
-        key['trials_total_num'] = len(trials_response_choice)
+        key['n_trials'] = len(trials_response_choice)
+
+        key_session = dict()
+        key_session['model'] = 'actions.session'
+        key_session['uuid'] = (acquisition.Session & key).fetch1('session_uuid')
+        
+        n_correct_trials = grf(key_session, 'n_correct_trials')
+        if n_correct_trials != 'None':
+            key['n_correct_trials'] = n_correct_trials
+
         key['trials_start_time'] = trials_intervals[0, 0]
         key['trials_end_time'] = trials_intervals[-1, 1]
 
+        print(key)
         self.insert1(key)
 
         for idx_trial in range(len(trials_response_choice)):
@@ -437,10 +444,10 @@ class TrialSet(dj.Imported):
 
             trial_key['trial_id'] = idx_trial + 1
             trial_key['trial_start_time'] = trials_intervals[idx_trial, 0]
-            trial_key['trial_end_time'] = trials_intervals[idx_trial, 0]
+            trial_key['trial_end_time'] = trials_intervals[idx_trial, 1]
             trial_key['trial_go_cue_time'] = float(trials_gocue_times[idx_trial])
             trial_key['trial_response_time'] = float(trials_response_times[idx_trial])
-            trial_key['trial_choice'] = trial_response_choice
+            trial_key['trial_response_choice'] = trial_response_choice
             trial_key['trial_stim_on_time'] = trials_visual_stim_times[idx_trial, 0]
             trial_key['trial_stim_contrast_left'] = float(trial_stim_contrast_left)
             trial_key['trial_stim_contrast_right'] = float(trial_stim_contrast_right)
@@ -456,7 +463,7 @@ class TrialSet(dj.Imported):
             #     excluded_trial_key['trial_id'] = idx_trial + 1
             #     self.ExcludedTrial().insert1(excluded_trial_key)
 
-        logger.info('Populated a TrialSet tuple, all Trial tuples and Excluded Trial tuples for subject {subject_uuid} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a TrialSet tuple, all Trial tuples and Excluded Trial tuples for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
 
     class Trial(dj.Part):
         # all times are in absolute seconds, rather than relative to trial onset
@@ -468,7 +475,7 @@ class TrialSet(dj.Imported):
         trial_end_time:             double         # end of iti (seconds)
         trial_go_cue_time:          double         # Time of go cue in choiceworld (seconds)
         trial_response_time:        double         # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
-        trial_choice:               enum("CCW", "CW", "No Go")       # which choice was made in choiceworld
+        trial_response_choice:      enum("CCW", "CW", "No Go")       # which choice was made in choiceworld
         trial_stim_on_time:         double         # Time of stimulus in choiceworld (seconds)
         trial_stim_contrast_left:   float	      # contrast of the stimulus on the left
         trial_stim_contrast_right:  float         # contrast of the stimulus on the right
@@ -538,7 +545,7 @@ class PassiveTrialSet(dj.Imported):
 
             self.PassiveTrial().insert1(passive_trial_key)
 
-        logger.info('Populated a PassiveTrialSet tuple, all Trial tuples and Excluded Trial tuples for subject {subject_uuid} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a PassiveTrialSet tuple, all Trial tuples and Excluded Trial tuples for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
 
     class PassiveTrial(dj.Part):
         definition = """

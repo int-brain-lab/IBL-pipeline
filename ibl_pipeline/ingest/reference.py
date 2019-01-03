@@ -14,10 +14,12 @@ class Lab(dj.Computed):
     definition = """
     (lab_uuid) -> alyxraw.AlyxRaw
     ---
-    lab_name:           varchar(255)  # name of lab
-    institution:        varchar(255)
-    address:            varchar(255)
-    time_zone:          varchar(255)
+    lab_name:               varchar(255)  # name of lab
+    institution:            varchar(255)
+    address:                varchar(255)
+    time_zone:              varchar(255)
+    reference_weight_pct:   float
+    zscore_weight_pct:      float
     """
     key_source = (alyxraw.AlyxRaw & 'model = "misc.lab"').proj(lab_uuid='uuid')
 
@@ -28,6 +30,8 @@ class Lab(dj.Computed):
         key_lab['institution'] = grf(key, 'institution')
         key_lab['address'] = grf(key, 'address')
         key_lab['time_zone'] = grf(key, 'timezone')
+        key_lab['reference_weight_pct'] = grf(key, 'reference_weight_pct')
+        key_lab['zscore_weight_pct'] = grf(key, 'zscore_weight_pct')
         self.insert1(key_lab)
 
 
@@ -49,8 +53,6 @@ class LabMember(dj.Computed):
     is_staff:		        boolean		    # staff status
     is_superuser:	        boolean		    # superuser status
     is_stock_manager:       boolean         # stock manager status
-    groups=null:            blob            # 
-    user_permissions=null:   blob            #
     """
     key_source = (alyxraw.AlyxRaw & 'model = "misc.labmember"').proj(user_uuid='uuid')
 
@@ -86,14 +88,6 @@ class LabMember(dj.Computed):
 
         is_stock_manager = grf(key, 'is_stock_manager')
         key_lab_member['is_stock_manager'] = is_stock_manager == 'True'
-
-        groups = grf(key, 'groups')
-        if groups != 'None':
-            key_lab_member['groups'] = groups
-
-        user_permissions = grf(key, 'user_permissions')
-        if groups != 'None':
-            key_lab_member['user_permissions'] = user_permissions
 
         self.insert1(key_lab_member)
 
@@ -151,7 +145,10 @@ class LabLocation(dj.Computed):
         key['uuid'] = key['location_uuid']
         key_loc['location_name'] = grf(key, 'name')
         lab_uuid = grf(key, 'lab')
-        key_loc['lab_name'] = (Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
+        if lab_uuid == 'None':
+            key_loc['lab_name'] = 'cortexlab'
+        else:
+            key_loc['lab_name'] = (Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
 
         self.insert1(key_loc)
 
