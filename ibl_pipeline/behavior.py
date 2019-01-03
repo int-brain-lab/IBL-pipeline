@@ -444,7 +444,7 @@ class TrialSet(dj.Imported):
 
             trial_key['trial_id'] = idx_trial + 1
             trial_key['trial_start_time'] = trials_intervals[idx_trial, 0]
-            trial_key['trial_end_time'] = trials_intervals[idx_trial, 0]
+            trial_key['trial_end_time'] = trials_intervals[idx_trial, 1]
             trial_key['trial_go_cue_time'] = float(trials_gocue_times[idx_trial])
             trial_key['trial_response_time'] = float(trials_response_times[idx_trial])
             trial_key['trial_response_choice'] = trial_response_choice
