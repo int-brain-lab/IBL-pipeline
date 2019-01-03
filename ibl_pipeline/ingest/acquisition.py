@@ -105,6 +105,8 @@ class WaterAdministrationSession(dj.Manual):
     definition = """
     lab_name:               varchar(255)
     subject_nickname:       varchar(255)
+    administration_time:    datetime
     ---
     session_start_time:     datetime
     """
+    
