@@ -55,7 +55,7 @@ class Session(dj.Manual):
     session_number=null:        int     	# number
     session_end_time=null:      datetime	# end time
     -> [nullable] reference.Project
-    -> [nullable] reference.LabLocation
+    -> [nullable] reference.LabLocation.proj(session_lab='lab_name', session_location='location_name')
     task_protocol=null:         int
     session_type=null:		    varchar(255)	# type
     session_narrative=null:     varchar(1024)
@@ -72,7 +72,7 @@ class ChildSession(dj.Manual):
 
 
 @schema
-class SessionLabMember(dj.Manual):
+class SessionUser(dj.Manual):
     definition = """
     -> Session
     -> reference.LabMember
@@ -80,8 +80,16 @@ class SessionLabMember(dj.Manual):
 
 
 @schema
-class SessionProcedureType(dj.Manual):
+class SessionProcedure(dj.Manual):
     definition = """
     -> Session
     -> action.ProcedureType
+    """
+
+@schema
+class WaterAdministrationSession(dj.Manual):
+    definition = """
+    -> action.WaterAdministration
+    ---
+    -> Session
     """
