@@ -5,10 +5,11 @@ import time, re, datetime, os, glob
 from datetime import timedelta
 import seaborn as sns
 
+## INITIALIZE A FEW THINGS
+sns.set_style("darkgrid", {'xtick.bottom': True,'ytick.left': True, 'lines.markeredgewidth':0})
+sns.set_context(context="paper")
+
 import matplotlib as mpl
-from matplotlib import rcParams
-rcParams['font.family'] = 'sans-serif'
-rcParams['font.sans-serif'] = ['Helvetica', 'Arial']
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -31,10 +32,6 @@ path = '/Snapshot_DataJoint/'
 # ============================================= #
 # START BIG OVERVIEW PLOT
 # ============================================= #
-
-## INITIALIZE A FEW THINGS
-sns.set_style("darkgrid", {'xtick.bottom': True,'ytick.left': True, 'lines.markeredgewidth':0})
-sns.set_context(context="paper")
 
 # all mice that are alive, without those with undefined sex (i.e. example mice)
 # restrict to animals that have trial data, weights and water logged
