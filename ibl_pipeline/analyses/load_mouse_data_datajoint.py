@@ -15,10 +15,10 @@ from ibl_pipeline import reference, subject, action, acquisition, data, behavior
 # ==================== #
 
 def get_weights(mousename):
-    mouse = (subject.Subject() & 'subject_nickname = "%s"' % mousename)
 
     wei = {}
-    wei['date_time'], wei['weight'] = (action.Weighing() & mouse).fetch('weighing_time',
+    wei['date_time'], wei['weight'] = (action.Weighing() &
+                                       'subject_nickname="%s"'%mousename).fetch('weighing_time',
                                                                         'weight', order_by='weighing_time')
     wei = pd.DataFrame.from_dict(wei)
 
@@ -35,9 +35,8 @@ def get_weights(mousename):
 
 
 def get_water(mousename):
-    mouse = (subject.Subject() & 'subject_nickname = "%s"' % mousename)
-    wei = (action.WaterAdministration() & mouse).fetch(as_dict=True)
 
+    wei = (action.WaterAdministration() & 'subject_nickname="%s"'%mousename).fetch(as_dict=True)
     wei = pd.DataFrame(wei)
     if not wei.empty:
         wei.rename(columns={'administration_time': 'date_time', 'watertype_name': 'water_type'}, inplace=True)
@@ -106,8 +105,8 @@ def get_water_weight(mousename):
 
 def get_behavior(mousename, **kwargs):
 
-    b = (behavior.TrialSet.Trial * acquisition.Session.proj('session_end_time',
-            ac_lab='lab_name') * subject.Subject) & 'subject_nickname = "%s"' % mousename
+    b = behavior.TrialSet.Trial * acquisition.Session.proj('session_end_time',
+            ac_lab='lab_name') & 'subject_nickname = "%s"' % mousename
     behav = pd.DataFrame(b.fetch(order_by='session_start_time, trial_id'))
 
     if not behav.empty:
@@ -123,10 +122,10 @@ def get_behavior(mousename, **kwargs):
         behav['days'] = behav.date - behav.date[0]
         behav['days'] = behav.days.dt.days
 
-        behav['signedContrast'] = (behav['trial_stim_contrast_left'] - behav['trial_stim_contrast_right']) * 100
+        behav['signedContrast'] = (behav['trial_stim_contrast_right'] - behav['trial_stim_contrast_left']) * 100
         behav['signedContrast'] = behav.signedContrast.astype(int)
 
-        val_map = {'CCW': -1, 'No Go': 0, 'CW': 1}
+        val_map = {'CCW': 1, 'No Go': 0, 'CW': -1}
         behav['choice'] = behav['trial_response_choice'].map(val_map)
         behav['correct'] = np.where(np.sign(behav['signedContrast']) == behav['choice'], 1, 0)
         behav.loc[behav['signedContrast'] == 0, 'correct'] = np.NaN

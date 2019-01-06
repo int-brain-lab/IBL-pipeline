@@ -29,9 +29,7 @@ Schema of `behavior`
     DJ_PASS=password
     ```
 
-6. Copy your `.one_params` file into `IBL-pipeline/root` to not be prompted for Alyx login.
-
-7. Move into the cloned directory in a terminal, then run `docker-compose up -d`.
+6. Copy your `.one_params` file into `IBL-pipeline/root` to not be prompted for Alyx login (see https://ibllib.readthedocs.io/en/latest/02a_installation_python.html).
 
 Note: if you first build the docker container and then add `.one_params`, running ONE() in Python may still prompt you for your Alyx and FlatIron login details. In this case, do
 ```
@@ -41,34 +39,43 @@ docker-compose up -d
 docker exec -it ibl-pipeline_datajoint_1 /bin/bash
 ```
 
-### To run example notebooks ###
+7. To save figures into AlyxPlots on the Google Drive, you can mount this path to somewhere inside the docker. The save the figs into the docker folder. The saved results will be automatically present in the outside folder you mounted.
 
-8. Go to http://localhost:8888/tree in your favorite browser to open Jupyter Notebook.
+a. `docker-compose down`
+b. open `docker-compose.yml`
+c. add `~/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/:/Snapshot_DataJoint` in to the volumes:
+d. close the file
+e. `docker-compose up -d`
 
-9. Open "Datajoint pipeline query tutorial.ipynb".
+Then save the plots into `/SnapShot_DataJoint` inside the docker, then you’ll see that the plots are in the folder you want.
 
-10. Run through the notebook and feel free to experiment.
+## To run your own Python scripts ##
 
-### To run your own Python scripts ###
+8. If you would like to enter the docker and run scripts through the terminal, navigate to the IBL-pipeline directory, `chmod +x ibl_docker_setup.sh` will allow you to run 
+```
+. ./ibl_docker_setup.sh
+```
 
-8. If the user would like to enter the docker and run scripts through the terminal, run 
+Which contains the following individual steps (as well as starting Docker):
+
 ```
 docker-compose up -d
 docker exec -it ibl-pipeline_datajoint_1 /bin/bash
 cd /src/ibl-pipeline/ibl_pipeline/analyses
 ```
 
-To save figures into AlyxPlots on the Google Drive, you can mount this path to somewhere inside the docker. The save the figs into the docker folder. The saved results will be automatically present in the outside folder you mounted.
+### To run example notebooks ###
 
-a. `docker-compose down`
-b. open `docker-compose.yml`
-c. add `/Users/urai/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/:/Snapshot_DataJoint` in to the volumes:
-d. close the file
-e. `docker-compose up -d`
+9. Move into the cloned directory in a terminal, then run `docker-compose up -d`.
 
-Then save the plots into `/AlyxPlots` inside the docker, then you’ll see that the plots are in the folder you want.
+10. Go to http://localhost:8888/tree in your favorite browser to open Jupyter Notebook.
 
-# Instructions to ingest Alyx data into local database
+11. Open "Datajoint pipeline query tutorial.ipynb".
+
+12. Run through the notebook and feel free to experiment.
+
+
+# Instructions to ingest Alyx data into local database #
 
 To run an local instance of database in the background, run the docker-compose command as follows:
 
@@ -95,9 +102,6 @@ To turn stop the containers, run:
 ```bash
 docker-compose -f docker-compose-local.yml down
 ```
-
-
-
 
 # Instructions to ingest Alyx data into Amazon RDS
 

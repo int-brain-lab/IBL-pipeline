@@ -38,8 +38,9 @@ sns.set_context(context="paper")
 
 # all mice that are alive, without those with undefined sex (i.e. example mice)
 # restrict to animals that have trial data, weights and water logged
-subjects = pd.DataFrame.from_dict(((((subject.Subject() & 'sex != "U"') - subject.Death()) & action.Weighing() & action.WaterAdministration() &
-                                    behavior.TrialSet())).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
+subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'sex!="U"')
+                                   & action.Weighing() & action.WaterAdministration() & behavior.TrialSet()
+                                   ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
 print(subjects['subject_nickname'].unique())
 
 for i, mouse in enumerate(subjects['subject_nickname']):
