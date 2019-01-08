@@ -107,6 +107,7 @@ for lidx, lab in enumerate(users):
 		# SAVE FIGURE PER BATCH
 		fig.suptitle('Mice born on %s, %s' %(birth_date, lab))
 		plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-		fig.savefig(os.path.join(path + '%s_overview_batch_%s.pdf'%(lab, birth_date)))
+		now = datetime.datetime.now().strftime("%Y-%m-%d")
+		fig.savefig(os.path.join(path + '%s_%s_batch_%s.pdf'%(now, lab, birth_date)))
 		plt.close(fig)
 

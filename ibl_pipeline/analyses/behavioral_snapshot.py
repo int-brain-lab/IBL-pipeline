@@ -193,6 +193,7 @@ for i, mouse in enumerate(subjects['subject_nickname']):
     # ============================================= #
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    fig.savefig(os.path.join(path + '%s_snapshot.pdf'%mouse))
+    fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.pdf' % (datetime.datetime.now().strftime("%Y-%m-%d"),
+                                                               subjects.loc[subjects['subject_nickname'] == mouse]['lab_name'].item(),
+                                                               mouse)))
     plt.close(fig)
-    print(os.path.join(path + '%s_snapshot.pdf'%mouse))
