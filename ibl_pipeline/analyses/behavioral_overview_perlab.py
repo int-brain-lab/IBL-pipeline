@@ -109,5 +109,6 @@ for lidx, lab in enumerate(users):
 		plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 		now = datetime.datetime.now().strftime("%Y-%m-%d")
 		fig.savefig(os.path.join(path + '%s_%s_batch_%s.pdf'%(now, lab, birth_date)))
+		fig.savefig(os.path.join(path + '%s_%s_batch_%s.png'%(now, lab, birth_date)))
 		plt.close(fig)
 

@@ -196,4 +196,10 @@ for i, mouse in enumerate(subjects['subject_nickname']):
     fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.pdf' % (datetime.datetime.now().strftime("%Y-%m-%d"),
                                                                subjects.loc[subjects['subject_nickname'] == mouse]['lab_name'].item(),
                                                                mouse)))
+
+    fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.png' % (datetime.datetime.now().strftime("%Y-%m-%d"),
+                                                                     subjects.loc[
+                                                                         subjects['subject_nickname'] == mouse][
+                                                                         'lab_name'].item(),
+                                                                     mouse)))
     plt.close(fig)
