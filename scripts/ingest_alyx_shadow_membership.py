@@ -350,7 +350,10 @@ for key in keys:
         continue
     session_uuid = grf(key, 'session', multiple_entries=False)
     key_ws = key_w.copy()
-    key_ws['session_start_time'] = (acquisition.Session & 'session_uuid="{}"'.format(session_uuid)).fetch1('session_start_time')
+    try:
+        key_ws['session_start_time'] = (acquisition.Session & 'session_uuid="{}"'.format(session_uuid)).fetch1('session_start_time')
+    except:
+        print('session', session_uuid)
     acquisition.WaterAdministrationSession.insert1(key_ws, skip_duplicates=True)
 
 # data.ProjectRepository
