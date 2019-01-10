@@ -167,8 +167,8 @@ for key in keys:
 print('Ingesting subject.Death...')
 subjects_d = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="death_date"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & subjects & subjects_d).proj(subject_uuid='uuid')
-def make(self, key):
-    
+
+for key in keys:    
     key['uuid'] = key['subject_uuid']
     lab_uuid = grf(key, 'lab')
     key_death = dict()
@@ -181,7 +181,7 @@ def make(self, key):
 # subject.Implant
 print('Ingesting subject.Implant...')
 subjects_i = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw.Field & 'model="subjects.subject"') & 'fname="implant_weight"' & 'fvalue!="None"'
-keys = (alyxraw.AlyxRaw & subjects & subjects_i).proj(subject_uuid='uuid')
+keys = (alyxraw.AlyxRaw & subjects_i).proj(subject_uuid='uuid')
 
 for key in keys:
     key['uuid'] = key['subject_uuid']
