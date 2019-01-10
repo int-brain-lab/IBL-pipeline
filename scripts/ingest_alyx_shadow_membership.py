@@ -263,6 +263,8 @@ keys = (alyxraw.AlyxRaw & 'model = "actions.surgery"').proj(surgery_uuid='uuid')
 for key in keys:
     key_s = dict()
     key['uuid'] = key['surgery_uuid']
+    if len(action.Surgery & key)==0:
+        continue
     key_s['lab_name'], key_s['subject_nickname'], key_s['surgery_start_time'] = \
         (action.Surgery & key).fetch1('lab_name', 'subject_nickname', 'surgery_start_time')
     procedures = grf(key, 'procedures', multiple_entries=True)
