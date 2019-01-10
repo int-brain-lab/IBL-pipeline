@@ -180,8 +180,8 @@ for key in keys:
 
 # subject.Implant
 print('Ingesting subject.Implant...')
-subjects_i = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw.Field & 'model="subjects.subject"') & 'fname="implant_weight"' & 'fvalue!="None"'
-keys = (alyxraw.AlyxRaw & subjects_i).proj(subject_uuid='uuid')
+subjects_i = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="implant_weight"' & 'fvalue!="None"'
+keys = (alyxraw.AlyxRaw & subjects & subjects_i).proj(subject_uuid='uuid')
 
 for key in keys:
     key['uuid'] = key['subject_uuid']
