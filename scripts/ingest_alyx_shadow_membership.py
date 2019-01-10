@@ -88,7 +88,7 @@ for key in keys:
         subject.SubjectProject.insert1(key_sp, skip_duplicates=True)
 
 # subject.Caging
-print('Ingesting subject.Caging')
+print('Ingesting subject.Caging...')
 subjects_c = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="cage"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & subjects & subjects_c).proj(subject_uuid='uuid')
 for key in keys:
@@ -114,6 +114,8 @@ for key in keys:
                 subject.Caging.insert1(key_cage_i, skip_duplicates=True)
                 if cage['value'] != 'None':
                     key_cage_i['cage_name'] = cage['value']
+    else:
+        subject.Caging.insert1(key_cage, skip_duplicates=True)
 
 # subject.UserHistory
 print('Ingesting subject.UserHistory...')
@@ -143,11 +145,13 @@ for key in keys:
                 if user['value'] != 'None':
                     user_uuid = user['value']
                     key_user_i['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
+    else:
+        subject.UserHistory.insert1(key_user, skip_duplicates=True)
 
 
 # subject.Weaning
 print('Ingesting subject.Weaning...')
-subjects_w = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="weaning_date"' & 'fvalue!="None"'
+subjects_w = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="wean_date"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & subjects & subjects_w).proj(subject_uuid='uuid')
 for key in keys:
     key['uuid'] = key['subject_uuid']
@@ -161,7 +165,7 @@ for key in keys:
 
 # subject.Death
 print('Ingesting subject.Death...')
-subjects_d = alyxraw.AlyxRaw.Field (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="death_date"' & 'fvalue!="None"'
+subjects_d = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="death_date"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & subjects & subjects_d).proj(subject_uuid='uuid')
 def make(self, key):
     

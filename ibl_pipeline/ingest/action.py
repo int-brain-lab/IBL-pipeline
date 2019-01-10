@@ -203,6 +203,8 @@ class Surgery(dj.Computed):
         key['uuid'] = key['surgery_uuid']
 
         subject_uuid = grf(key, 'subject')
+        if len(subject.Subject & 'subject_uuid="{}"'.format(subject_uuid)) == 0:
+            return
         key_surgery['lab_name'], key_surgery['subject_nickname'] = (subject.Subject & 'subject_uuid="{}"'.format(subject_uuid)).fetch1('lab_name', 'subject_nickname')
 
         start_time = grf(key, 'start_time')
