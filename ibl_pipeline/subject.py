@@ -188,7 +188,7 @@ class Caging(dj.Manual):
     """
 
 @schema
-class UserHistory(dj.Computed):
+class UserHistory(dj.Manual):
     definition = """
     -> Subject
     -> reference.LabMember
