@@ -73,7 +73,7 @@ ACQUISITION_TABLES = (
     'ChildSession',
     'SessionUser',
     'SessionProcedure',
-    'WaterAdiministrationSession'
+    'WaterAdministrationSession'
 )
 
 for table in ACQUISITION_TABLES:

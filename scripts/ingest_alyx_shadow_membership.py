@@ -128,7 +128,7 @@ for key in keys:
     key_user['subject_nickname'] = grf(key, 'nickname')
 
     user = grf(key, 'responsible_user')
-    key_user['user_name'] = (reference.LabMember & 'user_uuid={}'.format(user)).fetch1('user_name')
+    key_user['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user)).fetch1('user_name')
     json_content = grf(key, 'json')
     if json_content != 'None':
         json_dict = json.loads(json_content)
