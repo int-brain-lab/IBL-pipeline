@@ -8,6 +8,6 @@ services:
       - ./images:/images
       - .:/src/ibl-pipeline
       - ./data:/data
-      - /Users/urai/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/:/Snapshot_DataJoint
+      - /Users/urai/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/:/Snapshot_DataJoint_shortcut
     ports:
       - "8888:8888"

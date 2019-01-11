@@ -27,7 +27,7 @@ from load_mouse_data_datajoint import * # this has all plotting functions
 import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 # folder to save plots, from DataJoint
-path = '/Snapshot_DataJoint/'
+path = '/Snapshot_DataJoint_shortcut/'
 
 # ============================================= #
 # START BIG OVERVIEW PLOT
