@@ -87,6 +87,20 @@ for key in keys:
         key_sp['project_name'] = (reference.Project & 'project_uuid="{}"'.format(proj_uuid)).fetch1('project_name')
         subject.SubjectProject.insert1(key_sp, skip_duplicates=True)
 
+
+# subject.SubjectUser
+print('Ingesting subject.SubjectUser...')
+keys = (alyxraw.AlyxRaw & subjects).proj(subject_uuid='uuid')
+for key in keys:
+    key['uuid'] = key['subject_uuid']
+    lab_uuid = grf(key, 'lab')
+    key_su = dict()
+    key_su['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
+    key_su['subject_nickname'] = grf(key, 'nickname')
+    user = grf(key, 'responsible_user')
+    key_su['responsible_user'] = (reference.LabMember & 'user_uuid="{}"'.format(user)).fetch1('user_name')
+    subject.SubjectUser.insert1(key_su, skip_duplicates=True)
+
 # subject.Caging
 print('Ingesting subject.Caging...')
 subjects_c = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="cage"' & 'fvalue!="None"'
