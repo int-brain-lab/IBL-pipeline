@@ -5,3 +5,4 @@ python ingest_alyx_real.py
 python ingest_behavior.py
 cd ../ibl_pipeline/analyses
 python behavioral_snapshot.py
+python behavioral_overview_perlab.py
