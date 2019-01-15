@@ -95,7 +95,10 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
 
     weight_water.loc[weight_water['adlib'] == 1, 'water_administered'] = 3
 
+    # ################################################### #
     # use pandas plot for a stacked bar - water types
+    # ################################################### #
+
     wa_unstacked = weight_water.pivot_table(index='days',
         columns='water_type', values='water_administered', aggfunc='sum').reset_index()
 
@@ -121,24 +124,34 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     ax.set(ylabel="Water intake (mL)", xlabel='', xlim=xlims)
     ax.yaxis.label.set_color("#0072B2")
 
+    # ################################################### #
     # OVERLAY THE WEIGHT CURVE
+    # ################################################### #
+
     weight_water2 = weight_water.groupby('days').mean().reset_index()
     weight_water2 = weight_water2.dropna(subset=['weight'])
     righty = ax.twinx()
 
-    # add a line for 85% of baseline weight
-    if baseline.date.item():
-        righty.axhline(y=baseline.weight.item()*0.85, color='k', linestyle='--', linewidth=0.5)
-
     # plot weight curve
     sns.lineplot(x=weight_water2.days, y=weight_water2.weight, ax=righty, color='.15', marker='o')
-    sns.scatterplot(x='day', y='weight', data=baseline, ax=righty, marker='D',
+
+    # show the start of each water restriction
+    sns.scatterplot(x=baseline.day_start, y=baseline.weight_baseline, ax=righty, marker='D',
                     facecolor='white', edgecolor='black', s=10, zorder=100, legend=False)
 
+    for d in range(len(baseline)):
+        # add a line for 85% of baseline weight
+        righty.plot((baseline.day_start[d], baseline.day_end[d]),
+                    (baseline.weight_baseline[d]*0.85, baseline.weight_baseline[d]*0.85), 'k--', linewidth=0.5)
+
     righty.grid(False)
-    righty.set(xlabel='', ylabel="Weight (g)",
-        xlim=[weight_water.days.min()-2, weight_water.days.max()+2],
-               ylim=[baseline.weight.item()*0.8, baseline.weight.item()*1.2])
+    if not baseline.empty:
+        righty.set(xlabel='', ylabel="Weight (g)",
+            xlim=[weight_water.days.min()-2, weight_water.days.max()+2],
+               ylim=[baseline.weight_baseline.iat[-1]*0.8, baseline.weight_baseline.iat[-1]*1.2])
+    else:
+        righty.set(xlabel='', ylabel="Weight (g)",
+               xlim=[weight_water.days.min() - 2, weight_water.days.max() + 2])
 
     # correct the ticks to show dates, not days
     # also indicate Mondays by grid lines
