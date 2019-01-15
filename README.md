@@ -1,24 +1,12 @@
-# IBL pipeline schemas
-
-Alyx-corresponding schemas, including, `referenall_erd.save('/images/all_erd.png')ce`, `subject`, `action`, `acquisition`, and `data`
-
-![Alyx_corresponding erd](images/alyx_erd.png)
-
-Schema of `ephys`
-![Ephys erd](images/ephys_erd.png)
-
-Schema of `behavior`
-![Behavior erd](images/behavior_erd.png)
-
-# Instructions for connecting to the IBL pipeline
+# Getting started with DataJoint for IBL #
 
 1. Email austin@vathes.com for a database username.
 
-2. Install Docker (https://www.docker.com/). Linux users also need to install Docker Compose separately.
+2. Install Docker (https://www.docker.com/). Linux users also need to install Docker Compose separately. For Mac: https://docs.docker.com/docker-for-mac/.
 
 3. Fork the repository (https://github.com/int-brain-lab/IBL-pipeline) onto your own GitHub account.
 
-4. Clone the forked repository.
+4. Clone the forked repository, i.e. copy the files to your local machine by `git clone git@github.com:YourUserName/IBL-pipeline.git`
 
 5. Create a .env file in the cloned directory and **modify user and password values** per Step 1.
 
@@ -32,28 +20,33 @@ Schema of `behavior`
 6. Copy your `.one_params` file into `IBL-pipeline/root` to not be prompted for Alyx login (see https://ibllib.readthedocs.io/en/latest/02a_installation_python.html).
 
 Note: if you first build the docker container and then add `.one_params`, running ONE() in Python may still prompt you for your Alyx and FlatIron login details. In this case, do
-```
-docker-compose down
-docker image rm ibl-pipeline_datajoint:latest
-docker-compose up -d
-docker exec -it ibl-pipeline_datajoint_1 /bin/bash
-```
+	```
+	docker-compose down
+	docker image rm ibl-pipeline_datajoint:latest
+	docker-compose up -d
+	docker exec -it ibl-pipeline_datajoint_1 /bin/bash
+	```
+!ToDo: clarify if step 6 is necessary when not importing ONE()
 
 7. To save figures into AlyxPlots on the Google Drive, you can mount this path to somewhere inside the docker. The save the figs into the docker folder. The saved results will be automatically present in the outside folder you mounted.
 
-a. `docker-compose down`
-b. open `docker-compose.yml`
-c. add `~/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/:/Snapshot_DataJoint` in to the volumes:
-d. close the file
-e. `docker-compose up -d`
+	a. `docker-compose down`
 
-Then save the plots into `/SnapShot_DataJoint` inside the docker, then you’ll see that the plots are in the folder you want.
+	b. open `docker-compose.yml`
+
+	c. add `~/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/:/Snapshot_DataJoint_shortcut` in to the `volumes:`
+
+	d. close the file
+
+	e. `docker-compose up -d`
+
+Then save the plots from Python into `/Snapshot_DataJoint_shortcut` inside the docker, then you’ll see that the plots are in the folder you want.
 
 ## To run your own Python scripts ##
 
-8. If you would like to enter the docker and run scripts through the terminal, navigate to the IBL-pipeline directory, `chmod +x ibl_docker_setup.sh` will allow you to run 
+8. If you would like to enter the docker and run scripts through the terminal, navigate `cd` to the IBL-pipeline directory, `chmod +x ibl_docker_setup.sh` (only needed once, will give you permission to treat this file as an 'executable') will allow you to run 
 ```
-. ./ibl_docker_setup.sh
+./ibl_docker_setup.sh
 ```
 
 Which contains the following individual steps (as well as starting Docker):
@@ -61,10 +54,13 @@ Which contains the following individual steps (as well as starting Docker):
 ```
 docker-compose up -d
 docker exec -it ibl-pipeline_datajoint_1 /bin/bash
-cd /src/ibl-pipeline/ibl_pipeline/analyses
 ```
 
-### To run example notebooks ###
+After Docker has started, you'll be dropped in a new Terminal. To go back from there to the `IBL-pipeline/ibl_pipeline/analysis` folder containing Python scripts: `cd /src/ibl-pipeline/ibl_pipeline/analyses`.
+
+Then run e.g. the behavioral snapshot code: `python behavioral_snapshot.py` or `python behavioral_overview_perlab.py`.
+
+## To run example notebooks ##
 
 9. Move into the cloned directory in a terminal, then run `docker-compose up -d`.
 
@@ -74,6 +70,7 @@ cd /src/ibl-pipeline/ibl_pipeline/analyses
 
 12. Run through the notebook and feel free to experiment.
 
+---
 
 # Instructions to ingest Alyx data into local database #
 
@@ -114,3 +111,15 @@ docker-compose up -d
 ```
 
 This will create a docker container and link to the remote Amazon RDS. Then follow the same instruction of ingestion to the local database.
+
+# IBL pipeline schemas #
+
+Alyx-corresponding schemas, including, `referenall_erd.save('/images/all_erd.png')ce`, `subject`, `action`, `acquisition`, and `data`
+
+![Alyx_corresponding erd](images/alyx_erd.png)
+
+Schema of `ephys`
+![Ephys erd](images/ephys_erd.png)
+
+Schema of `behavior`
+![Behavior erd](images/behavior_erd.png)
