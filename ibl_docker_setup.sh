@@ -13,8 +13,3 @@ fi
 
 docker-compose up -d
 docker exec -it ibl-pipeline_datajoint_1 /bin/bash
-
-# move to the src instead of notebook folder
-cd /src/ibl-pipeline/ibl_pipeline/analyses
-echo "PWD: "$PWD
-

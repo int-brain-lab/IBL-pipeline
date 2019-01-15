@@ -22,7 +22,7 @@ class Session(dj.Computed):
     session_location=null:      varchar(255)
     session_type=null:          varchar(255)
     session_narrative=null:     varchar(1024)
-    task_protocol=null:         int
+    task_protocol=null:         varchar(255)
     """
     key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(session_uuid='uuid')
 
@@ -105,6 +105,8 @@ class WaterAdministrationSession(dj.Manual):
     definition = """
     lab_name:               varchar(255)
     subject_nickname:       varchar(255)
+    administration_time:    datetime
     ---
     session_start_time:     datetime
     """
+    
