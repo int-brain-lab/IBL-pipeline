@@ -27,7 +27,7 @@ from load_mouse_data_datajoint import * # this has all plotting functions
 import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 # folder to save plots, from DataJoint
-path = '/Snapshot_DataJoint/'
+path = '/Snapshot_DataJoint_shortcut/'
 
 # ============================================= #
 # START BIG OVERVIEW PLOT
@@ -41,7 +41,7 @@ print(users)
 
 for lidx, lab in enumerate(users):
 
-	subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'sex!="U"' & 'lab_name="%s"'%lab)
+	subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'subject_nickname="IBL_47"' & 'sex!="U"' & 'lab_name="%s"'%lab)
 									   & action.Weighing() & action.WaterAdministration() & behavior.TrialSet()
 									   ).fetch(as_dict=True, order_by=['subject_nickname']))
 	# group by batches: mice that were born on the same day

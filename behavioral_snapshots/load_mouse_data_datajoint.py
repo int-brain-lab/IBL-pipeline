@@ -78,30 +78,41 @@ def get_water_weight(mousename):
         combined['days'] = combined.date - combined.date[0]
         combined['days'] = combined.days.dt.days  # convert to number of days from start of the experiment
 
-        # only if the mouse is on water restriction, add its baseline weight
-        mouse = (subject.Subject() & 'subject_nickname = "%s"' % mousename)
-        latest = mouse.aggr(action.WaterRestriction.proj(action_lab="lab_name"),
-                            restriction_start_time='max(restriction_start_time)')
-        restr = pd.DataFrame((action.WaterRestriction & latest).fetch())
+        # grab info about water restrictions
+        restr_start, restr_end, reference_weight = \
+            (action.WaterRestriction & 'subject_nickname="%s"'%mousename).fetch('restriction_start_time',
+                                                                            'restriction_end_time', 'reference_weight')
+        restrictions = pd.DataFrame.from_dict({'date_start': pd.to_datetime(restr_start),
+                                               'date_end': pd.to_datetime(restr_end),
+                                               'weight_baseline': reference_weight,
+                                               'index': np.arange(len(reference_weight))})
+        # round down to the date
+        restrictions['date_start'] = restrictions['date_start'].dt.floor('D')
+        restrictions['date_end'] = restrictions['date_end'].dt.floor('D')
 
-        if restr.empty or not restr['reference_weight'].item() > 0:
-            baseline = pd.DataFrame.from_dict({'date': None, 'weight': combined.weight[0], 'day': np.nan, 'index': [0]})
-        else:
-            baseline = pd.DataFrame.from_dict({'date': pd.to_datetime(restr['restriction_start_time'].dt.floor('D'))[0],
-                                               'weight': restr['reference_weight'], 'index': [0]})
-            # also show the value that we're using as the baseline with a different marker
-            baseline.sort_index(inplace=True)
+        # fill to the appropriate day
+        restrictions['day_start'] = combined['days'].max() * np.ones(restrictions['date_start'].shape)
+        restrictions['day_end'] = combined['days'].max() * np.ones(restrictions['date_end'].shape)
+        combined['water_restricted'] = np.zeros(combined['days'].shape, dtype=bool)
+        for d in range(len(restrictions)):
+            try:
+                restrictions['day_start'][d] = combined.loc[combined['date']
+                                                     == restrictions['date_start'][d], 'days'].item()
+                restrictions['day_end'][d] = combined.loc[combined['date']
+                                                     == restrictions['date_end'][d], 'days'].item()
+            except:
+                pass
 
-            # if the restriction is within the range of weight/water values, show it
-            if baseline['date'][0] in combined['date']:
-                baseline['day'] = combined.loc[combined['date'] == baseline['date'][0], 'days'].item()
-            else:
-                baseline = pd.DataFrame.from_dict({'date': None, 'weight': combined.weight[0], 'day': np.nan, 'index': [0]})
+            # for each day, mark if the animal was on WR or not
+            combined['water_restricted'] = combined['water_restricted'] | \
+                                           combined['days'].between(restrictions['day_start'][d],
+                                           restrictions['day_end'][d], inclusive=True)
+
     else:
         combined = pd.DataFrame()
-        baseline = pd.DataFrame()
+        restrictions = pd.DataFrame()
 
-    return combined, baseline
+    return combined, restrictions
 
 def get_behavior(mousename, **kwargs):
 
