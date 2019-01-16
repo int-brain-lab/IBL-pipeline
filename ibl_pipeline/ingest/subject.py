@@ -357,6 +357,15 @@ class SubjectProject(dj.Manual):
     subject_nickname:       varchar(255)
     project_name:           varchar(255)
     """
+
+@schema
+class SubjectUser(dj.Manual):
+    definition = """
+    lab_name:               varchar(255)
+    subject_nickname:       varchar(255)
+    ---
+    responsible_user:       varchar(255)
+    """
     
 
 @schema
@@ -373,8 +382,8 @@ class Caging(dj.Manual):
 class UserHistory(dj.Manual):
     definition = """
     lab_name:               varchar(255)
-    subject_nickname: varchar(255)
-    user_name:        varchar(255)  # username 
+    subject_nickname:       varchar(255)
+    user_name:              varchar(255)  # username 
     ---
     user_change_time=null:   datetime      # time when changed to this user
     """

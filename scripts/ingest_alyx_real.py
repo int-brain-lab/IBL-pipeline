@@ -40,6 +40,7 @@ SUBJECT_TABLES = (
     'LitterSubject',
     'Weaning',
     'Death',
+    'UserHistory',
     'GenotypeTest',
     'Zygosity',
     'Implant'
@@ -71,7 +72,8 @@ ACQUISITION_TABLES = (
     'Session',
     'ChildSession',
     'SessionUser',
-    'SessionProcedure'
+    'SessionProcedure',
+    'WaterAdministrationSession'
 )
 
 for table in ACQUISITION_TABLES:

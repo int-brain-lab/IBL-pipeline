@@ -7,9 +7,10 @@ import json
 from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data
 from ibl_pipeline.ingest import get_raw_field as grf
 
-subjects = alyxraw.AlyxRaw.Field & 'model="subjects.subject"' & 'fname="lab"' & 'fvalue!="None"'
+subjects = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="lab"' & 'fvalue!="None"'
 
 # reference.ProjectLabMember
+print('Ingesting reference.ProjectLabMember...')
 keys = (alyxraw.AlyxRaw & 'model="subjects.project"').proj(project_uuid='uuid')
 
 for key in keys:
@@ -25,6 +26,7 @@ for key in keys:
 
 
 # subject.AlleleSequence
+print('Ingesting subject.AlleleSequence...')
 keys = (alyxraw.AlyxRaw & 'model="subjects.allele"').proj(allele_uuid='uuid')
 for key in keys:
     key_a = dict()
@@ -38,6 +40,7 @@ for key in keys:
             subject.AlleleSequence.insert1(key_as, skip_duplicates=True)
 
 # subject.LineAllele
+print('Ingesting subject.LineAllele...')
 keys = (alyxraw.AlyxRaw & 'model="subjects.line"').proj(line_uuid='uuid')
 for key in keys:
     key_l = dict()
@@ -52,7 +55,8 @@ for key in keys:
             subject.LineAllele.insert1(key_la, skip_duplicates=True)
 
 # subject.LitterSubject
-subjects_l = alyxraw.AlyxRaw.Field & 'model = "subjects.subject"' & 'fname="litter"' & 'fvalue!="None"'
+print('Ingesting subject.LitterSubject...')
+subjects_l = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model = "subjects.subject"') & 'fname="litter"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & subjects & subjects_l).proj(subject_uuid='uuid')
 
 for key in keys:
@@ -66,7 +70,8 @@ for key in keys:
     subject.LitterSubject.insert1(key_ls, skip_duplicates=True)
 
 # subject.SubjectProject
-subjects_p = alyxraw.AlyxRaw.Field & 'model="subjects.subject"' & 'fname="projects"' & 'fvalue!="None"'
+print('Ingesting subject.SubjectProject...')
+subjects_p = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="projects"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & subjects & subjects_p).proj(subject_uuid='uuid')
 for key in keys:
     key['uuid'] = key['subject_uuid']
@@ -82,8 +87,23 @@ for key in keys:
         key_sp['project_name'] = (reference.Project & 'project_uuid="{}"'.format(proj_uuid)).fetch1('project_name')
         subject.SubjectProject.insert1(key_sp, skip_duplicates=True)
 
+
+# subject.SubjectUser
+print('Ingesting subject.SubjectUser...')
+keys = (alyxraw.AlyxRaw & subjects).proj(subject_uuid='uuid')
+for key in keys:
+    key['uuid'] = key['subject_uuid']
+    lab_uuid = grf(key, 'lab')
+    key_su = dict()
+    key_su['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
+    key_su['subject_nickname'] = grf(key, 'nickname')
+    user = grf(key, 'responsible_user')
+    key_su['responsible_user'] = (reference.LabMember & 'user_uuid="{}"'.format(user)).fetch1('user_name')
+    subject.SubjectUser.insert1(key_su, skip_duplicates=True)
+
 # subject.Caging
-subjects_c = alyxraw.AlyxRaw.Field & 'model="subjects.subject"' & 'fname="cage"' & 'fvalue!="None"'
+print('Ingesting subject.Caging...')
+subjects_c = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="cage"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & subjects & subjects_c).proj(subject_uuid='uuid')
 for key in keys:
     key['uuid'] = key['subject_uuid']
@@ -108,8 +128,11 @@ for key in keys:
                 subject.Caging.insert1(key_cage_i, skip_duplicates=True)
                 if cage['value'] != 'None':
                     key_cage_i['cage_name'] = cage['value']
+    else:
+        subject.Caging.insert1(key_cage, skip_duplicates=True)
 
 # subject.UserHistory
+print('Ingesting subject.UserHistory...')
 keys = (alyxraw.AlyxRaw & subjects).proj(subject_uuid='uuid')
 for key in keys:
     key['uuid'] = key['subject_uuid']
@@ -119,7 +142,7 @@ for key in keys:
     key_user['subject_nickname'] = grf(key, 'nickname')
 
     user = grf(key, 'responsible_user')
-    key_user['user_name'] = user
+    key_user['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user)).fetch1('user_name')
     json_content = grf(key, 'json')
     if json_content != 'None':
         json_dict = json.loads(json_content)
@@ -136,10 +159,13 @@ for key in keys:
                 if user['value'] != 'None':
                     user_uuid = user['value']
                     key_user_i['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
+    else:
+        subject.UserHistory.insert1(key_user, skip_duplicates=True)
 
 
 # subject.Weaning
-subjects_w = alyxraw.AlyxRaw.Field & 'model="subjects.subject"' & 'fname="weaning_date"' & 'fvalue!="None"'
+print('Ingesting subject.Weaning...')
+subjects_w = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="wean_date"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & subjects & subjects_w).proj(subject_uuid='uuid')
 for key in keys:
     key['uuid'] = key['subject_uuid']
@@ -152,10 +178,11 @@ for key in keys:
     subject.Weaning.insert1(key_weaning, skip_duplicates=True)
 
 # subject.Death
-subjects_d = alyxraw.AlyxRaw.Field & 'model="subjects.subject"' & 'fname="death_date"' & 'fvalue!="None"'
+print('Ingesting subject.Death...')
+subjects_d = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="death_date"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & subjects & subjects_d).proj(subject_uuid='uuid')
-def make(self, key):
-    
+
+for key in keys:    
     key['uuid'] = key['subject_uuid']
     lab_uuid = grf(key, 'lab')
     key_death = dict()
@@ -166,7 +193,8 @@ def make(self, key):
     subject.Death.insert1(key_death, skip_duplicates=True)
 
 # subject.Implant
-subjects_i = alyxraw.AlyxRaw.Field & 'model="subjects.subject"' & 'fname="implant_weight"' & 'fvalue!="None"'
+print('Ingesting subject.Implant...')
+subjects_i = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"') & 'fname="implant_weight"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & subjects & subjects_i).proj(subject_uuid='uuid')
 
 for key in keys:
@@ -190,6 +218,7 @@ for key in keys:
     subject.Implant.insert1(key_implant, skip_duplicates=True)
 
 # action.WaterRestrictionUser
+print('Ingesting action.WaterRestrictionUser...')
 keys = (alyxraw.AlyxRaw & 'model = "actions.waterrestriction"').proj(restriction_uuid='uuid')
 for key in keys:
     key_r = dict()
@@ -206,6 +235,7 @@ for key in keys:
             action.WaterRestrictionUser.insert1(key_ru, skip_duplicates=True)
 
 # action.WaterRestrictionProcedure
+print('Ingesting action.WaterRestrictionProcedure...')
 keys = (alyxraw.AlyxRaw & 'model = "actions.waterrestriction"').proj(restriction_uuid='uuid')
 for key in keys:
     key_r = dict()
@@ -224,10 +254,13 @@ for key in keys:
 
 
 # action.SurgeryUser
+print('Ingesting action.SurgeryUser...')
 keys = (alyxraw.AlyxRaw & 'model = "actions.surgery"').proj(surgery_uuid='uuid')
 for key in keys:
     key_s = dict()
     key['uuid'] = key['surgery_uuid']
+    if len(action.Surgery & key)==0:
+        continue
     key_s['lab_name'], key_s['subject_nickname'], key_s['surgery_start_time'] = \
         (action.Surgery & key).fetch1('lab_name', 'subject_nickname', 'surgery_start_time')
     user_uuids = grf(key, 'users', multiple_entries=True)
@@ -239,10 +272,13 @@ for key in keys:
             action.SurgeryUser.insert1(key_sl, skip_duplicates=True)
 
 # action.SurgeryProcedure
+print('Ingesting action.SurgeryProcedure...')
 keys = (alyxraw.AlyxRaw & 'model = "actions.surgery"').proj(surgery_uuid='uuid')
 for key in keys:
     key_s = dict()
     key['uuid'] = key['surgery_uuid']
+    if len(action.Surgery & key)==0:
+        continue
     key_s['lab_name'], key_s['subject_nickname'], key_s['surgery_start_time'] = \
         (action.Surgery & key).fetch1('lab_name', 'subject_nickname', 'surgery_start_time')
     procedures = grf(key, 'procedures', multiple_entries=True)
@@ -254,7 +290,8 @@ for key in keys:
             action.SurgeryProcedure.insert1(key_sp, skip_duplicates=True)
 
 # acquisition.ChildSession
-sessions = (alyxraw.AlyxRaw.Field & 'model="actions.session"' & 'fname="parent_session"' & 'fvalue!="None"')
+print('Ingesting acquisition.ChildSession...')
+sessions = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="actions.session"') & 'fname="parent_session"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & sessions & 'model="actions.session"').proj(session_uuid='uuid')
 for key in keys:
     key_cs = dict()
@@ -269,6 +306,7 @@ for key in keys:
         acquisition.ChildSession.insert1(key_cs, skip_duplicates=True)
 
 # acquisition.SessionUser
+print('Ingesting acquisition.SessionUser...')
 keys = (alyxraw.AlyxRaw & 'model = "actions.session"').proj(session_uuid = 'uuid')
 for key in keys:
     key_s = dict()
@@ -289,7 +327,8 @@ for key in keys:
             acquisition.SessionUser.insert1(key_su, skip_duplicates=True)
 
 # acquisition.SessionProcedure
-procedure = alyxraw.AlyxRaw.Field & 'model="actions.session"' & 'fname="procedure"' & 'fvalue!="None"'
+print('Ingesting acquisition.SessionProcedure...')
+procedure = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="actions.session"') & 'fname="procedure"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & 'model="actions.session"').proj(session_uuid='uuid')
 for key in keys:
     key_s = dict()
@@ -310,7 +349,8 @@ for key in keys:
             acquisition.SessionProcedure.insert1(key_sp, skip_duplicates=True)
 
 # acquisition.WaterAdminstrationSession
-admin = alyxraw.AlyxRaw.Field & 'model="actions.wateradministration"' & 'fname="session"' & 'fvalue!="None"'
+print('Ingesting acquisition.WaterAdministrationSession...')
+admin = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="actions.wateradministration"') & 'fname="session"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & admin).proj(wateradmin_uuid='uuid')
 for key in keys:
     key_w = dict()
@@ -324,10 +364,14 @@ for key in keys:
         continue
     session_uuid = grf(key, 'session', multiple_entries=False)
     key_ws = key_w.copy()
-    key_ws['session_start_time'] = (acquisition.Session & 'session_uuid="{}"'.format(session_uuid)).fetch1('session_start_time')
+    try:
+        key_ws['session_start_time'] = (acquisition.Session & 'session_uuid="{}"'.format(session_uuid)).fetch1('session_start_time')
+    except:
+        print('session', session_uuid)
     acquisition.WaterAdministrationSession.insert1(key_ws, skip_duplicates=True)
 
 # data.ProjectRepository
+print('Ingesting data.ProjectRespository...')
 keys = (alyxraw.AlyxRaw & 'model="subjects.project"').proj(project_uuid='uuid')
 for key in keys:
     key_p = dict()

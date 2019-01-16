@@ -176,6 +176,13 @@ class SubjectProject(dj.Manual):
     -> reference.Project
     """
 
+@schema
+class SubjectUser(dj.Manual):
+    definition = """
+    -> Subject
+    ---
+    -> reference.LabMember.proj(responsible_user='user_name')
+    """
 
 @schema
 class Caging(dj.Manual):
@@ -188,7 +195,7 @@ class Caging(dj.Manual):
     """
 
 @schema
-class UserHistory(dj.Computed):
+class UserHistory(dj.Manual):
     definition = """
     -> Subject
     -> reference.LabMember
