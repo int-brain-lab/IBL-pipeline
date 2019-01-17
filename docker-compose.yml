@@ -9,5 +9,6 @@ services:
       - .:/src/ibl-pipeline
       - ./data:/data
       - ./snapshots:/Snapshot_DataJoint_shortcut
+      - ~/Documents⁩/IBL⁩/Figures⁩/AlyxPlot/:/Snapshot_DataJoint_shortcut
     ports:
       - "8888:8888"

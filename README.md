@@ -27,6 +27,7 @@ Note: if you first build the docker container and then add `.one_params`, runnin
 	docker exec -it ibl-pipeline_datajoint_1 /bin/bash
 	```
 !ToDo: clarify if step 6 is necessary when not importing ONE()
+!ToDO Remove test GC
 
 7. To save figures into AlyxPlots on the Google Drive, you can mount this path to somewhere inside the docker. The save the figs into the docker folder. The saved results will be automatically present in the outside folder you mounted.
 
