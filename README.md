@@ -6,9 +6,9 @@
 
 3. Fork the repository (https://github.com/int-brain-lab/IBL-pipeline) onto your own GitHub account.
 
-4. Clone the forked repository, i.e. copy the files to your local machine by `git clone git@github.com:YourUserName/IBL-pipeline.git`
+4. Clone the forked repository, i.e. copy the files to your local machine by `git clone git@github.com:YourUserName/IBL-pipeline.git`. If you don't have SSH setup, use `git clone https://github.com/YourUserName/IBL-pipeline.git`. See https://help.github.com/articles/which-remote-url-should-i-use/ for an explanation of the distinction - in the long run, it's convenient to setup SSH authorization so you don't have to type passwords every time.
 
-5. Create a .env file in the cloned directory and **modify user and password values** per Step 1.
+5. Create a file with the name `.env` (in your favourite text editor) in the cloned directory and **modify user and password values** per Step 1.
 
     File contents of ``.env``:
     ```
@@ -17,7 +17,7 @@
     DJ_PASS=password
     ```
 
-6. Copy your `.one_params` file into `IBL-pipeline/root` to not be prompted for Alyx login (see https://ibllib.readthedocs.io/en/latest/02a_installation_python.html).
+6. Copy your `.one_params` file into `IBL-pipeline/root` to not be prompted for Alyx login (see https://ibllib.readthedocs.io/en/latest/02a_installation_python.html). If you have no `root` folder, create one.
 
 Note: if you first build the docker container and then add `.one_params`, running ONE() in Python may still prompt you for your Alyx and FlatIron login details. In this case, do
 	```
@@ -26,21 +26,20 @@ Note: if you first build the docker container and then add `.one_params`, runnin
 	docker-compose up -d
 	docker exec -it ibl-pipeline_datajoint_1 /bin/bash
 	```
-!ToDo: clarify if step 6 is necessary when not importing ONE()
 
-7. To save figures into AlyxPlots on the Google Drive, you can mount this path to somewhere inside the docker. The save the figs into the docker folder. The saved results will be automatically present in the outside folder you mounted.
+7. To save figures in a folder outside your `IBL-pipeline` docker folder (which is good practice so you don't clutter up the Github repo), you can tell Docker to create an alias older which points to your preferred place for storing figures. 
 
 	a. `docker-compose down`
 
-	b. open `docker-compose.yml`
+	b. `open docker-compose.yml`
 
-	c. add `~/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/:/Snapshot_DataJoint_shortcut` in to the `volumes:`
+	c. add `myFullPath:/DataJoint_Figures_shortcut` in to the `volumes:`, where `myFullPath` could for example be `~/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/`
 
 	d. close the file
 
-	e. `docker-compose up -d`
+	e. `docker-compose up -d`. The first time, this will setup the Docker container which takes a bit of time.
 
-Then save the plots from Python into `/Snapshot_DataJoint_shortcut` inside the docker, then you’ll see that the plots are in the folder you want.
+Then save the plots from Python into `/DataJoint_Figures_shortcut` inside the docker, then you’ll see that the plots are in the folder you want.
 
 ## To run your own Python scripts ##
 
@@ -59,6 +58,14 @@ docker exec -it ibl-pipeline_datajoint_1 /bin/bash
 After Docker has started, you'll be dropped in a new Terminal. To go back from there to the `IBL-pipeline/ibl_pipeline/analysis` folder containing Python scripts: `cd /src/ibl-pipeline/ibl_pipeline/analyses`.
 
 Then run e.g. the behavioral snapshot code: `python behavioral_snapshot.py` or `python behavioral_overview_perlab.py`.
+
+### Run your Python scripts after Docker is already installed for the first time ###
+
+```
+./ibl_docker_setup.sh
+cd /src/ibl-pipeline/ibl_pipeline/analyses
+python behavioral_snapshot.py
+```
 
 ## To run example notebooks ##
 
