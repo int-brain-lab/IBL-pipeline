@@ -81,7 +81,9 @@ python behavioral_snapshot.py
 
 ### Staying up-to date and contributing code ###
 
-To stay up-to-date with the latest code from DataJoint, you might first want to check by `git remote -v`. If there is no upstream pointing to the int-brain-lab repository, then do `git add remote upstream https://github.com/int-brain-lab/IBL-pipeline`.
+To stay up-to-date with the latest code from DataJoint, you might first want to check by `git remote -v`. 
+If there is no upstream pointing to the int-brain-lab repository, then do `git add remote upstream https://github.com/int-brain-lab/IBL-pipeline`.
+
 Then `git pull upstream master` will make sure that your local fork stays up to date with the original repo.
 
 ---
