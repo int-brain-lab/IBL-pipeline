@@ -4,9 +4,11 @@
 
 2. Install Docker (https://www.docker.com/). Linux users also need to install Docker Compose separately. For Mac: https://docs.docker.com/docker-for-mac/.
 
-3. Fork the repository (https://github.com/int-brain-lab/IBL-pipeline) onto your own GitHub account.
+3. Fork the repository (https://github.com/int-brain-lab/IBL-pipeline) onto your own GitHub account by clicking on the 'Fork' button in the top right corner of Github.
 
-4. Clone the forked repository, i.e. copy the files to your local machine by `git clone git@github.com:YourUserName/IBL-pipeline.git`. If you don't have SSH setup, use `git clone https://github.com/YourUserName/IBL-pipeline.git`. See https://help.github.com/articles/which-remote-url-should-i-use/ for an explanation of the distinction - in the long run, it's convenient to setup SSH authorization so you don't have to type passwords every time.
+4. Clone the forked repository, i.e. copy the files to your local machine by `git clone git@github.com:YourUserName/IBL-pipeline.git`. Important: do *not* clone the repo from `int-brain-lab`, but the one that you forked onto your own account!
+
+If you don't have SSH setup, use `git clone https://github.com/YourUserName/IBL-pipeline.git`. See https://help.github.com/articles/which-remote-url-should-i-use/ for an explanation of the distinction - in the long run, it's convenient to setup SSH authorization so you don't have to type passwords every time.
 
 5. Create a file with the name `.env` (in your favourite text editor) in the cloned directory and **modify user and password values** per Step 1.
 
@@ -55,7 +57,7 @@ docker-compose up -d
 docker exec -it ibl-pipeline_datajoint_1 /bin/bash
 ```
 
-After Docker has started, you'll be dropped in a new Terminal. To go back from there to the `IBL-pipeline/ibl_pipeline/analysis` folder containing Python scripts: `cd /src/ibl-pipeline/ibl_pipeline/analyses`.
+After Docker has started, you'll be dropped in a new Terminal. To go back from there to the `IBL-pipeline/prelim_analyses` folder containing Python scripts: `cd /src/ibl-pipeline/prelim_analyses`.
 
 Then run e.g. the behavioral snapshot code: `python behavioral_snapshot.py` or `python behavioral_overview_perlab.py`.
 
@@ -76,6 +78,11 @@ python behavioral_snapshot.py
 11. Open "Datajoint pipeline query tutorial.ipynb".
 
 12. Run through the notebook and feel free to experiment.
+
+### Staying up-to date and contributing code ###
+
+To stay up-to-date with the latest code from DataJoint, you might first want to check by `git remote -v`. If there is no upstream pointing to the int-brain-lab repository, then do `git add remote upstream https://github.com/int-brain-lab/IBL-pipeline`.
+Then `git pull upstream master` will make sure that your local fork stays up to date with the original repo.
 
 ---
 
