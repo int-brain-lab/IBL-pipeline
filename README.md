@@ -4,7 +4,7 @@
 
 2. Install Docker (https://www.docker.com/). Linux users also need to install Docker Compose separately. For Mac: https://docs.docker.com/docker-for-mac/.
 
-3. Fork the repository (https://github.com/int-brain-lab/IBL-pipeline) onto your own GitHub account. If you do it via the GitHub web, the top of the GitHub page should now display 'YourGitHubAccount/IBL-pipeline (forked from int-brain-lab/IBL-pipeline'.
+3. Fork the repository (https://github.com/int-brain-lab/IBL-pipeline) onto your own GitHub account. If you do it via the GitHub web, the top of the GitHub page should now display _YourGitHubAccount/IBL-pipeline (forked from int-brain-lab/IBL-pipeline_.
 
 4. Clone the forked repository, i.e. copy the files to your local machine by typing in command terminal `git clone git@github.com:YourUserName/IBL-pipeline.git` .
 
@@ -26,19 +26,26 @@ Note: if you first build the docker container and then add `.one_params`, runnin
 	docker-compose up -d
 	docker exec -it ibl-pipeline_datajoint_1 /bin/bash
 	```
-!ToDo: clarify if step 6 is necessary when not importing ONE()
-!ToDO Remove test GC
+!ToDo: clarify if step 6 is necessary when *not* importing ONE()
 
-7. To save figures into AlyxPlots on the Google Drive, you can mount this path to somewhere inside the docker. The save the figs into the docker folder. The saved results will be automatically present in the outside folder you mounted.
+7. !ToDO this step does not work properly and needs clarification. Should default path be ONE folder?
 
+To save figures on your machine, create a folder inside the cloned directory IBL-pipeline and map the path in the docker using a path shortcut as per the steps below. The saved results will be automatically present in the folder you set the path to.
+_Note:_ To save figures into AlyxPlots on the Google Drive or Dropbox, you can mount this drive onto your machine and select this path (see step **c** below).
+
+Type in terminal:
 	a. `docker-compose down`
 
+From your folder search:
 	b. open `docker-compose.yml`
 
-	c. add `~/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/:/Snapshot_DataJoint_shortcut` in to the `volumes:`
+	c. below the `volumes:`, add the path pointing to your desired figure folder, e.g. `.../IBL-pipeline/FigFolder/:/Snapshot_DataJoint_shortcut` or `~/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/:/Snapshot_DataJoint_shortcut` 
+
+	_Note:_ `Snapshot_DataJoint_shortcut` is used in the code as alias for the path to use to save figures to.
 
 	d. close the file
 
+Type in terminal:
 	e. `docker-compose up -d`
 
 Then save the plots from Python into `/Snapshot_DataJoint_shortcut` inside the docker, then you’ll see that the plots are in the folder you want.
