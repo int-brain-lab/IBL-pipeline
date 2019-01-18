@@ -115,6 +115,9 @@ venv.bak/
 dj_local_conf.json
 root/.one_params
 
+# docker related file
+docker-compose.yml
+
 # raw data file
 data/*
 
