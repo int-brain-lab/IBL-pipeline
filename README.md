@@ -4,11 +4,11 @@
 
 2. Install Docker (https://www.docker.com/). Linux users also need to install Docker Compose separately. For Mac: https://docs.docker.com/docker-for-mac/.
 
-3. Fork the repository (https://github.com/int-brain-lab/IBL-pipeline) onto your own GitHub account.
+3. Fork the repository (https://github.com/int-brain-lab/IBL-pipeline) onto your own GitHub account. If you do it via the GitHub web, the top of the GitHub page should now display 'YourGitHubAccount/IBL-pipeline (forked from int-brain-lab/IBL-pipeline'.
 
-4. Clone the forked repository, i.e. copy the files to your local machine by `git clone git@github.com:YourUserName/IBL-pipeline.git`
+4. Clone the forked repository, i.e. copy the files to your local machine by typing in command terminal `git clone git@github.com:YourUserName/IBL-pipeline.git` .
 
-5. Create a .env file in the cloned directory and **modify user and password values** per Step 1.
+5. Create a .env file in the cloned directory IBL-pipeline and **modify user and password values** per Step 1. To create an .env file, simply create a text file, and edit the extension .txt into .env. Copy in the following file content.
 
     File contents of ``.env``:
     ```
