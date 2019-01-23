@@ -347,7 +347,7 @@ class CompleteTrialSession(dj.Computed):
     """
 
     required_datasets =  ["_ibl_trials.feedback_times.npy", "_ibl_trials.feedbackType.npy", \
-                            "_ibl_trials.goCue_times.npy", "_ibl_trials.intervals.npy", "_ibl_trials.repNum.npy", \
+                            "_ibl_trials.intervals.npy", "_ibl_trials.repNum.npy", \
                             "_ibl_trials.choice.npy", "_ibl_trials.response_times.npy", \
                             "_ibl_trials.contrastLeft.npy", "_ibl_trials.contrastRight.npy", \
                             "_ibl_trials.stimOn_times.npy", "_ibl_trials.included.npy",\
@@ -372,28 +372,37 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    key_source = CompleteTrialSession & 'trial_session_complete = 1'
+    key_source = CompleteTrialSession & 'trial_session_complete=1'
 
     def make(self, key):
         trial_key = key.copy()
         # excluded_trial_key = key.copy()      
         eID = (acquisition.Session & key).fetch1('session_uuid')
 
-        trials_feedback_times, trials_feedback_types, trials_gocue_times, \
-            trials_intervals, trials_rep_num, trials_response_choice, trials_response_times, \
+        trials_feedback_times, trials_feedback_types, trials_intervals, \
+            trials_rep_num, trials_response_choice, trials_response_times, \
             trials_contrast_left, trials_contrast_right, \
-            trials_visual_stim_times, trials_included, \
-            trials_p_left = \
+            trials_included, trials_p_left = \
             ONE().load(eID, dataset_types=['_ibl_trials.feedback_times', '_ibl_trials.feedbackType',
-                                           '_ibl_trials.goCue_times', '_ibl_trials.intervals', '_ibl_trials.repNum',
+                                           '_ibl_trials.intervals', '_ibl_trials.repNum',
                                            '_ibl_trials.choice', '_ibl_trials.response_times',
                                            '_ibl_trials.contrastLeft', '_ibl_trials.contrastRight',
-                                           '_ibl_trials.stimOn_times', '_ibl_trials.included',
-                                           '_ibl_trials.probabilityLeft'])
+                                           '_ibl_trials.included', '_ibl_trials.probabilityLeft'])
+        if key['lab_name'] == 'wittenlab':
+            trials_visual_stim_times = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.stimOn_times', clobber=True))
+        else:
+            trials_visual_stim_times = ONE().load(eID, dataset_types='_ibl_trials.stimOn_times')
 
+        if len(trials_visual_stim_times) == 1:
+            trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
+        
+        # for debugging purpose
+        # print(key['session_start_time'])
+        # print(len(trials_feedback_times), len(trials_feedback_types), len(trials_intervals), \
+        #     len(trials_rep_num), len(trials_response_choice), len(trials_response_times), len(trials_contrast_left), \
+        #     len(trials_contrast_right), len(trials_visual_stim_times), len(trials_included), len(trials_p_left))
         assert len(np.unique(np.array([len(trials_feedback_times),
                                        len(trials_feedback_types),
-                                       len(trials_gocue_times),
                                        len(trials_intervals),
                                        len(trials_rep_num),
                                        len(trials_response_choice),
@@ -404,7 +413,7 @@ class TrialSet(dj.Imported):
                                        len(trials_included),
                                        len(trials_p_left)
                                        ]))) == 1, 'Loaded trial files do not have the same length'
-
+        
         key['n_trials'] = len(trials_response_choice)
 
         key_session = dict()
@@ -414,11 +423,14 @@ class TrialSet(dj.Imported):
         n_correct_trials = grf(key_session, 'n_correct_trials')
         if n_correct_trials != 'None':
             key['n_correct_trials'] = n_correct_trials
+        else:
+            key['n_correct_trials'] = sum((np.squeeze(trials_response_choice)==1) & (np.squeeze(trials_contrast_left)>0)) \
+                + sum((np.squeeze(trials_response_choice)==-1) & (np.squeeze(trials_contrast_right)>0))
 
         key['trials_start_time'] = trials_intervals[0, 0]
         key['trials_end_time'] = trials_intervals[-1, 1]
 
-        print(key)
+       
         self.insert1(key)
 
         for idx_trial in range(len(trials_response_choice)):
@@ -441,14 +453,15 @@ class TrialSet(dj.Imported):
                 trial_response_choice = "CW"
             else:
                 raise ValueError('Invalid reponse choice.')
+            
 
             trial_key['trial_id'] = idx_trial + 1
             trial_key['trial_start_time'] = trials_intervals[idx_trial, 0]
             trial_key['trial_end_time'] = trials_intervals[idx_trial, 1]
-            trial_key['trial_go_cue_time'] = float(trials_gocue_times[idx_trial])
             trial_key['trial_response_time'] = float(trials_response_times[idx_trial])
             trial_key['trial_response_choice'] = trial_response_choice
-            trial_key['trial_stim_on_time'] = trials_visual_stim_times[idx_trial, 0]
+            trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
+            trial_key['trial_stim_on_time'] = trials_visual_stim_times[idx_trial]
             trial_key['trial_stim_contrast_left'] = float(trial_stim_contrast_left)
             trial_key['trial_stim_contrast_right'] = float(trial_stim_contrast_right)
             trial_key['trial_feedback_time'] = float(trials_feedback_times[idx_trial])
@@ -473,7 +486,6 @@ class TrialSet(dj.Imported):
         ---
         trial_start_time:           double         # beginning of quiescent period time (seconds)
         trial_end_time:             double         # end of iti (seconds)
-        trial_go_cue_time:          double         # Time of go cue in choiceworld (seconds)
         trial_response_time:        double         # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
         trial_response_choice:      enum("CCW", "CW", "No Go")       # which choice was made in choiceworld
         trial_stim_on_time:         double         # Time of stimulus in choiceworld (seconds)
