@@ -11,6 +11,8 @@ services:
       - ./images:/images
       - .:/src/ibl-pipeline
       - ./data:/data
+      - ./root/.one_params:/root/.one_params
+      - ./snapshots:/Snapshot_DataJoint_shortcut
     links:
       - db
     ports:
