@@ -117,7 +117,7 @@ root/.one_params
 
 # docker related file
 docker-compose.yml
-
+docker-compose-local.yml
 # raw data file
 data/*
 
