@@ -41,7 +41,7 @@ print(users)
 
 for lidx, lab in enumerate(users):
 
-	subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'subject_nickname="IBL_47"' & 'sex!="U"' & 'lab_name="%s"'%lab)
+	subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'subject_nickname!="IBL_47"' & 'sex!="U"' & 'lab_name="%s"'%lab
 									   & action.Weighing() & action.WaterAdministration() & behavior.TrialSet()
 									   ).fetch(as_dict=True, order_by=['subject_nickname']))
 	# group by batches: mice that were born on the same day
