@@ -356,7 +356,8 @@ class CompleteTrialSession(dj.Computed):
     def make(self, key):
         datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {'exists': 1}).fetch('dataset_name')
         key['trial_session_complete'] = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
-        self.insert1(key)
+        if key['trial_session_complete'] is True:
+            self.insert1(key)
 
 
 @schema
