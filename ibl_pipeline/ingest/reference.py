@@ -123,9 +123,9 @@ class LabMembership(dj.Computed):
         if start_date != 'None':
             key_mem['mem_start_date'] = start_date
 
-        end_date = grf(key, 'mem_end_date')
+        end_date = grf(key, 'end_date')
         if end_date != 'None':
-            key_mem['end_date'] = end_date
+            key_mem['mem_end_date'] = end_date
 
         self.insert1(key_mem)
 
