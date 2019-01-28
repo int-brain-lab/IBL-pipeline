@@ -127,6 +127,7 @@ class LabMembership(dj.Computed):
         if end_date != 'None':
             key_mem['mem_end_date'] = end_date
 
+        print(key_mem)
         self.insert1(key_mem)
 
 
