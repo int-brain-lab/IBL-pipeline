@@ -121,9 +121,9 @@ class LabMembership(dj.Computed):
 
         start_date = grf(key, 'start_date')
         if start_date != 'None':
-            key_mem['start_date'] = start_date
+            key_mem['mem_start_date'] = start_date
 
-        end_date = grf(key, 'end_date')
+        end_date = grf(key, 'mem_end_date')
         if end_date != 'None':
             key_mem['end_date'] = end_date
 
