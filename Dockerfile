@@ -1,8 +1,8 @@
 FROM datajoint/jupyter:python3.6
 
-ADD . /src/ibl-pipeline
+ADD . /src/IBL-pipeline
 
-RUN pip install -e /src/ibl-pipeline
+RUN pip install -e /src/IBL-pipeline
 
 RUN pip install globus_sdk
 
