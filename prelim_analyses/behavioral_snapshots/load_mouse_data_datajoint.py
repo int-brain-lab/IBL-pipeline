@@ -82,6 +82,10 @@ def get_water_weight(mousename, labname):
         restrictions = pd.DataFrame.from_dict((action.WaterRestriction & 
             'subject_nickname="%s"'%mousename & 'lab_name="%s"'%labname).fetch(as_dict=True))
 
+        # ensure that start and end times are pandas datetimes
+        restrictions['restriction_start_time'] = pd.to_datetime(restrictions['restriction_start_time'])
+        restrictions['restriction_end_time'] = pd.to_datetime(restrictions['restriction_end_time'])
+
         # round down to the date
         restrictions['date_start'] = restrictions['restriction_start_time'].dt.floor('D')
         restrictions['date_end'] = restrictions['restriction_end_time'].dt.floor('D')
