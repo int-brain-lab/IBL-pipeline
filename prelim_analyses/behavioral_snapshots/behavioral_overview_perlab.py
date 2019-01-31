@@ -21,35 +21,36 @@ import datajoint as dj
 from ibl_pipeline import reference, subject, action, acquisition, data, behavior
 
 # loading and plotting functions
-from define_paths import fig_path
 from behavior_plots import *
 from load_mouse_data_datajoint import * # this has all plotting functions
 import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 # folder to save plots, from DataJoint
-path = '/Snapshot_DataJoint_shortcut/'
+path = '/Figures_DataJoint_shortcuts/'
 
 # ============================================= #
 # START BIG OVERVIEW PLOT
 # ============================================= #
 
-subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'sex!="U"')
+allsubjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'sex!="U"')
                                    & action.Weighing() & action.WaterAdministration() & behavior.TrialSet()
                                    ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
-users = subjects['lab_name'].unique()
+users = allsubjects['lab_name'].unique()
 print(users)
 
 for lidx, lab in enumerate(users):
 
-	subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'subject_nickname="IBL_47"' & 'sex!="U"' & 'lab_name="%s"'%lab)
-									   & action.Weighing() & action.WaterAdministration() & behavior.TrialSet()
-									   ).fetch(as_dict=True, order_by=['subject_nickname']))
+	# take mice from this lab only
+	subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'sex!="U"' & 'lab_name="%s"'%lab)
+                                   & action.Weighing() & action.WaterAdministration() & behavior.TrialSet()
+                                   ).fetch(as_dict=True, order_by=['subject_nickname']))
+
 	# group by batches: mice that were born on the same day
 	batches = subjects.subject_birth_date.unique()
 
 	for birth_date in batches:
 
-		mice = subjects.loc[subjects['subject_birth_date'] == birth_date]['subject_nickname']
+		mice = subjects.loc[subjects['subject_birth_date'] == birth_date]['subject_nickname'].unique()
 		print(mice)
 
 		fig  = plt.figure(figsize=(13.69, 8.27), constrained_layout=True)
@@ -63,7 +64,7 @@ for lidx, lab in enumerate(users):
 
 				# WEIGHT CURVE AND WATER INTAKE
 				t = time.time()
-				weight_water, baseline = get_water_weight(mouse)
+				weight_water, baseline = get_water_weight(mouse, lab)
 
 				# determine x limits
 				xlims = [weight_water.date.min() - timedelta(days=2), weight_water.date.max() + timedelta(days=2)]
@@ -72,7 +73,7 @@ for lidx, lab in enumerate(users):
 				axes.append(ax)
 
 				# TRIAL COUNTS AND SESSION DURATION
-				behav 	= get_behavior(mouse)
+				behav 	= get_behavior(mouse, lab)
 
 				ax = plt.subplot2grid((4, max([len(mice), 4])), (1, i))
 				plot_trialcounts_sessionlength(behav, ax, xlims)
@@ -93,7 +94,8 @@ for lidx, lab in enumerate(users):
 				print( "Elapsed time: %f seconds.\n" %elapsed)
 
 			except:
-				raise
+				ax = plt.subplot2grid((4, max([len(mice), 4])), (3, i))
+				pass
 
 			# add an xlabel with the mouse's name and sex
 			ax.set_xlabel('Mouse %s (%s)'%(mouse,
