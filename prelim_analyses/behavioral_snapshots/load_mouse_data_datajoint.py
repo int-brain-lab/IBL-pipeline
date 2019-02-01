@@ -14,11 +14,11 @@ from ibl_pipeline import reference, subject, action, acquisition, data, behavior
 # DATAJOINT
 # ==================== #
 
-def get_weights(mousename):
+def get_weights(mousename, labname):
 
     wei = {}
     wei['date_time'], wei['weight'] = (action.Weighing() &
-                                       'subject_nickname="%s"'%mousename).fetch('weighing_time',
+                                       'subject_nickname="%s"'%mousename & 'lab_name="%s"'%labname).fetch('weighing_time',
                                                                         'weight', order_by='weighing_time')
     wei = pd.DataFrame.from_dict(wei)
 
@@ -34,9 +34,9 @@ def get_weights(mousename):
     return wei
 
 
-def get_water(mousename):
+def get_water(mousename, labname):
 
-    wei = (action.WaterAdministration() & 'subject_nickname="%s"'%mousename).fetch(as_dict=True)
+    wei = (action.WaterAdministration() & 'subject_nickname="%s"'%mousename & 'lab_name="%s"'%labname).fetch(as_dict=True)
     wei = pd.DataFrame(wei)
     if not wei.empty:
         wei.rename(columns={'administration_time': 'date_time', 'watertype_name': 'water_type'}, inplace=True)
@@ -52,10 +52,10 @@ def get_water(mousename):
     return wei
 
 
-def get_water_weight(mousename):
+def get_water_weight(mousename, labname):
 
-    wei = get_weights(mousename)
-    wa = get_water(mousename)
+    wei = get_weights(mousename, labname)
+    wa = get_water(mousename, labname)
 
     if not (wei.empty or wa.empty):
 
@@ -79,16 +79,16 @@ def get_water_weight(mousename):
         combined['days'] = combined.days.dt.days  # convert to number of days from start of the experiment
 
         # grab info about water restrictions
-        restr_start, restr_end, reference_weight = \
-            (action.WaterRestriction & 'subject_nickname="%s"'%mousename).fetch('restriction_start_time',
-                                                                            'restriction_end_time', 'reference_weight')
-        restrictions = pd.DataFrame.from_dict({'date_start': pd.to_datetime(restr_start),
-                                               'date_end': pd.to_datetime(restr_end),
-                                               'weight_baseline': reference_weight,
-                                               'index': np.arange(len(reference_weight))})
+        restrictions = pd.DataFrame.from_dict((action.WaterRestriction & 
+            'subject_nickname="%s"'%mousename & 'lab_name="%s"'%labname).fetch(as_dict=True))
+
+        # ensure that start and end times are pandas datetimes
+        restrictions['restriction_start_time'] = pd.to_datetime(restrictions['restriction_start_time'])
+        restrictions['restriction_end_time'] = pd.to_datetime(restrictions['restriction_end_time'])
+
         # round down to the date
-        restrictions['date_start'] = restrictions['date_start'].dt.floor('D')
-        restrictions['date_end'] = restrictions['date_end'].dt.floor('D')
+        restrictions['date_start'] = restrictions['restriction_start_time'].dt.floor('D')
+        restrictions['date_end'] = restrictions['restriction_end_time'].dt.floor('D')
 
         # fill to the appropriate day
         restrictions['day_start'] = combined['days'].max() * np.ones(restrictions['date_start'].shape)
@@ -114,10 +114,10 @@ def get_water_weight(mousename):
 
     return combined, restrictions
 
-def get_behavior(mousename, **kwargs):
+def get_behavior(mousename, labname, **kwargs):
 
     b = behavior.TrialSet.Trial * acquisition.Session.proj('session_end_time',
-            ac_lab='lab_name') & 'subject_nickname = "%s"' % mousename
+            ac_lab='lab_name') & 'subject_nickname = "%s"' % mousename & 'lab_name="%s"'%labname
     behav = pd.DataFrame(b.fetch(order_by='session_start_time, trial_id'))
 
     if not behav.empty:
