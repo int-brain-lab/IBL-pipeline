@@ -9,6 +9,6 @@ services:
       - .:/src/IBL-pipeline
       - ./data:/data
       - ./root/.one_params:/root/.one_params
-      - ./snapshots:/Snapshot_DataJoint_shortcut
+      - ./snapshots:/Figures_DataJoint_shortcuts
     ports:
       - "8888:8888"

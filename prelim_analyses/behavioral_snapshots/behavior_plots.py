@@ -136,19 +136,19 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     sns.lineplot(x=weight_water2.days, y=weight_water2.weight, ax=righty, color='.15', marker='o')
 
     # show the start of each water restriction
-    sns.scatterplot(x=baseline.day_start, y=baseline.weight_baseline, ax=righty, marker='D',
+    sns.scatterplot(x=baseline.day_start, y=baseline.reference_weight, ax=righty, marker='D',
                     facecolor='white', edgecolor='black', s=10, zorder=100, legend=False)
 
     for d in range(len(baseline)):
         # add a line for 85% of baseline weight
         righty.plot((baseline.day_start[d], baseline.day_end[d]),
-                    (baseline.weight_baseline[d]*0.85, baseline.weight_baseline[d]*0.85), 'k--', linewidth=0.5)
+                    (baseline.reference_weight[d]*0.85, baseline.reference_weight[d]*0.85), 'k--', linewidth=0.5)
 
     righty.grid(False)
     if not baseline.empty:
         righty.set(xlabel='', ylabel="Weight (g)",
             xlim=[weight_water.days.min()-2, weight_water.days.max()+2],
-               ylim=[baseline.weight_baseline.iat[-1]*0.8, baseline.weight_baseline.iat[-1]*1.2])
+               ylim=[baseline.reference_weight.iat[-1]*0.8, baseline.reference_weight.iat[-1]*1.2])
     else:
         righty.set(xlabel='', ylabel="Weight (g)",
                xlim=[weight_water.days.min() - 2, weight_water.days.max() + 2])

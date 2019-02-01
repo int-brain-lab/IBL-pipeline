@@ -29,19 +29,21 @@ Note: if you first build the docker container and then add `.one_params`, runnin
 	docker exec -it ibl-pipeline_datajoint_1 /bin/bash
 	```
 
-7. To save figures in a folder outside your `IBL-pipeline` docker folder (which is good practice so you don't clutter up the Github repo), you can tell Docker to create an alias older which points to your preferred place for storing figures. 
+7. Now we're ready to build a Docker image. First, copy `docker-compose-template.yml` into `docker-compose.yml` - this is your own file you can customize.
+
+To save figures in a folder outside your `IBL-pipeline` docker folder (which is good practice so you don't clutter up the Github repo), you can tell Docker to create an alias older which points to your preferred place for storing figures. 
 
 	a. `docker-compose down`
 
 	b. `open docker-compose.yml`
 
-	c. add `myFullPath:/DataJoint_Figures_shortcut` in to the `volumes:`, where `myFullPath` could for example be `~/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/`
-
+	c. add `myFullPath:/Figures_DataJoint_shortcuts` in to the `volumes:`, where `myFullPath` could for example be `~/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/` 
+	
 	d. close the file
 
 	e. `docker-compose up -d`. The first time, this will setup the Docker container which takes a bit of time.
 
-Then save the plots from Python into `/DataJoint_Figures_shortcut` inside the docker, then you’ll see that the plots are in the folder you want.
+Then save the plots from Python into `/Figures_DataJoint_shortcuts` inside the docker, then you’ll see that the plots are in the folder you want.
 
 ## To run your own Python scripts ##
 
