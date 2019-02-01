@@ -40,7 +40,7 @@ path = '/Figures_DataJoint_shortcuts/'
 #                                    ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
 # print(subjects['subject_nickname'].unique())
 
-allsubjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'sex!="U"')
+allsubjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'sex!="U"'
                                    & action.Weighing() & action.WaterAdministration() & behavior.TrialSet()
                                    ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
 users = allsubjects['lab_name'].unique()
