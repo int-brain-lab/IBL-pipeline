@@ -116,7 +116,7 @@ def get_water_weight(mousename, labname):
 
 def get_behavior(mousename, labname, **kwargs):
 
-    b = behavior.TrialSet.Trial * acquisition.Session.proj('session_end_time',
+    b = behavior.TrialSet.Trial * acquisition.Session.proj('session_end_time', 'task_protocol',
             ac_lab='lab_name') & 'subject_nickname = "%s"' % mousename & 'lab_name="%s"'%labname
     behav = pd.DataFrame(b.fetch(order_by='session_start_time, trial_id'))
 
@@ -148,5 +148,10 @@ def get_behavior(mousename, labname, **kwargs):
 
         behav['rt'] = behav['trial_response_time'] - behav['trial_stim_on_time']
         behav['included'] = behav['trial_included']
+
+        # for trainingChoiceWorld, make sure all probabilityLeft = 0.5
+        behav['probabilityLeft_block'] = behav['probabilityLeft']
+        behav.fillna({'task_protocol':'unknown'}, inplace=True)
+        behav.loc[behav['task_protocol'].str.contains("trainingChoiceWorld"), 'probabilityLeft_block'] = 0.5
 
     return behav

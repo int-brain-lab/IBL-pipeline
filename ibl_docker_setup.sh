@@ -12,4 +12,4 @@ done
 fi
 
 docker-compose up -d
-docker exec -it ibl-pipeline_datajoint_1 /bin/bash
+docker exec -it ibl-pipeline_datajoint_1 bash -c "cd /src/ibl-pipeline/prelim_analyses" /bin/bash 
