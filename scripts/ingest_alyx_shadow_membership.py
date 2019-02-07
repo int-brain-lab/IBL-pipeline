@@ -238,7 +238,12 @@ for key in keys:
     for user_uuid in user_uuids:
         if user_uuid != 'None':
             key_ru = key_r.copy()
-            key_ru['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
+            try:
+                key_ru['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
+            except:
+                print(user_uuid)
+                print(key)
+                continue
             action.WaterRestrictionUser.insert1(key_ru, skip_duplicates=True)
 
 # action.WaterRestrictionProcedure
