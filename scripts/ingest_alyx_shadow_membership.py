@@ -11,19 +11,20 @@ subjects = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject"'
 
 # reference.ProjectLabMember
 print('Ingesting reference.ProjectLabMember...')
-keys = (alyxraw.AlyxRaw & 'model="subjects.project"').proj(project_uuid='uuid')
+projects = alyxraw.AlyxRaw & 'model="subjects.project"'
+users = alyxraw.AlyxRaw.Field & projects & 'fname="users"' & 'fvalue!="None"' 
+keys = (alyxraw.AlyxRaw & users).proj(project_uuid='uuid')
 
 for key in keys:
     key_p = dict()
     key_p['project_name'] = (reference.Project & key).fetch1('project_name')
 
-    user_uuids = grf(key, 'users', multiple_entries=True)
+    user_uuids = grf(key, 'user_uuids', multiple_entries=True, model='subjects.project')
 
     for user_uuid in user_uuids:
         key_pl = key_p.copy()
         key_pl['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
         reference.ProjectLabMember.insert1(key_pl, skip_duplicates=True)
-
 
 # subject.AlleleSequence
 print('Ingesting subject.AlleleSequence...')
@@ -32,7 +33,7 @@ for key in keys:
     key_a = dict()
     key_a['allele_name'] = (subject.Allele & key).fetch1('allele_name')
     key['uuid'] = key['allele_uuid']
-    sequences = grf(key, 'sequences', multiple_entries=True)
+    sequences = grf(key, 'sequences', multiple_entries=True, model="subjects.allele")
     for sequence in sequences:
         if sequence != 'None':
             key_as = key_a.copy()
@@ -46,7 +47,7 @@ for key in keys:
     key_l = dict()
     key_l['line_name'] = (subject.Line & key).fetch1('line_name')
     key['uuid'] = key['line_uuid']
-    alleles = grf(key, 'alleles', multiple_entries=True)
+    alleles = grf(key, 'alleles', multiple_entries=True, model='subjects.line')
 
     for allele in alleles:
         if allele != 'None':
@@ -61,12 +62,18 @@ keys = (alyxraw.AlyxRaw & subjects & subjects_l).proj(subject_uuid='uuid')
 
 for key in keys:
     key['uuid'] = key['subject_uuid']
-    lab_uuid = grf(key, 'lab')
+    lab_uuid = grf(key, 'lab', model='subjects.subject')
     key_ls = dict()
     key_ls['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
-    key_ls['subject_nickname'] = grf(key, 'nickname')
-    litter = grf(key, 'litter')
-    key_ls['litter_name'] = (subject.Litter & 'litter_uuid="{}"'.format(litter)).fetch1('litter_name')
+    key_ls['subject_nickname'] = grf(key, 'nickname', model='subjects.subject')
+    litter = grf(key, 'litter', model='subjects.subject')
+    try:
+        key_ls['litter_name'] = (subject.Litter & 'litter_uuid="{}"'.format(litter)).fetch1('litter_name')
+    except:
+        print(key)
+        print(litter)
+        continue
+        
     subject.LitterSubject.insert1(key_ls, skip_duplicates=True)
 
 # subject.SubjectProject
@@ -75,15 +82,15 @@ subjects_p = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject
 keys = (alyxraw.AlyxRaw & subjects & subjects_p).proj(subject_uuid='uuid')
 for key in keys:
     key['uuid'] = key['subject_uuid']
-    lab_uuid = grf(key, 'lab')
+    lab_uuid = grf(key, 'lab', model='subjects.subject')
     key_s = dict()
     key_s['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
-    key_s['subject_nickname'] = grf(key, 'nickname')
+    key_s['subject_nickname'] = grf(key, 'nickname', model='subjects.subject')
     proj_uuids = grf(key, 'projects', multiple_entries=True)
     
     for proj_uuid in proj_uuids:
         key_sp = key_s.copy()
-        key_sp['subject_nickname'] = grf(key, 'nickname')
+        key_sp['subject_nickname'] = grf(key, 'nickname', model='subjects.subject')
         key_sp['project_name'] = (reference.Project & 'project_uuid="{}"'.format(proj_uuid)).fetch1('project_name')
         subject.SubjectProject.insert1(key_sp, skip_duplicates=True)
 
@@ -93,11 +100,11 @@ print('Ingesting subject.SubjectUser...')
 keys = (alyxraw.AlyxRaw & subjects).proj(subject_uuid='uuid')
 for key in keys:
     key['uuid'] = key['subject_uuid']
-    lab_uuid = grf(key, 'lab')
+    lab_uuid = grf(key, 'lab', model='subjects.subject')
     key_su = dict()
     key_su['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
-    key_su['subject_nickname'] = grf(key, 'nickname')
-    user = grf(key, 'responsible_user')
+    key_su['subject_nickname'] = grf(key, 'nickname', model='subjects.subject')
+    user = grf(key, 'responsible_user', model='subjects.subject')
     key_su['responsible_user'] = (reference.LabMember & 'user_uuid="{}"'.format(user)).fetch1('user_name')
     subject.SubjectUser.insert1(key_su, skip_duplicates=True)
 
@@ -107,13 +114,13 @@ subjects_c = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject
 keys = (alyxraw.AlyxRaw & subjects & subjects_c).proj(subject_uuid='uuid')
 for key in keys:
     key['uuid'] = key['subject_uuid']
-    lab_uuid = grf(key, 'lab')
+    lab_uuid = grf(key, 'lab', model='subjects.subject')
     key_cage = dict()
     key_cage['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
-    key_cage['subject_nickname'] = grf(key, 'nickname')
+    key_cage['subject_nickname'] = grf(key, 'nickname', model='subjects.subject')
     
-    key_cage['cage_name'] = grf(key, 'cage')
-    json_content = grf(key, 'json')
+    key_cage['cage_name'] = grf(key, 'cage', model='subjects.subject')
+    json_content = grf(key, 'json', model='subjects.subject')
     if json_content != 'None':
         json_dict = json.loads(json_content)
         history = json_dict['history']
@@ -136,14 +143,14 @@ print('Ingesting subject.UserHistory...')
 keys = (alyxraw.AlyxRaw & subjects).proj(subject_uuid='uuid')
 for key in keys:
     key['uuid'] = key['subject_uuid']
-    lab_uuid = grf(key, 'lab')
+    lab_uuid = grf(key, 'lab', model='subjects.subject')
     key_user = dict()
     key_user['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
-    key_user['subject_nickname'] = grf(key, 'nickname')
+    key_user['subject_nickname'] = grf(key, 'nickname', model='subjects.subject')
 
-    user = grf(key, 'responsible_user')
+    user = grf(key, 'responsible_user', model='subjects.subject')
     key_user['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user)).fetch1('user_name')
-    json_content = grf(key, 'json')
+    json_content = grf(key, 'json', model='subjects.subject')
     if json_content != 'None':
         json_dict = json.loads(json_content)
         history = json_dict['history']
@@ -169,11 +176,11 @@ subjects_w = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="subjects.subject
 keys = (alyxraw.AlyxRaw & subjects & subjects_w).proj(subject_uuid='uuid')
 for key in keys:
     key['uuid'] = key['subject_uuid']
-    lab_uuid = grf(key, 'lab')
+    lab_uuid = grf(key, 'lab', model='subjects.subject')
     key_weaning = dict()
     key_weaning['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
-    key_weaning['subject_nickname'] = grf(key, 'nickname')
-    wean_date = grf(key, 'wean_date')
+    key_weaning['subject_nickname'] = grf(key, 'nickname', model='subjects.subject')
+    wean_date = grf(key, 'wean_date', model='subjects.subject')
     key_weaning['wean_date'] = wean_date
     subject.Weaning.insert1(key_weaning, skip_duplicates=True)
 
@@ -184,11 +191,11 @@ keys = (alyxraw.AlyxRaw & subjects & subjects_d).proj(subject_uuid='uuid')
 
 for key in keys:    
     key['uuid'] = key['subject_uuid']
-    lab_uuid = grf(key, 'lab')
+    lab_uuid = grf(key, 'lab', model='subjects.subject')
     key_death = dict()
     key_death['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
-    key_death['subject_nickname'] = grf(key, 'nickname')
-    death_date = grf(key, 'death_date')
+    key_death['subject_nickname'] = grf(key, 'nickname', model='subjects.subject')
+    death_date = grf(key, 'death_date', model='subjects.subject')
     key_death['death_date'] = death_date
     subject.Death.insert1(key_death, skip_duplicates=True)
 
@@ -199,21 +206,21 @@ keys = (alyxraw.AlyxRaw & subjects & subjects_i).proj(subject_uuid='uuid')
 
 for key in keys:
     key['uuid'] = key['subject_uuid']
-    lab_uuid = grf(key, 'lab')
+    lab_uuid = grf(key, 'lab', model='subjects.subject')
     key_implant = dict()
     key_implant['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
-    key_implant['subject_nickname'] = grf(key, 'nickname')
-    key_implant['implant_weight'] = float(grf(key, 'implant_weight'))
+    key_implant['subject_nickname'] = grf(key, 'nickname', model='subjects.subject')
+    key_implant['implant_weight'] = float(grf(key, 'implant_weight', model='subjects.subject'))
 
-    adverse_effects = grf(key, 'adverse_effects')
+    adverse_effects = grf(key, 'adverse_effects', model='subjects.subject')
     if adverse_effects != 'None':
         key_implant['adverse_effects'] = adverse_effects
 
-    actual_severity = grf(key, 'actual_severity')
+    actual_severity = grf(key, 'actual_severity', model='subjects.subject')
     if actual_severity != 'None':
         key_implant['actual_severity'] = int(actual_severity)
 
-    key_implant['protocol_number'] = int(grf(key, 'protocol_number'))
+    key_implant['protocol_number'] = int(grf(key, 'protocol_number', model='subjects.subject'))
 
     subject.Implant.insert1(key_implant, skip_duplicates=True)
 
@@ -226,7 +233,7 @@ for key in keys:
     key_r['lab_name'], key_r['subject_nickname'], key_r['restriction_start_time'] = \
         (action.WaterRestriction & key).fetch1('lab_name', 'subject_nickname', 'restriction_start_time')
     
-    user_uuids = grf(key, 'users', multiple_entries=True)
+    user_uuids = grf(key, 'users', multiple_entries=True, model='actions.waterrestriction')
 
     for user_uuid in user_uuids:
         if user_uuid != 'None':
@@ -243,7 +250,7 @@ for key in keys:
     key_r['lab_name'], key_r['subject_nickname'], key_r['restriction_start_time'] = \
         (action.WaterRestriction & key).fetch1('lab_name', 'subject_nickname', 'restriction_start_time')
     
-    procedures = grf(key, 'procedures', multiple_entries=True)
+    procedures = grf(key, 'procedures', multiple_entries=True, model='actions.waterrestriction')
 
     for procedure in procedures:
         if procedure != 'None':
@@ -263,7 +270,7 @@ for key in keys:
         continue
     key_s['lab_name'], key_s['subject_nickname'], key_s['surgery_start_time'] = \
         (action.Surgery & key).fetch1('lab_name', 'subject_nickname', 'surgery_start_time')
-    user_uuids = grf(key, 'users', multiple_entries=True)
+    user_uuids = grf(key, 'users', multiple_entries=True, model='action.surgery')
 
     for user_uuid in user_uuids:
         if user_uuid != 'None':
@@ -281,7 +288,7 @@ for key in keys:
         continue
     key_s['lab_name'], key_s['subject_nickname'], key_s['surgery_start_time'] = \
         (action.Surgery & key).fetch1('lab_name', 'subject_nickname', 'surgery_start_time')
-    procedures = grf(key, 'procedures', multiple_entries=True)
+    procedures = grf(key, 'procedures', multiple_entries=True, model='action.surgery')
 
     for procedure in procedures:
         if procedure != 'None':
@@ -299,7 +306,7 @@ for key in keys:
 
     key_cs['lab_name'], key_cs['subject_nickname'], key_cs['session_start_time'] = \
         (acquisition.Session & key).fetch1('lab_name', 'subject_nickname', 'session_start_time')
-    parent_session = grf(key, 'parent_session')
+    parent_session = grf(key, 'parent_session', model='actions.session')
     if parent_session != 'None':
         key_cs['parent_session_start_time'] = \
             (acquisition.Session & 'session_uuid="{}"'.format(parent_session)).fetch1('session_start_time')
@@ -318,7 +325,7 @@ for key in keys:
         print('session', key['session_uuid'])
         continue
 
-    user_uuids = grf(key, 'users', multiple_entries=True)
+    user_uuids = grf(key, 'users', multiple_entries=True, model='actions.session')
 
     for user_uuid in user_uuids:
         if user_uuid != 'None':
@@ -340,7 +347,7 @@ for key in keys:
         print('session', key['session_uuid'])
         continue
 
-    procedures = grf(key, 'procedures', multiple_entries=True)
+    procedures = grf(key, 'procedures', multiple_entries=True, model='actions.session')
 
     for procedure in procedures:
         if procedure != 'None':
@@ -362,7 +369,7 @@ for key in keys:
     except:
         print('wateradimin', key['wateradmin_uuid'])
         continue
-    session_uuid = grf(key, 'session', multiple_entries=False)
+    session_uuid = grf(key, 'session', multiple_entries=False, model='actions.wateradministration')
     key_ws = key_w.copy()
     try:
         key_ws['session_start_time'] = (acquisition.Session & 'session_uuid="{}"'.format(session_uuid)).fetch1('session_start_time')
@@ -378,7 +385,7 @@ for key in keys:
     key_p['project_name'] = (reference.Project & key).fetch1('project_name')
     key['uuid'] = key['project_uuid']
 
-    repo_uuids = grf(key, 'repositories', multiple_entries=True)
+    repo_uuids = grf(key, 'repositories', multiple_entries=True, model='subjects.project')
 
     for repo_uuid in repo_uuids:
         if repo_uuid != 'None':
