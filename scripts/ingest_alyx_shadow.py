@@ -9,9 +9,9 @@ from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition
 # reference tables
 reference.Lab.populate(suppress_errors=True)
 reference.LabMember.populate(suppress_errors=True)
-reference.LabMembership(suppress_errors=True).populate(suppress_errors=True)
-reference.LabLocation(suppress_errors=True).populate(suppress_errors=True)
-reference.Project(suppress_errors=True).populate(suppress_errors=True)
+reference.LabMembership.populate(suppress_errors=True)
+reference.LabLocation.populate(suppress_errors=True)
+reference.Project.populate(suppress_errors=True)
 
 # subject tables
 subject.Species.populate(suppress_errors=True)
