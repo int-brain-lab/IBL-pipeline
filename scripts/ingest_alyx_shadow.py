@@ -39,7 +39,7 @@ action.OtherAction.populate(suppress_errors=True)
 acquisition.Session.populate(suppress_errors=True)
 
 # data tables
-data.DataFormat(suppress_errors=True).populate(suppress_errors=True)
+data.DataFormat.populate(suppress_errors=True)
 data.DataRepositoryType.populate(suppress_errors=True)
 data.DataRepository.populate(suppress_errors=True)
 data.DataSetType.populate(suppress_errors=True)

@@ -230,21 +230,23 @@ keys = (alyxraw.AlyxRaw & 'model = "actions.waterrestriction"').proj(restriction
 for key in keys:
     key_r = dict()
     key['uuid'] = key['restriction_uuid']
-    key_r['lab_name'], key_r['subject_nickname'], key_r['restriction_start_time'] = \
+
+    try:
+        key_r['lab_name'], key_r['subject_nickname'], key_r['restriction_start_time'] = \
         (action.WaterRestriction & key).fetch1('lab_name', 'subject_nickname', 'restriction_start_time')
-    
+    except:
+        print(key)
+        continue
+
     user_uuids = grf(key, 'users', multiple_entries=True, model='actions.waterrestriction')
 
     for user_uuid in user_uuids:
         if user_uuid != 'None':
             key_ru = key_r.copy()
-            try:
-                key_ru['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
-            except:
-                print(user_uuid)
-                print(key)
-                continue
-            action.WaterRestrictionUser.insert1(key_ru, skip_duplicates=True)
+          
+        key_ru['user_name'] = (reference.LabMember & 'user_uuid="{}"'.format(user_uuid)).fetch1('user_name')
+            
+        action.WaterRestrictionUser.insert1(key_ru, skip_duplicates=True)
 
 # action.WaterRestrictionProcedure
 print('Ingesting action.WaterRestrictionProcedure...')
@@ -252,9 +254,14 @@ keys = (alyxraw.AlyxRaw & 'model = "actions.waterrestriction"').proj(restriction
 for key in keys:
     key_r = dict()
     key['uuid'] = key['restriction_uuid']
-    key_r['lab_name'], key_r['subject_nickname'], key_r['restriction_start_time'] = \
-        (action.WaterRestriction & key).fetch1('lab_name', 'subject_nickname', 'restriction_start_time')
-    
+
+    try:
+        key_r['lab_name'], key_r['subject_nickname'], key_r['restriction_start_time'] = \
+            (action.WaterRestriction & key).fetch1('lab_name', 'subject_nickname', 'restriction_start_time')
+    except:
+        print(key)
+        continue
+
     procedures = grf(key, 'procedures', multiple_entries=True, model='actions.waterrestriction')
 
     for procedure in procedures:
