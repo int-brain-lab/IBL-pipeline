@@ -60,7 +60,7 @@ for lidx, lab in enumerate(users):
 		# TODO: need a better way to define batches! litter mates?
 		for sub_batch in np.arange(0,len(mice),sub_batch_size):
 
-			fig  = plt.figure(figsize=(11.69, 8.27), constrained_layout=True)
+			fig  = plt.figure(figsize=(13.69, 8.27), constrained_layout=True)
 			axes = []
 			sns.set_palette("colorblind") # palette for water types
 
