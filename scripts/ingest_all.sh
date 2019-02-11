@@ -1,4 +1,4 @@
-#python delete_tables_for_updates.py
+python delete_tables_for_updates.py
 python ingest_alyx_raw.py "$@"
 python ingest_alyx_shadow.py
 python ingest_alyx_shadow_membership.py
