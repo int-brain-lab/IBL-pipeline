@@ -141,12 +141,9 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
                     (baseline.reference_weight[d]*0.85, baseline.reference_weight[d]*0.85), 'k--', linewidth=0.5)
 
     righty.grid(False)
-    if not baseline.empty:
-        righty.set(xlabel='', ylabel="Weight (g)",
-            xlim=[weight_water.days.min()-2, weight_water.days.max()+2])
-    else:
-        righty.set(xlabel='', ylabel="Weight (g)",
-               xlim=[weight_water.days.min() - 2, weight_water.days.max() + 2])
+    righty.set(xlabel='', ylabel="Weight (g)",
+        xlim=[weight_water.days.min()-2, weight_water.days.max()+2])
+
 
     # correct the ticks to show dates, not days
     # also indicate Mondays by grid lines
