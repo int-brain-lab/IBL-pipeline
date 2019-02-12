@@ -4,8 +4,6 @@ Created on Tue Sep 11 18:39:52 2018
 
 @author: Miles
 """
-
-import psychofit as psy
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -14,15 +12,13 @@ import scipy as sp
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import timedelta
-
-#from matplotlib.dates import MONDAY
-import psychofit as psy # https://github.com/cortex-lab/psychofit
 import seaborn as sns 
 import pandas as pd
 from IPython import embed as shell
 
+# import from same parent folder
+from . import psychofit as psy # https://github.com/cortex-lab/psychofit
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-
 
 def fit_psychfunc(df):
     choicedat = df.groupby('signedContrast').agg({'trial':'max', 'choice2':'mean'}).reset_index()
