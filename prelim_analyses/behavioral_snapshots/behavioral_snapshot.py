@@ -27,6 +27,7 @@ import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 # folder to save plots, from DataJoint
 path = '/Figures_DataJoint_shortcuts/'
+datapath = '/Data_shortcut/'
 
 # ============================================= #
 # START BIG OVERVIEW PLOT
@@ -58,6 +59,7 @@ for lidx, lab in enumerate(users):
         print(mouse)
         weight_water, baseline = get_water_weight(mouse, lab)
         behav = get_behavior(mouse, lab)
+        # behav.to_csv(os.path.join(datapath + 'mouse_%s.csv' % (mouse)))
 
         if weight_water.empty or behav.empty:
             continue
@@ -69,7 +71,7 @@ for lidx, lab in enumerate(users):
         # MAKE THE FIGURE, divide subplots using gridspec
         fig, axes = plt.subplots(ncols=5, nrows=4, constrained_layout=False,
                                  gridspec_kw=dict(width_ratios=[2, 2, 1, 1, 1], height_ratios=[1, 1, 1, 1]),
-                                 figsize=(11.69, 8.27))
+                                 figsize=(13.69, 8.27))
         sns.set_palette("colorblind")  # palette for water types
 
         fig.suptitle('Mouse %s (%s), born %s, user %s (%s), %s' %(subjects['subject_nickname'][i],

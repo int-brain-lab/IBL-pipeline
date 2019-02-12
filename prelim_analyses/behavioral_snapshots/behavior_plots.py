@@ -143,8 +143,7 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     righty.grid(False)
     if not baseline.empty:
         righty.set(xlabel='', ylabel="Weight (g)",
-            xlim=[weight_water.days.min()-2, weight_water.days.max()+2],
-               ylim=[baseline.reference_weight.iat[-1]*0.8, baseline.reference_weight.iat[-1]*1.2])
+            xlim=[weight_water.days.min()-2, weight_water.days.max()+2])
     else:
         righty.set(xlabel='', ylabel="Weight (g)",
                xlim=[weight_water.days.min() - 2, weight_water.days.max() + 2])
