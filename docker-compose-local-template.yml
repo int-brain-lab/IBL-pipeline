@@ -9,7 +9,7 @@ services:
     volumes:
       - ./notebooks:/notebooks
       - ./images:/images
-      - .:/src/ibl-pipeline
+      - .:/src/IBL-pipeline
       - ./data:/data
       - ./root/.one_params:/root/.one_params
       - ./snapshots:/Snapshot_DataJoint_shortcut

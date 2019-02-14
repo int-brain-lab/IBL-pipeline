@@ -168,7 +168,7 @@ class WaterRestrictionUser(dj.Manual):
     definition = """
     lab_name:               varchar(255)
     subject_nickname:       varchar(255)
-    restriction_start_time: varchar(255)   
+    restriction_start_time: datetime   
     user_name:              varchar(255)
     """
 

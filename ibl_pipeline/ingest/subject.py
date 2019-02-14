@@ -328,7 +328,11 @@ class Litter(dj.Computed):
         key_litter['litter_name'] = grf(key, 'name')
 
         line_uuid = grf(key, 'line')
-        key_litter['litter_line'] = (Line & 'line_uuid="{}"'.format(line_uuid)).fetch1('line_name')
+        try:
+            key_litter['litter_line'] = (Line & 'line_uuid="{}"'.format(line_uuid)).fetch1('line_name')
+        except:
+            print(key)
+            return
 
         description = grf(key, 'description')
         if description != 'None':
