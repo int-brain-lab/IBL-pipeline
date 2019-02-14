@@ -10,87 +10,30 @@ from ibl_pipeline.ingest import acquisition as acquisition_ingest
 from ibl_pipeline.ingest import data as data_ingest
 from ibl_pipeline import reference, subject, action, acquisition, data
 from ingest_utils import copy_table
+import table_names as tables
 
+tables.init()
 
-REF_TABLES = (
-    'Lab',
-    'LabMember',
-    'LabMembership',
-    'LabLocation',
-    'Project',
-    'ProjectLabMember'
-)
-
-for table in REF_TABLES:
+for table in tables.REF_TABLES:
     print(table)
     copy_table(reference, reference_ingest, table)
 
-SUBJECT_TABLES = (
-    'Species',
-    'Strain',
-    'Source',
-    'Sequence',
-    'Allele',
-    'AlleleSequence',
-    'Line',
-    'LineAllele',
-    'Subject',
-    'BreedingPair',
-    'Litter',
-    'LitterSubject',
-    'Weaning',
-    'Death',
-    'UserHistory',
-    'GenotypeTest',
-    'Zygosity',
-    'Implant'
-)
 
-for table in SUBJECT_TABLES:
+for table in tables.SUBJECT_TABLES:
     print(table)
     copy_table(subject, subject_ingest, table)
 
 
-ACTION_TABLES = (
-    'ProcedureType',
-    'Weighing',
-    'WaterType',
-    'WaterAdministration',
-    'WaterRestriction',
-    'WaterRestrictionUser',
-    'WaterRestrictionProcedure',
-    'Surgery',
-    'SurgeryUser',
-    'SurgeryProcedure'
-)
-
-for table in ACTION_TABLES:
+for table in tables.ACTION_TABLES:
     print(table)
     copy_table(action, action_ingest, table)
 
-ACQUISITION_TABLES = (
-    'Session',
-    'ChildSession',
-    'SessionUser',
-    'SessionProcedure',
-    'WaterAdministrationSession'
-)
 
-for table in ACQUISITION_TABLES:
+for table in tables.ACQUISITION_TABLES:
     print(table)
     copy_table(acquisition, acquisition_ingest, table)
 
 
-DATA_TABLES = (
-    'DataFormat',
-    'DataRepositoryType',
-    'DataRepository',
-    'ProjectRepository',
-    'DataSetType',
-    'DataSet',
-    'FileRecord'
-)
-
-for table in DATA_TABLES:
+for table in tables.DATA_TABLES:
     print(table)
     copy_table(data, data_ingest, table)
