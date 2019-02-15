@@ -343,20 +343,35 @@ class CompleteTrialSession(dj.Computed):
     # sessions that are complete with trial information and thus may be ingested
     -> acquisition.Session
     ---
-    trial_session_complete: bool              # whether the session is complete
+    trial_session_complete: tinyint # whether the session is complete, 1: complete 2: partial stimOn_times 3: missing stimOn_times
     """
 
     required_datasets =  ["_ibl_trials.feedback_times.npy", "_ibl_trials.feedbackType.npy", \
                             "_ibl_trials.intervals.npy", "_ibl_trials.repNum.npy", \
                             "_ibl_trials.choice.npy", "_ibl_trials.response_times.npy", \
                             "_ibl_trials.contrastLeft.npy", "_ibl_trials.contrastRight.npy", \
-                            "_ibl_trials.stimOn_times.npy", "_ibl_trials.included.npy",\
-                            "_ibl_trials.probabilityLeft.npy"]
+                            "_ibl_trials.included.npy", "_ibl_trials.probabilityLeft.npy"]
 
     def make(self, key):
         datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {'exists': 1}).fetch('dataset_name')
-        key['trial_session_complete'] = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
-        if key['trial_session_complete'] is True:
+        is_complete = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
+        if is_complete is True:
+            if '_ibl_trials.stimOn_times.npy' not in datasets:
+                key['trial_session_complete'] = 3
+            else:
+                eID = (acquisition.Session & key).fetch1('session_uuid')
+                if key['lab_name'] == 'wittenlab':
+                    stimOn_times = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.stimOn_times', clobber=True))
+                else:        
+                    stimOn_times = ONE().load(eID, dataset_types='_ibl_trials.stimOn_times')
+                
+                if np.all(np.isnan(stimOn_times)):
+                    key['trial_session_complete'] = 3
+                elif np.any(np.isnan(stimOn_times)):
+                    key['trial_session_complete'] = 2
+                else:
+                    key['trial_session_complete'] = 1
+
             self.insert1(key)
 
 
