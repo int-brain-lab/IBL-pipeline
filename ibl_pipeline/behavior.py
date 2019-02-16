@@ -404,19 +404,23 @@ class TrialSet(dj.Imported):
                                            '_ibl_trials.choice', '_ibl_trials.response_times',
                                            '_ibl_trials.contrastLeft', '_ibl_trials.contrastRight',
                                            '_ibl_trials.included', '_ibl_trials.probabilityLeft'])
-        if key['lab_name'] == 'wittenlab':
-            trials_visual_stim_times = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.stimOn_times', clobber=True))
-        else:
-            trials_visual_stim_times = ONE().load(eID, dataset_types='_ibl_trials.stimOn_times')
+        
+        complete = (CompleteTrialSession & key).fetch1('trial_session_complete')
+        if complete != 3:
+            if key['lab_name'] == 'wittenlab':
+                trials_visual_stim_times = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.stimOn_times', clobber=True))
+            else:
+                trials_visual_stim_times = ONE().load(eID, dataset_types='_ibl_trials.stimOn_times')
 
-        if len(trials_visual_stim_times) == 1:
-            trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
+            if len(trials_visual_stim_times) == 1:
+                trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
+            
         
         # for debugging purpose
-        print(key['session_start_time'])
-        print(len(trials_feedback_times), len(trials_feedback_types), len(trials_intervals), \
-             len(trials_rep_num), len(trials_response_choice), len(trials_response_times), len(trials_contrast_left), \
-             len(trials_contrast_right), len(trials_visual_stim_times), len(trials_included), len(trials_p_left))
+        # print(key['session_start_time'])
+        # print(len(trials_feedback_times), len(trials_feedback_types), len(trials_intervals), \
+        #      len(trials_rep_num), len(trials_response_choice), len(trials_response_times), len(trials_contrast_left), \
+        #      len(trials_contrast_right), len(trials_visual_stim_times), len(trials_included), len(trials_p_left))
         assert len(np.unique(np.array([len(trials_feedback_times),
                                        len(trials_feedback_types),
                                        len(trials_intervals),
@@ -425,7 +429,7 @@ class TrialSet(dj.Imported):
                                        len(trials_response_times),
                                        len(trials_contrast_left),
                                        len(trials_contrast_right),
-                                       len(trials_visual_stim_times),
+                                       # len(trials_visual_stim_times),
                                        len(trials_included),
                                        len(trials_p_left)
                                        ]))) == 1, 'Loaded trial files do not have the same length'
@@ -476,8 +480,10 @@ class TrialSet(dj.Imported):
             trial_key['trial_end_time'] = trials_intervals[idx_trial, 1]
             trial_key['trial_response_time'] = float(trials_response_times[idx_trial])
             trial_key['trial_response_choice'] = trial_response_choice
-            trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
-            trial_key['trial_stim_on_time'] = trials_visual_stim_times[idx_trial]
+            
+            if complete != 3:
+                trial_key['trial_stim_on_time'] = trials_visual_stim_times[idx_trial]
+                
             trial_key['trial_stim_contrast_left'] = float(trial_stim_contrast_left)
             trial_key['trial_stim_contrast_right'] = float(trial_stim_contrast_right)
             trial_key['trial_feedback_time'] = float(trials_feedback_times[idx_trial])
