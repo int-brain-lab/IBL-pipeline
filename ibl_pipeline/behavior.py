@@ -388,7 +388,7 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    key_source = CompleteTrialSession
+    key_source = CompleteTrialSession & 'trial_session_complete in (1, 2, 3)'
 
     def make(self, key):
         trial_key = key.copy()
@@ -413,10 +413,10 @@ class TrialSet(dj.Imported):
             trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
         
         # for debugging purpose
-        # print(key['session_start_time'])
-        # print(len(trials_feedback_times), len(trials_feedback_types), len(trials_intervals), \
-        #     len(trials_rep_num), len(trials_response_choice), len(trials_response_times), len(trials_contrast_left), \
-        #     len(trials_contrast_right), len(trials_visual_stim_times), len(trials_included), len(trials_p_left))
+        print(key['session_start_time'])
+        print(len(trials_feedback_times), len(trials_feedback_types), len(trials_intervals), \
+             len(trials_rep_num), len(trials_response_choice), len(trials_response_times), len(trials_contrast_left), \
+             len(trials_contrast_right), len(trials_visual_stim_times), len(trials_included), len(trials_p_left))
         assert len(np.unique(np.array([len(trials_feedback_times),
                                        len(trials_feedback_types),
                                        len(trials_intervals),
