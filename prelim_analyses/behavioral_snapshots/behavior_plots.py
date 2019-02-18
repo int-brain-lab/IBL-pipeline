@@ -17,7 +17,9 @@ import pandas as pd
 from IPython import embed as shell
 
 # import from same parent folder
-from . import psychofit as psy # https://github.com/cortex-lab/psychofit
+# from . import psychofit as psy # https://github.com/cortex-lab/psychofit
+import psychofit as psy # https://github.com/cortex-lab/psychofit
+
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 def fit_psychfunc(df):
