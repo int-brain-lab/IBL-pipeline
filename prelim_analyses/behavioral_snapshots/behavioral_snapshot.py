@@ -66,7 +66,7 @@ for lidx, lab in enumerate(users):
         # MAKE THE FIGURE, divide subplots using gridspec
         fig, axes = plt.subplots(ncols=5, nrows=4, 
                                  gridspec_kw=dict(width_ratios=[2, 2, 1, 1, 1], height_ratios=[1, 1, 1, 1]),
-                                 figsize=(13.69, 8.27), constrained_layout=True)
+                                 figsize=(13.69, 8.27))
         sns.set_palette("colorblind")  # palette for water types
 
         fig.suptitle('Mouse %s (%s), born %s, user %s (%s), %s' %(subjects['subject_nickname'][i],
@@ -88,7 +88,6 @@ for lidx, lab in enumerate(users):
 
         try:
             behav = get_behavior(mouse, lab)
-
             plot_trialcounts_sessionlength(behav, axes[1,0], xlims)
 
             # ============================================= #

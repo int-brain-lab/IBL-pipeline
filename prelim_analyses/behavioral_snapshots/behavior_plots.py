@@ -107,9 +107,9 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     wa_unstacked.columns = wa_unstacked.columns.str.replace("Hydrogel", "Hdrg")
 
     # https://stackoverflow.com/questions/44250445/pandas-bar-plot-with-continuous-x-axis
-    plotvar       = wa_unstacked
+    plotvar       = wa_unstacked.copy()
     plotvar.index = plotvar.days
-    plotvar = plotvar.reindex(np.arange(plotvar.days.min()-1, plotvar.days.max()+2))
+    plotvar       = plotvar.reindex(np.arange(plotvar.days.min(), plotvar.days.max()+1))
     plotvar.drop(columns='days', inplace=True)
 
     # sort the columns by possible water types
@@ -119,17 +119,18 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
         bbox_to_anchor=(0., 1.02, 1., .102),
         ncol=2, mode="expand", borderaxespad=0., frameon=False)
     l.set_title('')
-    ax.set(ylabel="Water intake (mL)", xlabel='', xlim=[weight_water.days.min()-2, weight_water.days.max()+2])
+    ax.set(ylabel="Water intake (mL)", xlabel='')
+       # xlim=[weight_water.days.min()-2, weight_water.days.max()+2])
     ax.yaxis.label.set_color("#0072B2")
 
     # ################################################### #
     # OVERLAY THE WEIGHT CURVE
     # ################################################### #
 
+    righty = ax.twinx()
     weight_water2 = weight_water.groupby('days').mean().reset_index()
     weight_water2 = weight_water2.dropna(subset=['weight'])
-    righty = ax.twinx()
-
+ 
     # plot weight curve
     sns.lineplot(x=weight_water2.days, y=weight_water2.weight, ax=righty, color='.15', marker='o')
 
@@ -145,7 +146,6 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     righty.grid(False)
     righty.set(xlabel='', ylabel="Weight (g)",
         xlim=[weight_water.days.min()-2, weight_water.days.max()+2])
-
 
     # correct the ticks to show dates, not days
     # also indicate Mondays by grid lines
