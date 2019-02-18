@@ -47,12 +47,14 @@ def alter_column(table, name, dtype, default_value=None, comment=None):
         table (DataJoint table class instance): table in which to modify a column's definition
         name (str): name of the column to be modified
         dtype (str): (new) data type of the column
-        default_value (str, optional): (new) default value for the column. If 'null' or None, then the attribute 
-            is considered non-required. Defaults to None.
+        default_value (str, optional): (new) default value for the column. If 'null', then the attribute 
+            is considered non-required. If None (default), the attribute is required.
         comment (str, optional): (new) comment for the new column
     """
     full_table_name = table.full_table_name
-    if default_value is None or default_value.strip().lower() == 'null':
+    if default_value is None:
+        query = 'ALTER TABLE {} MODIFY {} {} NOT NULL'.format(full_table_name, name, dtype)
+    elif default_value.strip().lower() == 'null':
         query = 'ALTER TABLE {} MODIFY {} {}'.format(full_table_name, name, dtype)
     else:
         query = 'ALTER TABLE {} MODIFY {} {} NOT NULL DEFAULT {}'.format(full_table_name, name, dtype, repr(default_value))

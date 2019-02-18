@@ -356,7 +356,8 @@ class CompleteTrialSession(dj.Computed):
     def make(self, key):
         datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {'exists': 1}).fetch('dataset_name')
         key['trial_session_complete'] = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
-        self.insert1(key)
+        if key['trial_session_complete'] is True:
+            self.insert1(key)
 
 
 @schema
@@ -488,7 +489,7 @@ class TrialSet(dj.Imported):
         trial_end_time:             double         # end of iti (seconds)
         trial_response_time:        double         # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
         trial_response_choice:      enum("CCW", "CW", "No Go")       # which choice was made in choiceworld
-        trial_stim_on_time:         double         # Time of stimulus in choiceworld (seconds)
+        trial_stim_on_time=null:    double         # Time of stimulus in choiceworld (seconds)
         trial_stim_contrast_left:   float	      # contrast of the stimulus on the left
         trial_stim_contrast_right:  float         # contrast of the stimulus on the right
         trial_feedback_time:        double         # Time of feedback delivery (reward or not) in choiceworld

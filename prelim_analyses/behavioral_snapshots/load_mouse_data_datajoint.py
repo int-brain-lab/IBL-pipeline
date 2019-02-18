@@ -55,13 +55,13 @@ def get_water(mousename, labname):
 def get_water_weight(mousename, labname):
 
     wei = get_weights(mousename, labname)
-    wa = get_water(mousename, labname)
+    wa  = get_water(mousename, labname)
 
     if not (wei.empty or wa.empty):
 
         # AVERAGE WEIGHT WITHIN EACH DAY
         wei = wei.groupby(['date']).mean().reset_index()
-        wa = wa.groupby(['date', 'water_type']).mean().reset_index()
+        wa  = wa.groupby(['date', 'water_type']).mean().reset_index()
 
         # make sure that NaNs are entered for days with only water or weight but not both
         combined = pd.merge(wei, wa, on="date", how='outer')
@@ -78,7 +78,7 @@ def get_water_weight(mousename, labname):
         combined['days'] = combined.date - combined.date[0]
         combined['days'] = combined.days.dt.days  # convert to number of days from start of the experiment
 
-        # grab info about water restrictions
+        # ALSO GET INFO ABOUT WATER RESTRICTIONS
         restrictions = pd.DataFrame.from_dict((action.WaterRestriction & 
             'subject_nickname="%s"'%mousename & 'lab_name="%s"'%labname).fetch(as_dict=True))
 
@@ -94,14 +94,14 @@ def get_water_weight(mousename, labname):
         restrictions['day_start'] = combined['days'].max() * np.ones(restrictions['date_start'].shape)
         restrictions['day_end'] = combined['days'].max() * np.ones(restrictions['date_end'].shape)
         combined['water_restricted'] = np.zeros(combined['days'].shape, dtype=bool)
+        
+        # recode dates into days
+        datedict = pd.Series(combined.days.values, index=combined.date).to_dict()
         for d in range(len(restrictions)):
-            try:
-                restrictions.loc[d, 'day_start'] = combined.loc[combined['date']
-                                                     == restrictions['date_start'][d], 'days'].item()
-                restrictions.loc[d, 'day_end'] = combined.loc[combined['date']
-                                                     == restrictions['date_end'][d], 'days'].item()
-            except:
-                pass
+            restrictions.loc[d, 'day_start'] = datedict[restrictions.loc[d, 'date_start']]
+            if restrictions.loc[d, 'date_end'] != pd.NaT:
+                shell()
+                restrictions.loc[d, 'day_end'] = datedict[restrictions.loc[d, 'date_end']]
 
             # for each day, mark if the animal was on WR or not
             combined['water_restricted'] = combined['water_restricted'] | \
@@ -109,7 +109,7 @@ def get_water_weight(mousename, labname):
                                            restrictions['day_end'][d], inclusive=True)
 
     else:
-        combined = pd.DataFrame()
+        combined     = pd.DataFrame()
         restrictions = pd.DataFrame()
 
     return combined, restrictions
