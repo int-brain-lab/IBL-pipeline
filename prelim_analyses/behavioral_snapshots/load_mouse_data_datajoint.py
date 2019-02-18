@@ -119,6 +119,10 @@ def get_water_weight(mousename, labname):
                                            combined['days'].between(restrictions['day_start'][d],
                                            restrictions['day_end'][d], inclusive=True)
 
+
+        print(combined)
+        print(restrictions)
+
     else:
         combined     = pd.DataFrame()
         restrictions = pd.DataFrame()

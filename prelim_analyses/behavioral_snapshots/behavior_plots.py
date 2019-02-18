@@ -109,7 +109,7 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     # https://stackoverflow.com/questions/44250445/pandas-bar-plot-with-continuous-x-axis
     plotvar       = wa_unstacked.copy()
     plotvar.index = plotvar.days
-    plotvar       = plotvar.reindex(np.arange(plotvar.days.min(), plotvar.days.max()+1))
+    plotvar       = plotvar.reindex(np.arange(weight_water.days.min(), weight_water.days.max()+1))
     plotvar.drop(columns='days', inplace=True)
 
     # sort the columns by possible water types
