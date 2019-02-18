@@ -22,6 +22,14 @@ def get_weights(mousename, labname):
                                                                         'weight', order_by='weighing_time')
     wei = pd.DataFrame.from_dict(wei)
 
+    # ensure that the reference weight is also added
+    restrictions = pd.DataFrame.from_dict((action.WaterRestriction & 
+        'subject_nickname="%s"'%mousename & 'lab_name="%s"'%labname).fetch(as_dict=True))
+    restr_summary = restrictions[['restriction_start_time', 'reference_weight']].copy()
+    restr_summary = restr_summary.rename(columns = {'restriction_start_time':'date_time', 'reference_weight':'weight'})
+
+    wei = pd.concat([wei, restr_summary], ignore_index=True)
+
     if not wei.empty:
         # now organize in a pandas dataframe
         wei['date_time'] = pd.to_datetime(wei.date_time)
@@ -94,14 +102,17 @@ def get_water_weight(mousename, labname):
         restrictions['day_start'] = combined['days'].max() * np.ones(restrictions['date_start'].shape)
         restrictions['day_end'] = combined['days'].max() * np.ones(restrictions['date_end'].shape)
         combined['water_restricted'] = np.zeros(combined['days'].shape, dtype=bool)
-        
+
         # recode dates into days
         datedict = pd.Series(combined.days.values, index=combined.date).to_dict()
         for d in range(len(restrictions)):
             restrictions.loc[d, 'day_start'] = datedict[restrictions.loc[d, 'date_start']]
-            if restrictions.loc[d, 'date_end'] != pd.NaT:
-                shell()
+
+            # only do this for dates that are not NaT
+            try:
                 restrictions.loc[d, 'day_end'] = datedict[restrictions.loc[d, 'date_end']]
+            except:
+                pass
 
             # for each day, mark if the animal was on WR or not
             combined['water_restricted'] = combined['water_restricted'] | \
