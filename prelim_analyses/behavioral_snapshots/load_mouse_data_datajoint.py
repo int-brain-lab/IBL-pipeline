@@ -96,9 +96,9 @@ def get_water_weight(mousename, labname):
         combined['water_restricted'] = np.zeros(combined['days'].shape, dtype=bool)
         for d in range(len(restrictions)):
             try:
-                restrictions['day_start'][d] = combined.loc[combined['date']
+                restrictions.loc[d, 'day_start'] = combined.loc[combined['date']
                                                      == restrictions['date_start'][d], 'days'].item()
-                restrictions['day_end'][d] = combined.loc[combined['date']
+                restrictions.loc[d, 'day_end'] = combined.loc[combined['date']
                                                      == restrictions['date_end'][d], 'days'].item()
             except:
                 pass

@@ -33,7 +33,7 @@ path = '/Figures_DataJoint_shortcuts/'
 # ============================================= #
 
 allsubjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'sex!="U"'
-                                   & action.Weighing() & action.WaterAdministration() & behavior.TrialSet()
+                                   & action.Weighing() & action.WaterAdministration()
                                    ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
 users = allsubjects['lab_name'].unique()
 print(users)
@@ -45,8 +45,8 @@ sub_batch_size = 5
 for lidx, lab in enumerate(users):
 
 	# take mice from this lab only
-	subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'sex!="U"' & 'lab_name="%s"'%lab)
-                                   & action.Weighing() & action.WaterAdministration() & behavior.TrialSet()
+	subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'sex!="U"' & 'lab_name="%s"'%lab
+                                   & action.Weighing() & action.WaterAdministration()
                                    ).fetch(as_dict=True, order_by=['subject_nickname']))
 
 	# group by batches: mice that were born on the same day
@@ -67,18 +67,17 @@ for lidx, lab in enumerate(users):
 			for i, mouse in enumerate(mice[sub_batch:sub_batch+sub_batch_size]):
 				print(mouse)
 
+				# WEIGHT CURVE AND WATER INTAKE
+				t = time.time()
+				weight_water, baseline = get_water_weight(mouse, lab)
+
+				# determine x limits
+				xlims = [weight_water.date.min() - timedelta(days=2), weight_water.date.max() + timedelta(days=2)]
+				ax = plt.subplot2grid((4, sub_batch_size), (0, i))
+				plot_water_weight_curve(weight_water, baseline, ax, xlims)
+				axes.append(ax)
+
 				try:
-
-					# WEIGHT CURVE AND WATER INTAKE
-					t = time.time()
-					weight_water, baseline = get_water_weight(mouse, lab)
-
-					# determine x limits
-					xlims = [weight_water.date.min() - timedelta(days=2), weight_water.date.max() + timedelta(days=2)]
-					ax = plt.subplot2grid((4, sub_batch_size), (0, i))
-					plot_water_weight_curve(weight_water, baseline, ax, xlims)
-					axes.append(ax)
-
 					# TRIAL COUNTS AND SESSION DURATION
 					behav 	= get_behavior(mouse, lab)
 
@@ -101,8 +100,7 @@ for lidx, lab in enumerate(users):
 					print( "Elapsed time: %f seconds.\n" %elapsed)
 
 				except:
-					# ax = plt.subplot2grid((4, max([len(mice), 4])), (3, i))
-					raise
+					pass
 
 				# add an xlabel with the mouse's name and sex
 				ax.set_xlabel('Mouse %s (%s)'%(mouse,

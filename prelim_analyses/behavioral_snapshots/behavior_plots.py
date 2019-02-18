@@ -111,8 +111,8 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     # https://stackoverflow.com/questions/44250445/pandas-bar-plot-with-continuous-x-axis
     plotvar       = wa_unstacked
     plotvar.index = plotvar.days
+    plotvar = plotvar.reindex(np.arange(plotvar.days.min()-1, plotvar.days.max()+2))
     plotvar.drop(columns='days', inplace=True)
-    plotvar = plotvar.reindex(np.arange(weight_water.days.min()-2, weight_water.days.max()+2))
 
     # sort the columns by possible water types
     plotvar = plotvar[sorted(list(plotvar.columns.values), reverse=True)]
@@ -121,7 +121,7 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
         bbox_to_anchor=(0., 1.02, 1., .102),
         ncol=2, mode="expand", borderaxespad=0., frameon=False)
     l.set_title('')
-    ax.set(ylabel="Water intake (mL)", xlabel='', xlim=xlims)
+    ax.set(ylabel="Water intake (mL)", xlabel='', xlim=[weight_water.days.min()-2, weight_water.days.max()+2])
     ax.yaxis.label.set_color("#0072B2")
 
     # ################################################### #
