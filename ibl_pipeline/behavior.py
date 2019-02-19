@@ -406,8 +406,7 @@ class TrialSet(dj.Imported):
             trials_contrast_left, trials_contrast_right, \
             trials_included, trials_p_left = \
             ONE().load(eID, dataset_types=['_ibl_trials.feedback_times', '_ibl_trials.feedbackType',
-                                           '_ibl_trials.intervals', '_ibl_trials.repNum',
-                                           '_ibl_trials.choice', '_ibl_trials.response_times',
+                                        '_ibl_trials.intervals', '_ibl_trials.choice', '_ibl_trials.response_times',
                                            '_ibl_trials.contrastLeft', '_ibl_trials.contrastRight',
                                            '_ibl_trials.included', '_ibl_trials.probabilityLeft'])
         
@@ -521,7 +520,7 @@ class TrialSet(dj.Imported):
         trial_stim_contrast_right:  float         # contrast of the stimulus on the right
         trial_feedback_time:        double         # Time of feedback delivery (reward or not) in choiceworld
         trial_feedback_type:        tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
-        trial_rep_num:              int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
+        trial_rep_num=null:         int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
         trial_stim_prob_left:       float         # probability of the stimulus being present on left
         trial_included:             bool          # whether the trial should be included
         """
