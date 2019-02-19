@@ -343,12 +343,13 @@ class CompleteTrialSession(dj.Computed):
     # sessions that are complete with trial information and thus may be ingested
     -> acquisition.Session
     ---
-    trial_session_complete: tinyint # whether the session is complete, 1: complete 2: partial stimOn_times 3: missing stimOn_times
+    stim_on_times_status: enum('Complete', 'Partial', 'Missing')
+    rep_num_status: enum('Complete', 'Missing')
     """
 
     required_datasets =  ["_ibl_trials.feedback_times.npy", "_ibl_trials.feedbackType.npy", \
-                            "_ibl_trials.intervals.npy", "_ibl_trials.repNum.npy", \
-                            "_ibl_trials.choice.npy", "_ibl_trials.response_times.npy", \
+                            "_ibl_trials.intervals.npy", "_ibl_trials.choice.npy", \
+                            "_ibl_trials.response_times.npy", \
                             "_ibl_trials.contrastLeft.npy", "_ibl_trials.contrastRight.npy", \
                             "_ibl_trials.included.npy", "_ibl_trials.probabilityLeft.npy"]
 
@@ -357,7 +358,7 @@ class CompleteTrialSession(dj.Computed):
         is_complete = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
         if is_complete is True:
             if '_ibl_trials.stimOn_times.npy' not in datasets:
-                key['trial_session_complete'] = 3
+                key['stim_on_times_status'] = 'Missing'
             else:
                 eID = (acquisition.Session & key).fetch1('session_uuid')
                 if key['lab_name'] == 'wittenlab':
@@ -366,11 +367,16 @@ class CompleteTrialSession(dj.Computed):
                     stimOn_times = ONE().load(eID, dataset_types='_ibl_trials.stimOn_times')
                 
                 if np.all(np.isnan(stimOn_times)):
-                    key['trial_session_complete'] = 3
+                    key['stim_on_times_status'] = 'Missing'
                 elif np.any(np.isnan(stimOn_times)):
-                    key['trial_session_complete'] = 2
+                    key['stim_on_times_status'] = 'Partial'
                 else:
-                    key['trial_session_complete'] = 1
+                    key['stim_on_times_status'] = 'Complete'
+            
+            if '_ibl_trials.repNum.npy' not in datasets:
+                key['rep_num_status'] = 'Missing'
+            else:
+                key['rep_num_status'] = 'Complete'
 
             self.insert1(key)
 
@@ -388,7 +394,7 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    key_source = CompleteTrialSession & 'trial_session_complete in (1, 2, 3)'
+    key_source = CompleteTrialSession
 
     def make(self, key):
         trial_key = key.copy()
@@ -483,7 +489,7 @@ class TrialSet(dj.Imported):
             
             if complete != 3:
                 trial_key['trial_stim_on_time'] = trials_visual_stim_times[idx_trial]
-                
+
             trial_key['trial_stim_contrast_left'] = float(trial_stim_contrast_left)
             trial_key['trial_stim_contrast_right'] = float(trial_stim_contrast_right)
             trial_key['trial_feedback_time'] = float(trials_feedback_times[idx_trial])
