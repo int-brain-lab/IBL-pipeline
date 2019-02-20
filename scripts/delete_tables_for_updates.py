@@ -10,8 +10,9 @@ dj.config['safemode'] = False
 
 # delete alyxraw for data.filerecord if exists = 0
 file_records = alyxraw.AlyxRaw & 'model = "data.filerecord"'
-file_record_fields = (alyxraw.AlyxRaw.Field & file_records & 'fname = "exists"' & 'fvalue = "False"').fetch('KEY')
-(alyxraw.AlyxRaw & file_record_fields).delete()
+file_record_fields = alyxraw.AlyxRaw.Field & file_records & 'fname = "exists"' & 'fvalue = "False"'
+keys = (alyxraw.AlyxRaw & file_record_fields).fetch('KEY')
+(alyxraw.AlyxRaw & keys).delete()
 
 # delete some shadow tables
 action_shadow.WaterRestrictionProcedure.delete()
