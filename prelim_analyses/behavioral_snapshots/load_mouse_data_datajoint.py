@@ -163,6 +163,9 @@ def get_behavior(mousename, labname, **kwargs):
 
         behav['rt'] = behav['trial_response_time'] - behav['trial_stim_on_time']
         behav['included'] = behav['trial_included']
+        
+        # don't count RT if there was no response
+        behav.loc[behav.choice == 0, 'rt'] = np.nan 
 
         # for trainingChoiceWorld, make sure all probabilityLeft = 0.5
         behav['probabilityLeft_block'] = behav['probabilityLeft']

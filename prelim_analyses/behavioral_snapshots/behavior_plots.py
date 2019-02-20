@@ -17,8 +17,10 @@ import pandas as pd
 from IPython import embed as shell
 
 # import from same parent folder
-# from . import psychofit as psy # https://github.com/cortex-lab/psychofit
-import psychofit as psy # https://github.com/cortex-lab/psychofit
+try:
+    from . import psychofit as psy # https://github.com/cortex-lab/psychofit
+except:
+    import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -32,7 +34,7 @@ def fit_psychfunc(df):
 
     return pd.DataFrame(df2, index=[0])
 
-def plot_psychometric(df, ax=None, color="black"):
+def plot_psychometric(df, ax=None, **kwargs):
     """
     Plots psychometric data for a given DataFrame of behavioural trials
     
