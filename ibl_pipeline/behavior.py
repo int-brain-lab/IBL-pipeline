@@ -406,12 +406,13 @@ class TrialSet(dj.Imported):
             trials_contrast_left, trials_contrast_right, \
             trials_included, trials_p_left = \
             ONE().load(eID, dataset_types=['_ibl_trials.feedback_times', '_ibl_trials.feedbackType',
-                                        '_ibl_trials.intervals', '_ibl_trials.choice', '_ibl_trials.response_times',
+                                           '_ibl_trials.intervals', '_ibl_trials.choice', '_ibl_trials.response_times',
                                            '_ibl_trials.contrastLeft', '_ibl_trials.contrastRight',
                                            '_ibl_trials.included', '_ibl_trials.probabilityLeft'])
         
-        complete = (CompleteTrialSession & key).fetch1('trial_session_complete')
-        if complete != 3:
+        stim_on_times_status, rep_num_status = (CompleteTrialSession & key).fetch1(
+                    'stim_on_times_status', 'rep_num_status')
+        if stim_on_times_status != 'Missing':
             if key['lab_name'] == 'wittenlab':
                 trials_visual_stim_times = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.stimOn_times', clobber=True))
             else:
@@ -429,7 +430,7 @@ class TrialSet(dj.Imported):
         assert len(np.unique(np.array([len(trials_feedback_times),
                                        len(trials_feedback_types),
                                        len(trials_intervals),
-                                       len(trials_rep_num),
+                                       # len(trials_rep_num),
                                        len(trials_response_choice),
                                        len(trials_response_times),
                                        len(trials_contrast_left),
@@ -486,14 +487,17 @@ class TrialSet(dj.Imported):
             trial_key['trial_response_time'] = float(trials_response_times[idx_trial])
             trial_key['trial_response_choice'] = trial_response_choice
             
-            if complete != 3:
+            if stim_on_times_status != 'Missing':
                 trial_key['trial_stim_on_time'] = trials_visual_stim_times[idx_trial]
 
             trial_key['trial_stim_contrast_left'] = float(trial_stim_contrast_left)
             trial_key['trial_stim_contrast_right'] = float(trial_stim_contrast_right)
             trial_key['trial_feedback_time'] = float(trials_feedback_times[idx_trial])
             trial_key['trial_feedback_type'] = int(trials_feedback_types[idx_trial])
-            trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
+            
+            if rep_num_status != 'Missing':
+                trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
+
             trial_key['trial_stim_prob_left'] = float(trials_p_left[idx_trial])
             trial_key['trial_included'] = bool(trials_included[idx_trial])
 
