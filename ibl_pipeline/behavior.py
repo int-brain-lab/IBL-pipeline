@@ -394,7 +394,7 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    key_source = CompleteTrialSession
+    key_source = acquisition.Session & CompleteTrialSession
 
     def make(self, key):
         trial_key = key.copy()
