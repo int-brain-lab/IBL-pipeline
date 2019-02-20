@@ -428,10 +428,10 @@ class TrialSet(dj.Imported):
                 trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
 
         if rep_num_status != 'Missing':
-            trials_rep_num = ONE().load(eID, dataset_types=['_ibl_trials.repNum'])
+            trials_rep_num = ONE().load(eID, dataset_types='_ibl_trials.repNum')
         
         if included_status != 'Missing':
-            trials_included = ONE().load(eID, dataset_types=['_ibl_trials.included'])
+            trials_included = ONE().load(eID, dataset_types='_ibl_trials.included')
         
         # for debugging purpose
         # print(key['session_start_time'])
