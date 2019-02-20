@@ -442,7 +442,7 @@ class TrialSet(dj.Imported):
                                        len(trials_contrast_left),
                                        len(trials_contrast_right),
                                        # len(trials_visual_stim_times),
-                                       len(trials_included),
+                                       # len(trials_included),
                                        len(trials_p_left)
                                        ]))) == 1, 'Loaded trial files do not have the same length'
         
