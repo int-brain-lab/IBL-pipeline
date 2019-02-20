@@ -408,9 +408,8 @@ class TrialSet(dj.Imported):
         eID = (acquisition.Session & key).fetch1('session_uuid')
 
         trials_feedback_times, trials_feedback_types, trials_intervals, \
-            trials_rep_num, trials_response_choice, trials_response_times, \
-            trials_contrast_left, trials_contrast_right, \
-            trials_included, trials_p_left = \
+            trials_response_choice, trials_response_times, \
+            trials_contrast_left, trials_contrast_right, trials_p_left = \
             ONE().load(eID, dataset_types=['_ibl_trials.feedback_times', '_ibl_trials.feedbackType',
                                            '_ibl_trials.intervals', '_ibl_trials.choice', 
                                            '_ibl_trials.response_times',
