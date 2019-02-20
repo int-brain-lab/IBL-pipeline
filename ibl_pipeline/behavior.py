@@ -426,7 +426,12 @@ class TrialSet(dj.Imported):
 
             if len(trials_visual_stim_times) == 1:
                 trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
-            
+
+        if rep_num_status != 'Missing':
+            trials_rep_num = ONE().load(eID, dataset_types=['_ibl_trials.repNum'])
+        
+        if included_status != 'Missing':
+            trials_included = ONE().load(eID, dataset_types=['_ibl_trials.included'])
         
         # for debugging purpose
         # print(key['session_start_time'])
@@ -462,7 +467,6 @@ class TrialSet(dj.Imported):
         key['trials_start_time'] = trials_intervals[0, 0]
         key['trials_end_time'] = trials_intervals[-1, 1]
 
-       
         self.insert1(key)
 
         for idx_trial in range(len(trials_response_choice)):
