@@ -10,7 +10,7 @@ dj.config['safemode'] = False
 
 # delete alyxraw for data.filerecord if exists = 0
 file_records = alyxraw.AlyxRaw & 'model = "data.filerecord"'
-file_record_fields = alyxraw.AlyxRaw.Field & file_records & 'fname = "exists"' & 'fvalue = "False"'
+file_record_fields = (alyxraw.AlyxRaw.Field & file_records & 'fname = "exists"' & 'fvalue = "False"').fetch('KEY')
 (alyxraw.AlyxRaw & file_record_fields).delete()
 
 # delete some shadow tables
