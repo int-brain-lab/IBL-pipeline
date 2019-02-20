@@ -412,9 +412,10 @@ class TrialSet(dj.Imported):
             trials_contrast_left, trials_contrast_right, \
             trials_included, trials_p_left = \
             ONE().load(eID, dataset_types=['_ibl_trials.feedback_times', '_ibl_trials.feedbackType',
-                                           '_ibl_trials.intervals', '_ibl_trials.choice', '_ibl_trials.response_times',
+                                           '_ibl_trials.intervals', '_ibl_trials.choice', 
+                                           '_ibl_trials.response_times',
                                            '_ibl_trials.contrastLeft', '_ibl_trials.contrastRight',
-                                           '_ibl_trials.included', '_ibl_trials.probabilityLeft'])
+                                           '_ibl_trials.probabilityLeft'])
         
         stim_on_times_status, rep_num_status, included_status = (CompleteTrialSession & key).fetch1(
                     'stim_on_times_status', 'rep_num_status', 'included_status')
