@@ -345,13 +345,14 @@ class CompleteTrialSession(dj.Computed):
     ---
     stim_on_times_status: enum('Complete', 'Partial', 'Missing')
     rep_num_status: enum('Complete', 'Missing')
+    included_status: enum('Complete', 'Missing')
     """
 
     required_datasets =  ["_ibl_trials.feedback_times.npy", "_ibl_trials.feedbackType.npy", \
                             "_ibl_trials.intervals.npy", "_ibl_trials.choice.npy", \
                             "_ibl_trials.response_times.npy", \
                             "_ibl_trials.contrastLeft.npy", "_ibl_trials.contrastRight.npy", \
-                            "_ibl_trials.included.npy", "_ibl_trials.probabilityLeft.npy"]
+                            "_ibl_trials.probabilityLeft.npy"]
 
     def make(self, key):
         datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {'exists': 1}).fetch('dataset_name')
@@ -377,6 +378,11 @@ class CompleteTrialSession(dj.Computed):
                 key['rep_num_status'] = 'Missing'
             else:
                 key['rep_num_status'] = 'Complete'
+            
+            if '_ibl_trials.included.npy' not in datasets:
+                key['included_status'] = 'Missing'
+            else:
+                key['included_status'] = 'Complete'
 
             self.insert1(key)
 
@@ -410,8 +416,8 @@ class TrialSet(dj.Imported):
                                            '_ibl_trials.contrastLeft', '_ibl_trials.contrastRight',
                                            '_ibl_trials.included', '_ibl_trials.probabilityLeft'])
         
-        stim_on_times_status, rep_num_status = (CompleteTrialSession & key).fetch1(
-                    'stim_on_times_status', 'rep_num_status')
+        stim_on_times_status, rep_num_status, included_status = (CompleteTrialSession & key).fetch1(
+                    'stim_on_times_status', 'rep_num_status', 'included_status')
         if stim_on_times_status != 'Missing':
             if key['lab_name'] == 'wittenlab':
                 trials_visual_stim_times = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.stimOn_times', clobber=True))
@@ -499,7 +505,9 @@ class TrialSet(dj.Imported):
                 trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
 
             trial_key['trial_stim_prob_left'] = float(trials_p_left[idx_trial])
-            trial_key['trial_included'] = bool(trials_included[idx_trial])
+
+            if included_status != 'Missing':
+                trial_key['trial_included'] = bool(trials_included[idx_trial])
 
             self.Trial().insert1(trial_key)
             #
@@ -526,7 +534,7 @@ class TrialSet(dj.Imported):
         trial_feedback_type:        tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
         trial_rep_num=null:         int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
         trial_stim_prob_left:       float         # probability of the stimulus being present on left
-        trial_included:             bool          # whether the trial should be included
+        trial_included=null:        bool          # whether the trial should be included
         """
 
     class ExcludedTrial(dj.Part):
