@@ -203,11 +203,35 @@ for lidx, lab in enumerate(users):
         # ============================================= #
 
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.pdf' % (datetime.datetime.now().strftime("%Y-%m-%d"),
+
+        # get most recent session_date for the naming of the plot
+        subj = subject.Subject & 'subject_nickname = "{}"'.format(mouse)
+        subj_with_last_session = subj.aggr(
+            behavior.TrialSet, last_behavior = 'max(session_start_time)'
+        )
+   
+        last_behavior_time = subj_with_last_session.fetch('last_behavior')
+        
+        if last_behavior_time.size > 0:
+            last_date = last_behavior_time[0].date().strftime("%Y-%m-%d")
+        else:
+            subj_with_last_weighing_water = subj.aggr(
+                action.Weighing * action.WaterAdministration, \
+                last_weighing = 'max(weighing_time)',
+                last_water = 'max(administration_time)'
+            )
+            last_weighing_time, last_water_time = subj_with_last_weighing_water.fetch1(
+                'last_weighing', 'last_water'
+            )
+            last_time = max([last_weighing_time, last_water_time])
+            last_date = last_time.date().strftime("%Y-%m-%d")
+
+        
+        fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.pdf' % (last_date,
                                                                    subjects.loc[subjects['subject_nickname'] == mouse]['lab_name'].item(),
                                                                    mouse)))
 
-        fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.png' % (datetime.datetime.now().strftime("%Y-%m-%d"),
+        fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.png' % (last_date,
                                                                          subjects.loc[
                                                                              subjects['subject_nickname'] == mouse][
                                                                              'lab_name'].item(),

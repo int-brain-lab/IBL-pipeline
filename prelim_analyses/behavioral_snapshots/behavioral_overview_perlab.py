@@ -118,7 +118,24 @@ for lidx, lab in enumerate(users):
 			except:
 				pass
 
-			now = datetime.datetime.now().strftime("%Y-%m-%d")
-			fig.savefig(os.path.join(path + '%s_%s_batch_%s_%s.pdf'%(now, lab, birth_date, str(int(sub_batch/sub_batch_size)+1))))
-			fig.savefig(os.path.join(path + '%s_%s_batch_%s_%s.png'%(now, lab, birth_date, str(int(sub_batch/sub_batch_size)+1))))
+			mice_sub = mice[sub_batch:sub_batch+sub_batch_size]
+			mice_str = '"' + mice[0] + '"'
+			for imouse in mice_sub[1:]:
+				mice_str = mice_str + ', "' + imouse + '"'
+
+			mice_sub = subject.Subject & 'subject_nickname in ({})'.format(mice_str)
+			last_behavior = mice_sub.aggr(behavior.TrialSet, \
+				last_behavior = 'max(session_start_time)').fetch('last_behavior')
+			
+			if last_behavior.size > 0:
+				last_date = max(last_behavior).date().strftime("%Y-%m-%d")
+			else:
+				last_weighing = mice_sub.aggr(action.Weighing, \
+					last_weighing = 'max(weighing_time)').fetch('last_weighing')
+				last_water = mice_sub.aggr(action.WaterAdministration, \
+					last_water = 'max(administration_time)').fetch('last_water')
+				last_date = max(np.hstack([last_weighing, last_water])).date().strftime("%Y-%m-%d")
+
+			fig.savefig(os.path.join(path + '%s_%s_batch_%s_%s.pdf'%(last_date, lab, birth_date, str(int(sub_batch/sub_batch_size)+1))))
+			fig.savefig(os.path.join(path + '%s_%s_batch_%s_%s.png'%(last_date, lab, birth_date, str(int(sub_batch/sub_batch_size)+1))))
 			plt.close(fig)
