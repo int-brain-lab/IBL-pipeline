@@ -34,7 +34,7 @@ def fit_psychfunc(df):
 
     return pd.DataFrame(df2, index=[0])
 
-def plot_psychometric(df, ax=None, **kwargs):
+def plot_psychometric(df, color='black', ax=None, **kwargs):
     """
     Plots psychometric data for a given DataFrame of behavioural trials
     

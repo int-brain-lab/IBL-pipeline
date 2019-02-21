@@ -86,108 +86,108 @@ for lidx, lab in enumerate(users):
         # TRIAL COUNTS AND SESSION DURATION
         # ============================================= #
 
-        try:
-            behav = get_behavior(mouse, lab)
-            plot_trialcounts_sessionlength(behav, axes[1,0], xlims)
+        behav = get_behavior(mouse, lab)
+        if behav.empty:
+            continue
 
-            # ============================================= #
-            # PERFORMANCE AND MEDIAN RT
-            # ============================================= #
+        plot_trialcounts_sessionlength(behav, axes[1,0], xlims)
 
-            plot_performance_rt(behav, axes[2,0], xlims)
+        # ============================================= #
+        # PERFORMANCE AND MEDIAN RT
+        # ============================================= #
 
-            # ============================================= #
-            # CONTRAST/CHOICE HEATMAP
-            # ============================================= #
+        plot_performance_rt(behav, axes[2,0], xlims)
 
-            plot_contrast_heatmap(behav, axes[3,0])
+        # ============================================= #
+        # CONTRAST/CHOICE HEATMAP
+        # ============================================= #
 
-            # ============================================= #
-            # PSYCHOMETRIC FUNCTION FITS OVER TIME
-            # ============================================= #
+        plot_contrast_heatmap(behav, axes[3,0])
 
-            # fit psychfunc on choice fraction, rather than identity
-            pars = behav.groupby(['date', 'probabilityLeft_block']).apply(fit_psychfunc).reset_index()
+        # ============================================= #
+        # PSYCHOMETRIC FUNCTION FITS OVER TIME
+        # ============================================= #
 
-            # TODO: HOW TO SAVE THIS IN A DJ TABLE FOR LATER?
-            parsdict = {'threshold': r'Threshold $(\sigma)$', 'bias': r'Bias $(\mu)$',
-                'lapselow': r'Lapse low $(\gamma)$', 'lapsehigh': r'Lapse high $(\lambda)$'}
-            ylims = [[-5, 105], [-105, 105], [-0.05, 1.05], [-0.05, 1.05]]
-            yticks = [[0, 19, 100], [-100, -16, 0, 16, 100], [-0, 0.2, 0.5, 1], [-0, 0.2, 0.5, 1]]
+        # fit psychfunc on choice fraction, rather than identity
+        pars = behav.groupby(['date', 'probabilityLeft_block']).apply(fit_psychfunc).reset_index()
 
-            # pick a good-looking diverging colormap with black in the middle
-            cmap = sns.diverging_palette(20, 220, n=len(behav['probabilityLeft_block'].unique()), center="dark")
-            if len(behav['probabilityLeft_block'].unique()) == 1:
-                cmap = "gist_gray"
-            sns.set_palette(cmap)
+        # TODO: HOW TO SAVE THIS IN A DJ TABLE FOR LATER?
+        parsdict = {'threshold': r'Threshold $(\sigma)$', 'bias': r'Bias $(\mu)$',
+            'lapselow': r'Lapse low $(\gamma)$', 'lapsehigh': r'Lapse high $(\lambda)$'}
+        ylims = [[-5, 105], [-105, 105], [-0.05, 1.05], [-0.05, 1.05]]
+        yticks = [[0, 19, 100], [-100, -16, 0, 16, 100], [-0, 0.2, 0.5, 1], [-0, 0.2, 0.5, 1]]
 
-            # plot the fitted parameters
-            for pidx, (var, labelname) in enumerate(parsdict.items()):
-                ax = axes[pidx,1]
-                sns.lineplot(x="date", y=var, marker='o', hue="probabilityLeft_block", linestyle='', lw=0,
-                    palette=cmap, data=pars, legend=None, ax=ax)
-                ax.set(xlabel='', ylabel=labelname, ylim=ylims[pidx],
-                    yticks=yticks[pidx],
-                    xlim=[behav.date.min()-timedelta(days=1), behav.date.max()+timedelta(days=1)])
+        # pick a good-looking diverging colormap with black in the middle
+        cmap = sns.diverging_palette(20, 220, n=len(behav['probabilityLeft_block'].unique()), center="dark")
+        if len(behav['probabilityLeft_block'].unique()) == 1:
+            cmap = "gist_gray"
+        sns.set_palette(cmap)
 
-                fix_date_axis(ax)
-                if pidx == 0:
-                    ax.set(title=r'$\gamma + (1 -\gamma-\lambda)  (erf(\frac{x-\mu}{\sigma} + 1)/2$')
+        # plot the fitted parameters
+        for pidx, (var, labelname) in enumerate(parsdict.items()):
+            ax = axes[pidx,1]
+            sns.lineplot(x="date", y=var, marker='o', hue="probabilityLeft_block", linestyle='', lw=0,
+                palette=cmap, data=pars, legend=None, ax=ax)
+            ax.set(xlabel='', ylabel=labelname, ylim=ylims[pidx],
+                yticks=yticks[pidx],
+                xlim=[behav.date.min()-timedelta(days=1), behav.date.max()+timedelta(days=1)])
 
-            # ============================================= #
-            # LAST THREE SESSIONS
-            # ============================================= #
+            fix_date_axis(ax)
+            if pidx == 0:
+                ax.set(title=r'$\gamma + (1 -\gamma-\lambda)  (erf(\frac{x-\mu}{\sigma} + 1)/2$')
 
-            didx = 1
-            sorteddays = behav['days'].sort_values(ascending=True).unique()
-            for day in behav['days'].unique():
+        # ============================================= #
+        # LAST THREE SESSIONS
+        # ============================================= #
 
-                # use only the last three days
-                if len(sorteddays) >= 3:
-                    if day < sorteddays[-3]:
-                        continue
+        didx = 1
+        sorteddays = behav['days'].sort_values(ascending=True).unique()
+        for day in behav['days'].unique():
 
-                # grab only that day
-                dat = behav.loc[behav['days'] == day, :]
-                print(dat['date'].unique())
-                didx += 1
+            # use only the last three days
+            if len(sorteddays) >= 3:
+                if day < sorteddays[-3]:
+                    continue
 
-                # colormap for the asymmetric blocks
-                cmap = sns.diverging_palette(20, 220, n=len(dat['probabilityLeft_block'].unique()), center="dark")
-                if len(dat['probabilityLeft_block'].unique()) == 1:
-                    cmap = [np.array([0,0,0,1])]
+            # grab only that day
+            dat = behav.loc[behav['days'] == day, :]
+            print(dat['date'].unique())
+            didx += 1
 
-                # PSYCHOMETRIC FUNCTION
-                ax = axes[0, didx]
-                for ix, probLeft in enumerate(dat['probabilityLeft_block'].sort_values().unique()):
-                    plot_psychometric(dat.loc[dat['probabilityLeft_block'] == probLeft, :], ax=ax, color=cmap[ix])
-                ax.set(xlabel="Contrast (%)", ylabel="Choose right (%)")
-                ax.set(title=pd.to_datetime(dat['start_time'].unique()[0]).strftime('%b-%d, %A'))
+            # colormap for the asymmetric blocks
+            cmap = sns.diverging_palette(20, 220, n=len(dat['probabilityLeft_block'].unique()), center="dark")
+            if len(dat['probabilityLeft_block'].unique()) == 1:
+                cmap = [np.array([0,0,0,1])]
 
-                # CHRONOMETRIC FUNCTION
-                ax = axes[1, didx]
-                for ix, probLeft in enumerate(dat['probabilityLeft_block'].sort_values().unique()):
-                    plot_chronometric(dat.loc[dat['probabilityLeft_block'] == probLeft, :], ax, cmap[ix])
-                ax.set(ylim=[0.1,1.5], yticks=[0.1, 1.5])
-                ax.set_yscale("log")
-                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda y,pos:
-                    ('{{:.{:1d}f}}'.format(int(np.maximum(-np.log10(y),0)))).format(y)))
+            # PSYCHOMETRIC FUNCTION
+            ax = axes[0, didx]
+            for ix, probLeft in enumerate(dat['probabilityLeft_block'].sort_values().unique()):
+                plot_psychometric(dat.loc[dat['probabilityLeft_block'] == probLeft, :], ax=ax, color=cmap[ix])
+            ax.set(xlabel="Contrast (%)", ylabel="Choose right (%)")
+            ax.set(title=pd.to_datetime(dat['start_time'].unique()[0]).strftime('%b-%d, %A'))
 
-                # RTS THROUGHOUT SESSION
-                ax = axes[2, didx]
-                sns.scatterplot(x='trial', y='rt', style='correct', hue='correct',
-                    palette={1:"#009E73", 0:"#D55E00"}, # from https://github.com/matplotlib/matplotlib/blob/master/lib/matplotlib/mpl-data/stylelib/seaborn-colorblind.mplstyle
-                    markers={1:'o', 0:'X'}, s=10, edgecolors='face',
-                    alpha=.5, data=dat, ax=ax, legend=False)
-                # running median overlaid
-                sns.lineplot(x='trial', y='rt', color='black', ci=None,
-                    data=dat[['trial', 'rt']].rolling(10).median(), ax=ax)
-                ax.set(xlabel="Trial number", ylabel="RT (s)", ylim=[0.02, 60])
-                ax.set_yscale("log")
-                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda y,pos:
-                    ('{{:.{:1d}f}}'.format(int(np.maximum(-np.log10(y),0)))).format(y)))
-        except:
-            pass
+            # CHRONOMETRIC FUNCTION
+            ax = axes[1, didx]
+            for ix, probLeft in enumerate(dat['probabilityLeft_block'].sort_values().unique()):
+                plot_chronometric(dat.loc[dat['probabilityLeft_block'] == probLeft, :], ax, cmap[ix])
+            ax.set(ylim=[0.1,1.5], yticks=[0.1, 1.5])
+            ax.set_yscale("log")
+            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda y,pos:
+                ('{{:.{:1d}f}}'.format(int(np.maximum(-np.log10(y),0)))).format(y)))
+
+            # RTS THROUGHOUT SESSION
+            ax = axes[2, didx]
+            sns.scatterplot(x='trial', y='rt', style='correct', hue='correct',
+                palette={1:"#009E73", 0:"#D55E00"}, # from https://github.com/matplotlib/matplotlib/blob/master/lib/matplotlib/mpl-data/stylelib/seaborn-colorblind.mplstyle
+                markers={1:'o', 0:'X'}, s=10, edgecolors='face',
+                alpha=.5, data=dat, ax=ax, legend=False)
+            # running median overlaid
+            sns.lineplot(x='trial', y='rt', color='black', ci=None,
+                data=dat[['trial', 'rt']].rolling(10).median(), ax=ax)
+            ax.set(xlabel="Trial number", ylabel="RT (s)", ylim=[0.02, 60])
+            ax.set_yscale("log")
+            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda y,pos:
+                ('{{:.{:1d}f}}'.format(int(np.maximum(-np.log10(y),0)))).format(y)))
 
                 # ============================ #
                 # WHEEL ANALYSIS - TODO
