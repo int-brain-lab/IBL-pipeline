@@ -87,6 +87,9 @@ for lidx, lab in enumerate(users):
         # ============================================= #
 
         behav = get_behavior(mouse, lab)
+        if behav.empty:
+            continue
+
         plot_trialcounts_sessionlength(behav, axes[1,0], xlims)
 
         # ============================================= #
