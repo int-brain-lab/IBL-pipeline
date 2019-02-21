@@ -22,6 +22,14 @@ def get_weights(mousename, labname):
                                                                         'weight', order_by='weighing_time')
     wei = pd.DataFrame.from_dict(wei)
 
+    # ensure that the reference weight is also added
+    restrictions = pd.DataFrame.from_dict((action.WaterRestriction & 
+        'subject_nickname="%s"'%mousename & 'lab_name="%s"'%labname).fetch(as_dict=True))
+    restr_summary = restrictions[['restriction_start_time', 'reference_weight']].copy()
+    restr_summary = restr_summary.rename(columns = {'restriction_start_time':'date_time', 'reference_weight':'weight'})
+
+    wei = pd.concat([wei, restr_summary], ignore_index=True)
+
     if not wei.empty:
         # now organize in a pandas dataframe
         wei['date_time'] = pd.to_datetime(wei.date_time)
@@ -55,13 +63,13 @@ def get_water(mousename, labname):
 def get_water_weight(mousename, labname):
 
     wei = get_weights(mousename, labname)
-    wa = get_water(mousename, labname)
+    wa  = get_water(mousename, labname)
 
     if not (wei.empty or wa.empty):
 
         # AVERAGE WEIGHT WITHIN EACH DAY
         wei = wei.groupby(['date']).mean().reset_index()
-        wa = wa.groupby(['date', 'water_type']).mean().reset_index()
+        wa  = wa.groupby(['date', 'water_type']).mean().reset_index()
 
         # make sure that NaNs are entered for days with only water or weight but not both
         combined = pd.merge(wei, wa, on="date", how='outer')
@@ -78,7 +86,7 @@ def get_water_weight(mousename, labname):
         combined['days'] = combined.date - combined.date[0]
         combined['days'] = combined.days.dt.days  # convert to number of days from start of the experiment
 
-        # grab info about water restrictions
+        # ALSO GET INFO ABOUT WATER RESTRICTIONS
         restrictions = pd.DataFrame.from_dict((action.WaterRestriction & 
             'subject_nickname="%s"'%mousename & 'lab_name="%s"'%labname).fetch(as_dict=True))
 
@@ -94,12 +102,15 @@ def get_water_weight(mousename, labname):
         restrictions['day_start'] = combined['days'].max() * np.ones(restrictions['date_start'].shape)
         restrictions['day_end'] = combined['days'].max() * np.ones(restrictions['date_end'].shape)
         combined['water_restricted'] = np.zeros(combined['days'].shape, dtype=bool)
+
+        # recode dates into days
+        datedict = pd.Series(combined.days.values, index=combined.date).to_dict()
         for d in range(len(restrictions)):
+            restrictions.loc[d, 'day_start'] = datedict[restrictions.loc[d, 'date_start']]
+
+            # only do this for dates that are not NaT
             try:
-                restrictions['day_start'][d] = combined.loc[combined['date']
-                                                     == restrictions['date_start'][d], 'days'].item()
-                restrictions['day_end'][d] = combined.loc[combined['date']
-                                                     == restrictions['date_end'][d], 'days'].item()
+                restrictions.loc[d, 'day_end'] = datedict[restrictions.loc[d, 'date_end']]
             except:
                 pass
 
@@ -108,8 +119,12 @@ def get_water_weight(mousename, labname):
                                            combined['days'].between(restrictions['day_start'][d],
                                            restrictions['day_end'][d], inclusive=True)
 
+
+        print(combined)
+        print(restrictions)
+
     else:
-        combined = pd.DataFrame()
+        combined     = pd.DataFrame()
         restrictions = pd.DataFrame()
 
     return combined, restrictions
@@ -148,6 +163,9 @@ def get_behavior(mousename, labname, **kwargs):
 
         behav['rt'] = behav['trial_response_time'] - behav['trial_stim_on_time']
         behav['included'] = behav['trial_included']
+        
+        # don't count RT if there was no response
+        behav.loc[behav.choice == 0, 'rt'] = np.nan 
 
         # for trainingChoiceWorld, make sure all probabilityLeft = 0.5
         behav['probabilityLeft_block'] = behav['probabilityLeft']
