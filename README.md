@@ -19,49 +19,47 @@ If you don't have SSH setup, use `git clone https://github.com/YourUserName/IBL-
     DJ_PASS=password
     ```
 
-6. Copy your `.one_params` file into `IBL-pipeline/root` to not be prompted for Alyx login (see https://ibllib.readthedocs.io/en/latest/02a_installation_python.html). If you have no `root` folder, create one.
+6. Now let's set up the docker container that have the entire environment. 
 
-Note: if you first build the docker container and then add `.one_params`, running ONE() in Python may still prompt you for your Alyx and FlatIron login details. In this case, do
-	```
-	docker-compose down
-	docker image rm ibl-pipeline_datajoint:latest
-	docker-compose up -d
-	docker exec -it ibl-pipeline_datajoint_1 /bin/bash
-	```
+Copy `docker-compose-template.yml` as `docker-compose.yml` - this is your own file you can customize.
 
-7. Now we're ready to build a Docker image. First, copy `docker-compose-template.yml` into `docker-compose.yml` - this is your own file you can customize.
+Note: There is a similar file called `docker-compose-local_template.yml`. You will not need it unless you would like to perform ingestion from scratch in the database hosted on your own machine.
 
-To save figures in a folder outside your `IBL-pipeline` docker folder (which is good practice so you don't clutter up the Github repo), you can tell Docker to create an alias older which points to your preferred place for storing figures. 
+There are two properties that you may want to customize. 
 
-	a. `docker-compose down`
+First, to save figures in a folder outside your `IBL-pipeline` docker folder (which is good practice so you don't clutter up the Github repo), you can tell Docker to create an alias older which points to your preferred place for storing figures. 
 
-	b. `open docker-compose.yml`
+	a. `open docker-compose.yml`
 
-	c. add `myFullPath:/Figures_DataJoint_shortcuts` in to the `volumes:`, where `myFullPath` could for example be `~/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/` 
+	b. add `myFullPath:/Figures_DataJoint_shortcuts` in to the `volumes:`, where `myFullPath` could for example be `~/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/` 
 	
-	d. close the file
-
-	e. `docker-compose up -d`. The first time, this will setup the Docker container which takes a bit of time.
+	c. close the file
 
 Then save the plots from Python into `/Figures_DataJoint_shortcuts` inside the docker, then you’ll see that the plots are in the folder you want.
 
+Second, Set up your `.one_params`.
+
+If you have your `.one_params` in your root directory `~/.one_params`, you can directly go to Ste[ 7]. If you have your `.one_params` in another directory, please change the mapping `docker-compose.yml`
+in the `volumes:` section `your-directory-to-one_params/.one_params: /root/.one_params`.
+
+After your are done with these customization, you are ready to start the docker container, by running:
+`docker-compose up -d`. You can check the status of the docker container by `docker ps`
+
+
+Note: Anytime you would like to change the mapping from an outside folder to a directory inside docker container after you have your docker-compose running, please stop your docker container with the command 'docker-compose down', before you do the above steps.
+
+
+
 ## To run your own Python scripts ##
 
-8. If you would like to enter the docker and run scripts through the terminal, navigate `cd` to the IBL-pipeline directory, `chmod +x ibl_docker_setup.sh` (only needed once, will give you permission to treat this file as an 'executable') will allow you to run 
-```
-./ibl_docker_setup.sh
-```
+7. After running the docker container, you may want to use enter the container to run your own script. The command is `docker exec -it ibl-pipeline_datajoint_1 /bin/bash`. You would then enter the container with the current directory `/notebooks`. You can use `cd` to navigate inside the docker container. 
 
-Which contains the following individual steps (as well as starting Docker):
+    Note: If you would like to go to a specific folder, for example `prelim_analyses/behavioral_snapshots`at the same time when you run `docker exec`, you can use this command line: `docker exec -it docker exec -it ibl-pipeline_datajoint_1 bash -c "cd /src/IBL-pipeline/prelim_analyses/behavioral_snapshots; exec /bin/bash"`
 
-```
-docker-compose up -d
-docker exec -it ibl-pipeline_datajoint_1 /bin/bash
-```
+8. To simplify the process of setting up the docker environment, we prepared a bash script `ibl_docker_setup-template.sh`. You may first want to copy this template by `cp ibl_docker_setup-template.sh ibl_docker_setup.sh`, then customize your own `ibl_docker_setup.sh`. In the file, you can change the directory you want to go to in the last line. The default command in the last line is: `docker exec -it docker exec -it ibl-pipeline_datajoint_1 bash -c "cd /src/IBL-pipeline/prelim_analyses/; exec /bin/bash"`, which goes to the folder `IBL-pipeline/prelim_analyses`. You can replace this directory with the directory you would like to go to.
 
-After Docker has started, you'll be dropped in a new Terminal. To go back from there to the `IBL-pipeline/prelim_analyses` folder containing Python scripts: `cd /src/ibl-pipeline/prelim_analyses`.
+After setting up this customized file `ibl_docker_setup.sh`, you can run this file to set up all your docker environment, by running `bash ibl_docker_setup.sh`
 
-Then run e.g. the behavioral snapshot code: `python behavioral_snapshot.py` or `python behavioral_overview_perlab.py`.
 
 ### Run your Python scripts after Docker is already installed for the first time ###
 
