@@ -1,7 +1,8 @@
 import datajoint as dj
 from .. import subject, action, acquisition, behavior
+from . import psychofit
 import numpy as np
-import psychofit as psy
+
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_analyses_behavior')
 
