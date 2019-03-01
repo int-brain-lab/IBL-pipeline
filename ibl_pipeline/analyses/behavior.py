@@ -47,7 +47,7 @@ class Contrasts(dj.Computed):
         if contrasts_left.size != 0:
             key_con['has_left'] = True
             key_con['contrasts_left'] = contrasts_left
-            n_trials_stim_left = [len(trials & 'trial_stim_contrast_left={}'.format(contrast)) \
+            n_trials_stim_left = [len(trials & 'ABS(trial_stim_contrast_left-{})<1e-10'.format(contrast)) \
                                     for contrast in contrasts_left]
             key_con['n_trials_stim_left'] = n_trials_stim_left
         else:
@@ -56,7 +56,7 @@ class Contrasts(dj.Computed):
         if contrasts_right.size != 0:
             key_con['has_right'] = True
             key_con['contrasts_right'] = contrasts_right
-            n_trials_stim_right = [len(trials & 'trial_stim_contrast_right={}'.format(contrast)) \
+            n_trials_stim_right = [len(trials & 'ABS(trial_stim_contrast_right-{})<1e-10'.format(contrast)) \
                                     for contrast in contrasts_right]
             key_con['n_trials_stim_right'] = n_trials_stim_right
         else:
@@ -92,8 +92,6 @@ class PsychResults(dj.Computed):
     """
 
     def make(self, key):
-
-        print(key)
         
         key_psy = key.copy()
 
@@ -109,7 +107,7 @@ class PsychResults(dj.Computed):
         if has_left:
             contrasts_left, n_trials_stim_left = (Contrasts & key).fetch1(
                 'contrasts_left', 'n_trials_stim_left')
-            n_right_trials_stim_left = [len(trials & 'trial_stim_contrast_left={}'.format(contrast) & \
+            n_right_trials_stim_left = [len(trials & 'ABS(trial_stim_contrast_left-{})<1e-10'.format(contrast) & \
                                             'trial_response_choice="CCW"') \
                                         for contrast in contrasts_left]
             p_right_stim_left = np.divide(n_right_trials_stim_left, n_trials_stim_left)
@@ -120,7 +118,7 @@ class PsychResults(dj.Computed):
         if has_right:
             contrasts_right, n_trials_stim_right = (Contrasts & key).fetch1(
                 'contrasts_right', 'n_trials_stim_right')
-            n_right_trials_stim_right = [len(trials & 'trial_stim_contrast_right={}'.format(contrast) & \
+            n_right_trials_stim_right = [len(trials & 'ABS(trial_stim_contrast_right-{})<1e-10'.format(contrast) & \
                                             'trial_response_choice="CCW"') \
                                         for contrast in contrasts_right]
             p_right_stim_right = np.divide(n_right_trials_stim_right, n_trials_stim_right)
@@ -131,18 +129,12 @@ class PsychResults(dj.Computed):
             n_trials_stim_no_contrast = (Contrasts & key).fetch1(
                 'n_trials_stim_no_contrast')
             trials_no_contrast = trials & 'trial_stim_contrast_right=0' & 'trial_stim_contrast_left=0'
-            p_right_no_contrast = len(trials_no_contrast & 'trial_response_choice="CCW"')/n_trials_stim_no_contrast 
-            print(p_right_no_contrast)          
+            p_right_no_contrast = len(trials_no_contrast & 'trial_response_choice="CCW"')/n_trials_stim_no_contrast        
         else:
             p_right_no_contrast = []
         
         prob_choose_right = np.hstack([p_right_stim_left, p_right_no_contrast, p_right_stim_right])
 
-        print(contrasts)
-        print(prob_choose_right)
-
-        print(p_right_stim_left, p_right_no_contrast, p_right_stim_right)
-        
         pars, L = psy.mle_fit_psycho(np.vstack([contrasts, n_trials_stim, prob_choose_right]), \
                 P_model='erf_psycho_2gammas', \
                 parstart=np.array([contrasts.mean(), 20., 0.05, 0.05]), \
@@ -163,7 +155,7 @@ class PsychResults(dj.Computed):
 @schema
 class ReactionTime(dj.Computed):
     definition = """
-    -> behavior.TrialSet
+    -> Contrasts
     ---
     reaction_time:     blob   # reaction time for all contrasts
     """
@@ -182,9 +174,9 @@ class ReactionTime(dj.Computed):
 
         trials_rt = trials.proj(rt='trial_response_time-trial_stim_on_time')
 
-        rt_stim_left = [(trials_rt & (trials & 'trial_stim_contrast_left={}'.format(contrast))).fetch('rt').mean() \
+        rt_stim_left = [(trials_rt & (trials & 'ABS(trial_stim_contrast_left-{})<1e-10'.format(contrast))).fetch('rt').mean() \
                         for contrast in contrasts_left]
-        rt_stim_right = [(trials_rt & (trials & 'trial_stim_contrast_right={}'.format(contrast))).fetch('rt').mean() \
+        rt_stim_right = [(trials_rt & (trials & 'ABS(trial_stim_contrast_right-{})<1e-10'.format(contrast))).fetch('rt').mean() \
                         for contrast in contrasts_right]
 
         rt_no_contrast = (trials_rt & trials_no_contrast).fetch('rt').mean()
