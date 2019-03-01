@@ -30,6 +30,7 @@ class Contrasts(dj.Computed):
         trials = behavior.TrialSet.Trial & key
         contrasts_left = np.unique(trials.fetch('trial_stim_contrast_left'))
         contrasts_right = np.unique(trials.fetch('trial_stim_contrast_right'))
+
         # discard contrast 0
         if contrasts_left[0] == 0:
             contrasts_left = contrasts_left[1:]
@@ -62,7 +63,7 @@ class Contrasts(dj.Computed):
             n_trials_stim_right = []
         
         if len(trials_no_contrast) > 0:
-            key['has_no_contrast'] = True
+            key_con['has_no_contrast'] = True
             no_contrast = 0
             n_trials_stim_no_contrast = len(trials_no_contrast)
             key_con['n_trials_stim_no_contrast'] = n_trials_stim_no_contrast
@@ -130,19 +131,25 @@ class PsychResults(dj.Computed):
             n_trials_stim_no_contrast = (Contrasts & key).fetch1(
                 'n_trials_stim_no_contrast')
             trials_no_contrast = trials & 'trial_stim_contrast_right=0' & 'trial_stim_contrast_left=0'
-            p_right_no_contrast = len(trials_no_contrast & 'trial_response_choice="CCW"')/n_trials_stim_no_contrast            
+            p_right_no_contrast = len(trials_no_contrast & 'trial_response_choice="CCW"')/n_trials_stim_no_contrast 
+            print(p_right_no_contrast)          
         else:
             p_right_no_contrast = []
         
         prob_choose_right = np.hstack([p_right_stim_left, p_right_no_contrast, p_right_stim_right])
 
         print(contrasts)
+        print(prob_choose_right)
+
+        print(p_right_stim_left, p_right_no_contrast, p_right_stim_right)
         
         pars, L = psy.mle_fit_psycho(np.vstack([contrasts, n_trials_stim, prob_choose_right]), \
                 P_model='erf_psycho_2gammas', \
                 parstart=np.array([contrasts.mean(), 20., 0.05, 0.05]), \
                 parmin=np.array([contrasts.mean(), 0., 0., 0.]), \
                 parmax=np.array([contrasts.mean(), 100., 1, 1]))
+        
+        
 
         key_psy['prob_choose_right'] = prob_choose_right
         key_psy['bias'] = pars[0]
