@@ -38,6 +38,8 @@ class Contrasts(dj.Computed):
         if contrasts_right[0] == 0:
             contrasts_right = contrasts_right[1:]
         
+        print(contrasts_right)
+        
         trials_no_contrast = trials & 'trial_stim_contrast_right=0' & 'trial_stim_contrast_left=0'
 
         key_con['has_left'] = False
@@ -72,6 +74,7 @@ class Contrasts(dj.Computed):
             n_trials_stim_no_contrast = [] 
             
         key_con['contrasts'] = np.hstack([np.negative(contrasts_left[::-1]), no_contrast, contrasts_right])
+        print(key_con['contrasts'])
         key_con['n_trials_stim'] = np.hstack([n_trials_stim_left, n_trials_stim_no_contrast, n_trials_stim_right])
 
         self.insert1(key_con)
@@ -137,7 +140,7 @@ class PsychResults(dj.Computed):
         
         prob_choose_right = np.hstack([p_right_stim_left, p_right_no_contrast, p_right_stim_right])
 
-        pars, L = psy.mle_fit_psycho(np.vstack([contrasts, n_trials_stim, prob_choose_right]), \
+        pars, L = psy.mle_fit_psycho(np.vstack([contrasts*100, n_trials_stim, prob_choose_right]), \
                 P_model='erf_psycho_2gammas', \
                 parstart=np.array([contrasts.mean(), 20., 0.05, 0.05]), \
                 parmin=np.array([contrasts.mean(), 0., 0., 0.]), \
