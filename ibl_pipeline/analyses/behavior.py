@@ -71,7 +71,7 @@ class Contrasts(dj.Computed):
             no_contrast = []
             n_trials_stim_no_contrast = [] 
             
-        key_con['contrasts'] = np.hstack([np.negative(contrasts_left), no_contrast, contrasts_right])
+        key_con['contrasts'] = np.hstack([np.negative(contrasts_left[::-1]), no_contrast, contrasts_right])
         key_con['n_trials_stim'] = np.hstack([n_trials_stim_left, n_trials_stim_no_contrast, n_trials_stim_right])
 
         self.insert1(key_con)
