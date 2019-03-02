@@ -47,7 +47,7 @@ class Contrasts(dj.Computed):
         if contrasts_left.size != 0:
             key_con['has_left'] = True
             key_con['contrasts_left'] = contrasts_left
-            n_trials_stim_left = [len(trials & 'ABS(trial_stim_contrast_left-{})<1e-10'.format(contrast)) \
+            n_trials_stim_left = [len(trials & 'ABS(trial_stim_contrast_left-{})<1e-6'.format(contrast)) \
                                     for contrast in contrasts_left]
             key_con['n_trials_stim_left'] = n_trials_stim_left
         else:
@@ -56,7 +56,7 @@ class Contrasts(dj.Computed):
         if contrasts_right.size != 0:
             key_con['has_right'] = True
             key_con['contrasts_right'] = contrasts_right
-            n_trials_stim_right = [len(trials & 'ABS(trial_stim_contrast_right-{})<1e-10'.format(contrast)) \
+            n_trials_stim_right = [len(trials & 'ABS(trial_stim_contrast_right-{})<1e-6'.format(contrast)) \
                                     for contrast in contrasts_right]
             key_con['n_trials_stim_right'] = n_trials_stim_right
         else:
@@ -92,6 +92,8 @@ class PsychResults(dj.Computed):
     """
 
     def make(self, key):
+
+        print(key)
         
         key_psy = key.copy()
 
@@ -107,7 +109,7 @@ class PsychResults(dj.Computed):
         if has_left:
             contrasts_left, n_trials_stim_left = (Contrasts & key).fetch1(
                 'contrasts_left', 'n_trials_stim_left')
-            n_right_trials_stim_left = [len(trials & 'ABS(trial_stim_contrast_left-{})<1e-10'.format(contrast) & \
+            n_right_trials_stim_left = [len(trials & 'ABS(trial_stim_contrast_left-{})<1e-6'.format(contrast) & \
                                             'trial_response_choice="CCW"') \
                                         for contrast in contrasts_left]
             p_right_stim_left = np.divide(n_right_trials_stim_left, n_trials_stim_left)
@@ -118,7 +120,7 @@ class PsychResults(dj.Computed):
         if has_right:
             contrasts_right, n_trials_stim_right = (Contrasts & key).fetch1(
                 'contrasts_right', 'n_trials_stim_right')
-            n_right_trials_stim_right = [len(trials & 'ABS(trial_stim_contrast_right-{})<1e-10'.format(contrast) & \
+            n_right_trials_stim_right = [len(trials & 'ABS(trial_stim_contrast_right-{})<1e-6'.format(contrast) & \
                                             'trial_response_choice="CCW"') \
                                         for contrast in contrasts_right]
             p_right_stim_right = np.divide(n_right_trials_stim_right, n_trials_stim_right)
@@ -174,9 +176,9 @@ class ReactionTime(dj.Computed):
 
         trials_rt = trials.proj(rt='trial_response_time-trial_stim_on_time')
 
-        rt_stim_left = [(trials_rt & (trials & 'ABS(trial_stim_contrast_left-{})<1e-10'.format(contrast))).fetch('rt').mean() \
+        rt_stim_left = [(trials_rt & (trials & 'ABS(trial_stim_contrast_left-{})<1e-6'.format(contrast))).fetch('rt').mean() \
                         for contrast in contrasts_left]
-        rt_stim_right = [(trials_rt & (trials & 'ABS(trial_stim_contrast_right-{})<1e-10'.format(contrast))).fetch('rt').mean() \
+        rt_stim_right = [(trials_rt & (trials & 'ABS(trial_stim_contrast_right-{})<1e-6'.format(contrast))).fetch('rt').mean() \
                         for contrast in contrasts_right]
 
         rt_no_contrast = (trials_rt & trials_no_contrast).fetch('rt').mean()
