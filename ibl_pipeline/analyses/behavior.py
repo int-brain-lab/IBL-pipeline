@@ -38,8 +38,6 @@ class Contrasts(dj.Computed):
         if contrasts_right[0] == 0:
             contrasts_right = contrasts_right[1:]
         
-        print(contrasts_right)
-        
         trials_no_contrast = trials & 'trial_stim_contrast_right=0' & 'trial_stim_contrast_left=0'
 
         key_con['has_left'] = False
@@ -74,7 +72,6 @@ class Contrasts(dj.Computed):
             n_trials_stim_no_contrast = [] 
             
         key_con['contrasts'] = np.hstack([np.negative(contrasts_left[::-1]), no_contrast, contrasts_right])
-        print(key_con['contrasts'])
         key_con['n_trials_stim'] = np.hstack([n_trials_stim_left, n_trials_stim_no_contrast, n_trials_stim_right])
 
         self.insert1(key_con)
