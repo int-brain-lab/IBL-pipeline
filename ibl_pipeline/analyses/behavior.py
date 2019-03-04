@@ -166,31 +166,43 @@ class ReactionTime(dj.Computed):
     """
 
     key_source = behavior.TrialSet & \
-        (behavior.CompleteTrialSession & 'stim_on_times_status != "Missing"') & \
+        (behavior.CompleteTrialSession & 'stim_on_times_status = "Complete"') & \
         PsychResults
 
     def make(self, key):
         
         key_rt = key.copy()
         trials = behavior.TrialSet.Trial & key
-        contrasts_left = np.unique(trials.fetch('trial_stim_contrast_left'))[1:] # discard contrast 0
-        contrasts_right = np.unique(trials.fetch('trial_stim_contrast_right'))[1:] # discard contrast 0
-        trials_no_contrast = trials & 'trial_stim_contrast_right=0' & 'trial_stim_contrast_left=0'
+        trials_rt = trials.proj(
+            'trial_stim_contrast_left', 'trial_stim_contrast_right', \
+            rt='trial_response_time-trial_stim_on_time')
 
-        trials_rt = trials.proj(rt='trial_response_time-trial_stim_on_time')
+        has_left, has_right, has_no_contrast = (Contrasts & key).fetch1(
+            'has_left', 'has_right', 'has_no_contrast')
 
-        rt_stim_left = [(trials_rt & (trials & 'ABS(trial_stim_contrast_left-{})<1e-6'.format(contrast))).fetch('rt').mean() \
+        if has_left:
+            contrasts_left = (Contrasts & key).fetch1('contrasts_left')
+            rt_stim_left = [(trials_rt & 'ABS(trial_stim_contrast_left-{})<1e-6'.format(contrast)).fetch('rt').mean() \
                         for contrast in contrasts_left]
-        rt_stim_right = [(trials_rt & (trials & 'ABS(trial_stim_contrast_right-{})<1e-6'.format(contrast))).fetch('rt').mean() \
-                        for contrast in contrasts_right]
-
-        rt_no_contrast = (trials_rt & trials_no_contrast).fetch('rt').mean()
-        
-        if trials_no_contrast:
-        
-            rt_no_contrast = (trials_rt & trials_no_contrast).fetch('rt').mean()
-            key_rt['reaction_time'] = np.hstack([rt_stim_left, rt_no_contrast, rt_stim_right])
         else:
-            key_rt['reaction_time'] = np.hstack([rt_stim_left, rt_stim_right])
+            rt_stim_left = []
+
+        if has_right:
+            contrasts_right = (Contrasts & key).fetch1('contrasts_right')
+            rt_stim_right = [(trials_rt & 'ABS(trial_stim_contrast_right-{})<1e-6'.format(contrast)).fetch('rt').mean() \
+                        for contrast in contrasts_right]
+        else:
+            rt_stim_right = []
+        
+        if has_no_contrast:
+            trials_no_contrast = (trials & 'trial_stim_contrast_right=0' & 'trial_stim_contrast_left=0').proj(
+                'trial_stim_contrast_left', 'trial_stim_contrast_right', \
+                rt='trial_response_time-trial_stim_on_time'
+            )
+            rt_no_contrast = trials_no_contrast.fetch('rt').mean()     
+        else:
+            rt_no_contrast = []
+    
+        key_rt['reaction_time'] = np.hstack([rt_stim_left, rt_no_contrast, rt_stim_right])
 
         self.insert1(key_rt)
