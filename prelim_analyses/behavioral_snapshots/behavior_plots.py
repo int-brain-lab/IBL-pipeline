@@ -144,6 +144,9 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
         # add a line for 85% of baseline weight
         righty.plot((baseline.day_start[d], baseline.day_end[d]),
                     (baseline.reference_weight[d]*0.85, baseline.reference_weight[d]*0.85), 'k--', linewidth=0.5)
+        # another line for 75% baseline weight
+        righty.plot((baseline.day_start[d], baseline.day_end[d]),
+                    (baseline.reference_weight[d]*0.75, baseline.reference_weight[d]*0.75), 'k:', linewidth=0.5)
 
     righty.grid(False)
     righty.set(xlabel='', ylabel="Weight (g)",
