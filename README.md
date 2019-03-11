@@ -1,6 +1,6 @@
 # Getting started with DataJoint for IBL #
 
-1. Email austin@vathes.com for a database username.
+1. Email shanshen@vathes.com for a database username.
 
 2. Install Docker (https://www.docker.com/). Linux users also need to install Docker Compose separately. For Mac: https://docs.docker.com/docker-for-mac/.
 
@@ -30,7 +30,7 @@ There are two properties that you may want to customize.
 First, to save figures in a folder outside your `IBL-pipeline` docker folder (which is good practice so you don't clutter up the Github repo), you can tell Docker to create an alias older which points to your preferred place for storing figures. 
 
 	a. `open docker-compose.yml`
-
+	
 	b. add `myFullPath:/Figures_DataJoint_shortcuts` in to the `volumes:`, where `myFullPath` could for example be `~/Google Drive/Rig building WG/DataFigures/BehaviourData_Weekly/Snapshot_DataJoint/` 
 	
 	c. close the file
@@ -82,7 +82,7 @@ python behavioral_snapshot.py
 ### Staying up-to date ###
 
 To stay up-to-date with the latest code from DataJoint, you might first want to check by `git remote -v`. 
-If there is no upstream pointing to the int-brain-lab repository, then do `git add remote upstream https://github.com/int-brain-lab/IBL-pipeline`.
+If there is no upstream pointing to the int-brain-lab repository, then do `git remote add upstream https://github.com/int-brain-lab/IBL-pipeline`.
 
 Then `git pull upstream master` will make sure that your local fork stays up to date with the original repo.
 
