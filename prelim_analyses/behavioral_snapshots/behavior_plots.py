@@ -25,7 +25,7 @@ except:
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 def fit_psychfunc(df):
-    choicedat = df.groupby('signedContrast').agg({'trial':'max', 'choice2':'mean'}).reset_index()
+    choicedat = df.groupby('signedContrast').agg({'trial':'count', 'choice2':'mean'}).reset_index()
     pars, L = psy.mle_fit_psycho(choicedat.values.transpose(), P_model='erf_psycho_2gammas', 
         parstart=np.array([choicedat['signedContrast'].mean(), 20., 0.05, 0.05]), 
         parmin=np.array([choicedat['signedContrast'].min(), 0., 0., 0.]), 
