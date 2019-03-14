@@ -93,7 +93,7 @@ def plot_chronometric(df, ax, color):
 
 def plot_water_weight_curve(weight_water, baseline, ax, xlims):
 
-    weight_water.loc[weight_water['adlib'] == 1, 'water_administered'] = 3
+    weight_water.loc[weight_water['adlib'] == 1, 'water_administered'] = 1
 
     # ################################################### #
     # use pandas plot for a stacked bar - water types
@@ -108,6 +108,13 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     wa_unstacked.columns = wa_unstacked.columns.str.replace("Citric Acid", "CA")
     wa_unstacked.columns = wa_unstacked.columns.str.replace("Hydrogel", "Hdrg")
 
+    # only one name for CA
+    wa_unstacked.columns = wa_unstacked.columns.str.replace("CA Wa 2%", "Wa 2% CA")
+
+    # order in a fixed way
+    wa_unstacked = wa_unstacked.reindex(columns=['days', 'Wa 10% Sucr', 
+    	'Wa', 'Wa 2% CA', 'Hdrg', 'Wa 15% Sucr'])
+
     # https://stackoverflow.com/questions/44250445/pandas-bar-plot-with-continuous-x-axis
     plotvar       = wa_unstacked.copy()
     plotvar.index = plotvar.days
@@ -115,7 +122,8 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     plotvar.drop(columns='days', inplace=True)
 
     # sort the columns by possible water types
-    plotvar = plotvar[sorted(list(plotvar.columns.values), reverse=True)]
+    # shell()
+    # plotvar = plotvar[sorted(list(plotvar.columns.values), reverse=True)]
     plotvar.plot(kind='bar', style='.', stacked=True, ax=ax, edgecolor="none")
     l = ax.legend(loc='lower left', prop={'size': 'xx-small'},
         bbox_to_anchor=(0., 1.02, 1., .102),
@@ -146,7 +154,7 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
                     (baseline.reference_weight[d]*0.85, baseline.reference_weight[d]*0.85), 'k--', linewidth=0.5)
         # another line for 75% baseline weight
         righty.plot((baseline.day_start[d], baseline.day_end[d]),
-                    (baseline.reference_weight[d]*0.75, baseline.reference_weight[d]*0.75), 'k:', linewidth=0.5)
+                    (baseline.reference_weight[d]*0.75, baseline.reference_weight[d]*0.75), 'k-.', linewidth=0.5)
 
     righty.grid(False)
     righty.set(xlabel='', ylabel="Weight (g)",
