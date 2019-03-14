@@ -102,7 +102,7 @@ for lidx, lab in enumerate(users):
         # CONTRAST/CHOICE HEATMAP
         # ============================================= #
 
-        plot_contrast_heatmap(behav, axes[3,0])
+        plot_contrast_heatmap(behav, axes[3,0], xlims)
 
         # ============================================= #
         # PSYCHOMETRIC FUNCTION FITS OVER TIME
