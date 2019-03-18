@@ -187,7 +187,7 @@ def plot_trialcounts_sessionlength(behav, ax, xlims):
     sns.lineplot(x="date", y="sessionlength", marker='o', color="firebrick", data=sessionlength, ax=righty)
     righty.yaxis.label.set_color("firebrick")
     righty.tick_params(axis='y', colors='firebrick')
-    righty.set(xlabel='', ylabel="Session (min)", ylim=[0,80], xlim=xlims)
+    righty.set(xlabel='', ylabel="Session (min)", ylim=[0,90], xlim=xlims)
 
     righty.grid(False)
     fix_date_axis(righty)
