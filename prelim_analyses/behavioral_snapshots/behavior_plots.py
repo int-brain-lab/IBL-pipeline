@@ -25,7 +25,7 @@ except:
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 def fit_psychfunc(df):
-    choicedat = df.groupby('signedContrast').agg({'trial':'max', 'choice2':'mean'}).reset_index()
+    choicedat = df.groupby('signedContrast').agg({'trial':'count', 'choice2':'mean'}).reset_index()
     pars, L = psy.mle_fit_psycho(choicedat.values.transpose(), P_model='erf_psycho_2gammas', 
         parstart=np.array([choicedat['signedContrast'].mean(), 20., 0.05, 0.05]), 
         parmin=np.array([choicedat['signedContrast'].min(), 0., 0., 0.]), 
@@ -93,7 +93,7 @@ def plot_chronometric(df, ax, color):
 
 def plot_water_weight_curve(weight_water, baseline, ax, xlims):
 
-    weight_water.loc[weight_water['adlib'] == 1, 'water_administered'] = 3
+    weight_water.loc[weight_water['adlib'] == 1, 'water_administered'] = 1
 
     # ################################################### #
     # use pandas plot for a stacked bar - water types
@@ -108,6 +108,13 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     wa_unstacked.columns = wa_unstacked.columns.str.replace("Citric Acid", "CA")
     wa_unstacked.columns = wa_unstacked.columns.str.replace("Hydrogel", "Hdrg")
 
+    # only one name for CA
+    wa_unstacked.columns = wa_unstacked.columns.str.replace("CA Wa 2%", "Wa 2% CA")
+
+    # order in a fixed way
+    wa_unstacked = wa_unstacked.reindex(columns=['days', 'Wa 10% Sucr', 
+    	'Wa', 'Wa 2% CA', 'Hdrg', 'Wa 15% Sucr'])
+
     # https://stackoverflow.com/questions/44250445/pandas-bar-plot-with-continuous-x-axis
     plotvar       = wa_unstacked.copy()
     plotvar.index = plotvar.days
@@ -115,7 +122,8 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     plotvar.drop(columns='days', inplace=True)
 
     # sort the columns by possible water types
-    plotvar = plotvar[sorted(list(plotvar.columns.values), reverse=True)]
+    # shell()
+    # plotvar = plotvar[sorted(list(plotvar.columns.values), reverse=True)]
     plotvar.plot(kind='bar', style='.', stacked=True, ax=ax, edgecolor="none")
     l = ax.legend(loc='lower left', prop={'size': 'xx-small'},
         bbox_to_anchor=(0., 1.02, 1., .102),
@@ -144,6 +152,9 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
         # add a line for 85% of baseline weight
         righty.plot((baseline.day_start[d], baseline.day_end[d]),
                     (baseline.reference_weight[d]*0.85, baseline.reference_weight[d]*0.85), 'k--', linewidth=0.5)
+        # another line for 75% baseline weight
+        righty.plot((baseline.day_start[d], baseline.day_end[d]),
+                    (baseline.reference_weight[d]*0.75, baseline.reference_weight[d]*0.75), 'k-.', linewidth=0.5)
 
     righty.grid(False)
     righty.set(xlabel='', ylabel="Weight (g)",
@@ -203,36 +214,40 @@ def plot_performance_rt(behav, ax, xlims):
     fix_date_axis(righty)
     fix_date_axis(ax)
 
-def plot_contrast_heatmap(behav, ax):
+def plot_contrast_heatmap(behav, ax, xlims):
 
     import copy; cmap=copy.copy(plt.get_cmap('vlag'))
     cmap.set_bad(color="w") # remove those squares
 
     # TODO: only take the mean when there is more than 1 trial (to remove bug in early sessions)
-    pp  = behav.groupby(['signedContrast', 'days']).agg({'choice2':'mean'}).reset_index()
-    pp2 = pp.pivot("signedContrast", "days",  "choice2").sort_values(by='signedContrast', ascending=False)
+    pp  = behav.groupby(['signedContrast', 'date']).agg({'choice2':'mean'}).reset_index()
+    pp2 = pp.pivot("signedContrast", "date",  "choice2").sort_values(by='signedContrast', ascending=False)
     pp2 = pp2.reindex([-100, -50, -25, -12, -6, 0, 6, 12, 25, 50, 100])
+
+    # evenly spaced date axis
+    x = pd.date_range(xlims[0], xlims[1]).to_pydatetime()
+    pp2 = pp2.reindex(columns=x)
 
     # inset axes for colorbar, to the right of plot
     axins1 = inset_axes(ax, width="5%", height="90%", loc='right',
     bbox_to_anchor=(0.15, 0., 1, 1), bbox_transform=ax.transAxes, borderpad=0,)
     # now heatmap
     sns.heatmap(pp2, linewidths=.5, ax=ax, vmin=0, vmax=1, cmap=cmap, cbar=True,
-    cbar_ax=axins1,
-    cbar_kws={'label': 'Choose right (%)', 'shrink': 0.8, 'ticks': []})
-    ax.set(ylabel="Contrast (%)")
+    cbar_ax=axins1, cbar_kws={'label': 'Choose right (%)', 'shrink': 0.8, 'ticks': []})
+    ax.set(ylabel="Contrast (%)", xlabel='')
+    fix_date_axis(ax)
 
-    # fix the date axis
-    dates  = behav.date.unique()
-    xpos   = np.arange(len(dates)) + 0.5 # the tick locations for each day
-    xticks = [i for i, dt in enumerate(dates) if pd.to_datetime(dt).weekday() is 0]
-    ax.set_xticks(np.array(xticks) + 0.5)
+    # # fix the date axis
+    # dates  = behav.date.unique()
+    # xpos   = np.arange(len(dates)) + 0.5 # the tick locations for each day
+    # xticks = [i for i, dt in enumerate(dates) if pd.to_datetime(dt).weekday() is 0]
+    # ax.set_xticks(np.array(xticks) + 0.5)
 
-    xticklabels = [pd.to_datetime(dt).strftime('%b-%d') for i, dt in enumerate(dates) if pd.to_datetime(dt).weekday() is 0]
-    ax.set_xticklabels(xticklabels)
-    for item in ax.get_xticklabels():
-        item.set_rotation(60)
-    ax.set(xlabel='')
+    # xticklabels = [pd.to_datetime(dt).strftime('%b-%d') for i, dt in enumerate(dates) if pd.to_datetime(dt).weekday() is 0]
+    # ax.set_xticklabels(xticklabels)
+    # for item in ax.get_xticklabels():
+    #     item.set_rotation(60)
+    # ax.set(xlabel='')
 
 def fix_date_axis(ax):
     # deal with date axis and make nice looking 
