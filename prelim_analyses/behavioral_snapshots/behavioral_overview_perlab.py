@@ -94,14 +94,14 @@ for lidx, lab in enumerate(users):
 
 					# CONTRAST/CHOICE HEATMAP
 					ax = plt.subplot2grid((4, sub_batch_size), (3, i))
-					plot_contrast_heatmap(behav, ax)
-
-					elapsed = time.time() - t
-					print( "Elapsed time: %f seconds.\n" %elapsed)
+					plot_contrast_heatmap(behav, ax, xlims)
 
 				except:
 					pass
 
+				elapsed = time.time() - t
+				print( "Elapsed time: %f seconds.\n" %elapsed)
+					
 				# add an xlabel with the mouse's name and sex
 				ax.set_xlabel('Mouse %s (%s)'%(mouse,
 					subjects.loc[subjects['subject_nickname'] == mouse]['sex'].item()), fontweight="bold")
