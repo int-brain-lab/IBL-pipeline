@@ -25,8 +25,8 @@ def get_weights(mousename, labname):
     # ensure that the reference weight is also added
     restrictions = pd.DataFrame.from_dict((action.WaterRestriction & 
         'subject_nickname="%s"'%mousename & 'lab_name="%s"'%labname).fetch(as_dict=True))
-    restr_summary = restrictions[['restriction_start_time', 'reference_weight']].copy()
-    restr_summary = restr_summary.rename(columns = {'restriction_start_time':'date_time', 'reference_weight':'weight'})
+	restr_summary = restrictions[['restriction_start_time', 'reference_weight']].copy()
+	restr_summary = restr_summary.rename(columns = {'restriction_start_time':'date_time', 'reference_weight':'weight'})
 
     wei = pd.concat([wei, restr_summary], ignore_index=True)
 

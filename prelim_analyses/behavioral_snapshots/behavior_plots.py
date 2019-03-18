@@ -237,7 +237,7 @@ def plot_contrast_heatmap(behav, ax, xlims):
     axins1 = inset_axes(ax, width="5%", height="90%", loc='right',
     bbox_to_anchor=(0.15, 0., 1, 1), bbox_transform=ax.transAxes, borderpad=0,)
     # now heatmap
-    sns.heatmap(pp2, linewidths=.5, ax=ax, vmin=0, vmax=1, cmap=cmap, cbar=True,
+    sns.heatmap(pp2, linewidths=0, ax=ax, vmin=0, vmax=1, cmap=cmap, cbar=True,
     cbar_ax=axins1, cbar_kws={'label': 'Choose right (%)', 'shrink': 0.8, 'ticks': []})
     ax.set(ylabel="Contrast (%)", xlabel='')
     fix_date_axis(ax)
