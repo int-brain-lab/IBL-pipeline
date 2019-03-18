@@ -108,12 +108,19 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     wa_unstacked.columns = wa_unstacked.columns.str.replace("Citric Acid", "CA")
     wa_unstacked.columns = wa_unstacked.columns.str.replace("Hydrogel", "Hdrg")
 
-    # only one name for CA
+    # only one name for CA - merge
     wa_unstacked.columns = wa_unstacked.columns.str.replace("CA Wa 2%", "Wa 2% CA")
+
+    # if duplicate, merge
+    colnames = list(wa_unstacked)
+    if colnames.count('Wa 2% CA') > 1:
+        tmp = wa_unstacked[['Wa 2% CA']].sum(axis=1).copy()               
+        wa_unstacked = wa_unstacked.drop('Wa 2% CA', 1)
+        wa_unstacked['Wa 2% CA'] = tmp     
 
     # order in a fixed way
     wa_unstacked = wa_unstacked.reindex(columns=['days', 'Wa 10% Sucr', 
-    	'Wa', 'Wa 2% CA', 'Hdrg', 'Wa 15% Sucr'])
+       'Wa', 'Wa 2% CA', 'Hdrg', 'Wa 15% Sucr'])
 
     # https://stackoverflow.com/questions/44250445/pandas-bar-plot-with-continuous-x-axis
     plotvar       = wa_unstacked.copy()
@@ -122,8 +129,6 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     plotvar.drop(columns='days', inplace=True)
 
     # sort the columns by possible water types
-    # shell()
-    # plotvar = plotvar[sorted(list(plotvar.columns.values), reverse=True)]
     plotvar.plot(kind='bar', style='.', stacked=True, ax=ax, edgecolor="none")
     l = ax.legend(loc='lower left', prop={'size': 'xx-small'},
         bbox_to_anchor=(0., 1.02, 1., .102),
