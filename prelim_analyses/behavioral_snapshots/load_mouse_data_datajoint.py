@@ -23,7 +23,7 @@ def get_weights(mousename, labname):
     wei = pd.DataFrame.from_dict(wei)
 
     # ensure that the reference weight is also added
-    restrictions = pd.DataFrame.from_dict((action.WaterRestriction & 
+    restrictions = pd.DataFrame.from_dict((action.WaterRestriction &
         'subject_nickname="%s"'%mousename & 'lab_name="%s"'%labname).fetch(as_dict=True))
 	restr_summary = restrictions[['restriction_start_time', 'reference_weight']].copy()
 	restr_summary = restr_summary.rename(columns = {'restriction_start_time':'date_time', 'reference_weight':'weight'})
@@ -87,7 +87,7 @@ def get_water_weight(mousename, labname):
         combined['days'] = combined.days.dt.days  # convert to number of days from start of the experiment
 
         # ALSO GET INFO ABOUT WATER RESTRICTIONS
-        restrictions = pd.DataFrame.from_dict((action.WaterRestriction & 
+        restrictions = pd.DataFrame.from_dict((action.WaterRestriction &
             'subject_nickname="%s"'%mousename & 'lab_name="%s"'%labname).fetch(as_dict=True))
 
         # ensure that start and end times are pandas datetimes
@@ -159,9 +159,9 @@ def get_behavior(mousename, labname, **kwargs):
 
         behav['rt'] = behav['trial_response_time'] - behav['trial_stim_on_time']
         behav['included'] = behav['trial_included']
-        
+
         # don't count RT if there was no response
-        behav.loc[behav.choice == 0, 'rt'] = np.nan 
+        behav.loc[behav.choice == 0, 'rt'] = np.nan
 
         # for trainingChoiceWorld, make sure all probabilityLeft = 0.5
         behav['probabilityLeft_block'] = behav['probabilityLeft']
