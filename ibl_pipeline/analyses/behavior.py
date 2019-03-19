@@ -74,11 +74,9 @@ class ReactionTime(dj.Computed):
     ---
     reaction_time:     blob   # reaction time for all contrasts
     """
-
-    key_source = behavior.TrialSet & \
+    key_source = PsychResults & \
         (behavior.CompleteTrialSession &
-         'stim_on_times_status = "Complete"') & \
-        PsychResults
+         'stim_on_times_status = "Complete"')
 
     def make(self, key):
         trials = behavior.TrialSet.Trial & key
@@ -87,7 +85,7 @@ class ReactionTime(dj.Computed):
                              trial_stim_contrast_right',
             rt='trial_response_time-trial_stim_on_time')
 
-        q = dj.U('signed_contrast').aggr(trials_rt, n='count(*)')
-        key['reaction_time'] = q.fetch('rt').astype(float)
+        q = dj.U('signed_contrast').aggr(trials_rt, mean_rt='avg(rt)')
+        key['reaction_time'] = q.fetch('mean_rt').astype(float)
 
         self.insert1(key)
