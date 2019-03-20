@@ -61,11 +61,19 @@ class ReactionTime(dj.Computed):
 
 
 @schema
-class TrainingStatus(dj.Computed):
+class TrainingStatus(dj.Lookup):
+    definition = """
+    training_status: varchar(32)
+    """
+    contents = zip(['training in progress', 'trained', 'ready for ephys'])
+
+
+@schema
+class SessionTrainingStatus(dj.Computed):
     definition = """
     -> PsychResults
     ---
-    training_status: enum('trained', 'in progress')
+    -> TrainingStatus
     """
 
     def make(self, key):
@@ -73,7 +81,18 @@ class TrainingStatus(dj.Computed):
         subject_key = key.copy()
         subject_key.pop('session_start_time')
 
-        key['training_status'] = 'in progress'
+        # if the protocol for the current session is a biased session,
+        # set the status to be "trained" and check up the criteria for
+        # "read for ephys"
+        task_protocol = (acquisition.Session & key).fetch1('task_protocol')
+        if 'biased' in task_protocol:
+            key['training_status'] = 'trained'
+            self.insert1(key)
+            return
+            # Criteria for "ready for ephys" status in the future
+
+        # if the current session is not a biased session,
+        key['training_status'] = 'training in progress'
         # training in progress if the animals was trained in < 3 sessions
         sessions = (acquisition.Session & subject_key).fetch('KEY')
         if len(sessions) < 3:
@@ -88,8 +107,7 @@ class TrainingStatus(dj.Computed):
             self.insert1(key)
             return
 
-        # training in progress if the current session does not
-        # have all contrasts
+        # training in progress if the current session does not have 0 contrast
         contrasts = (PsychResults & key).fetch1('signed_contrasts')
         if 0 not in contrasts:
             self.insert1(key)
@@ -98,8 +116,9 @@ class TrainingStatus(dj.Computed):
         # compute psych results of last three sessions
         trials = behavior.TrialSet.Trial & sessions_rel
         psych = utils.compute_psych_pars(trials)
-        criterion = psych['bias'] < 16 and psych['threshold'] < 19 \
-            and psych['lapse_low'] < 0.2 and psych['lapse_high'] < 0.2
+        criterion = np.abs(psych['bias']) < 16 and \
+            psych['threshold'] < 19 and \
+            psych['lapse_low'] < 0.2 and psych['lapse_high'] < 0.2
 
         if criterion:
             key['training_status'] = 'trained'
