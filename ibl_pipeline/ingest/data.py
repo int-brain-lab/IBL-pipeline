@@ -209,13 +209,15 @@ class FileRecord(dj.Computed):
     repo_name:                  varchar(255)
     relative_path:              varchar(255)
     """
-    key_source = (alyxraw.AlyxRaw & 'model="data.filerecord"').proj(record_uuid='uuid')
+    model = alyxraw.AlyxRaw & 'model="data.filerecord"'
+    record_exists = alyxraw.AlyxRaw.Field & 'fname = "exists"' & 'fvalue="True"' & model
+    key_source = (model & record_exists).proj(record_uuid='uuid')
 
     def make(self, key):
         key_fr = key.copy()
         key['uuid'] = key['record_uuid']
-        exists = grf(key, 'exists')
-        key_fr['exists'] = True if exists=="True" else False
+        key_fr['exists'] = True
+        
         dataset_uuid = grf(key, 'dataset')
         key_fr['lab_name'], key_fr['subject_nickname'], key_fr['session_start_time'], key_fr['dataset_name'] = \
             (DataSet & 'dataset_uuid="{}"'.format(dataset_uuid)).fetch1('lab_name', 'subject_nickname', 'session_start_time', 'dataset_name')

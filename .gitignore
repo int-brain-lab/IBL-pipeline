@@ -118,6 +118,8 @@ root/.one_params
 # docker related file
 docker-compose.yml
 docker-compose-local.yml
+ibl_docker_setup.sh
+
 # raw data file
 data/*
 
