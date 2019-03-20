@@ -41,7 +41,7 @@ datapath = '/Data_shortcut/'
 # print(subjects['subject_nickname'].unique())
 
 allsubjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'sex!="U"'
-                                   & action.Weighing() & action.WaterAdministration() & behavior.TrialSet()
+                                   & action.Weighing() & action.WaterAdministration()
                                    ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
 users = allsubjects['lab_name'].unique()
 print(users)
@@ -50,7 +50,7 @@ for lidx, lab in enumerate(users):
 
     # take mice from this lab only
     subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'sex!="U"' & 'lab_name="%s"'%lab)
-                                   & action.Weighing() & action.WaterAdministration() & behavior.TrialSet()
+                                   & action.Weighing() & action.WaterAdministration()
                                    ).fetch(as_dict=True, order_by=['subject_nickname']))
 
     for i, mouse in enumerate(subjects['subject_nickname']):
@@ -58,18 +58,13 @@ for lidx, lab in enumerate(users):
         # get all this mouse's data
         print(mouse)
         weight_water, baseline = get_water_weight(mouse, lab)
-        behav = get_behavior(mouse, lab)
-        # behav.to_csv(os.path.join(datapath + 'mouse_%s.csv' % (mouse)))
-
-        if weight_water.empty or behav.empty:
-            continue
 
         # ============================================= #
         # GENERAL METADATA, use DJ variable names
         # ============================================= #
 
         # MAKE THE FIGURE, divide subplots using gridspec
-        fig, axes = plt.subplots(ncols=5, nrows=4, constrained_layout=False,
+        fig, axes = plt.subplots(ncols=5, nrows=4, 
                                  gridspec_kw=dict(width_ratios=[2, 2, 1, 1, 1], height_ratios=[1, 1, 1, 1]),
                                  figsize=(13.69, 8.27))
         sns.set_palette("colorblind")  # palette for water types
@@ -91,6 +86,7 @@ for lidx, lab in enumerate(users):
         # TRIAL COUNTS AND SESSION DURATION
         # ============================================= #
 
+        behav = get_behavior(mouse, lab)
         if behav.empty:
             continue
 
@@ -106,7 +102,7 @@ for lidx, lab in enumerate(users):
         # CONTRAST/CHOICE HEATMAP
         # ============================================= #
 
-        plot_contrast_heatmap(behav, axes[3,0])
+        plot_contrast_heatmap(behav, axes[3,0], xlims)
 
         # ============================================= #
         # PSYCHOMETRIC FUNCTION FITS OVER TIME
@@ -193,9 +189,9 @@ for lidx, lab in enumerate(users):
             ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda y,pos:
                 ('{{:.{:1d}f}}'.format(int(np.maximum(-np.log10(y),0)))).format(y)))
 
-            # ============================ #
-            # WHEEL ANALYSIS - TODO
-            # ============================ #
+                # ============================ #
+                # WHEEL ANALYSIS - TODO
+                # ============================ #
 
         # clean up layout
         for j in range(3):
@@ -207,11 +203,35 @@ for lidx, lab in enumerate(users):
         # ============================================= #
 
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.pdf' % (datetime.datetime.now().strftime("%Y-%m-%d"),
+
+        # get most recent session_date for the naming of the plot
+        subj = subject.Subject & 'subject_nickname = "{}"'.format(mouse)
+        subj_with_last_session = subj.aggr(
+            behavior.TrialSet, last_behavior = 'max(session_start_time)'
+        )
+   
+        last_behavior_time = subj_with_last_session.fetch('last_behavior')
+        
+        if last_behavior_time.size > 0:
+            last_date = last_behavior_time[0].date().strftime("%Y-%m-%d")
+        else:
+            subj_with_last_weighing_water = subj.aggr(
+                action.Weighing * action.WaterAdministration, \
+                last_weighing = 'max(weighing_time)',
+                last_water = 'max(administration_time)'
+            )
+            last_weighing_time, last_water_time = subj_with_last_weighing_water.fetch1(
+                'last_weighing', 'last_water'
+            )
+            last_time = max([last_weighing_time, last_water_time])
+            last_date = last_time.date().strftime("%Y-%m-%d")
+
+        
+        fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.pdf' % (last_date,
                                                                    subjects.loc[subjects['subject_nickname'] == mouse]['lab_name'].item(),
                                                                    mouse)))
 
-        fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.png' % (datetime.datetime.now().strftime("%Y-%m-%d"),
+        fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.png' % (last_date,
                                                                          subjects.loc[
                                                                              subjects['subject_nickname'] == mouse][
                                                                              'lab_name'].item(),

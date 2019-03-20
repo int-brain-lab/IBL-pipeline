@@ -5,7 +5,13 @@ from ibl_pipeline import action, data
 
 dj.config['safemode'] = False
 
-# delete alyxraw
+# delete alyxraw except for datasets and file records
+#(alyxraw.AlyxRaw & 'model not in ("data.dataset", "data.filerecord")').delete()
+
+# delete alyxraw for data.filerecord if exists = 0
+# file_record_fields = alyxraw.AlyxRaw.Field & 'fname = "exists"' & 'fvalue = "False"'
+# keys = (alyxraw.AlyxRaw & file_record_fields).fetch('KEY')
+# (alyxraw.AlyxRaw & keys).delete()
 alyxraw.AlyxRaw.delete()
 
 # delete some shadow tables
@@ -16,4 +22,3 @@ action_shadow.WaterRestrictionUser.delete()
 action.Weighing.delete()
 action.WaterAdministration.delete()
 action.WaterRestriction.delete()
-data.FileRecord.delete()
