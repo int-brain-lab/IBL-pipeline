@@ -19,6 +19,7 @@ from IPython import embed as shell
 ## CONNECT TO datajoint
 import datajoint as dj
 from ibl_pipeline import reference, subject, action, acquisition, data, behavior
+from ibl_pipeline.analyses import behavior as behavior_analysis
 
 # loading and plotting functions
 from behavior_plots import *
@@ -101,16 +102,26 @@ for lidx, lab in enumerate(users):
 
 				elapsed = time.time() - t
 				print( "Elapsed time: %f seconds.\n" %elapsed)
-					
+
 				# add an xlabel with the mouse's name and sex
 				ax.set_xlabel('Mouse %s (%s)'%(mouse,
 					subjects.loc[subjects['subject_nickname'] == mouse]['sex'].item()), fontweight="bold")
+
+				# check whether the subject is trained based the the lastest session
+				subj = subject.Subject & 'subject_nickname="{}"'.format(mouse)
+				last_session = subj.aggr(
+					behavior.TrialSet, session_start_time='max(session_start_time)')
+				trained = behavior_analysis.SessionTrainingStatus & last_session & \
+					'training_status="trained"'
+				if len(trained):
+					ax.xaxis.label.set_color('red')
+
 
 			# FIX: after creating the whole plot, make sure xticklabels are shown
 			# https://stackoverflow.com/questions/46824263/x-ticks-disappear-when-plotting-on-subplots-sharing-x-axis
 			for i, ax in enumerate(axes):
 				[t.set_visible(True) for t in ax.get_xticklabels()]
-		
+
 			# SAVE FIGURE PER BATCH
 			fig.suptitle('Mice born on %s, %s' %(birth_date, lab))
 			try:
@@ -124,15 +135,15 @@ for lidx, lab in enumerate(users):
 				mice_str = mice_str + ', "' + imouse + '"'
 
 			mice_sub = subject.Subject & 'subject_nickname in ({})'.format(mice_str)
-			last_behavior = mice_sub.aggr(behavior.TrialSet, \
+			last_behavior = mice_sub.aggr(behavior.TrialSet,
 				last_behavior = 'max(session_start_time)').fetch('last_behavior')
-			
-			if last_behavior.size > 0:
+
+			if last_behavior.size:
 				last_date = max(last_behavior).date().strftime("%Y-%m-%d")
 			else:
-				last_weighing = mice_sub.aggr(action.Weighing, \
+				last_weighing = mice_sub.aggr(action.Weighing,
 					last_weighing = 'max(weighing_time)').fetch('last_weighing')
-				last_water = mice_sub.aggr(action.WaterAdministration, \
+				last_water = mice_sub.aggr(action.WaterAdministration,
 					last_water = 'max(administration_time)').fetch('last_water')
 				last_date = max(np.hstack([last_weighing, last_water])).date().strftime("%Y-%m-%d")
 
