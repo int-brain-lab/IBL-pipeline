@@ -343,20 +343,47 @@ class CompleteTrialSession(dj.Computed):
     # sessions that are complete with trial information and thus may be ingested
     -> acquisition.Session
     ---
-    trial_session_complete: bool              # whether the session is complete
+    stim_on_times_status: enum('Complete', 'Partial', 'Missing')
+    rep_num_status: enum('Complete', 'Missing')
+    included_status: enum('Complete', 'Missing')
     """
 
     required_datasets =  ["_ibl_trials.feedback_times.npy", "_ibl_trials.feedbackType.npy", \
-                            "_ibl_trials.intervals.npy", "_ibl_trials.repNum.npy", \
-                            "_ibl_trials.choice.npy", "_ibl_trials.response_times.npy", \
+                            "_ibl_trials.intervals.npy", "_ibl_trials.choice.npy", \
+                            "_ibl_trials.response_times.npy", \
                             "_ibl_trials.contrastLeft.npy", "_ibl_trials.contrastRight.npy", \
-                            "_ibl_trials.stimOn_times.npy", "_ibl_trials.included.npy",\
                             "_ibl_trials.probabilityLeft.npy"]
 
     def make(self, key):
         datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {'exists': 1}).fetch('dataset_name')
-        key['trial_session_complete'] = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
-        if key['trial_session_complete'] is True:
+        is_complete = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
+        if is_complete is True:
+            if '_ibl_trials.stimOn_times.npy' not in datasets:
+                key['stim_on_times_status'] = 'Missing'
+            else:
+                eID = (acquisition.Session & key).fetch1('session_uuid')
+                if key['lab_name'] == 'wittenlab':
+                    stimOn_times = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.stimOn_times', clobber=True))
+                else:        
+                    stimOn_times = ONE().load(eID, dataset_types='_ibl_trials.stimOn_times')
+                
+                if np.all(np.isnan(stimOn_times)):
+                    key['stim_on_times_status'] = 'Missing'
+                elif np.any(np.isnan(stimOn_times)):
+                    key['stim_on_times_status'] = 'Partial'
+                else:
+                    key['stim_on_times_status'] = 'Complete'
+            
+            if '_ibl_trials.repNum.npy' not in datasets:
+                key['rep_num_status'] = 'Missing'
+            else:
+                key['rep_num_status'] = 'Complete'
+            
+            if '_ibl_trials.included.npy' not in datasets:
+                key['included_status'] = 'Missing'
+            else:
+                key['included_status'] = 'Complete'
+
             self.insert1(key)
 
 
@@ -373,7 +400,7 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    key_source = CompleteTrialSession & 'trial_session_complete=1'
+    key_source = acquisition.Session & CompleteTrialSession
 
     def make(self, key):
         trial_key = key.copy()
@@ -381,37 +408,46 @@ class TrialSet(dj.Imported):
         eID = (acquisition.Session & key).fetch1('session_uuid')
 
         trials_feedback_times, trials_feedback_types, trials_intervals, \
-            trials_rep_num, trials_response_choice, trials_response_times, \
-            trials_contrast_left, trials_contrast_right, \
-            trials_included, trials_p_left = \
+            trials_response_choice, trials_response_times, \
+            trials_contrast_left, trials_contrast_right, trials_p_left = \
             ONE().load(eID, dataset_types=['_ibl_trials.feedback_times', '_ibl_trials.feedbackType',
-                                           '_ibl_trials.intervals', '_ibl_trials.repNum',
-                                           '_ibl_trials.choice', '_ibl_trials.response_times',
+                                           '_ibl_trials.intervals', '_ibl_trials.choice', 
+                                           '_ibl_trials.response_times',
                                            '_ibl_trials.contrastLeft', '_ibl_trials.contrastRight',
-                                           '_ibl_trials.included', '_ibl_trials.probabilityLeft'])
-        if key['lab_name'] == 'wittenlab':
-            trials_visual_stim_times = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.stimOn_times', clobber=True))
-        else:
-            trials_visual_stim_times = ONE().load(eID, dataset_types='_ibl_trials.stimOn_times')
+                                           '_ibl_trials.probabilityLeft'])
+        
+        stim_on_times_status, rep_num_status, included_status = (CompleteTrialSession & key).fetch1(
+                    'stim_on_times_status', 'rep_num_status', 'included_status')
+        if stim_on_times_status != 'Missing':
+            if key['lab_name'] == 'wittenlab':
+                trials_visual_stim_times = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.stimOn_times', clobber=True))
+            else:
+                trials_visual_stim_times = ONE().load(eID, dataset_types='_ibl_trials.stimOn_times')
 
-        if len(trials_visual_stim_times) == 1:
-            trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
+            if len(trials_visual_stim_times) == 1:
+                trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
+
+        if rep_num_status != 'Missing':
+            trials_rep_num = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.repNum'))
+        
+        if included_status != 'Missing':
+            trials_included = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.included'))
         
         # for debugging purpose
         # print(key['session_start_time'])
         # print(len(trials_feedback_times), len(trials_feedback_types), len(trials_intervals), \
-        #     len(trials_rep_num), len(trials_response_choice), len(trials_response_times), len(trials_contrast_left), \
-        #     len(trials_contrast_right), len(trials_visual_stim_times), len(trials_included), len(trials_p_left))
+        #      len(trials_rep_num), len(trials_response_choice), len(trials_response_times), len(trials_contrast_left), \
+        #      len(trials_contrast_right), len(trials_visual_stim_times), len(trials_included), len(trials_p_left))
         assert len(np.unique(np.array([len(trials_feedback_times),
                                        len(trials_feedback_types),
                                        len(trials_intervals),
-                                       len(trials_rep_num),
+                                       # len(trials_rep_num),
                                        len(trials_response_choice),
                                        len(trials_response_times),
                                        len(trials_contrast_left),
                                        len(trials_contrast_right),
-                                       len(trials_visual_stim_times),
-                                       len(trials_included),
+                                       # len(trials_visual_stim_times),
+                                       # len(trials_included),
                                        len(trials_p_left)
                                        ]))) == 1, 'Loaded trial files do not have the same length'
         
@@ -431,7 +467,6 @@ class TrialSet(dj.Imported):
         key['trials_start_time'] = trials_intervals[0, 0]
         key['trials_end_time'] = trials_intervals[-1, 1]
 
-       
         self.insert1(key)
 
         for idx_trial in range(len(trials_response_choice)):
@@ -461,15 +496,22 @@ class TrialSet(dj.Imported):
             trial_key['trial_end_time'] = trials_intervals[idx_trial, 1]
             trial_key['trial_response_time'] = float(trials_response_times[idx_trial])
             trial_key['trial_response_choice'] = trial_response_choice
-            trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
-            trial_key['trial_stim_on_time'] = trials_visual_stim_times[idx_trial]
+            
+            if stim_on_times_status != 'Missing':
+                trial_key['trial_stim_on_time'] = trials_visual_stim_times[idx_trial]
+
             trial_key['trial_stim_contrast_left'] = float(trial_stim_contrast_left)
             trial_key['trial_stim_contrast_right'] = float(trial_stim_contrast_right)
             trial_key['trial_feedback_time'] = float(trials_feedback_times[idx_trial])
             trial_key['trial_feedback_type'] = int(trials_feedback_types[idx_trial])
-            trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
+            
+            if rep_num_status != 'Missing':
+                trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
+
             trial_key['trial_stim_prob_left'] = float(trials_p_left[idx_trial])
-            trial_key['trial_included'] = bool(trials_included[idx_trial])
+
+            if included_status != 'Missing':
+                trial_key['trial_included'] = bool(trials_included[idx_trial])
 
             self.Trial().insert1(trial_key)
             #
@@ -494,9 +536,9 @@ class TrialSet(dj.Imported):
         trial_stim_contrast_right:  float         # contrast of the stimulus on the right
         trial_feedback_time:        double         # Time of feedback delivery (reward or not) in choiceworld
         trial_feedback_type:        tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
-        trial_rep_num:              int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
+        trial_rep_num=null:         int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
         trial_stim_prob_left:       float         # probability of the stimulus being present on left
-        trial_included:             bool          # whether the trial should be included
+        trial_included=null:        bool          # whether the trial should be included
         """
 
     class ExcludedTrial(dj.Part):

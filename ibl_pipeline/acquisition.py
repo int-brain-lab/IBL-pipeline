@@ -56,7 +56,7 @@ class Session(dj.Manual):
     session_end_time=null:      datetime	# end time
     -> [nullable] reference.Project
     -> [nullable] reference.LabLocation.proj(session_lab='lab_name', session_location='location_name')
-    task_protocol=null:         int
+    task_protocol=null:         varchar(255)
     session_type=null:		    varchar(255)	# type
     session_narrative=null:     varchar(1024)
     """
