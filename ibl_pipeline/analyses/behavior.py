@@ -95,7 +95,7 @@ class SessionTrainingStatus(dj.Computed):
         # if the current session is not a biased session,
         key['training_status'] = 'training in progress'
         # training in progress if the animals was trained in < 3 sessions
-        sessions = (acquisition.TrialSet & subject_key &
+        sessions = (behavior.TrialSet & subject_key &
                     'session_start_time <= "{}"'.format(
                         key['session_start_time'].strftime('%Y-%m-%d %H:%M:%S')
                         )).fetch('KEY')
