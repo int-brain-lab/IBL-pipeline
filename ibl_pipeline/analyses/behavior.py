@@ -1,6 +1,6 @@
 import datajoint as dj
 from .. import subject, action, acquisition, behavior
-from . import psychofit as psy
+from ..utils import psychofit as psy
 from . import analysis_utils as utils
 import numpy as np
 
