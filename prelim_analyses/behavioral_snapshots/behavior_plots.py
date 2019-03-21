@@ -17,13 +17,9 @@ import pandas as pd
 from IPython import embed as shell
 
 # import from same parent folder
-try:
-    from . import psychofit as psy # https://github.com/cortex-lab/psychofit
-except:
-    import psychofit as psy # https://github.com/cortex-lab/psychofit
-
 import datajoint as dj
 from ibl_pipeline import reference, subject, action, acquisition, data, behavior
+from ibl_pipeline.analyses import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 

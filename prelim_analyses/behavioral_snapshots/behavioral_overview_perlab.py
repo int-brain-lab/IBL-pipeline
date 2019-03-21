@@ -45,6 +45,8 @@ print(users)
 # from guido: make sure max 5 mice are plotted on a single figure
 sub_batch_size = 5
 
+# keep track of when each mouse is trained
+training_review = pd.DataFrame([])
 
 for lidx, lab in enumerate(users):
 
@@ -99,8 +101,22 @@ for lidx, lab in enumerate(users):
 						first_trained_session_time = first_trained_session.fetch1('first_trained')
 						# convert to timestamp
 						trained_date = pd.DatetimeIndex([first_trained_session_time])[0]     
+
+						# how many days to training?
+						days_to_trained = sum(behav['date'].unique() < trained_date.to_datetime64())
+
+						# keep track
+						training_review = training_review.append(pd.DataFrame({'subject_nickname': mouse, 
+						'lab_name':lab, 'trained':isTrained,
+							'days_to_trained': days_to_trained}, index=[0]), ignore_index=True)
+
 					else:
 						isTrained = False
+
+						training_review = training_review.append(pd.DataFrame({'subject_nickname': mouse, 
+							'lab_name':lab, 'trained':isTrained,
+							'days_to_trained': np.nan}, index=[0]), ignore_index=True)
+
 
 					# MAIN PLOTS
 					ax = plt.subplot2grid((4, sub_batch_size), (1, i))
@@ -169,3 +185,5 @@ for lidx, lab in enumerate(users):
 			fig.savefig(os.path.join(path + '%s_%s_batch_%s_%s.pdf'%(last_date, lab, birth_date, str(int(sub_batch/sub_batch_size)+1))))
 			fig.savefig(os.path.join(path + '%s_%s_batch_%s_%s.png'%(last_date, lab, birth_date, str(int(sub_batch/sub_batch_size)+1))))
 			plt.close(fig)
+
+training_review.to_csv(os.path.join(path + 'training_review.csv'))
