@@ -20,11 +20,11 @@ from IPython import embed as shell
 import datajoint as dj
 from ibl_pipeline import reference, subject, action, acquisition, data, behavior
 from ibl_pipeline.analyses import behavior as behavior_analysis
+from ibl_pipeline.analyses import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 # loading and plotting functions
 from behavior_plots import *
 from load_mouse_data_datajoint import * # this has all plotting functions
-import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 # folder to save plots, from DataJoint
 path = '/Figures_DataJoint_shortcuts/'
@@ -104,10 +104,10 @@ for lidx, lab in enumerate(users):
 
 					# MAIN PLOTS
 					ax = plt.subplot2grid((4, sub_batch_size), (1, i))
-					plot_trialcounts_sessionlength(behav, ax, xlims)
 					if isTrained: # indicate date at which the animal is 'trained'
 						# shell()
-						ax.axvline(trained_date, color="darkgreen")
+						ax.axvline(trained_date, color="forestgreen")
+					plot_trialcounts_sessionlength(behav, ax, xlims)
 					fix_date_axis(ax)
 					axes.append(ax)
 
@@ -115,15 +115,13 @@ for lidx, lab in enumerate(users):
 					ax = plt.subplot2grid((4, sub_batch_size), (2, i))
 					plot_performance_rt(behav, ax, xlims)
 					if isTrained: # indicate date at which the animal is 'trained'
-						ax.axvline(trained_date, color="darkgreen")
+						ax.axvline(trained_date, color="forestgreen")
 					fix_date_axis(ax)
 					axes.append(ax)
 
 					# CONTRAST/CHOICE HEATMAP
 					ax = plt.subplot2grid((4, sub_batch_size), (3, i))
 					plot_contrast_heatmap(behav, ax, xlims)
-					if isTrained: # indicate date at which the animal is 'trained'
-						ax.axvline(trained_date, color="darkgreen")
 
 				except:
 					pass
@@ -135,7 +133,7 @@ for lidx, lab in enumerate(users):
 				ax.set_xlabel('Mouse %s (%s)'%(mouse,
 					subjects.loc[subjects['subject_nickname'] == mouse]['sex'].item()), fontweight="bold")
 				if isTrained:
-					ax.xaxis.label.set_color('darkgreen')
+					ax.xaxis.label.set_color('forestgreen')
 
 			# FIX: after creating the whole plot, make sure xticklabels are shown
 			# https://stackoverflow.com/questions/46824263/x-ticks-disappear-when-plotting-on-subplots-sharing-x-axis
