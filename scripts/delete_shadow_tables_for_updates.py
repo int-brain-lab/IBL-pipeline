@@ -17,8 +17,3 @@ alyxraw.AlyxRaw.delete()
 # delete some shadow tables
 action_shadow.WaterRestrictionProcedure.delete()
 action_shadow.WaterRestrictionUser.delete()
-
-# delete some real tables
-action.Weighing.delete()
-action.WaterAdministration.delete()
-action.WaterRestriction.delete()
