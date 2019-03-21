@@ -36,6 +36,9 @@ path = '/Figures_DataJoint_shortcuts/'
 allsubjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'sex!="U"'
                                    & action.Weighing() & action.WaterAdministration()
                                    ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
+if allsubjects.empty:
+	raise ValueError('DataJoint seems to be down, please try again later')
+
 users = allsubjects['lab_name'].unique()
 print(users)
 
@@ -82,20 +85,45 @@ for lidx, lab in enumerate(users):
 					# TRIAL COUNTS AND SESSION DURATION
 					behav 	= get_behavior(mouse, lab)
 
+					# check whether the subject is trained based the the lastest session
+					subj = subject.Subject & 'subject_nickname="{}"'.format(mouse)
+					last_session = subj.aggr(
+						behavior.TrialSet, session_start_time='max(session_start_time)')
+					trained = behavior_analysis.SessionTrainingStatus & last_session & \
+						'training_status="trained"'
+					if len(trained):
+						isTrained = True
+						first_trained_session = subj.aggr(behavior_analysis.SessionTrainingStatus & \
+							                                 'training_status="trained"',
+						                                     first_trained='min(session_start_time)')
+						first_trained_session_time = first_trained_session.fetch1('first_trained')
+						# convert to timestamp
+						trained_date = pd.DatetimeIndex([first_trained_session_time])[0]     
+					else:
+						isTrained = False
+
+					# MAIN PLOTS
 					ax = plt.subplot2grid((4, sub_batch_size), (1, i))
 					plot_trialcounts_sessionlength(behav, ax, xlims)
+					if isTrained: # indicate date at which the animal is 'trained'
+						# shell()
+						ax.axvline(trained_date, color="darkgreen")
 					fix_date_axis(ax)
 					axes.append(ax)
 
 					# PERFORMANCE AND MEDIAN RT
 					ax = plt.subplot2grid((4, sub_batch_size), (2, i))
 					plot_performance_rt(behav, ax, xlims)
+					if isTrained: # indicate date at which the animal is 'trained'
+						ax.axvline(trained_date, color="darkgreen")
 					fix_date_axis(ax)
 					axes.append(ax)
 
 					# CONTRAST/CHOICE HEATMAP
 					ax = plt.subplot2grid((4, sub_batch_size), (3, i))
 					plot_contrast_heatmap(behav, ax, xlims)
+					if isTrained: # indicate date at which the animal is 'trained'
+						ax.axvline(trained_date, color="darkgreen")
 
 				except:
 					pass
@@ -106,16 +134,8 @@ for lidx, lab in enumerate(users):
 				# add an xlabel with the mouse's name and sex
 				ax.set_xlabel('Mouse %s (%s)'%(mouse,
 					subjects.loc[subjects['subject_nickname'] == mouse]['sex'].item()), fontweight="bold")
-
-				# check whether the subject is trained based the the lastest session
-				subj = subject.Subject & 'subject_nickname="{}"'.format(mouse)
-				last_session = subj.aggr(
-					behavior.TrialSet, session_start_time='max(session_start_time)')
-				trained = behavior_analysis.SessionTrainingStatus & last_session & \
-					'training_status="trained"'
-				if len(trained):
-					ax.xaxis.label.set_color('red')
-
+				if isTrained:
+					ax.xaxis.label.set_color('darkgreen')
 
 			# FIX: after creating the whole plot, make sure xticklabels are shown
 			# https://stackoverflow.com/questions/46824263/x-ticks-disappear-when-plotting-on-subplots-sharing-x-axis
@@ -138,6 +158,7 @@ for lidx, lab in enumerate(users):
 			last_behavior = mice_sub.aggr(behavior.TrialSet,
 				last_behavior = 'max(session_start_time)').fetch('last_behavior')
 
+			# include date of last change in data
 			if last_behavior.size:
 				last_date = max(last_behavior).date().strftime("%Y-%m-%d")
 			else:

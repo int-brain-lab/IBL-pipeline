@@ -22,6 +22,9 @@ try:
 except:
     import psychofit as psy # https://github.com/cortex-lab/psychofit
 
+import datajoint as dj
+from ibl_pipeline import reference, subject, action, acquisition, data, behavior
+
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 def fit_psychfunc(df):
@@ -209,6 +212,7 @@ def plot_performance_rt(behav, ax, xlims):
     righty = ax.twinx()
     sns.lineplot(x="date", y="rt", marker='o', color="firebrick", data=trialcounts, ax=righty)
 
+    # layout
     righty.yaxis.label.set_color("firebrick")
     righty.tick_params(axis='y', colors='firebrick')
     righty.set(xlabel='', ylabel="RT (s)", ylim=[0.1,10], xlim=xlims)
