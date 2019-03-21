@@ -20,7 +20,7 @@ from IPython import embed as shell
 import datajoint as dj
 from ibl_pipeline import reference, subject, action, acquisition, data, behavior
 from ibl_pipeline.analyses import behavior as behavior_analysis
-from ibl_pipeline.analyses import psychofit as psy # https://github.com/cortex-lab/psychofit
+from ibl_pipeline.utils import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 # loading and plotting functions
 from behavior_plots import *
@@ -100,20 +100,20 @@ for lidx, lab in enumerate(users):
 						                                     first_trained='min(session_start_time)')
 						first_trained_session_time = first_trained_session.fetch1('first_trained')
 						# convert to timestamp
-						trained_date = pd.DatetimeIndex([first_trained_session_time])[0]     
+						trained_date = pd.DatetimeIndex([first_trained_session_time])[0]
 
 						# how many days to training?
 						days_to_trained = sum(behav['date'].unique() < trained_date.to_datetime64())
 
 						# keep track
-						training_review = training_review.append(pd.DataFrame({'subject_nickname': mouse, 
+						training_review = training_review.append(pd.DataFrame({'subject_nickname': mouse,
 						'lab_name':lab, 'trained':isTrained,
 							'days_to_trained': days_to_trained}, index=[0]), ignore_index=True)
 
 					else:
 						isTrained = False
 
-						training_review = training_review.append(pd.DataFrame({'subject_nickname': mouse, 
+						training_review = training_review.append(pd.DataFrame({'subject_nickname': mouse,
 							'lab_name':lab, 'trained':isTrained,
 							'days_to_trained': np.nan}, index=[0]), ignore_index=True)
 

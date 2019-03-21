@@ -20,7 +20,7 @@ from IPython import embed as shell
 import datajoint as dj
 from ibl_pipeline import reference, subject, action, acquisition, data, behavior
 from ibl_pipeline.analyses import behavior as behavior_analysis
-from ibl_pipeline.analyses import psychofit as psy
+from ibl_pipeline.utils import psychofit as psy
 
 # loading and plotting functions
 from behavior_plots import *
