@@ -19,11 +19,12 @@ from IPython import embed as shell
 ## CONNECT TO datajoint
 import datajoint as dj
 from ibl_pipeline import reference, subject, action, acquisition, data, behavior
+from ibl_pipeline.analyses import behavior as behavior_analysis
+from ibl_pipeline.analyses import psychofit as psy
 
 # loading and plotting functions
 from behavior_plots import *
 from load_mouse_data_datajoint import * # this has all plotting functions
-import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 # folder to save plots, from DataJoint
 path = '/Figures_DataJoint_shortcuts/'
@@ -35,14 +36,12 @@ datapath = '/Data_shortcut/'
 
 # all mice that are alive, without those with undefined sex (i.e. example mice)
 # restrict to animals that have trial data, weights and water logged
-# subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'sex!="U"')
-#                                    & action.Weighing() & action.WaterAdministration() & behavior.TrialSet()
-#                                    ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
-# print(subjects['subject_nickname'].unique())
-
 allsubjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'sex!="U"'
                                    & action.Weighing() & action.WaterAdministration()
                                    ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
+if allsubjects.empty:
+    raise ValueError('DataJoint seems to be down, please try again later')
+
 users = allsubjects['lab_name'].unique()
 print(users)
 
@@ -82,21 +81,42 @@ for lidx, lab in enumerate(users):
         xlims = [weight_water.date.min()-timedelta(days=2), weight_water.date.max()+timedelta(days=2)]
         plot_water_weight_curve(weight_water, baseline, axes[0,0], xlims)
 
-        # ============================================= #
-        # TRIAL COUNTS AND SESSION DURATION
-        # ============================================= #
-
         behav = get_behavior(mouse, lab)
         if behav.empty:
             continue
 
+        # check whether the subject is trained based the the lastest session
+        subj = subject.Subject & 'subject_nickname="{}"'.format(mouse)
+        last_session = subj.aggr(
+            behavior.TrialSet, session_start_time='max(session_start_time)')
+        trained = behavior_analysis.SessionTrainingStatus & last_session & \
+            'training_status="trained"'
+        if len(trained):
+            isTrained = True
+            first_trained_session = subj.aggr(behavior_analysis.SessionTrainingStatus & \
+                                                 'training_status="trained"',
+                                                 first_trained='min(session_start_time)')
+            first_trained_session_time = first_trained_session.fetch1('first_trained')
+            # convert to timestamp
+            trained_date = pd.DatetimeIndex([first_trained_session_time])[0]     
+        else:
+            isTrained = False
+
+        # ============================================= #
+        # TRIAL COUNTS AND SESSION DURATION
+        # ============================================= #
+
         plot_trialcounts_sessionlength(behav, axes[1,0], xlims)
+        if isTrained: # indicate date at which the animal is 'trained'
+            axes[1,0].axvline(trained_date, color="forestgreen")
 
         # ============================================= #
         # PERFORMANCE AND MEDIAN RT
         # ============================================= #
 
         plot_performance_rt(behav, axes[2,0], xlims)
+        if isTrained: # indicate date at which the animal is 'trained'
+            axes[2,0].axvline(trained_date, color="forestgreen")
 
         # ============================================= #
         # CONTRAST/CHOICE HEATMAP
@@ -135,6 +155,9 @@ for lidx, lab in enumerate(users):
             fix_date_axis(ax)
             if pidx == 0:
                 ax.set(title=r'$\gamma + (1 -\gamma-\lambda)  (erf(\frac{x-\mu}{\sigma} + 1)/2$')
+
+            if isTrained: # indicate date at which the animal is 'trained'
+                ax.axvline(trained_date, color="forestgreen")
 
         # ============================================= #
         # LAST THREE SESSIONS
