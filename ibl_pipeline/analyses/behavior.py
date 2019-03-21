@@ -2,6 +2,7 @@ import datajoint as dj
 from .. import subject, action, acquisition, behavior
 from ..utils import psychofit as psy
 from . import analysis_utils as utils
+from datetime import datetime
 import numpy as np
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
@@ -94,7 +95,10 @@ class SessionTrainingStatus(dj.Computed):
         # if the current session is not a biased session,
         key['training_status'] = 'training in progress'
         # training in progress if the animals was trained in < 3 sessions
-        sessions = (acquisition.Session & subject_key).fetch('KEY')
+        sessions = (acquisition.TrialSet & subject_key &
+                    'session_start_time <= "{}"'.format(
+                        key['session_start_time'].strftime('%Y-%m-%d %H:%M:%S')
+                        )).fetch('KEY')
         if len(sessions) < 3:
             self.insert1(key)
             return
