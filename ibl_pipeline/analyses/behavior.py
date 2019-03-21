@@ -85,7 +85,7 @@ class SessionTrainingStatus(dj.Computed):
         # set the status to be "trained" and check up the criteria for
         # "read for ephys"
         task_protocol = (acquisition.Session & key).fetch1('task_protocol')
-        if 'biased' in task_protocol:
+        if task_protocol and 'biased' in task_protocol:
             key['training_status'] = 'trained'
             self.insert1(key)
             return
