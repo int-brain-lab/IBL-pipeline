@@ -20,11 +20,11 @@ from IPython import embed as shell
 import datajoint as dj
 from ibl_pipeline import reference, subject, action, acquisition, data, behavior
 from ibl_pipeline.analyses import behavior as behavior_analysis
+from ibl_pipeline.analyses import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 # loading and plotting functions
 from behavior_plots import *
 from load_mouse_data_datajoint import * # this has all plotting functions
-import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 # folder to save plots, from DataJoint
 path = '/Figures_DataJoint_shortcuts/'
@@ -36,12 +36,17 @@ path = '/Figures_DataJoint_shortcuts/'
 allsubjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'sex!="U"'
                                    & action.Weighing() & action.WaterAdministration()
                                    ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
+if allsubjects.empty:
+	raise ValueError('DataJoint seems to be down, please try again later')
+
 users = allsubjects['lab_name'].unique()
 print(users)
 
 # from guido: make sure max 5 mice are plotted on a single figure
 sub_batch_size = 5
 
+# keep track of when each mouse is trained
+training_review = pd.DataFrame([])
 
 for lidx, lab in enumerate(users):
 
@@ -82,7 +87,42 @@ for lidx, lab in enumerate(users):
 					# TRIAL COUNTS AND SESSION DURATION
 					behav 	= get_behavior(mouse, lab)
 
+					# check whether the subject is trained based the the lastest session
+					subj = subject.Subject & 'subject_nickname="{}"'.format(mouse)
+					last_session = subj.aggr(
+						behavior.TrialSet, session_start_time='max(session_start_time)')
+					trained = behavior_analysis.SessionTrainingStatus & last_session & \
+						'training_status="trained"'
+					if len(trained):
+						isTrained = True
+						first_trained_session = subj.aggr(behavior_analysis.SessionTrainingStatus & \
+							                                 'training_status="trained"',
+						                                     first_trained='min(session_start_time)')
+						first_trained_session_time = first_trained_session.fetch1('first_trained')
+						# convert to timestamp
+						trained_date = pd.DatetimeIndex([first_trained_session_time])[0]     
+
+						# how many days to training?
+						days_to_trained = sum(behav['date'].unique() < trained_date.to_datetime64())
+
+						# keep track
+						training_review = training_review.append(pd.DataFrame({'subject_nickname': mouse, 
+						'lab_name':lab, 'trained':isTrained,
+							'days_to_trained': days_to_trained}, index=[0]), ignore_index=True)
+
+					else:
+						isTrained = False
+
+						training_review = training_review.append(pd.DataFrame({'subject_nickname': mouse, 
+							'lab_name':lab, 'trained':isTrained,
+							'days_to_trained': np.nan}, index=[0]), ignore_index=True)
+
+
+					# MAIN PLOTS
 					ax = plt.subplot2grid((4, sub_batch_size), (1, i))
+					if isTrained: # indicate date at which the animal is 'trained'
+						# shell()
+						ax.axvline(trained_date, color="forestgreen")
 					plot_trialcounts_sessionlength(behav, ax, xlims)
 					fix_date_axis(ax)
 					axes.append(ax)
@@ -90,6 +130,8 @@ for lidx, lab in enumerate(users):
 					# PERFORMANCE AND MEDIAN RT
 					ax = plt.subplot2grid((4, sub_batch_size), (2, i))
 					plot_performance_rt(behav, ax, xlims)
+					if isTrained: # indicate date at which the animal is 'trained'
+						ax.axvline(trained_date, color="forestgreen")
 					fix_date_axis(ax)
 					axes.append(ax)
 
@@ -106,16 +148,8 @@ for lidx, lab in enumerate(users):
 				# add an xlabel with the mouse's name and sex
 				ax.set_xlabel('Mouse %s (%s)'%(mouse,
 					subjects.loc[subjects['subject_nickname'] == mouse]['sex'].item()), fontweight="bold")
-
-				# check whether the subject is trained based the the lastest session
-				subj = subject.Subject & 'subject_nickname="{}"'.format(mouse)
-				last_session = subj.aggr(
-					behavior.TrialSet, session_start_time='max(session_start_time)')
-				trained = behavior_analysis.SessionTrainingStatus & last_session & \
-					'training_status="trained"'
-				if len(trained):
-					ax.xaxis.label.set_color('red')
-
+				if isTrained:
+					ax.xaxis.label.set_color('forestgreen')
 
 			# FIX: after creating the whole plot, make sure xticklabels are shown
 			# https://stackoverflow.com/questions/46824263/x-ticks-disappear-when-plotting-on-subplots-sharing-x-axis
@@ -138,6 +172,7 @@ for lidx, lab in enumerate(users):
 			last_behavior = mice_sub.aggr(behavior.TrialSet,
 				last_behavior = 'max(session_start_time)').fetch('last_behavior')
 
+			# include date of last change in data
 			if last_behavior.size:
 				last_date = max(last_behavior).date().strftime("%Y-%m-%d")
 			else:
@@ -150,3 +185,5 @@ for lidx, lab in enumerate(users):
 			fig.savefig(os.path.join(path + '%s_%s_batch_%s_%s.pdf'%(last_date, lab, birth_date, str(int(sub_batch/sub_batch_size)+1))))
 			fig.savefig(os.path.join(path + '%s_%s_batch_%s_%s.png'%(last_date, lab, birth_date, str(int(sub_batch/sub_batch_size)+1))))
 			plt.close(fig)
+
+training_review.to_csv(os.path.join(path + 'training_review.csv'))

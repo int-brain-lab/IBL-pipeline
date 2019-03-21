@@ -17,10 +17,9 @@ import pandas as pd
 from IPython import embed as shell
 
 # import from same parent folder
-try:
-    from . import psychofit as psy # https://github.com/cortex-lab/psychofit
-except:
-    import psychofit as psy # https://github.com/cortex-lab/psychofit
+import datajoint as dj
+from ibl_pipeline import reference, subject, action, acquisition, data, behavior
+from ibl_pipeline.analyses import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -187,7 +186,7 @@ def plot_trialcounts_sessionlength(behav, ax, xlims):
     sns.lineplot(x="date", y="sessionlength", marker='o', color="firebrick", data=sessionlength, ax=righty)
     righty.yaxis.label.set_color("firebrick")
     righty.tick_params(axis='y', colors='firebrick')
-    righty.set(xlabel='', ylabel="Session (min)", ylim=[0,80], xlim=xlims)
+    righty.set(xlabel='', ylabel="Session (min)", ylim=[0,90], xlim=xlims)
 
     righty.grid(False)
     fix_date_axis(righty)
@@ -209,6 +208,7 @@ def plot_performance_rt(behav, ax, xlims):
     righty = ax.twinx()
     sns.lineplot(x="date", y="rt", marker='o', color="firebrick", data=trialcounts, ax=righty)
 
+    # layout
     righty.yaxis.label.set_color("firebrick")
     righty.tick_params(axis='y', colors='firebrick')
     righty.set(xlabel='', ylabel="RT (s)", ylim=[0.1,10], xlim=xlims)
