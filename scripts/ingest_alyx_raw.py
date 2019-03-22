@@ -34,7 +34,7 @@ for key in keys:
     ib_main.insert1(dict(uuid=key['pk'], model=key['model']))
     if ib_main.flush(skip_duplicates=True, chunksz=10000):
         logger.debug('Inserted 10000 raw tuples.')
-    
+
 if ib_main.flush(skip_duplicates=True):
     logger.debug('Inserted remaining raw tuples')
 
@@ -58,7 +58,7 @@ for key in keys:
             for value_idx, value in enumerate(field_value):
                 key_field['value_idx'] = value_idx
                 key_field['fvalue'] = str(value)
-                ib_part.insert1(key_field)   
+                ib_part.insert1(key_field)
 
         else:
             key_field['value_idx'] = 0
