@@ -9,16 +9,10 @@ dj.config['safemode'] = False
 #(alyxraw.AlyxRaw & 'model not in ("data.dataset", "data.filerecord")').delete()
 
 # delete alyxraw for data.filerecord if exists = 0
-file_record_fields = alyxraw.AlyxRaw.Field & 'fname = "exists"' & 'fvalue = "False"'
-keys = (alyxraw.AlyxRaw & file_record_fields).fetch('KEY')
-
-keys_record = [dict(record_uuid=key['uuid']) for key in keys]
-
-print('Deleting file records where exists is false...')
-for k in keys_record:
-    (data.FileRecord & k).delete_quick()
-
 print('Deleting alyxraw entries corresponding to file records...')
+file_record_fields = alyxraw.AlyxRaw.Field & \
+    'fname = "exists"' & 'fvalue = "False"'
+
 for key in file_record_fields:
     (alyxraw.AlyxRaw.Field & key).delete_quick()
 
