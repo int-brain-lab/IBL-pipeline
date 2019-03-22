@@ -107,14 +107,14 @@ for lidx, lab in enumerate(users):
 
 						# keep track
 						training_review = training_review.append(pd.DataFrame({'subject_nickname': mouse, 
-						'lab_name':lab, 'trained':isTrained,
+						'lab_name':lab, 'total_training_days':len(behav['date'].unique()), 'trained':isTrained,
 							'days_to_trained': days_to_trained}, index=[0]), ignore_index=True)
 
 					else:
 						isTrained = False
 
 						training_review = training_review.append(pd.DataFrame({'subject_nickname': mouse, 
-							'lab_name':lab, 'trained':isTrained,
+							'lab_name':lab, 'total_training_days':len(behav['date'].unique()), 'trained':isTrained,
 							'days_to_trained': np.nan}, index=[0]), ignore_index=True)
 
 

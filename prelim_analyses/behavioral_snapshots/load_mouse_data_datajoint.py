@@ -144,6 +144,10 @@ def get_behavior(mousename, labname, **kwargs):
         behav['days'] = behav.date - behav.date[0]
         behav['days'] = behav.days.dt.days
 
+        # check that the contrasts are correctly extracted
+        assert(all(behav['trial_stim_contrast_right']) >= 0)
+        assert(all(behav['trial_stim_contrast_left']) >= 0)
+
         behav['signedContrast'] = (behav['trial_stim_contrast_right'] - behav['trial_stim_contrast_left']) * 100
         behav['signedContrast'] = behav.signedContrast.astype(int)
 
