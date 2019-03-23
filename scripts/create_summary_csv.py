@@ -40,6 +40,8 @@ for ilab in reference.Lab:
             'task_protocol LIKE "{}%"'.format(protocol))
 
     summary = pd.DataFrame(summary)
+    summary.pop('lab_name')
+    summary.index += 1
     last_session_date = \
         np.max(summary['last_session_start_time']).date().strftime('%Y-%m-%d')
     summary.to_csv(
