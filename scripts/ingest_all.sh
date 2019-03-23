@@ -6,6 +6,7 @@ python delete_real_tables_for_updates.py
 python ingest_alyx_real.py
 python ingest_behavior.py
 python analyses_behavior.py
+python create_summary_csv.py
 cd ../prelim_analyses/behavioral_snapshots
 python behavioral_snapshot.py
 python behavioral_overview_perlab.py
