@@ -48,7 +48,7 @@ print(users)
 for lidx, lab in enumerate(users):
 
     # take mice from this lab only
-    subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'sex!="U"' & 'lab_name="%s"'%lab)
+    subjects = pd.DataFrame.from_dict(((subject.Subject() & 'sex!="U"' & 'lab_name="%s"'%lab)
                                    & action.Weighing() & action.WaterAdministration()
                                    ).fetch(as_dict=True, order_by=['subject_nickname']))
 
