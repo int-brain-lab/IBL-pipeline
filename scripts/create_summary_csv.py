@@ -24,7 +24,8 @@ for ilab in reference.Lab:
         session_start_time='max(session_start_time)') \
         * acquisition.Session \
         * behavior_analyses.SessionTrainingStatus
-    summary = last_sessions.proj('task_protocol').fetch(as_dict=True)
+    summary = last_sessions.proj(
+        'task_protocol', 'training_status').fetch(as_dict=True)
 
     task_protocols = last_sessions.fetch('task_protocol')
     protocols = [protocol.partition('ChoiceWorld')[0]
