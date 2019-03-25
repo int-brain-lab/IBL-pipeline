@@ -36,7 +36,7 @@ datapath = '/Data_shortcut/'
 
 # all mice that are alive, without those with undefined sex (i.e. example mice)
 # restrict to animals that have trial data, weights and water logged
-allsubjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'sex!="U"'
+allsubjects = pd.DataFrame.from_dict((subject.Subject() & 'sex!="U"'
                                    & action.Weighing() & action.WaterAdministration()
                                    ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
 if allsubjects.empty:
@@ -63,7 +63,7 @@ for lidx, lab in enumerate(users):
         # ============================================= #
 
         # MAKE THE FIGURE, divide subplots using gridspec
-        fig, axes = plt.subplots(ncols=5, nrows=4, 
+        fig, axes = plt.subplots(ncols=5, nrows=4,
                                  gridspec_kw=dict(width_ratios=[2, 2, 1, 1, 1], height_ratios=[1, 1, 1, 1]),
                                  figsize=(13.69, 8.27))
         sns.set_palette("colorblind")  # palette for water types
@@ -98,7 +98,7 @@ for lidx, lab in enumerate(users):
                                                  first_trained='min(session_start_time)')
             first_trained_session_time = first_trained_session.fetch1('first_trained')
             # convert to timestamp
-            trained_date = pd.DatetimeIndex([first_trained_session_time])[0]     
+            trained_date = pd.DatetimeIndex([first_trained_session_time])[0]
         else:
             isTrained = False
 
@@ -232,9 +232,9 @@ for lidx, lab in enumerate(users):
         subj_with_last_session = subj.aggr(
             behavior.TrialSet, last_behavior = 'max(session_start_time)'
         )
-   
+
         last_behavior_time = subj_with_last_session.fetch('last_behavior')
-        
+
         if last_behavior_time.size > 0:
             last_date = last_behavior_time[0].date().strftime("%Y-%m-%d")
         else:
@@ -249,7 +249,7 @@ for lidx, lab in enumerate(users):
             last_time = max([last_weighing_time, last_water_time])
             last_date = last_time.date().strftime("%Y-%m-%d")
 
-        
+
         fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.pdf' % (last_date,
                                                                    subjects.loc[subjects['subject_nickname'] == mouse]['lab_name'].item(),
                                                                    mouse)))
