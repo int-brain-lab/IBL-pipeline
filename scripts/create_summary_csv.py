@@ -20,8 +20,9 @@ for ilab in reference.Lab:
         continue
 
     last_sessions = subjects.aggr(
-        ingested_sessions, 'task_protocol',
+        ingested_sessions,
         session_start_time='max(session_start_time)') \
+        * acquisition.Session \
         * behavior_analyses.SessionTrainingStatus
     summary = last_sessions.fetch(as_dict=True)
 
