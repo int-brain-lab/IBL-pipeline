@@ -38,6 +38,93 @@ class PsychResults(dj.Computed):
 
 
 @schema
+class ComputationForDate(dj.Computed):
+    definition = """
+    -> behavior.TrialSet
+    ---
+    performance:            float   # percentage correct for the day
+    """
+
+    key_source = behavior.TrialSet & (acquisition.Session & 'session_number=1')
+
+    def make(self, key):
+
+        subject_key = key.copy()
+        subject_key.pop('session_start_time')
+
+        master_entry = key.copy()
+        rt = key.copy()
+
+        # get the session date
+        session_date = (behavior.TrialSet & key).proj(
+            session_date='DATE(session_start_time)').fetch1('session_date')
+
+        # get all trial sets and trials from that date
+        trial_sets_proj = (behavior.TrialSet.proj(
+            session_date='DATE(session_start_time)')) & \
+            'session_date = "{}"'.format(session_date.strftime('%Y-%m-%d'))
+        trial_sets = trial_sets_proj * (behavior.TrialSet & subject_key)
+
+        n_trials, n_correct_trials = (trial_sets & key).fetch1(
+            'n_trials', 'n_correct_trials')
+
+        master_entry['performance'] = np.divide(
+            np.sum(n_correct_trials), np.sum(n_trials))
+
+        self.insert1(master_entry)
+
+        # compute psych results for all trials
+        trials = behavior.TrialSet.Trial & trial_sets
+
+        task_protocol = (acquisition.Session & key).fetch1('task_protocol')
+
+        if 'training' in task_protocol:
+            psych_results_tmp = utils.compute_psych_pars(trials)
+            psych_results = {**key, **psych_results_tmp}
+            psych_results['prob_left'] = 0.5
+            psych_results['prob_left_block'] = 1
+            self.PsychResults.insert1(psych_results)
+
+        elif 'biased' in task_protocol:
+            prob_lefts = dj.U('trial_stim_prob_left') & trials
+
+            for ileft, prob_left in enumerate(prob_lefts):
+                trials_sub = trials & prob_left
+                # compute psych results
+                psych_results_tmp = utils.compute_psych_pars(trials_sub)
+                psych_results = {**key, **psych_results_tmp, **prob_left}
+                psych_results['prob_left_block'] = ileft
+                self.PsychResults.insert1(psych_results)
+                # compute reaction time
+                rt['prob_left_block'] = ileft
+                rt['reaction_time'] = utils.compute_reaction_time(trials_sub)
+                self.ReactionTime.insert1(rt)
+
+    class PsychResults(dj.Part):
+        definition = """
+        -> master
+        prob_left_block:        int     # probability left block number
+        ---
+        prob_left:              float   # 0.5 for trainingChoiceWorld, actual value for biasedChoiceWorld
+        signed_contrasts:       blob    # contrasts used in this session, negative when on the left
+        n_trials_stim:          blob    # number of trials for each contrast
+        n_trials_stim_right:    blob    # number of reporting "right" trials for each contrast
+        prob_choose_right:      blob    # probability of choosing right, same size as contrasts
+        threshold:              float
+        bias:                   float
+        lapse_low:              float
+        lapse_high:             float
+        """
+
+    class ReactionTime(dj.Part):
+        definition = """
+        -> master.PsychResults
+        ---
+        reaction_time: blob   # reaction time for all contrasts
+        """
+
+
+@schema
 class ReactionTime(dj.Computed):
     definition = """
     -> PsychResults
@@ -50,14 +137,7 @@ class ReactionTime(dj.Computed):
 
     def make(self, key):
         trials = behavior.TrialSet.Trial & key
-        trials_rt = trials.proj(
-            signed_contrast='trial_stim_contrast_left- \
-                             trial_stim_contrast_right',
-            rt='trial_response_time-trial_stim_on_time')
-
-        q = dj.U('signed_contrast').aggr(trials_rt, mean_rt='avg(rt)')
-        key['reaction_time'] = q.fetch('mean_rt').astype(float)
-
+        key['reaction_time'] = utils.compute_reaction_time(trials)
         self.insert1(key)
 
 
