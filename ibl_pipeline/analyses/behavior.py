@@ -78,14 +78,7 @@ class ComputationForDate(dj.Computed):
 
         task_protocol = (acquisition.Session & key).fetch1('task_protocol')
 
-        if 'training' in task_protocol:
-            psych_results_tmp = utils.compute_psych_pars(trials)
-            psych_results = {**key, **psych_results_tmp}
-            psych_results['prob_left'] = 0.5
-            psych_results['prob_left_block'] = 1
-            self.PsychResults.insert1(psych_results)
-
-        elif 'biased' in task_protocol:
+        if 'biased' in task_protocol:
             prob_lefts = dj.U('trial_stim_prob_left') & trials
 
             for ileft, prob_left in enumerate(prob_lefts):
@@ -99,6 +92,17 @@ class ComputationForDate(dj.Computed):
                 rt['prob_left_block'] = ileft
                 rt['reaction_time'] = utils.compute_reaction_time(trials_sub)
                 self.ReactionTime.insert1(rt)
+        else:
+            psych_results_tmp = utils.compute_psych_pars(trials)
+            psych_results = {**key, **psych_results_tmp}
+            psych_results['prob_left'] = 0.5
+            psych_results['prob_left_block'] = 1
+            self.PsychResults.insert1(psych_results)
+
+            # compute reaction time
+            rt['prob_left_block'] = 1
+            rt['reaction_time'] = utils.compute_reaction_time(trials)
+            self.ReactionTime.insert1(rt)
 
     class PsychResults(dj.Part):
         definition = """
