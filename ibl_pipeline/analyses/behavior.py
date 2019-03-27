@@ -49,6 +49,7 @@ class ComputationForDate(dj.Computed):
 
     def make(self, key):
 
+        print(key)
         subject_key = key.copy()
         subject_key.pop('session_start_time')
 
@@ -82,10 +83,13 @@ class ComputationForDate(dj.Computed):
             prob_lefts = dj.U('trial_stim_prob_left') & trials
 
             for ileft, prob_left in enumerate(prob_lefts):
-                trials_sub = trials & prob_left
+                p_left = prob_left['trial_stim_prob_left']
+                trials_sub = trials & \
+                    'ABS(trial_stim_prob_left - {})<1e-6'.format(p_left)
                 # compute psych results
                 psych_results_tmp = utils.compute_psych_pars(trials_sub)
-                psych_results = {**key, **psych_results_tmp, **prob_left}
+                psych_results = {**key, **psych_results_tmp}
+                psych_results['prob_left'] = prob_left['trial_stim_prob_left']
                 psych_results['prob_left_block'] = ileft
                 self.PsychResults.insert1(psych_results)
                 # compute reaction time
