@@ -79,7 +79,7 @@ class ComputationForDate(dj.Computed):
 
         task_protocol = (acquisition.Session & key).fetch1('task_protocol')
 
-        if 'biased' in task_protocol:
+        if task_protocol and 'biased' in task_protocol:
             prob_lefts = dj.U('trial_stim_prob_left') & trials
 
             for ileft, prob_left in enumerate(prob_lefts):
