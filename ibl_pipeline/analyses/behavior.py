@@ -49,7 +49,6 @@ class ComputationForDate(dj.Computed):
 
     def make(self, key):
 
-        print(key)
         subject_key = key.copy()
         subject_key.pop('session_start_time')
 
