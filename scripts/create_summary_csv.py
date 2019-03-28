@@ -33,9 +33,9 @@ for ilab in reference.Lab:
     for i, entry in enumerate(summary):
         subj = subject.Subject & entry
         protocol = protocols[i]
-        entry['last_session_start_time'] = entry.pop('session_start_time')
-        entry['current_task_protocol'] = entry.pop('task_protocol')
-        entry['current_training_status'] = entry.pop('training_status')
+        entry['lastest_session_start_time'] = entry.pop('session_start_time')
+        entry['latest_task_protocol'] = entry.pop('task_protocol')
+        entry['latest_training_status'] = entry.pop('training_status')
         # get all sessions with this protocol
         entry['n_sessions'] = len(
             ingested_sessions & subj &
