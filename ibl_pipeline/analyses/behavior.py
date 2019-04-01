@@ -58,10 +58,10 @@ class BehavioralSummaryByDate(dj.Computed):
         trial_sets_proj = (behavior.TrialSet.proj(
             session_date='DATE(session_start_time)')) & key
 
-        trial_sets = behavior.TrialSet & (behavior.TrialSet * trial_sets_proj)
+        trial_sets_keys = (behavior.TrialSet * trial_sets_proj).fetch('KEY')
 
         n_trials, n_correct_trials = \
-            (behavior.TrialSet & trial_sets).fetch(
+            (behavior.TrialSet & trial_sets_keys).fetch(
                 'n_trials', 'n_correct_trials')
 
         master_entry['performance'] = np.divide(
@@ -70,11 +70,9 @@ class BehavioralSummaryByDate(dj.Computed):
         self.insert1(master_entry)
 
         # compute psych results for all trials
-        trials = behavior.TrialSet.Trial & trial_sets
+        trials = behavior.TrialSet.Trial & trial_sets_keys
 
-        trial_sets_key = trial_sets.fetch('KEY')
-
-        task_protocol = (acquisition.Session & trial_sets_key).fetch1(
+        task_protocol = (acquisition.Session & trial_sets_keys[0]).fetch1(
             'task_protocol')
 
         if task_protocol and 'biased' in task_protocol:
