@@ -2,13 +2,6 @@
 Utility functions for ingestion
 '''
 import traceback
-import datajoint as dj
-from ibl_pipeline.ingest import reference as reference_ingest
-from ibl_pipeline.ingest import subject as subject_ingest
-from ibl_pipeline.ingest import action as action_ingest
-from ibl_pipeline.ingest import acquisition as acquisition_ingest
-from ibl_pipeline.ingest import data as data_ingest
-from ibl_pipeline import reference, subject, action, acquisition, data
 
 
 def copy_table(target_schema, src_schema, table_name, fresh=False):
