@@ -45,7 +45,7 @@ for ilab in reference.Lab:
     summary.pop('lab_name')
     summary.index += 1
     last_session_date = \
-        np.max(summary['last_session_start_time']).date().strftime('%Y-%m-%d')
+        np.max(summary['lastest_session_start_time']).date().strftime('%Y-%m-%d')
     summary.to_csv(
         '/src/IBL-pipeline/snapshots/{}_{}_summary.csv'.format(
             last_session_date, ilab['lab_name']))
