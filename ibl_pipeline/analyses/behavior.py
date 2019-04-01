@@ -38,35 +38,29 @@ class PsychResults(dj.Computed):
 
 
 @schema
-class ComputationForDate(dj.Computed):
+class BehavioralSummaryByDate(dj.Computed):
     definition = """
-    -> behavior.TrialSet
+    -> subject.Subject
+    session_date:      date    # date of recording
     ---
-    performance:            float   # percentage correct for the day
+    performance:       float   # percentage correct for the day
     """
 
-    key_source = behavior.TrialSet & (acquisition.Session & 'session_number=1')
+    key_source = dj.U('lab_name', 'subject_nickname', 'session_date') \
+        & behavior.TrialSet.proj(session_date='DATE(session_start_time)')
 
     def make(self, key):
-
-        subject_key = key.copy()
-        subject_key.pop('session_start_time')
 
         master_entry = key.copy()
         rt = key.copy()
 
-        # get the session date
-        session_date = (behavior.TrialSet & key).proj(
-            session_date='DATE(session_start_time)').fetch1('session_date')
-
         # get all trial sets and trials from that date
-        trial_sets_proj = (behavior.TrialSet.proj(
-            session_date='DATE(session_start_time)')) & \
-            'session_date = "{}"'.format(session_date.strftime('%Y-%m-%d'))
-        trial_sets = trial_sets_proj * (behavior.TrialSet & subject_key)
+        trial_sets = (behavior.TrialSet.proj(
+            session_date='DATE(session_start_time)')) & key
 
-        n_trials, n_correct_trials = (trial_sets & key).fetch1(
-            'n_trials', 'n_correct_trials')
+        n_trials, n_correct_trials = \
+            (behavior.TrialSet & trial_sets & key).fetch1(
+                'n_trials', 'n_correct_trials')
 
         master_entry['performance'] = np.divide(
             np.sum(n_correct_trials), np.sum(n_trials))
@@ -153,7 +147,10 @@ class TrainingStatus(dj.Lookup):
     definition = """
     training_status: varchar(32)
     """
-    contents = zip(['training in progress', 'trained', 'ready for ephys'])
+    contents = zip(['untrainable',
+                    'training in progress',
+                    'trained',
+                    'ready for ephys'])
 
 
 @schema
@@ -240,9 +237,10 @@ class SessionTrainingStatus(dj.Computed):
         -> master
         ---
         cum_performance:            float   # percentage correct in this session
+        cum_performance_easy:       float   # percentage correct on easy trials 0.5 and 1
         cum_signed_contrasts:       blob    # contrasts used in this session, negative when on the left
         cum_n_trials_stim:          blob    # number of trials for each contrast
-        cum_n_trials_stim_right:    blob   # number of reporting "right" trials for each contrast
+        cum_n_trials_stim_right:    blob    # number of reporting "right" trials for each contrast
         cum_prob_choose_right:      blob    # probability of choosing right, same size as contrasts
         cum_threshold:              float
         cum_bias:                   float
