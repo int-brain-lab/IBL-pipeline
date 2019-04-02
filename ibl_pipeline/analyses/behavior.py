@@ -15,9 +15,10 @@ class PsychResults(dj.Computed):
     -> behavior.TrialSet
     ---
     performance:            float   # percentage correct in this session
+    performance_easy:       float   # percentage correct of easy trials in this session
     signed_contrasts:       blob    # contrasts used in this session, negative when on the left
     n_trials_stim:          blob    # number of trials for each contrast
-    n_trials_stim_right:    blob   # number of reporting "right" trials for each contrast
+    n_trials_stim_right:    blob    # number of reporting "right" trials for each contrast
     prob_choose_right:      blob    # probability of choosing right, same size as contrasts
     threshold:              float
     bias:                   float
@@ -44,6 +45,7 @@ class BehavioralSummaryByDate(dj.Computed):
     session_date:      date    # date of recording
     ---
     performance:       float   # percentage correct for the day
+    performance_easy:  float   # percentage correct of the easy trials for the day
     """
 
     key_source = dj.U('lab_name', 'subject_nickname', 'session_date') \
@@ -84,6 +86,7 @@ class BehavioralSummaryByDate(dj.Computed):
                     'ABS(trial_stim_prob_left - {})<1e-6'.format(p_left)
                 # compute psych results
                 psych_results_tmp = utils.compute_psych_pars(trials_sub)
+                psych_results_tmp.pop('performance_easy')
                 psych_results = {**key, **psych_results_tmp}
                 psych_results['prob_left'] = prob_left['trial_stim_prob_left']
                 psych_results['prob_left_block'] = ileft
@@ -94,6 +97,7 @@ class BehavioralSummaryByDate(dj.Computed):
                 self.ReactionTime.insert1(rt)
         else:
             psych_results_tmp = utils.compute_psych_pars(trials)
+            psych_results_tmp.pop('performance_easy')
             psych_results = {**key, **psych_results_tmp}
             psych_results['prob_left'] = 0.5
             psych_results['prob_left_block'] = 1
@@ -177,7 +181,8 @@ class SessionTrainingStatus(dj.Computed):
             key['training_status'] = 'trained'
             self.insert1(key)
             return
-            # Criteria for "ready for ephys" status in the future
+            # Criteria for "ready for ephys" status
+
 
         # if the current session is not a biased session,
         key['training_status'] = 'training in progress'
