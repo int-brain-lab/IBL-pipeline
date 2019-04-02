@@ -10,7 +10,7 @@ dj.config['safemode'] = False
 if len(action_ingest.Weighing()):
     action.Weighing.delete()
 
-if len(action_ingest.WaterAdiminitration()):
+if len(action_ingest.WaterAdministration()):
     action.WaterAdministration.delete()
 
 if len(action_ingest.WaterRestriction()):
