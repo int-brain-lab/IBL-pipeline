@@ -48,7 +48,7 @@ def compute_psych_pars(trials):
     return {
         'signed_contrasts': signed_contrasts,
         'n_trials_stim': n_trials_stim,
-        'n_trials_stim_right': 'n_trials_stim_right',
+        'n_trials_stim_right': n_trials_stim_right,
         'prob_choose_right': prob_choose_right,
         'bias': pars[0],
         'threshold': pars[1],
