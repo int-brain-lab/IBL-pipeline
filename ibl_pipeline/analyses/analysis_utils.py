@@ -30,18 +30,6 @@ def compute_psych_pars(trials):
         parmin=np.array([np.min(contrasts), 0., 0., 0.]),
         parmax=np.array([np.max(contrasts), 100., 1, 1]))
 
-    # compute the performance for easy trials
-    trials_easy = trials & 'ABS(signed_contrast)>0.499'
-    trials_response_choice, trials_signed_contrast = \
-        trials_easy.fetch('trial_response_choice', 'signed_contrast')
-    n_correct_trials_easy = \
-        np.sum((trials_response_choice == "CCW") &
-               (trials_signed_contrast > 0)) + \
-        np.sum((trials_response_choice == "CW") &
-               (trials_signed_contrast < 0))
-
-    performance_easy = n_correct_trials_easy/len(trials_easy)
-
     return {
         'signed_contrasts': signed_contrasts,
         'n_trials_stim': n_trials_stim,
@@ -50,9 +38,29 @@ def compute_psych_pars(trials):
         'bias': pars[0],
         'threshold': pars[1],
         'lapse_low': pars[2],
-        'lapse_high': pars[3],
-        'performance_easy': performance_easy
+        'lapse_high': pars[3]
     }
+
+
+def compute_performance_easy(trials):
+    trials = trials.proj(
+        'trial_response_choice',
+        signed_contrast='trial_stim_contrast_right \
+        - trial_stim_contrast_left')
+
+    trials_easy = trials & 'ABS(signed_contrast)>0.499'
+
+    if not len(trials_easy):
+        return
+    else:
+        trials_response_choice, trials_signed_contrast = \
+            trials_easy.fetch('trial_response_choice', 'signed_contrast')
+        n_correct_trials_easy = \
+            np.sum((trials_response_choice == "CCW") &
+                   (trials_signed_contrast > 0)) + \
+            np.sum((trials_response_choice == "CW") &
+                   (trials_signed_contrast < 0))
+        return n_correct_trials_easy/len(trials_easy)
 
 
 def compute_reaction_time(trials):

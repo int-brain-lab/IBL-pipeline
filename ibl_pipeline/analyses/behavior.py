@@ -15,7 +15,7 @@ class PsychResults(dj.Computed):
     -> behavior.TrialSet
     ---
     performance:            float   # percentage correct in this session
-    performance_easy:       float   # percentage correct of easy trials in this session
+    performance_easy=null:  float   # percentage correct of easy trials in this session
     signed_contrasts:       blob    # contrasts used in this session, negative when on the left
     n_trials_stim:          blob    # number of trials for each contrast
     n_trials_stim_right:    blob    # number of reporting "right" trials for each contrast
@@ -32,6 +32,10 @@ class PsychResults(dj.Computed):
         psych_results_tmp = utils.compute_psych_pars(trials)
         psych_results = {**key, **psych_results_tmp}
 
+        performance_easy = utils.compute_performance_easy(trials)
+        if performance_easy:
+            psych_results['performance_easy'] = performance_easy
+
         n_trials, n_correct_trials = (behavior.TrialSet & key).fetch1(
             'n_trials', 'n_correct_trials')
         psych_results['performance'] = n_correct_trials/n_trials
@@ -42,10 +46,10 @@ class PsychResults(dj.Computed):
 class BehavioralSummaryByDate(dj.Computed):
     definition = """
     -> subject.Subject
-    session_date:      date    # date of recording
+    session_date:           date    # date of recording
     ---
-    performance:       float   # percentage correct for the day
-    performance_easy:  float   # percentage correct of the easy trials for the day
+    performance:            float   # percentage correct for the day
+    performance_easy=null:  float   # percentage correct of the easy trials for the day
     """
 
     key_source = dj.U('lab_name', 'subject_nickname', 'session_date') \
@@ -66,14 +70,20 @@ class BehavioralSummaryByDate(dj.Computed):
             (behavior.TrialSet & trial_sets_keys).fetch(
                 'n_trials', 'n_correct_trials')
 
+        trials = behavior.TrialSet.Trial & trial_sets_keys
+
+        # compute the performance for easy trials
+        performance_easy = utils.compute_performance_easy(trials)
+        if performance_easy:
+            master_entry['performance_easy'] = performance_easy
+
+        # compute the performance for all trials
         master_entry['performance'] = np.divide(
             np.sum(n_correct_trials), np.sum(n_trials))
 
         self.insert1(master_entry)
 
         # compute psych results for all trials
-        trials = behavior.TrialSet.Trial & trial_sets_keys
-
         task_protocol = (acquisition.Session & trial_sets_keys[0]).fetch1(
             'task_protocol')
 
@@ -86,7 +96,6 @@ class BehavioralSummaryByDate(dj.Computed):
                     'ABS(trial_stim_prob_left - {})<1e-6'.format(p_left)
                 # compute psych results
                 psych_results_tmp = utils.compute_psych_pars(trials_sub)
-                psych_results_tmp.pop('performance_easy')
                 psych_results = {**key, **psych_results_tmp}
                 psych_results['prob_left'] = prob_left['trial_stim_prob_left']
                 psych_results['prob_left_block'] = ileft
@@ -97,7 +106,6 @@ class BehavioralSummaryByDate(dj.Computed):
                 self.ReactionTime.insert1(rt)
         else:
             psych_results_tmp = utils.compute_psych_pars(trials)
-            psych_results_tmp.pop('performance_easy')
             psych_results = {**key, **psych_results_tmp}
             psych_results['prob_left'] = 0.5
             psych_results['prob_left_block'] = 1
@@ -183,7 +191,6 @@ class SessionTrainingStatus(dj.Computed):
             return
             # Criteria for "ready for ephys" status
 
-
         # if the current session is not a biased session,
         key['training_status'] = 'training in progress'
         # training in progress if the animals was trained in < 3 sessions
@@ -245,7 +252,7 @@ class SessionTrainingStatus(dj.Computed):
         -> master
         ---
         cum_performance:            float   # percentage correct in this session
-        cum_performance_easy:       float   # percentage correct on easy trials 0.5 and 1
+        cum_performance_easy=null:  float   # percentage correct on easy trials 0.5 and 1
         cum_signed_contrasts:       blob    # contrasts used in this session, negative when on the left
         cum_n_trials_stim:          blob    # number of trials for each contrast
         cum_n_trials_stim_right:    blob    # number of reporting "right" trials for each contrast
