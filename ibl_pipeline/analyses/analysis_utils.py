@@ -2,6 +2,7 @@ import datajoint as dj
 from .. import subject, action, acquisition, behavior
 from ..utils import psychofit as psy
 import numpy as np
+import pandas as pd
 
 
 def compute_psych_pars(trials):
@@ -19,7 +20,21 @@ def compute_psych_pars(trials):
     signed_contrasts = signed_contrasts.astype(float)
     n_trials_stim = n_trials_stim.astype(int)
     n_trials_stim_right = q_right.fetch('n_right').astype(int)
-    prob_choose_right = np.divide(n_trials_stim_right, n_trials_stim)
+
+    # merge left 0 and right 0
+    data = pd.DataFrame({
+        'signed_contrasts': signed_contrasts,
+        'n_trials_stim': n_trials_stim,
+        'n_trials_stim_right': n_trials_stim_right
+    })
+    data = data.groupby('signed_contrasts').sum()
+
+    signed_contrasts = np.unique(signed_contrasts)
+    n_trials_stim_right = data['n_trials_stim_right']
+    n_trials_stim = data['n_trials_stim']
+
+    prob_choose_right = np.divide(n_trials_stim_right,
+                                  n_trials_stim)
 
     # convert to percentage and fit psychometric function
     contrasts = signed_contrasts * 100
@@ -33,7 +48,7 @@ def compute_psych_pars(trials):
     return {
         'signed_contrasts': signed_contrasts,
         'n_trials_stim': n_trials_stim,
-        'n_trials_stim_right': n_trials_stim_right,
+        'n_trials_stim_right': 'n_trials_stim_right',
         'prob_choose_right': prob_choose_right,
         'bias': pars[0],
         'threshold': pars[1],

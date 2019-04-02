@@ -210,9 +210,12 @@ class SessionTrainingStatus(dj.Computed):
             self.insert1(key)
             return
 
-        # training in progress if the current session does not have 0 contrast
-        contrasts = (PsychResults & key).fetch1('signed_contrasts')
-        if 0 not in contrasts:
+        # training in progress if the current session does not
+        # have low contrasts
+        contrasts = np.absolute(
+            (PsychResults & key).fetch1('signed_contrasts'))
+        if not (0 in contrasts and
+                np.sum((contrasts < 0.062) and (contrasts > 0.001))):
             self.insert1(key)
             return
 
