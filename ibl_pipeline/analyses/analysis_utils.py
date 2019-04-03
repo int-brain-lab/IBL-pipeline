@@ -2,24 +2,39 @@ import datajoint as dj
 from .. import subject, action, acquisition, behavior
 from ..utils import psychofit as psy
 import numpy as np
+import pandas as pd
 
 
 def compute_psych_pars(trials):
 
-    trials = trials * trials.proj(
+    trials = trials.proj(
+        'trial_response_choice',
         signed_contrast='trial_stim_contrast_right \
         - trial_stim_contrast_left')
     q_all = dj.U('signed_contrast').aggr(trials, n='count(*)')
-    q_right = (dj.U('signed_contrast') & trials).aggr(
-        trials & 'trial_response_choice="CCW"', n='count(*)',
-        keep_all_rows=True)
+    q_right = dj.U('signed_contrast').aggr(
+        trials, n_right='sum(trial_response_choice="CCW")')
     signed_contrasts, n_trials_stim = q_all.fetch(
         'signed_contrast', 'n'
     )
     signed_contrasts = signed_contrasts.astype(float)
     n_trials_stim = n_trials_stim.astype(int)
-    n_trials_stim_right = q_right.fetch('n').astype(int)
-    prob_choose_right = np.divide(n_trials_stim_right, n_trials_stim)
+    n_trials_stim_right = q_right.fetch('n_right').astype(int)
+
+    # merge left 0 and right 0
+    data = pd.DataFrame({
+        'signed_contrasts': signed_contrasts,
+        'n_trials_stim': n_trials_stim,
+        'n_trials_stim_right': n_trials_stim_right
+    })
+    data = data.groupby('signed_contrasts').sum()
+
+    signed_contrasts = np.unique(signed_contrasts)
+    n_trials_stim_right = data['n_trials_stim_right']
+    n_trials_stim = data['n_trials_stim']
+
+    prob_choose_right = np.divide(n_trials_stim_right,
+                                  n_trials_stim)
 
     # convert to percentage and fit psychometric function
     contrasts = signed_contrasts * 100
@@ -40,3 +55,34 @@ def compute_psych_pars(trials):
         'lapse_low': pars[2],
         'lapse_high': pars[3]
     }
+
+
+def compute_performance_easy(trials):
+    trials = trials.proj(
+        'trial_response_choice',
+        signed_contrast='trial_stim_contrast_right \
+        - trial_stim_contrast_left')
+
+    trials_easy = trials & 'ABS(signed_contrast)>0.499'
+
+    if not len(trials_easy):
+        return
+    else:
+        trials_response_choice, trials_signed_contrast = \
+            trials_easy.fetch('trial_response_choice', 'signed_contrast')
+        n_correct_trials_easy = \
+            np.sum((trials_response_choice == "CCW") &
+                   (trials_signed_contrast > 0)) + \
+            np.sum((trials_response_choice == "CW") &
+                   (trials_signed_contrast < 0))
+        return n_correct_trials_easy/len(trials_easy)
+
+
+def compute_reaction_time(trials):
+    trials_rt = trials.proj(
+            signed_contrast='trial_stim_contrast_left- \
+                             trial_stim_contrast_right',
+            rt='trial_response_time-trial_stim_on_time')
+
+    q = dj.U('signed_contrast').aggr(trials_rt, mean_rt='avg(rt)')
+    return q.fetch('mean_rt').astype(float)
