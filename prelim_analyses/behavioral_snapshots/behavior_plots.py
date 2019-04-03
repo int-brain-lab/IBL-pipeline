@@ -12,22 +12,22 @@ import scipy as sp
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import timedelta
-import seaborn as sns 
+import seaborn as sns
 import pandas as pd
 from IPython import embed as shell
 
 # import from same parent folder
 import datajoint as dj
 from ibl_pipeline import reference, subject, action, acquisition, data, behavior
-from ibl_pipeline.analyses import psychofit as psy # https://github.com/cortex-lab/psychofit
+from ibl_pipeline.utils import psychofit as psy # https://github.com/cortex-lab/psychofit
 
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 def fit_psychfunc(df):
     choicedat = df.groupby('signedContrast').agg({'trial':'count', 'choice2':'mean'}).reset_index()
-    pars, L = psy.mle_fit_psycho(choicedat.values.transpose(), P_model='erf_psycho_2gammas', 
-        parstart=np.array([choicedat['signedContrast'].mean(), 20., 0.05, 0.05]), 
-        parmin=np.array([choicedat['signedContrast'].min(), 0., 0., 0.]), 
+    pars, L = psy.mle_fit_psycho(choicedat.values.transpose(), P_model='erf_psycho_2gammas',
+        parstart=np.array([choicedat['signedContrast'].mean(), 20., 0.05, 0.05]),
+        parmin=np.array([choicedat['signedContrast'].min(), 0., 0., 0.]),
         parmax=np.array([choicedat['signedContrast'].max(), 100., 1, 1]))
     df2 = {'bias':pars[0],'threshold':pars[1], 'lapselow':pars[2], 'lapsehigh':pars[3]}
 
@@ -36,24 +36,24 @@ def fit_psychfunc(df):
 def plot_psychometric(df, color='black', ax=None, **kwargs):
     """
     Plots psychometric data for a given DataFrame of behavioural trials
-    
+
     If the data contains more than six different contrasts (or > three per side)
-    the data are fit with an erf function.  The x-axis is percent contrast and 
-    the y-axis is the proportion of 'rightward choices', i.e. trials where the 
+    the data are fit with an erf function.  The x-axis is percent contrast and
+    the y-axis is the proportion of 'rightward choices', i.e. trials where the
     subject turned the wheel clockwise to threshold.
-    
+
     Example:
         df = alf.load_behaviour('2018-09-11_1_Mouse1', r'\\server\SubjectData')
         plot_psychometric(df)
-        
+
     Args:
         df (DataFrame): DataFrame constructed from an ALF trials object.
         ax (Axes): Axes to plot to.  If None, a new figure is created.
-        
+
     Returns:
         ax (Axes): The plot axes
     """
-    
+
     if len(df['signedContrast'].unique()) > 4:
         df2 = df.groupby(['signedContrast']).agg({'choice':'count', 'choice2':'mean'}).reset_index()
         df2.rename(columns={"choice2": "fraction", "choice": "ntrials"}, inplace=True)
@@ -61,7 +61,7 @@ def plot_psychometric(df, color='black', ax=None, **kwargs):
         pars, L = psy.mle_fit_psycho(df2.transpose().values, # extract the data from the df
                                      P_model='erf_psycho_2gammas',
                                      parstart=np.array([df2['signedContrast'].mean(), 20., 0.05, 0.05]),
-                                     parmin=np.array([df2['signedContrast'].min(), 0., 0., 0.]), 
+                                     parmin=np.array([df2['signedContrast'].min(), 0., 0., 0.]),
                                      parmax=np.array([df2['signedContrast'].max(), 100., 1, 1]))
         sns.lineplot(np.arange(-100,100), psy.erf_psycho_2gammas( pars, np.arange(-100,100)), color=color, ax=ax)
 
@@ -113,12 +113,12 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     # if duplicate, merge
     colnames = list(wa_unstacked)
     if colnames.count('Wa 2% CA') > 1:
-        tmp = wa_unstacked[['Wa 2% CA']].sum(axis=1).copy()               
+        tmp = wa_unstacked[['Wa 2% CA']].sum(axis=1).copy()
         wa_unstacked = wa_unstacked.drop('Wa 2% CA', 1)
-        wa_unstacked['Wa 2% CA'] = tmp     
+        wa_unstacked['Wa 2% CA'] = tmp
 
     # order in a fixed way
-    wa_unstacked = wa_unstacked.reindex(columns=['days', 'Wa 10% Sucr', 
+    wa_unstacked = wa_unstacked.reindex(columns=['days', 'Wa 10% Sucr',
        'Wa', 'Wa 2% CA', 'Hdrg', 'Wa 15% Sucr'])
 
     # https://stackoverflow.com/questions/44250445/pandas-bar-plot-with-continuous-x-axis
@@ -144,7 +144,7 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
     righty = ax.twinx()
     weight_water2 = weight_water.groupby('days').mean().reset_index()
     weight_water2 = weight_water2.dropna(subset=['weight'])
- 
+
     # plot weight curve
     sns.lineplot(x=weight_water2.days, y=weight_water2.weight, ax=righty, color='.15', marker='o')
 
@@ -255,10 +255,9 @@ def plot_contrast_heatmap(behav, ax, xlims):
     # ax.set(xlabel='')
 
 def fix_date_axis(ax):
-    # deal with date axis and make nice looking 
+    # deal with date axis and make nice looking
     ax.xaxis_date()
     ax.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=mdates.MONDAY))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%d'))
     for item in ax.get_xticklabels():
         item.set_rotation(60)
-
