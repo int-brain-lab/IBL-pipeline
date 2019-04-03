@@ -44,6 +44,9 @@ for ilab in reference.Lab:
     summary = pd.DataFrame(summary)
     summary.pop('lab_name')
     summary.index += 1
+    cols = summary.columns.tolist()
+    cols = cols[-1:] + cols[:-1]
+    summary = summary[cols]
     last_session_date = \
         np.max(summary['lastest_session_start_time']).date().strftime('%Y-%m-%d')
     summary.to_csv(
