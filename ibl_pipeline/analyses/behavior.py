@@ -295,6 +295,7 @@ class SessionTrainingStatus(dj.Computed):
                         'cum_lapse_high': psych['lapse_high']
                     })
                     self.CumulativePsychResults.insert1(cum_psych_results)
+                    return
 
         # check whether the subject is untrainable
         if len(sessions) >= 40:
