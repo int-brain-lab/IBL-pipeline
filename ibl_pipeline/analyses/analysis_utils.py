@@ -79,10 +79,15 @@ def compute_performance_easy(trials):
 
 
 def compute_reaction_time(trials):
+    # median reaction time
     trials_rt = trials.proj(
             signed_contrast='trial_stim_contrast_left- \
                              trial_stim_contrast_right',
             rt='trial_response_time-trial_stim_on_time')
 
-    q = dj.U('signed_contrast').aggr(trials_rt, mean_rt='avg(rt)')
-    return q.fetch('mean_rt').astype(float)
+    rt = trials_rt.fetch(as_dict=True)
+    rt = pd.DataFrame(rt)
+    rt = rt[['signed_contrast', 'rt']]
+    median_rt = rt.groupby('signed_contrast').median()
+
+    return median_rt['rt']
