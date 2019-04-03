@@ -89,34 +89,51 @@ for lidx, lab in enumerate(users):
         subj = subject.Subject & 'subject_nickname="{}"'.format(mouse)
         last_session = subj.aggr(
             behavior.TrialSet, session_start_time='max(session_start_time)')
-        trained = behavior_analysis.SessionTrainingStatus & last_session & \
-            'training_status="trained"'
-        if len(trained):
-            isTrained = True
-            first_trained_session = subj.aggr(behavior_analysis.SessionTrainingStatus & \
-                                                 'training_status="trained"',
-                                                 first_trained='min(session_start_time)')
-            first_trained_session_time = first_trained_session.fetch1('first_trained')
+        training_status = \
+            (behavior_analysis.SessionTrainingStatus & last_session).fetch1(
+                'training_status')
+        if training_status in ['trained', 'ready for ephys']:
+            first_trained_session = subj.aggr(
+                behavior_analysis.SessionTrainingStatus &
+                'training_status="trained"',
+                first_trained='min(session_start_time)')
+            first_trained_session_time = first_trained_session.fetch1(
+                'first_trained')
             # convert to timestamp
             trained_date = pd.DatetimeIndex([first_trained_session_time])[0]
-        else:
-            isTrained = False
+
+            if training_status == 'ready for ephys':
+                first_biased_session = subj.aggr(
+                    behavior_analysis.SessionTrainingStatus &
+                    'training_status="ready for ephys"',
+                    first_biased='min(session_start_time)')
+                first_biased_session_time = first_biased_session.fetch1(
+                    'first_biased')
+                biased_date = pd.DatetimeIndex([first_biased_session_time])[0]
 
         # ============================================= #
         # TRIAL COUNTS AND SESSION DURATION
         # ============================================= #
 
-        plot_trialcounts_sessionlength(behav, axes[1,0], xlims)
-        if isTrained: # indicate date at which the animal is 'trained'
-            axes[1,0].axvline(trained_date, color="forestgreen")
+        plot_trialcounts_sessionlength(behav, axes[1, 0], xlims)
+        if training_status == 'trained':
+            # indicate date at which the animal is 'trained'
+            axes[1, 0].axvline(trained_date, color="orange")
+        elif training_status == 'ready for ephys':
+            # indicate date at which the animal is 'ready for ephys'
+            axes[1, 0].axvline(biased_date, color="forestgreen")
 
         # ============================================= #
         # PERFORMANCE AND MEDIAN RT
         # ============================================= #
 
-        plot_performance_rt(behav, axes[2,0], xlims)
-        if isTrained: # indicate date at which the animal is 'trained'
-            axes[2,0].axvline(trained_date, color="forestgreen")
+        plot_performance_rt(behav, axes[2, 0], xlims)
+        if training_status == 'trained':
+            # indicate date at which the animal is 'trained'
+            axes[2, 0].axvline(trained_date, color="orange")
+        elif training_status == 'ready for ephys':
+            # indicate date at which the animal is 'ready for ephys'
+            axes[2, 0].axvline(biased_date, color="forestgreen")
 
         # ============================================= #
         # CONTRAST/CHOICE HEATMAP
@@ -156,8 +173,12 @@ for lidx, lab in enumerate(users):
             if pidx == 0:
                 ax.set(title=r'$\gamma + (1 -\gamma-\lambda)  (erf(\frac{x-\mu}{\sigma} + 1)/2$')
 
-            if isTrained: # indicate date at which the animal is 'trained'
-                ax.axvline(trained_date, color="forestgreen")
+            if training_status == 'trained':
+                # indicate date at which the animal is 'trained'
+                ax.axvline(trained_date, color="orange")
+            elif training_status == 'ready for ephys':
+                # indicate date at which the animal is 'ready for ephys'
+                ax.axvline(biased_date, color="forestgreen")
 
         # ============================================= #
         # LAST THREE SESSIONS
