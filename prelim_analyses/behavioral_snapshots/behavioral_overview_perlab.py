@@ -130,6 +130,7 @@ for lidx, lab in enumerate(users):
 					else:
 							days_to_trained = np.nan
 							days_to_biased = np.nan
+							
 					# keep track
 					training_review = training_review.append(
 						pd.DataFrame({
