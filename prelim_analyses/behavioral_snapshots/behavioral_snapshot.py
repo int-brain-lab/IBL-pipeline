@@ -20,7 +20,7 @@ from IPython import embed as shell
 import datajoint as dj
 from ibl_pipeline import reference, subject, action, acquisition, data, behavior
 from ibl_pipeline.analyses import behavior as behavior_analysis
-from ibl_pipeline.analyses import psychofit as psy
+from ibl_pipeline.utils import psychofit as psy
 
 # loading and plotting functions
 from behavior_plots import *
@@ -36,7 +36,7 @@ datapath = '/Data_shortcut/'
 
 # all mice that are alive, without those with undefined sex (i.e. example mice)
 # restrict to animals that have trial data, weights and water logged
-allsubjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'sex!="U"'
+allsubjects = pd.DataFrame.from_dict(((subject.Subject - subject.Death) & 'sex!="U"'
                                    & action.Weighing() & action.WaterAdministration()
                                    ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
 if allsubjects.empty:
@@ -48,7 +48,7 @@ print(users)
 for lidx, lab in enumerate(users):
 
     # take mice from this lab only
-    subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death() & 'sex!="U"' & 'lab_name="%s"'%lab)
+    subjects = pd.DataFrame.from_dict((((subject.Subject - subject.Death) & 'sex!="U"' & 'lab_name="%s"'%lab)
                                    & action.Weighing() & action.WaterAdministration()
                                    ).fetch(as_dict=True, order_by=['subject_nickname']))
 
@@ -63,7 +63,7 @@ for lidx, lab in enumerate(users):
         # ============================================= #
 
         # MAKE THE FIGURE, divide subplots using gridspec
-        fig, axes = plt.subplots(ncols=5, nrows=4, 
+        fig, axes = plt.subplots(ncols=5, nrows=4,
                                  gridspec_kw=dict(width_ratios=[2, 2, 1, 1, 1], height_ratios=[1, 1, 1, 1]),
                                  figsize=(13.69, 8.27))
         sns.set_palette("colorblind")  # palette for water types
@@ -89,34 +89,51 @@ for lidx, lab in enumerate(users):
         subj = subject.Subject & 'subject_nickname="{}"'.format(mouse)
         last_session = subj.aggr(
             behavior.TrialSet, session_start_time='max(session_start_time)')
-        trained = behavior_analysis.SessionTrainingStatus & last_session & \
-            'training_status="trained"'
-        if len(trained):
-            isTrained = True
-            first_trained_session = subj.aggr(behavior_analysis.SessionTrainingStatus & \
-                                                 'training_status="trained"',
-                                                 first_trained='min(session_start_time)')
-            first_trained_session_time = first_trained_session.fetch1('first_trained')
+        training_status = \
+            (behavior_analysis.SessionTrainingStatus & last_session).fetch1(
+                'training_status')
+        if training_status in ['trained', 'ready for ephys']:
+            first_trained_session = subj.aggr(
+                behavior_analysis.SessionTrainingStatus &
+                'training_status="trained"',
+                first_trained='min(session_start_time)')
+            first_trained_session_time = first_trained_session.fetch1(
+                'first_trained')
             # convert to timestamp
-            trained_date = pd.DatetimeIndex([first_trained_session_time])[0]     
-        else:
-            isTrained = False
+            trained_date = pd.DatetimeIndex([first_trained_session_time])[0]
+
+            if training_status == 'ready for ephys':
+                first_biased_session = subj.aggr(
+                    behavior_analysis.SessionTrainingStatus &
+                    'training_status="ready for ephys"',
+                    first_biased='min(session_start_time)')
+                first_biased_session_time = first_biased_session.fetch1(
+                    'first_biased')
+                biased_date = pd.DatetimeIndex([first_biased_session_time])[0]
 
         # ============================================= #
         # TRIAL COUNTS AND SESSION DURATION
         # ============================================= #
 
-        plot_trialcounts_sessionlength(behav, axes[1,0], xlims)
-        if isTrained: # indicate date at which the animal is 'trained'
-            axes[1,0].axvline(trained_date, color="forestgreen")
+        plot_trialcounts_sessionlength(behav, axes[1, 0], xlims)
+        if training_status == 'trained':
+            # indicate date at which the animal is 'trained'
+            axes[1, 0].axvline(trained_date, color="orange")
+        elif training_status == 'ready for ephys':
+            # indicate date at which the animal is 'ready for ephys'
+            axes[1, 0].axvline(biased_date, color="forestgreen")
 
         # ============================================= #
         # PERFORMANCE AND MEDIAN RT
         # ============================================= #
 
-        plot_performance_rt(behav, axes[2,0], xlims)
-        if isTrained: # indicate date at which the animal is 'trained'
-            axes[2,0].axvline(trained_date, color="forestgreen")
+        plot_performance_rt(behav, axes[2, 0], xlims)
+        if training_status == 'trained':
+            # indicate date at which the animal is 'trained'
+            axes[2, 0].axvline(trained_date, color="orange")
+        elif training_status == 'ready for ephys':
+            # indicate date at which the animal is 'ready for ephys'
+            axes[2, 0].axvline(biased_date, color="forestgreen")
 
         # ============================================= #
         # CONTRAST/CHOICE HEATMAP
@@ -166,8 +183,12 @@ for lidx, lab in enumerate(users):
             if pidx == 0:
                 ax.set(title=r'$\gamma + (1 -\gamma-\lambda)  (erf(\frac{x-\mu}{\sigma} + 1)/2$')
 
-            if isTrained: # indicate date at which the animal is 'trained'
-                ax.axvline(trained_date, color="forestgreen")
+            if training_status == 'trained':
+                # indicate date at which the animal is 'trained'
+                ax.axvline(trained_date, color="orange")
+            elif training_status == 'ready for ephys':
+                # indicate date at which the animal is 'ready for ephys'
+                ax.axvline(biased_date, color="forestgreen")
 
         # ============================================= #
         # LAST THREE SESSIONS
@@ -242,9 +263,9 @@ for lidx, lab in enumerate(users):
         subj_with_last_session = subj.aggr(
             behavior.TrialSet, last_behavior = 'max(session_start_time)'
         )
-   
+
         last_behavior_time = subj_with_last_session.fetch('last_behavior')
-        
+
         if last_behavior_time.size > 0:
             last_date = last_behavior_time[0].date().strftime("%Y-%m-%d")
         else:
@@ -259,7 +280,7 @@ for lidx, lab in enumerate(users):
             last_time = max([last_weighing_time, last_water_time])
             last_date = last_time.date().strftime("%Y-%m-%d")
 
-        
+
         fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.pdf' % (last_date,
                                                                    subjects.loc[subjects['subject_nickname'] == mouse]['lab_name'].item(),
                                                                    mouse)))
