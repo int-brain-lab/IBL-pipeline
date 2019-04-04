@@ -130,7 +130,7 @@ for lidx, lab in enumerate(users):
 					else:
 							days_to_trained = np.nan
 							days_to_biased = np.nan
-							
+
 					# keep track
 					training_review = training_review.append(
 						pd.DataFrame({
@@ -150,6 +150,7 @@ for lidx, lab in enumerate(users):
 						ax.axvline(trained_date, color="orange")
 					elif training_status == 'ready for ephys':
 					# indicate date at which the animal is 'ready for ephys'
+						ax.axvline(trained_date, color="orange")
 						ax.axvline(biased_date, color="forestgreen")
 
 					plot_trialcounts_sessionlength(behav, ax, xlims)
@@ -165,6 +166,7 @@ for lidx, lab in enumerate(users):
 						ax.axvline(trained_date, color="orange")
 					elif training_status == 'ready for ephys':
 					# indicate date at which the animal is 'ready for ephys'
+						ax.axvline(trained_date, color="orange")
 						ax.axvline(biased_date, color="forestgreen")
 
 					fix_date_axis(ax)

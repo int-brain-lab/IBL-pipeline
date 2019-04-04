@@ -121,6 +121,7 @@ for lidx, lab in enumerate(users):
             axes[1, 0].axvline(trained_date, color="orange")
         elif training_status == 'ready for ephys':
             # indicate date at which the animal is 'ready for ephys'
+            axes[1, 0].axvline(trained_date, color="orange")
             axes[1, 0].axvline(biased_date, color="forestgreen")
 
         # ============================================= #
@@ -133,6 +134,7 @@ for lidx, lab in enumerate(users):
             axes[2, 0].axvline(trained_date, color="orange")
         elif training_status == 'ready for ephys':
             # indicate date at which the animal is 'ready for ephys'
+            axes[2, 0].axvline(trained_date, color="orange")
             axes[2, 0].axvline(biased_date, color="forestgreen")
 
         # ============================================= #
@@ -188,6 +190,7 @@ for lidx, lab in enumerate(users):
                 ax.axvline(trained_date, color="orange")
             elif training_status == 'ready for ephys':
                 # indicate date at which the animal is 'ready for ephys'
+                ax.axvline(trained_date, color="orange")
                 ax.axvline(biased_date, color="forestgreen")
 
         # ============================================= #
