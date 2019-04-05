@@ -73,7 +73,7 @@ class BehavioralSummaryByDate(dj.Computed):
         & behavior.TrialSet.proj(session_date='DATE(session_start_time)')
 
     def make(self, key):
-
+        print(key)
         master_entry = key.copy()
         rt = key.copy()
 
@@ -226,7 +226,7 @@ class SessionTrainingStatus(dj.Computed):
                 psych_80 = utils.compute_psych_pars(trials_80)
                 psych_20 = utils.compute_psych_pars(trials_20)
 
-                criterion = psych_unbiased['bias'] < 16 and \
+                criterion = np.abs(psych_unbiased['bias']) < 16 and \
                     psych_unbiased['threshold'] < 19 and \
                     psych_unbiased['lapse_low'] < 0.2 and \
                     psych_unbiased['lapse_high'] < 0.2 and \
@@ -262,7 +262,7 @@ class SessionTrainingStatus(dj.Computed):
             contrasts = np.absolute(
                 (PsychResults & key).fetch1('signed_contrasts'))
             if 0 in contrasts and \
-               np.sum((contrasts < 0.062) & (contrasts > 0.001)):
+               np.sum((contrasts < 0.065) & (contrasts > 0.001)):
                 # compute psych results of last three sessions
                 trials = behavior.TrialSet.Trial & sessions_rel
                 psych = utils.compute_psych_pars(trials)
