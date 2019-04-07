@@ -1,12 +1,12 @@
 import datajoint as dj
 
-schema = dj.schema('ibl_alyxraw')
+schema = dj.schema('ibl_dj_alyxraw')
 
 
 @schema
 class AlyxRaw(dj.Manual):
     definition = '''
-    uuid: varchar(64)  # pk field (uuid string repr)
+    uuid: uuid  # pk field (uuid string repr)
     ---
     model: varchar(255)  # alyx 'model'
     '''

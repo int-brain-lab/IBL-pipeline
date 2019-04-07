@@ -62,11 +62,14 @@ log = logging.getLogger(__name__)
 
 def get_raw_field(key, field, multiple_entries=False, model=None):
     if model:
-        query = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & 'model="{}"'.format(model)) & key & 'fname="{}"'.format(field)
+        query = alyxraw.AlyxRaw.Field & \
+            (alyxraw.AlyxRaw & 'model="{}"'.format(model)) & \
+            key & 'fname="{}"'.format(field)
     else:
         query = alyxraw.AlyxRaw.Field & key & 'fname="{}"'.format(field)
 
-    return query.fetch('fvalue') if multiple_entries else query.fetch1('fvalue')
+    return query.fetch('fvalue') \
+        if multiple_entries else query.fetch1('fvalue')
 
 
 class InsertBuffer(object):
