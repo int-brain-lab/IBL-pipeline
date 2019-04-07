@@ -25,7 +25,7 @@ else:
 with open(filename, 'r') as fid:
     keys = json.load(fid)
 
-# remove invalid uuid
+# remove invalid uuid from unused tables
 keys = [key for key in keys
         if key['model'] not in
         ['auth.group', 'sessions.session', 'authtoken.token']]
