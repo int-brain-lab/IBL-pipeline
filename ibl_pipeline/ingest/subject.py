@@ -268,9 +268,9 @@ class BreedingPair(dj.Computed):
     bp_description=null:	varchar(2048)		# description
     bp_start_date=null:		date			    # start date
     bp_end_date=null:		date			    # end date
-    father=null:            varchar(64)         # subject uuid of dad, inherited from subject
-    mother1=null:           varchar(64)         # subject uuid of mom, inherited from subject
-    mother2=null:		    varchar(64)         # subject uuid of mom2, if has one, inherited from subject
+    father=null:            uuid                # subject uuid of dad, inherited from subject
+    mother1=null:           uuid                # subject uuid of mom, inherited from subject
+    mother2=null:		    uuid                # subject uuid of mom2, if has one, inherited from subject
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.breedingpair"').proj(
         bp_uuid='uuid')
@@ -301,15 +301,15 @@ class BreedingPair(dj.Computed):
 
         father = grf(key, 'father')
         if father != 'None':
-            key_bp['father'] = father
+            key_bp['father'] = uuid.UUID(father)
 
         mother1 = grf(key, 'mother1')
         if mother1 != 'None':
-            key_bp['mother1'] = mother1
+            key_bp['mother1'] = uuid.UUID(mother1)
 
         mother2 = grf(key, 'mother2')
         if mother2 != 'None':
-            key_bp['mother2'] = mother2
+            key_bp['mother2'] = uuid.UUID(mother2)
 
         self.insert1(key_bp)
 
@@ -572,9 +572,9 @@ class GenotypeTest(dj.Computed):
     definition = """
     (genotype_test_uuid) -> alyxraw.AlyxRaw
     ---
-    subject_uuid:               uuid
-    sequence_name:              varchar(64)                     # inherited from Sequence
-    test_result:		        enum("Present", "Absent")		# test result
+    subject_uuid:       uuid
+    sequence_name:      varchar(255)              # inherited from Sequence
+    test_result:		enum("Present", "Absent") # test result
     """
     key_source = (alyxraw.AlyxRaw & 'model = "subjects.genotypetest"').proj(
         genotype_test_uuid='uuid')

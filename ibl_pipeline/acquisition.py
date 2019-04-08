@@ -3,7 +3,7 @@ import datajoint as dj
 from . import subject
 from . import reference, subject, action
 
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_acquisition')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_dj_acquisition')
 
 '''
 To simplify from Alyx schema, dropping file repositories as core
@@ -51,7 +51,7 @@ class Session(dj.Manual):
     -> subject.Subject
     session_start_time:         datetime	# start time
     ---
-    session_uuid:               varchar(64)
+    session_uuid:               uuid
     session_number=null:        int     	# number
     session_end_time=null:      datetime	# end time
     -> [nullable] reference.Project
@@ -85,6 +85,7 @@ class SessionProcedure(dj.Manual):
     -> Session
     -> action.ProcedureType
     """
+
 
 @schema
 class WaterAdministrationSession(dj.Manual):
