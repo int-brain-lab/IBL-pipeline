@@ -1,10 +1,13 @@
 '''
 Create global variables for table names
 '''
+
+
 def init():
-    
-    global REF_TABLES, SUBJECT_TABLES, ACTION_TABLES, ACQUISITION_TABLES, DATA_TABLES
-    
+
+    global REF_TABLES, SUBJECT_TABLES, ACTION_TABLES, \
+        ACQUISITION_TABLES, DATA_TABLES
+
     REF_TABLES = (
         'Lab',
         'LabMember',
@@ -24,11 +27,14 @@ def init():
         'Line',
         'LineAllele',
         'Subject',
+        'SubjectUser',
+        'SubjectLab',
         'BreedingPair',
         'Litter',
         'LitterSubject',
         'Weaning',
         'Death',
+        'Caging',
         'UserHistory',
         'GenotypeTest',
         'Zygosity',
@@ -45,7 +51,11 @@ def init():
         'WaterRestrictionProcedure',
         'Surgery',
         'SurgeryUser',
-        'SurgeryProcedure'
+        'SurgeryProcedure',
+        'OtherAction',
+        'OtherActionUser',
+        'OtherActionProcedure'
+
     )
 
     ACQUISITION_TABLES = (
@@ -57,11 +67,11 @@ def init():
     )
 
     DATA_TABLES = (
-    'DataFormat',
-    'DataRepositoryType',
-    'DataRepository',
-    'ProjectRepository',
-    'DataSetType',
-    'DataSet',
-    'FileRecord'
+        'DataFormat',
+        'DataRepositoryType',
+        'DataRepository',
+        'ProjectRepository',
+        'DataSetType',
+        'DataSet',
+        'FileRecord'
     )
