@@ -459,7 +459,7 @@ class TrialSet(dj.Imported):
 
     def make(self, key):
         trial_key = key.copy()
-        # excluded_trial_key = key.copy()
+        print(key)
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         trials_feedback_times, trials_feedback_types, trials_intervals, \
