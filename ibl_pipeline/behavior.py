@@ -12,7 +12,7 @@ except:
     pass
 
 logger = logging.getLogger(__name__)
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_dj_behavior')
 
 
 @schema
@@ -33,21 +33,26 @@ class Eye(dj.Imported):
     eye_end_time:       float           # (seconds)
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & 'dataset_name in \
-                    ("_ibl_eye.area.npy", "_ibl_eye.blink.npy", "_ibl_eye.xyPos.npy", "_ibl_eye.timestamps.npy")')
+    key_source = acquisition.Session & (data.FileRecord & {'exists': 1} & 'dataset_name in \
+                    ("_ibl_eye.area.npy", "_ibl_eye.blink.npy", \
+                     "_ibl_eye.xyPos.npy", "_ibl_eye.timestamps.npy")')
 
     def make(self, key):
 
-        eID = (acquisition.Session & key).fetch1('session_uuid')
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
         eye_area, eye_blink, eye_xypos, eye_timestamps = \
-            ONE().load(eID, dataset_types=['_ibl_eye.area', '_ibl_eye.blink', '_ibl_eye.xypos', '_ibl_eye.timestamps'])
+            ONE().load(eID, dataset_types=['_ibl_eye.area',
+                                           '_ibl_eye.blink',
+                                           '_ibl_eye.xypos',
+                                           '_ibl_eye.timestamps'])
 
         eye_sample_ids = eye_timestamps[:, 0]
         eye_timestamps = eye_timestamps[:, 1]
 
         assert len(np.unique(np.array([len(eye_xypos),
                                        len(eye_blink),
-                                       len(eye_area)]))) == 1, 'Loaded eye files do not have the same length'
+                                       len(eye_area)]))) == 1, \
+            'Loaded eye files do not have the same length'
 
         key['eye_sample_ids'] = eye_sample_ids
         key['eye_timestamps'] = eye_timestamps
@@ -60,7 +65,9 @@ class Eye(dj.Imported):
         key['eye_end_time'] = eye_timestamps[-1]
 
         self.insert1(key)
-        logger.info('Populated an Eye tuple for subject {subject_nickname} on {session_start_time}'.format(**key))
+        logger.info('Populated an Eye tuple for subject {subject_uuid} \
+            on session started at {session_start_time}'.format(
+            **key))
 
 
 @schema
@@ -72,11 +79,15 @@ class CompleteWheelSession(dj.Computed):
     wheel_session_complete: bool              # whether the session is complete
     """
 
-    required_datasets =  ["_ibl_wheel.position.npy", "_ibl_wheel.velocity.npy", "_ibl_wheel.timestamps.npy"]
+    required_datasets = ["_ibl_wheel.position.npy",
+                         "_ibl_wheel.velocity.npy",
+                         "_ibl_wheel.timestamps.npy"]
 
     def make(self, key):
-        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {'exists': 1}).fetch('dataset_name')
-        key['wheel_session_complete'] = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
+        datasets = (data.FileRecord & key & {'exists': 1}).fetch(
+            'dataset_name')
+        key['wheel_session_complete'] = bool(
+            np.all([req_ds in datasets for req_ds in self.required_datasets]))
         self.insert1(key)
 
 
@@ -100,9 +111,11 @@ class Wheel(dj.Imported):
 
     def make(self, key):
 
-        eID = (acquisition.Session & key).fetch1('session_uuid')
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
         wheel_position, wheel_velocity, wheel_timestamps = \
-            ONE().load(eID, dataset_types=['_ibl_wheel.position', '_ibl_wheel.velocity', '_ibl_wheel.timestamps'])
+            ONE().load(eID, dataset_types=['_ibl_wheel.position',
+                                           '_ibl_wheel.velocity',
+                                           '_ibl_wheel.timestamps'])
 
         wheel_sample_ids = wheel_timestamps[:, 0]
         wheel_timestamps = wheel_timestamps[:, 1]
@@ -118,7 +131,8 @@ class Wheel(dj.Imported):
         key['wheel_sampling_rate'] = wheel_sampling_rate
 
         self.insert1(key)
-        logger.info('Populated a Wheel tuple for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a Wheel tuple for subject {subject_uuid} \
+            in session on {session_start_time}'.format(**key))
 
 
 @schema
@@ -135,14 +149,17 @@ class CompleteWheelMoveSession(dj.Computed):
     # sessions that are complete with wheel related information and thus may be ingested
     -> acquisition.Session
     ---
-    wheelmove_session_complete: bool              # whether the session is complete
+    wheelmove_session_complete: bool  # whether the session is complete
     """
 
-    required_datasets = ["_ibl_wheelMoves.intervals.npy", "_ibl_wheelMoves.type.csv"]
+    required_datasets = ["_ibl_wheelMoves.intervals.npy",
+                         "_ibl_wheelMoves.type.csv"]
 
     def make(self, key):
-        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {'exists': 1}).fetch('dataset_name')
-        key['wheelmove_session_complete'] = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
+        datasets = (data.FileRecord & key & {'exists': 1}).fetch(
+            'dataset_name')
+        key['wheelmove_session_complete'] = bool(
+            np.all([req_ds in datasets for req_ds in self.required_datasets]))
         self.insert1(key)
 
 
@@ -159,21 +176,26 @@ class WheelMoveSet(dj.Imported):
     def make(self, key):
         wheel_move_key = key.copy()
 
-        eID = (acquisition.Session & key).fetch1('session_uuid')
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
         wheel_moves_intervals, wheel_moves_types = \
-            ONE().load(eID, dataset_types=['_ibl_wheelMoves.intervals', '_ibl_wheelMoves.type'])
+            ONE().load(eID, dataset_types=['_ibl_wheelMoves.intervals',
+                                           '_ibl_wheelMoves.type'])
 
         wheel_moves_types = wheel_moves_types.columns
 
-        assert len(np.unique(np.array([len(wheel_moves_intervals), len(wheel_moves_types)]))) == 1, 'Loaded wheel move files do not have the same length'
+        assert len(np.unique(np.array([len(wheel_moves_intervals),
+                                       len(wheel_moves_types)]))) == 1, \
+            'Loaded wheel move files do not have the same length'
 
         key['wheel_move_number'] = len(wheel_moves_types)
         self.insert1(key)
 
         for idx_move in range(len(wheel_moves_types)):
             wheel_move_key['wheel_move_id'] = idx_move + 1
-            wheel_move_key['wheel_move_start_time'] = wheel_moves_intervals[idx_move, 0]
-            wheel_move_key['wheel_move_end_time'] = wheel_moves_intervals[idx_move, 1]
+            wheel_move_key['wheel_move_start_time'] = \
+                wheel_moves_intervals[idx_move, 0]
+            wheel_move_key['wheel_move_end_time'] = \
+                wheel_moves_intervals[idx_move, 1]
 
             wheel_move_type = wheel_moves_types[idx_move]
             if 'CCW' in wheel_move_type:
@@ -185,7 +207,9 @@ class WheelMoveSet(dj.Imported):
 
             self.WheelMove().insert1(wheel_move_key)
 
-        logger.info('Populated a WheelMoveSet and all WheelMove tuples for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a WheelMoveSet and all WheelMove tuples for \
+            subject {subject_uuid} in session started at \
+            {session_start_time}'.format(**key))
 
     class WheelMove(dj.Part):
         definition = """
@@ -203,28 +227,34 @@ class SparseNoise(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    sparse_noise_x_pos:  longblob				# x coordiate on screen of sparse noise stimulus squares (WHAT UNIT?)
-    sparse_noise_y_pos:  longblob				# y coordiate on screen of sparse noise stimulus squares (WHAT UNIT?)
-    sparse_noise_times:  longblob				# times of those stimulus squares appeared in universal seconds
+    sparse_noise_x_pos:  longblob	# x coordiate on screen of sparse noise stimulus squares (WHAT UNIT?)
+    sparse_noise_y_pos:  longblob	# y coordiate on screen of sparse noise stimulus squares (WHAT UNIT?)
+    sparse_noise_times:  longblob	# times of those stimulus squares appeared in universal seconds
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
-                    ("_ibl_sparseNoise.positions.npy", "_ibl_sparseNoise.times.npy")')
+    key_source = acquisition.Session & \
+        (data.FileRecord & {'exists': 1} &
+         'dataset_name in ("_ibl_sparseNoise.positions.npy", \
+                           "_ibl_sparseNoise.times.npy")')
 
     def make(self, key):
 
-        eID = (acquisition.Session & key).fetch1('session_uuid')
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         sparse_noise_positions, sparse_noise_times = \
-            ONE().load(eID, dataset_types=['_ibl_sparseNoise.positions', '_ns_sparseNoise.times'])
+            ONE().load(eID, dataset_types=['_ibl_sparseNoise.positions',
+                                           '_ns_sparseNoise.times'])
 
-        assert len(np.unique(np.array([len(sparse_noise_positions), len(sparse_noise_times)]))) == 1, 'Loaded sparse noise files do not have the same length'
+        assert len(np.unique(np.array([len(sparse_noise_positions),
+                                       len(sparse_noise_times)]))) == 1, \
+            'Loaded sparse noise files do not have the same length'
 
         key['sparse_noise_x_pos'] = sparse_noise_positions[:, 0],
         key['sparse_noise_y_pos'] = sparse_noise_positions[:, 1],
         key['sparse_noise_times'] = sparse_noise_times
         self.insert1(key)
-        logger.info('Populated a SparseNoise tuple for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a SparseNoise tuple for subject {subject_uuid} \
+            in session started at {session_start_time}'.format(**key))
 
 
 @schema
@@ -236,8 +266,9 @@ class ExtraRewards(dj.Imported):
     extra_rewards_times: longblob 			# times of extra rewards (seconds)
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
-                    ("_ibl_extraRewards.times.npy")')
+    key_source = acquisition.Session & \
+        (data.FileRecord & {'exists': 1} &
+            'dataset_name in ("_ibl_extraRewards.times.npy")')
 
     def make(self, key):
 
@@ -250,7 +281,9 @@ class ExtraRewards(dj.Imported):
 
         self.insert1(key)
 
-        logger.info('Populated an ExtraRewards tuple for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated an ExtraRewards tuple for \
+            subject {subject_uuid} in session started at \
+            {session_start_time}'.format(**key))
 
 
 @schema
@@ -262,13 +295,14 @@ class SpontaneousTimeSet(dj.Imported):
     spontaneous_time_total_num:   int   # total number of the spontaneous time periods
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
-                    ("_ibl_spontaneous.intervals.npy")')
+    key_source = acquisition.Session & \
+        (data.FileRecord & {'exists': 1} &
+         'dataset_name in ("_ibl_spontaneous.intervals.npy")')
 
     def make(self, key):
         spon_time_key = key.copy()
 
-        eID = (acquisition.Session & key).fetch1('session_uuid')
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         spontaneous_intervals = \
             ONE().load(eID, dataset_types=['_ibl_spontaneous.intervals'])
@@ -278,12 +312,17 @@ class SpontaneousTimeSet(dj.Imported):
 
         for idx_spon in range(len(spontaneous_intervals)):
             spon_time_key['spontaneous_time_id'] = idx_spon + 1
-            spon_time_key['spontaneous_start_time'] = spontaneous_intervals[idx_spon, 0]
-            spon_time_key['spontaneous_end_time'] = spontaneous_intervals[idx_spon, 1]
-            spon_time_key['spontaneous_time_duration'] = float(np.diff(spontaneous_intervals[idx_spon, :]))
+            spon_time_key['spontaneous_start_time'] = \
+                spontaneous_intervals[idx_spon, 0]
+            spon_time_key['spontaneous_end_time'] = \
+                spontaneous_intervals[idx_spon, 1]
+            spon_time_key['spontaneous_time_duration'] = \
+                float(np.diff(spontaneous_intervals[idx_spon, :]))
             self.SpontaneousTime().insert1(spon_time_key)
 
-        logger.info('Populated a SpontaneousTimeSet tuple and all Spontaneoustime tuples for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a SpontaneousTimeSet tuple and all \
+            Spontaneoustime tuples for subject {subject_uuid} in \
+                session started at {session_start_time}'.format(**key))
 
     class SpontaneousTime(dj.Part):
         definition = """
@@ -311,15 +350,20 @@ class Lick(dj.Imported):
     lick_sampling_rate:     float     # number of samples per second
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
-                    ("_ibl_licks.times.npy", "_ibl_lickPiezo.raw.npy", "_ibl_lickPiezo.timestamps.npy")')
+    key_source = acquisition.Session & \
+        (data.FileRecord & {'exists': 1} &
+         'dataset_name in ("_ibl_licks.times.npy", \
+                           "_ibl_lickPiezo.raw.npy", \
+                           "_ibl_lickPiezo.timestamps.npy")')
 
     def make(self, key):
 
         eID = (acquisition.Session & key).fetch1('session_uuid')
 
         lick_times, lick_piezo_raw, lick_piezo_timestamps = \
-            ONE().load(eID, dataset_types=['_ibl_licks.times', '_ibl_lickPiezo.raw', '_ibl_lickPiezo.timestamps'])
+            ONE().load(eID, dataset_types=['_ibl_licks.times',
+                                           '_ibl_lickPiezo.raw',
+                                           '_ibl_lickPiezo.timestamps'])
 
         lick_sample_ids = lick_piezo_timestamps[:, 0]
         lick_piezo_timestamps = lick_piezo_timestamps[:, 1]
@@ -330,11 +374,14 @@ class Lick(dj.Imported):
         key['lick_piezo_timestamps'] = lick_piezo_timestamps
         key['lick_start_time'] = lick_piezo_timestamps[0]
         key['lick_end_time'] = lick_piezo_timestamps[-1]
-        key['lick_sampling_rate'] = 1 / np.median(np.diff(lick_piezo_timestamps))
+        key['lick_sampling_rate'] = \
+            1 / np.median(np.diff(lick_piezo_timestamps))
 
         self.insert1(key)
 
-        logger.info('Populated a Lick tuple for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a Lick tuple for \
+            subject {subject_uuid} in session started at \
+            {session_start_time}'.format(**key))
 
 
 @schema
@@ -348,37 +395,45 @@ class CompleteTrialSession(dj.Computed):
     included_status: enum('Complete', 'Missing')
     """
 
-    required_datasets =  ["_ibl_trials.feedback_times.npy", "_ibl_trials.feedbackType.npy", \
-                            "_ibl_trials.intervals.npy", "_ibl_trials.choice.npy", \
-                            "_ibl_trials.response_times.npy", \
-                            "_ibl_trials.contrastLeft.npy", "_ibl_trials.contrastRight.npy", \
-                            "_ibl_trials.probabilityLeft.npy"]
+    required_datasets = ["_ibl_trials.feedback_times.npy",
+                         "_ibl_trials.feedbackType.npy",
+                         "_ibl_trials.intervals.npy", "_ibl_trials.choice.npy",
+                         "_ibl_trials.response_times.npy",
+                         "_ibl_trials.contrastLeft.npy",
+                         "_ibl_trials.contrastRight.npy",
+                         "_ibl_trials.probabilityLeft.npy"]
 
     def make(self, key):
-        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {'exists': 1}).fetch('dataset_name')
-        is_complete = bool(np.all([req_ds in datasets for req_ds in self.required_datasets]))
+        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
+                    {'exists': 1}).fetch('dataset_name')
+        is_complete = bool(np.all([req_ds in datasets
+                                   for req_ds in self.required_datasets]))
         if is_complete is True:
             if '_ibl_trials.stimOn_times.npy' not in datasets:
                 key['stim_on_times_status'] = 'Missing'
             else:
-                eID = (acquisition.Session & key).fetch1('session_uuid')
-                if key['lab_name'] == 'wittenlab':
-                    stimOn_times = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.stimOn_times', clobber=True))
-                else:        
-                    stimOn_times = ONE().load(eID, dataset_types='_ibl_trials.stimOn_times')
-                
+                eID = str((acquisition.Session & key).fetch1('session_uuid'))
+                lab_name = (subject.SubjectLab & key).fetch1('lab_name')
+                if lab_name == 'wittenlab':
+                    stimOn_times = np.squeeze(ONE().load(
+                            eID, dataset_types='_ibl_trials.stimOn_times',
+                            clobber=True))
+                else:
+                    stimOn_times = ONE().load(
+                        eID, dataset_types='_ibl_trials.stimOn_times')
+
                 if np.all(np.isnan(stimOn_times)):
                     key['stim_on_times_status'] = 'Missing'
                 elif np.any(np.isnan(stimOn_times)):
                     key['stim_on_times_status'] = 'Partial'
                 else:
                     key['stim_on_times_status'] = 'Complete'
-            
+
             if '_ibl_trials.repNum.npy' not in datasets:
                 key['rep_num_status'] = 'Missing'
             else:
                 key['rep_num_status'] = 'Complete'
-            
+
             if '_ibl_trials.included.npy' not in datasets:
                 key['included_status'] = 'Missing'
             else:
@@ -393,10 +448,10 @@ class TrialSet(dj.Imported):
     # information about behavioral trials
     -> acquisition.Session
     ---
-    n_trials:                int              # total trial numbers in this set
-    n_correct_trials=null:   int              # number of the correct trials
-    trials_start_time:       float            # start time of the trial set (seconds)
-    trials_end_time:         float            # end time of the trial set (seconds)
+    n_trials:                int      # total trial numbers in this set
+    n_correct_trials=null:   int      # number of the correct trials
+    trials_start_time:       float    # start time of the trial set (seconds)
+    trials_end_time:         float    # end time of the trial set (seconds)
     """
 
     # Knowledge based hack to be formalized better later
@@ -404,40 +459,45 @@ class TrialSet(dj.Imported):
 
     def make(self, key):
         trial_key = key.copy()
-        # excluded_trial_key = key.copy()      
-        eID = (acquisition.Session & key).fetch1('session_uuid')
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         trials_feedback_times, trials_feedback_types, trials_intervals, \
             trials_response_choice, trials_response_times, \
             trials_contrast_left, trials_contrast_right, trials_p_left = \
-            ONE().load(eID, dataset_types=['_ibl_trials.feedback_times', '_ibl_trials.feedbackType',
-                                           '_ibl_trials.intervals', '_ibl_trials.choice', 
+            ONE().load(eID, dataset_types=['_ibl_trials.feedback_times',
+                                           '_ibl_trials.feedbackType',
+                                           '_ibl_trials.intervals',
+                                           '_ibl_trials.choice',
                                            '_ibl_trials.response_times',
-                                           '_ibl_trials.contrastLeft', '_ibl_trials.contrastRight',
+                                           '_ibl_trials.contrastLeft',
+                                           '_ibl_trials.contrastRight',
                                            '_ibl_trials.probabilityLeft'])
-        
-        stim_on_times_status, rep_num_status, included_status = (CompleteTrialSession & key).fetch1(
-                    'stim_on_times_status', 'rep_num_status', 'included_status')
+
+        stim_on_times_status, rep_num_status, included_status = \
+            (CompleteTrialSession & key).fetch1(
+                'stim_on_times_status', 'rep_num_status', 'included_status')
+
+        lab_name = (subject.SubjectLab & key).fetch1('lab_name')
         if stim_on_times_status != 'Missing':
-            if key['lab_name'] == 'wittenlab':
-                trials_visual_stim_times = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.stimOn_times', clobber=True))
+            if lab_name == 'wittenlab':
+                trials_visual_stim_times = np.squeeze(ONE().load(
+                    eID, dataset_types='_ibl_trials.stimOn_times',
+                    clobber=True))
             else:
-                trials_visual_stim_times = ONE().load(eID, dataset_types='_ibl_trials.stimOn_times')
+                trials_visual_stim_times = ONE().load(
+                    eID, dataset_types='_ibl_trials.stimOn_times')
 
             if len(trials_visual_stim_times) == 1:
                 trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
 
         if rep_num_status != 'Missing':
-            trials_rep_num = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.repNum'))
-        
+            trials_rep_num = np.squeeze(ONE().load(
+                eID, dataset_types='_ibl_trials.repNum'))
+
         if included_status != 'Missing':
-            trials_included = np.squeeze(ONE().load(eID, dataset_types='_ibl_trials.included'))
-        
-        # for debugging purpose
-        # print(key['session_start_time'])
-        # print(len(trials_feedback_times), len(trials_feedback_types), len(trials_intervals), \
-        #      len(trials_rep_num), len(trials_response_choice), len(trials_response_times), len(trials_contrast_left), \
-        #      len(trials_contrast_right), len(trials_visual_stim_times), len(trials_included), len(trials_p_left))
+            trials_included = np.squeeze(ONE().load(
+                eID, dataset_types='_ibl_trials.included'))
+
         assert len(np.unique(np.array([len(trials_feedback_times),
                                        len(trials_feedback_types),
                                        len(trials_intervals),
@@ -449,20 +509,25 @@ class TrialSet(dj.Imported):
                                        # len(trials_visual_stim_times),
                                        # len(trials_included),
                                        len(trials_p_left)
-                                       ]))) == 1, 'Loaded trial files do not have the same length'
-        
+                                       ]))) == 1
+        'Loaded trial files do not have the same length'
+
         key['n_trials'] = len(trials_response_choice)
 
         key_session = dict()
         key_session['model'] = 'actions.session'
-        key_session['uuid'] = (acquisition.Session & key).fetch1('session_uuid')
-        
+        key_session['uuid'] = (acquisition.Session & key).fetch1(
+            'session_uuid')
+
         n_correct_trials = grf(key_session, 'n_correct_trials')
         if n_correct_trials != 'None':
             key['n_correct_trials'] = n_correct_trials
         else:
-            key['n_correct_trials'] = sum((np.squeeze(trials_response_choice)==1) & (np.squeeze(trials_contrast_left)>0)) \
-                + sum((np.squeeze(trials_response_choice)==-1) & (np.squeeze(trials_contrast_right)>0))
+            key['n_correct_trials'] = \
+                sum((np.squeeze(trials_response_choice) == 1) &
+                    (np.squeeze(trials_contrast_left) > 0)) \
+                + sum((np.squeeze(trials_response_choice) == -1) &
+                      (np.squeeze(trials_contrast_right) > 0))
 
         key['trials_start_time'] = trials_intervals[0, 0]
         key['trials_end_time'] = trials_intervals[-1, 1]
@@ -489,22 +554,27 @@ class TrialSet(dj.Imported):
                 trial_response_choice = "CW"
             else:
                 raise ValueError('Invalid reponse choice.')
-            
 
             trial_key['trial_id'] = idx_trial + 1
             trial_key['trial_start_time'] = trials_intervals[idx_trial, 0]
             trial_key['trial_end_time'] = trials_intervals[idx_trial, 1]
-            trial_key['trial_response_time'] = float(trials_response_times[idx_trial])
+            trial_key['trial_response_time'] = float(
+                trials_response_times[idx_trial])
             trial_key['trial_response_choice'] = trial_response_choice
-            
-            if stim_on_times_status != 'Missing':
-                trial_key['trial_stim_on_time'] = trials_visual_stim_times[idx_trial]
 
-            trial_key['trial_stim_contrast_left'] = float(trial_stim_contrast_left)
-            trial_key['trial_stim_contrast_right'] = float(trial_stim_contrast_right)
-            trial_key['trial_feedback_time'] = float(trials_feedback_times[idx_trial])
-            trial_key['trial_feedback_type'] = int(trials_feedback_types[idx_trial])
-            
+            if stim_on_times_status != 'Missing':
+                trial_key['trial_stim_on_time'] = trials_visual_stim_times[
+                    idx_trial]
+
+            trial_key['trial_stim_contrast_left'] = float(
+                trial_stim_contrast_left)
+            trial_key['trial_stim_contrast_right'] = float(
+                trial_stim_contrast_right)
+            trial_key['trial_feedback_time'] = float(
+                trials_feedback_times[idx_trial])
+            trial_key['trial_feedback_type'] = int(
+                trials_feedback_types[idx_trial])
+
             if rep_num_status != 'Missing':
                 trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
 
@@ -514,12 +584,11 @@ class TrialSet(dj.Imported):
                 trial_key['trial_included'] = bool(trials_included[idx_trial])
 
             self.Trial().insert1(trial_key)
-            #
-            # if trials_included[idx_trial] is False:
-            #     excluded_trial_key['trial_id'] = idx_trial + 1
-            #     self.ExcludedTrial().insert1(excluded_trial_key)
 
-        logger.info('Populated a TrialSet tuple, all Trial tuples and Excluded Trial tuples for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a TrialSet tuple, \
+            all Trial tuples and Excluded Trial tuples for \
+            subject {subject_uuid} in session started at \
+            {session_start_time}'.format(**key))
 
     class Trial(dj.Part):
         # all times are in absolute seconds, rather than relative to trial onset
@@ -558,13 +627,16 @@ class PassiveTrialSet(dj.Imported):
     passive_trials_end_time : float
     """
 
-    key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
-                    ("_ibl_passiveVisual.contrastLeft.npy", "_ibl_passiveVisual.contrastRight.npy", "_ibl_lickPiezo.timestamps.npy")')
+    key_source = acquisition.Session & (data.FileRecord & {'exists': 1} &
+                                        'dataset_name in \
+                                        ("_ibl_passiveVisual.contrastLeft.npy", \
+                                        "_ibl_passiveVisual.contrastRight.npy", \
+                                        "_ibl_lickPiezo.timestamps.npy")')
 
     def make(self, key):
 
         passive_trial_key = key.copy()
-        eID = (acquisition.Session & key).fetch1('session_uuid')
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         passive_visual_stim_contrast_left, passive_visual_stim_contrast_right = \
             ONE().load(eID, dataset_types=['_ibl_passiveVisual.contrastLeft',
@@ -573,7 +645,8 @@ class PassiveTrialSet(dj.Imported):
 
         assert len(np.unique(np.array([len(passive_visual_stim_contrast_left),
                                        len(passive_visual_stim_contrast_right),
-                                       len(passive_visual_stim_times)]))) == 1, 'Loaded passive visual files do not have the same length'
+                                       len(passive_visual_stim_times)]))) == 1, \
+            'Loaded passive visual files do not have the same length'
 
         key['passive_trials_total_num'] = len(passive_visual_stim_times)
         key['passive_trials_start_time'] = float(passive_visual_stim_times[0])
@@ -586,30 +659,37 @@ class PassiveTrialSet(dj.Imported):
             if np.isnan(passive_visual_stim_contrast_left[idx_trial]):
                 passive_stim_contrast_left = 0
             else:
-                passive_stim_contrast_left = passive_visual_stim_contrast_left[idx_trial]
+                passive_stim_contrast_left = \
+                    passive_visual_stim_contrast_left[idx_trial]
 
             if np.isnan(passive_visual_stim_contrast_right[idx_trial]):
                 passive_stim_contrast_right = 0
             else:
-                passive_stim_contrast_right = passive_visual_stim_contrast_right[idx_trial]
+                passive_stim_contrast_right = \
+                    passive_visual_stim_contrast_right[idx_trial]
 
             passive_trial_key['passive_trial_id'] = idx_trial + 1
-            passive_trial_key['passive_trial_stim_on_time'] = float(passive_visual_stim_times[idx_trial])
-            passive_trial_key['passive_trial_stim_contrast_left'] = float(passive_stim_contrast_left)
-            passive_trial_key['passive_trial_stim_contrast_right'] = float(passive_stim_contrast_right)
+            passive_trial_key['passive_trial_stim_on_time'] = float(
+                passive_visual_stim_times[idx_trial])
+            passive_trial_key['passive_trial_stim_contrast_left'] = float(
+                passive_stim_contrast_left)
+            passive_trial_key['passive_trial_stim_contrast_right'] = float(
+                passive_stim_contrast_right)
 
             self.PassiveTrial().insert1(passive_trial_key)
 
-        logger.info('Populated a PassiveTrialSet tuple, all Trial tuples and Excluded Trial tuples for subject {subject_nickname} in session started at {session_start_time}'.format(**key))
+        logger.info('Populated a PassiveTrialSet tuple, all Trial tuples and \
+            Excluded Trial tuples for subject {subject_uuid} in \
+                session started at {session_start_time}'.format(**key))
 
     class PassiveTrial(dj.Part):
         definition = """
         -> master
         passive_trial_id:           int         # trial identifier
         ---
-        passive_trial_stim_on_time:             float	    # Time of stimuli in choiceworld
-        passive_trial_stim_contrast_left:       float 	    # contrast of the stimulus on the left
-        passive_trial_stim_contrast_right:      float       # contrast of the stimulus on the right
+        passive_trial_stim_on_time:          float	# Time of stimuli in choiceworld
+        passive_trial_stim_contrast_left:    float 	# contrast of the stimulus on the left
+        passive_trial_stim_contrast_right:   float   # contrast of the stimulus on the right
         """
 
 
@@ -628,9 +708,10 @@ class PassiveRecordings(dj.Imported):
 
     def make(self, key):
 
-        eID = (acquisition.Session & key).fetch1('session_uuid')
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
-        key['passive_beep_times'], key['passive_valve_click_times'], key['passive_white_noise_times'] = \
+        key['passive_beep_times'], key['passive_valve_click_times'], \
+            key['passive_white_noise_times'] = \
             ONE().load(eID, dataset_types=['_ibl_passiveBeeps.times',
                                            '_ibl_passiveValveClick.times',
                                            '_ibl_passiveWhiteNoise.times'])

@@ -1,7 +1,7 @@
 import datajoint as dj
 from . import reference
 
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_subject')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_dj_subject')
 
 
 # Actions:
@@ -21,7 +21,7 @@ class Species(dj.Lookup):
     definition = """
     binomial:			    varchar(255)	# binomial
     ---
-    species_uuid:           varchar(64)
+    species_uuid:           uuid
     species_nickname:		varchar(255)	# nick name
     """
 
@@ -32,7 +32,7 @@ class Source(dj.Lookup):
     definition = """
     source_name:				varchar(255)	# name of source
     ---
-    source_uuid:                varchar(64)
+    source_uuid:                uuid
     source_description=null:	varchar(255)	# description
     """
 
@@ -43,7 +43,7 @@ class Strain(dj.Lookup):
     definition = """
     strain_name:		        varchar(255)	# strain name
     ---
-    strain_uuid:                varchar(64)
+    strain_uuid:                uuid
     strain_description=null:    varchar(255)	# description
     """
 
@@ -54,7 +54,7 @@ class Sequence(dj.Lookup):
     definition = """
     sequence_name:		        varchar(255)	# informal name
     ---
-    sequence_uuid:              varchar(64)
+    sequence_uuid:              uuid
     base_pairs=null:	        varchar(1024)	# base pairs
     sequence_description=null:	varchar(255)	# description
     """
@@ -66,7 +66,7 @@ class Allele(dj.Lookup):
     definition = """
     allele_name:			    varchar(255)    # informal name
     ---
-    allele_uuid:                varchar(64)
+    allele_uuid:                uuid
     standard_name=null:		    varchar(255)	# standard name
     -> [nullable] Source
     allele_source=null:         varchar(255)    # source of the allele
@@ -92,7 +92,7 @@ class Line(dj.Lookup):
     ---
     -> Species
     -> [nullable] Strain
-    line_uuid:              varchar(64)
+    line_uuid:              uuid
     line_description=null:	varchar(2048)	# description
     target_phenotype=null:	varchar(255)	# target phenotype
     line_nickname:		    varchar(255)	# nickname
@@ -112,16 +112,14 @@ class LineAllele(dj.Lookup):
 class Subject(dj.Manual):
     # <class 'subjects.models.Subject'>
     definition = """
-    -> reference.Lab
-    subject_nickname:		    varchar(255)		# nickname
+    subject_uuid:               uuid
     ---
-    subject_uuid:               varchar(64)
+    subject_nickname:		    varchar(255)		# nickname
     sex:			            enum("M", "F", "U")	# sex
     subject_birth_date=null:	date			    # birth date
     ear_mark=null:			    varchar(255)		# ear mark
     -> [nullable] Line.proj(subject_line="line_name")
     -> [nullable] Source.proj(subject_source='source_name')
-    -> [nullable] reference.LabMember.proj(responsible_user='user_name')
     protocol_number:            tinyint         	# protocol number
     subject_description=null:   varchar(1024)
     """
@@ -134,13 +132,13 @@ class BreedingPair(dj.Manual):
     bp_name:			    varchar(255)		    # name
     ---
     -> [nullable] Line.proj(bp_line='line_name')
-    bp_uuid:                varchar(64)
+    bp_uuid:                uuid
     bp_description=null:	varchar(2048)		    # description
     bp_start_date=null:	    date		            # start date
     bp_end_date=null:		date			        # end date
-    -> [nullable] Subject.proj(father='subject_nickname')   # father
-    -> [nullable] Subject.proj(mother1='subject_nickname')   # mother1
-    -> [nullable] Subject.proj(mother2='subject_nickname')	# mother2
+    -> [nullable] Subject.proj(father='subject_uuid')    # father
+    -> [nullable] Subject.proj(mother1='subject_uuid')   # mother1
+    -> [nullable] Subject.proj(mother2='subject_uuid')	 # mother2
     """
 
 
@@ -151,8 +149,8 @@ class Litter(dj.Manual):
     litter_name:                    varchar(255)
     ---
     -> [nullable] BreedingPair
-    -> Line.proj(litter_line='line_name')
-    litter_uuid:			        varchar(64)	    # litter uuid
+    -> [nullable] Line.proj(litter_line='line_name')
+    litter_uuid:			        uuid	    # litter uuid
     litter_descriptive_name=null:	varchar(255)	# descriptive name
     litter_description=null:	    varchar(255)	# description
     litter_birth_date=null:			date		    # birth date
@@ -176,6 +174,7 @@ class SubjectProject(dj.Manual):
     -> reference.Project
     """
 
+
 @schema
 class SubjectUser(dj.Manual):
     definition = """
@@ -184,15 +183,26 @@ class SubjectUser(dj.Manual):
     -> reference.LabMember.proj(responsible_user='user_name')
     """
 
+
+@schema
+class SubjectLab(dj.Manual):
+    definition = """
+    -> Subject
+    ---
+    -> reference.Lab
+    """
+
+
 @schema
 class Caging(dj.Manual):
     # <class 'subjects.models.Subject'>
     definition = """
     -> Subject
-    cage_name:          varchar(255)        # cage name
+    cage_name:              varchar(255)        # cage name
     ---
-    cage_time=null:	    datetime			# cage 
+    caging_time=null:	    datetime			# cage
     """
+
 
 @schema
 class UserHistory(dj.Manual):
@@ -222,7 +232,7 @@ class GenotypeTest(dj.Manual):
     definition = """
     -> Subject
     -> Sequence
-    genotype_test_uuid:		    varchar(64)     # genotype test id
+    genotype_test_uuid:		    uuid     # genotype test id
     ---
     test_result:		        enum("Present", "Absent")		# test result
     """
@@ -237,7 +247,7 @@ class Zygosity(dj.Manual):
     -> Subject
     -> Allele
     ---
-    zygosity_uuid:      varchar(64)
+    zygosity_uuid:      uuid
     zygosity:		    enum("Present", "Absent", "Homozygous", "Heterozygous")  # zygosity
     """
 

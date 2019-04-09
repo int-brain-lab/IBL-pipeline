@@ -1,6 +1,6 @@
 import datajoint as dj
 
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_reference')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_dj_reference')
 
 
 @schema
@@ -9,7 +9,7 @@ class Lab(dj.Lookup):
     definition = """
     lab_name:               varchar(255)  # name of lab
     ---
-    lab_uuid:               varchar(64)
+    lab_uuid:               uuid
     institution:            varchar(255)
     address:                varchar(255)
     time_zone:              varchar(255)
@@ -25,7 +25,7 @@ class LabMember(dj.Manual):
     definition = """
     user_name:		        varchar(255)	# username
     ---
-    user_uuid:              varchar(64)     
+    user_uuid:              uuid
     password:		        varchar(255)	# password
     email=null:		        varchar(255)	# email address
     last_login=null:	    datetime	    # last login
@@ -36,7 +36,7 @@ class LabMember(dj.Manual):
     is_staff:		        boolean		    # staff status
     is_superuser:	        boolean		    # superuser status
     is_stock_manager:       boolean         # stock manager status
-    groups=null:            blob            # 
+    groups=null:            blob            #
     user_permissions=null:   blob            #
     """
 
@@ -47,7 +47,7 @@ class LabMembership(dj.Manual):
     -> Lab
     -> LabMember
     ---
-    lab_membership_uuid:    varchar(64)
+    lab_membership_uuid:    uuid
     role=null:              varchar(255)
     mem_start_date=null:    date
     mem_end_date=null:      date
@@ -63,7 +63,7 @@ class LabLocation(dj.Manual):
     -> Lab
     location_name:      varchar(255)    # name of the location
     ---
-    location_uuid:      varchar(64)
+    location_uuid:      uuid
     """
 
 
@@ -72,7 +72,7 @@ class Project(dj.Lookup):
     definition = """
     project_name:               varchar(255)
     ---
-    project_uuid:               varchar(64)
+    project_uuid:               uuid
     project_description=null:   varchar(1024)
     """
 

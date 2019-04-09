@@ -1,6 +1,9 @@
 # IDEA configs
 .idea/
 
+# vscode settings
+.vscode/*
+
 # macOS
 .DS_Store
 
