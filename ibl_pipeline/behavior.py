@@ -564,8 +564,8 @@ class TrialSet(dj.Imported):
             trial_key['trial_response_choice'] = trial_response_choice
 
             if stim_on_times_status != 'Missing':
-                trial_key['trial_stim_on_time'] = trials_visual_stim_times
-                [idx_trial]
+                trial_key['trial_stim_on_time'] = trials_visual_stim_times[
+                    idx_trial]
 
             trial_key['trial_stim_contrast_left'] = float(
                 trial_stim_contrast_left)
@@ -584,11 +584,8 @@ class TrialSet(dj.Imported):
             if included_status != 'Missing':
                 trial_key['trial_included'] = bool(trials_included[idx_trial])
 
+            print(trial_key)
             self.Trial().insert1(trial_key)
-            #
-            # if trials_included[idx_trial] is False:
-            #     excluded_trial_key['trial_id'] = idx_trial + 1
-            #     self.ExcludedTrial().insert1(excluded_trial_key)
 
         logger.info('Populated a TrialSet tuple, \
             all Trial tuples and Excluded Trial tuples for \
