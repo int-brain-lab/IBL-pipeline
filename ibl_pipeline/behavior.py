@@ -459,7 +459,6 @@ class TrialSet(dj.Imported):
 
     def make(self, key):
         trial_key = key.copy()
-        print(key)
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         trials_feedback_times, trials_feedback_types, trials_intervals, \
@@ -584,7 +583,6 @@ class TrialSet(dj.Imported):
             if included_status != 'Missing':
                 trial_key['trial_included'] = bool(trials_included[idx_trial])
 
-            print(trial_key)
             self.Trial().insert1(trial_key)
 
         logger.info('Populated a TrialSet tuple, \
