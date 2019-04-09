@@ -11,15 +11,14 @@ def compute_psych_pars(trials):
         'trial_response_choice',
         signed_contrast='trial_stim_contrast_right \
         - trial_stim_contrast_left')
-    q_all = dj.U('signed_contrast').aggr(trials, n='count(*)')
-    q_right = dj.U('signed_contrast').aggr(
-        trials, n_right='sum(trial_response_choice="CCW")')
-    signed_contrasts, n_trials_stim = q_all.fetch(
-        'signed_contrast', 'n'
+    q = dj.U('signed_contrast').aggr(trials, n='count(*)',
+                                     n_right='sum(trial_response_choice="CCW")')
+    signed_contrasts, n_trials_stim, n_trials_stim_right = q.fetch(
+        'signed_contrast', 'n', 'n_right'
     )
     signed_contrasts = signed_contrasts.astype(float)
     n_trials_stim = n_trials_stim.astype(int)
-    n_trials_stim_right = q_right.fetch('n_right').astype(int)
+    n_trials_stim_right = n_trials_stim_right.astype(int)
 
     # merge left 0 and right 0
     data = pd.DataFrame({
