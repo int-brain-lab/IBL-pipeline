@@ -6,7 +6,7 @@ from datetime import datetime
 import numpy as np
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
-                   'ibl_analyses_behavior')
+                   'ibl_dj_analyses_behavior')
 
 
 @schema
@@ -47,7 +47,7 @@ class ReactionTime(dj.Computed):
     definition = """
     -> PsychResults
     ---
-    reaction_time:     blob   # meadian reaction time for each contrasts
+    reaction_time:     blob   # median reaction time for each contrasts
     """
     key_source = PsychResults & \
         (behavior.CompleteTrialSession &
@@ -69,7 +69,7 @@ class BehavioralSummaryByDate(dj.Computed):
     performance_easy=null:  float   # percentage correct of the easy trials for the day
     """
 
-    key_source = dj.U('lab_name', 'subject_nickname', 'session_date') \
+    key_source = dj.U('subject_uuid', 'session_date') \
         & behavior.TrialSet.proj(session_date='DATE(session_start_time)')
 
     def make(self, key):
