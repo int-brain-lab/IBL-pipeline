@@ -114,14 +114,12 @@ class Subject(dj.Manual):
     definition = """
     subject_uuid:               uuid
     ---
-    -> [nullable] reference.Lab
     subject_nickname:		    varchar(255)		# nickname
     sex:			            enum("M", "F", "U")	# sex
     subject_birth_date=null:	date			    # birth date
     ear_mark=null:			    varchar(255)		# ear mark
     -> [nullable] Line.proj(subject_line="line_name")
     -> [nullable] Source.proj(subject_source='source_name')
-    -> [nullable] reference.LabMember.proj(responsible_user='user_name')
     protocol_number:            tinyint         	# protocol number
     subject_description=null:   varchar(1024)
     """
