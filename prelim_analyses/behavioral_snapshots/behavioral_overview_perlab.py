@@ -33,9 +33,12 @@ path = '/Figures_DataJoint_shortcuts/'
 # START BIG OVERVIEW PLOT
 # ============================================= #
 
-allsubjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'sex!="U"'
-                                   & action.Weighing() & action.WaterAdministration()
-                                   ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
+allsubjects = pd.DataFrame.from_dict(
+	((subject.Subject - subject.Death) * subject.SubjectLab & 'sex!="U"' &
+	 action.Weighing & action.WaterAdministration).fetch(
+		as_dict=True, order_by=['lab_name', 'subject_nickname'])
+)
+
 if allsubjects.empty:
 	raise ValueError('DataJoint seems to be down, please try again later')
 
@@ -51,9 +54,10 @@ training_review = pd.DataFrame([])
 for lidx, lab in enumerate(users):
 
 	# take mice from this lab only
-	subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'sex!="U"' & 'lab_name="%s"'%lab
-                                   & action.Weighing() & action.WaterAdministration()
-                                   ).fetch(as_dict=True, order_by=['subject_nickname']))
+	subjects = pd.DataFrame.from_dict(
+		((subject.Subject - subject.Death) * subject.SubjectLab & 'sex!="U"' &
+		 'lab_name="%s"'%lab & action.Weighing & action.WaterAdministration).fetch(
+			 as_dict=True, order_by=['subject_nickname']))
 
 	# group by batches: mice that were born on the same day
 	batches = subjects.subject_birth_date.unique()
