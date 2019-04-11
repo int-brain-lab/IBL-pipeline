@@ -37,7 +37,7 @@ datapath = '/Data_shortcut/'
 # all mice that are alive, without those with undefined sex (i.e. example mice)
 # restrict to animals that have trial data, weights and water logged
 allsubjects = pd.DataFrame.from_dict(
-    ((subject.Subject - subject.Death) & subject.SubjectLab & 'sex!="U"' &
+    ((subject.Subject - subject.Death) * subject.SubjectLab & 'sex!="U"' &
      action.Weighing & action.WaterAdministration).fetch(
          as_dict=True, order_by=['lab_name', 'subject_nickname']))
 
@@ -51,9 +51,9 @@ for lidx, lab in enumerate(users):
 
     # take mice from this lab only
     subjects = pd.DataFrame.from_dict(
-        ((subject.Subject - subject.Death) * subject.SubjectLab & 'sex!="U"' &
+        ((subject.Subject - subject.Death) * subject.SubjectLab * subject.SubjectUser & 'sex!="U"' &
          'lab_name="%s"' % lab & action.Weighing & action.WaterAdministration).fetch(
-             as_dict=True, order_by=['subject_nickname'])
+             as_dict=True, order_by=['subject_nickname']))
 
     for i, mouse in enumerate(subjects['subject_nickname']):
 

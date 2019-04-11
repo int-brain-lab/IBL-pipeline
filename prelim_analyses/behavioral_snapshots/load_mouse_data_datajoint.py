@@ -128,9 +128,11 @@ def get_water_weight(mousename, labname):
 
 def get_behavior(mousename, labname, **kwargs):
 
-    b = subject.Subject * subject.SubjectLab * behavior.TrialSet.Trial * acquisition.Session.proj(
-        'session_end_time', 'task_protocol', ac_lab='lab_name') & \
-            'subject_nickname = "%s"' % mousename & 'lab_name="%s"' % labname
+    b = (subject.Subject & 'subject_nickname = "%s"' % mousename) \
+        * (subject.SubjectLab & 'lab_name="%s"' % labname)\
+        * subject.SubjectLab.proj(ac_lab='lab_name') \
+        * behavior.TrialSet.Trial * acquisition.Session.proj(
+        'session_end_time', 'task_protocol')
     behav = pd.DataFrame(b.fetch(order_by='session_start_time, trial_id'))
 
     if not behav.empty:

@@ -181,6 +181,7 @@ for lidx, lab in enumerate(users):
 					plot_contrast_heatmap(behav, ax, xlims)
 
 				except:
+					print(mouse + ' error')
 					pass
 
 				elapsed = time.time() - t
