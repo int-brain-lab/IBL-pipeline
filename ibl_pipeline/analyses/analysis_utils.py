@@ -29,8 +29,8 @@ def compute_psych_pars(trials):
     data = data.groupby('signed_contrasts').sum()
 
     signed_contrasts = np.unique(signed_contrasts)
-    n_trials_stim_right = data['n_trials_stim_right']
-    n_trials_stim = data['n_trials_stim']
+    n_trials_stim_right = np.array(data['n_trials_stim_right'])
+    n_trials_stim = np.array(data['n_trials_stim'])
 
     prob_choose_right = np.divide(n_trials_stim_right,
                                   n_trials_stim)
@@ -89,4 +89,4 @@ def compute_reaction_time(trials):
     rt = rt[['signed_contrast', 'rt']]
     median_rt = rt.groupby('signed_contrast').median()
 
-    return median_rt['rt']
+    return np.array(median_rt['rt'])

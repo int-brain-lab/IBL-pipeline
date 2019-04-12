@@ -69,11 +69,15 @@ class BehavioralSummaryByDate(dj.Computed):
     performance_easy=null:  float   # percentage correct of the easy trials for the day
     """
 
+    trial_sets_with_stim_on_times = behavior.TrialSet & \
+        (behavior.CompleteTrialSession &
+         'stim_on_times_status = "Complete"')
     key_source = dj.U('subject_uuid', 'session_date') \
-        & behavior.TrialSet.proj(session_date='DATE(session_start_time)')
+        & trial_sets_with_stim_on_times.proj(
+            session_date='DATE(session_start_time)')
 
     def make(self, key):
-        print(key)
+
         master_entry = key.copy()
         rt = key.copy()
 

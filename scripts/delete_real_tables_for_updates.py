@@ -12,7 +12,7 @@ dj.config['safemode'] = False
 if len(subject_ingest.SubjectUser()):
     subject.SubjectUser.delete()
 
-if len(subject_ingest.SubjectLab):
+if len(subject_ingest.SubjectLab()):
     subject.SubjectLab.delete()
 
 if len(action_ingest.Weighing()):
