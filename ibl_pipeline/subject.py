@@ -1,7 +1,7 @@
 import datajoint as dj
 from . import reference
 
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_dj_subject')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_subject')
 
 
 # Actions:

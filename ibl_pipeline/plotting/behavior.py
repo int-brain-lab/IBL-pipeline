@@ -6,7 +6,7 @@ import plotly
 import plotly.graph_objs as go
 import statsmodels.stats.proportion as smp
 
-schema = dj.schema('ibl_dj_plotting_behavior')
+schema = dj.schema('ibl_plotting_behavior')
 
 
 @schema

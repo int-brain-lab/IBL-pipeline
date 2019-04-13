@@ -6,7 +6,7 @@ from datetime import datetime
 import numpy as np
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
-                   'ibl_dj_analyses_behavior')
+                   'ibl_analyses_behavior')
 
 
 @schema

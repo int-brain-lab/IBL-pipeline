@@ -1,6 +1,6 @@
 import datajoint as dj
 
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_dj_reference')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_reference')
 
 
 @schema

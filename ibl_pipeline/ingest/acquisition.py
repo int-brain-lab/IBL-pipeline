@@ -6,7 +6,7 @@ from . import alyxraw, reference, subject, action
 from . import get_raw_field as grf
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
-                   'ibl_dj_ingest_acquisition')
+                   'ibl_ingest_acquisition')
 
 
 @schema

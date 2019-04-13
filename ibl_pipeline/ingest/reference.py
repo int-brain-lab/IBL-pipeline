@@ -6,7 +6,7 @@ from . import get_raw_field as grf
 
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
-                   'ibl_dj_ingest_reference')
+                   'ibl_ingest_reference')
 
 
 @schema

@@ -12,7 +12,7 @@ except:
     pass
 
 logger = logging.getLogger(__name__)
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_dj_behavior')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
 
 
 @schema
