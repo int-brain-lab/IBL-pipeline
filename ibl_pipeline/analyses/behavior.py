@@ -43,6 +43,23 @@ class PsychResults(dj.Computed):
 
 
 @schema
+class ReactionTime(dj.Computed):
+    definition = """
+    -> PsychResults
+    ---
+    reaction_time:     blob   # median reaction time for each contrasts
+    """
+    key_source = PsychResults & \
+        (behavior.CompleteTrialSession &
+         'stim_on_times_status = "Complete"')
+
+    def make(self, key):
+        trials = behavior.TrialSet.Trial & key
+        key['reaction_time'] = utils.compute_reaction_time(trials)
+        self.insert1(key)
+
+
+@schema
 class BehavioralSummaryByDate(dj.Computed):
     definition = """
     -> subject.Subject
@@ -52,8 +69,12 @@ class BehavioralSummaryByDate(dj.Computed):
     performance_easy=null:  float   # percentage correct of the easy trials for the day
     """
 
-    key_source = dj.U('lab_name', 'subject_nickname', 'session_date') \
-        & behavior.TrialSet.proj(session_date='DATE(session_start_time)')
+    trial_sets_with_stim_on_times = behavior.TrialSet & \
+        (behavior.CompleteTrialSession &
+         'stim_on_times_status = "Complete"')
+    key_source = dj.U('subject_uuid', 'session_date') \
+        & trial_sets_with_stim_on_times.proj(
+            session_date='DATE(session_start_time)')
 
     def make(self, key):
 
@@ -136,25 +157,8 @@ class BehavioralSummaryByDate(dj.Computed):
         definition = """
         -> master.PsychResults
         ---
-        reaction_time: blob   # reaction time for all contrasts
+        reaction_time: blob   # meadian reaction time for each contrast
         """
-
-
-@schema
-class ReactionTime(dj.Computed):
-    definition = """
-    -> PsychResults
-    ---
-    reaction_time:     blob   # reaction time for all contrasts
-    """
-    key_source = PsychResults & \
-        (behavior.CompleteTrialSession &
-         'stim_on_times_status = "Complete"')
-
-    def make(self, key):
-        trials = behavior.TrialSet.Trial & key
-        key['reaction_time'] = utils.compute_reaction_time(trials)
-        self.insert1(key)
 
 
 @schema
@@ -189,7 +193,7 @@ class SessionTrainingStatus(dj.Computed):
             key['training_status'] = 'trained'
             # Criteria for "ready for ephys" status
             sessions = (behavior.TrialSet & subject_key &
-                        (acquisition.Session & 'task_protocol="biased"') &
+                        (acquisition.Session & 'task_protocol LIKE "%biased%"') &
                         'session_start_time <= "{}"'.format(
                             key['session_start_time'].strftime(
                                 '%Y-%m-%d %H:%M:%S')
@@ -201,11 +205,12 @@ class SessionTrainingStatus(dj.Computed):
 
             sessions_rel = sessions[-3:]
             n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
-            performance_easy = (behavior.TrialSet & sessions_rel).fetch(
+            performance_easy = (PsychResults & sessions_rel).fetch(
                 'performance_easy')
             if np.all(n_trials > 200) and np.all(performance_easy > 0.8):
                 trials = behavior.TrialSet.Trial & sessions_rel
-                prob_lefts = dj.U('trial_stim_prob_left') & trials
+                prob_lefts = (dj.U('trial_stim_prob_left') & trials).fetch(
+                    'trial_stim_prob_left')
 
                 # if no 0.5 of prob_left, keep trained
                 if np.all(np.absolute(prob_lefts - 0.5) > 0.001):
@@ -225,11 +230,11 @@ class SessionTrainingStatus(dj.Computed):
                 psych_80 = utils.compute_psych_pars(trials_80)
                 psych_20 = utils.compute_psych_pars(trials_20)
 
-                criterion = psych_unbiased['bias'] < 16 and \
+                criterion = np.abs(psych_unbiased['bias']) < 16 and \
                     psych_unbiased['threshold'] < 19 and \
                     psych_unbiased['lapse_low'] < 0.2 and \
                     psych_unbiased['lapse_high'] < 0.2 and \
-                    psych_80['bias'] - psych_20['bias'] > 5
+                    psych_20['bias'] - psych_80['bias'] > 5
 
                 if criterion:
                     key['training_status'] = 'ready for ephys'
@@ -249,7 +254,7 @@ class SessionTrainingStatus(dj.Computed):
             return
 
         # training in progress if any of the last three sessions have
-        # < 200 trials
+        # < 200 trials or performance of easy trials < 0.8
         sessions_rel = sessions[-3:]
         n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
         performance_easy = (PsychResults & sessions_rel).fetch(
@@ -261,7 +266,7 @@ class SessionTrainingStatus(dj.Computed):
             contrasts = np.absolute(
                 (PsychResults & key).fetch1('signed_contrasts'))
             if 0 in contrasts and \
-               np.sum((contrasts < 0.062) & (contrasts > 0.001)):
+               np.sum((contrasts < 0.065) & (contrasts > 0.001)):
                 # compute psych results of last three sessions
                 trials = behavior.TrialSet.Trial & sessions_rel
                 psych = utils.compute_psych_pars(trials)

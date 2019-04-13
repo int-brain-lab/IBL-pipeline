@@ -36,9 +36,11 @@ datapath = '/Data_shortcut/'
 
 # all mice that are alive, without those with undefined sex (i.e. example mice)
 # restrict to animals that have trial data, weights and water logged
-allsubjects = pd.DataFrame.from_dict(((subject.Subject - subject.Death) & 'sex!="U"'
-                                   & action.Weighing() & action.WaterAdministration()
-                                   ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
+allsubjects = pd.DataFrame.from_dict(
+    ((subject.Subject - subject.Death) * subject.SubjectLab & 'sex!="U"' &
+     action.Weighing & action.WaterAdministration).fetch(
+         as_dict=True, order_by=['lab_name', 'subject_nickname']))
+
 if allsubjects.empty:
     raise ValueError('DataJoint seems to be down, please try again later')
 
@@ -48,9 +50,10 @@ print(users)
 for lidx, lab in enumerate(users):
 
     # take mice from this lab only
-    subjects = pd.DataFrame.from_dict((((subject.Subject - subject.Death) & 'sex!="U"' & 'lab_name="%s"'%lab)
-                                   & action.Weighing() & action.WaterAdministration()
-                                   ).fetch(as_dict=True, order_by=['subject_nickname']))
+    subjects = pd.DataFrame.from_dict(
+        ((subject.Subject - subject.Death) * subject.SubjectLab * subject.SubjectUser & 'sex!="U"' &
+         'lab_name="%s"' % lab & action.Weighing & action.WaterAdministration).fetch(
+             as_dict=True, order_by=['subject_nickname']))
 
     for i, mouse in enumerate(subjects['subject_nickname']):
 
@@ -121,6 +124,7 @@ for lidx, lab in enumerate(users):
             axes[1, 0].axvline(trained_date, color="orange")
         elif training_status == 'ready for ephys':
             # indicate date at which the animal is 'ready for ephys'
+            axes[1, 0].axvline(trained_date, color="orange")
             axes[1, 0].axvline(biased_date, color="forestgreen")
 
         # ============================================= #
@@ -133,6 +137,7 @@ for lidx, lab in enumerate(users):
             axes[2, 0].axvline(trained_date, color="orange")
         elif training_status == 'ready for ephys':
             # indicate date at which the animal is 'ready for ephys'
+            axes[2, 0].axvline(trained_date, color="orange")
             axes[2, 0].axvline(biased_date, color="forestgreen")
 
         # ============================================= #
@@ -148,8 +153,18 @@ for lidx, lab in enumerate(users):
         # fit psychfunc on choice fraction, rather than identity
         pars = behav.groupby(['date', 'probabilityLeft_block']).apply(fit_psychfunc).reset_index()
 
-        # TODO: HOW TO SAVE THIS IN A DJ TABLE FOR LATER?
-        parsdict = {'threshold': r'Threshold $(\sigma)$', 'bias': r'Bias $(\mu)$',
+        # pars = (behavior_analysis.ComputationForDate.PsychResults &
+        #            'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab).fetch(as_dict=True,
+        #            order_by='session_start_time')
+        # shell()
+
+        # or how about we chat tomorrow morning? the fetch seems straightforward, perhaps we can go through the following together
+        # - in the output, can I round the session_start_time to a date (remove the hours and minutes)?
+        # - can I get these values but on appended data per day (rather than each sessions, i.e. when there are two sessions per day group them together)
+        # - within each session of biasedChoiceWorld, can we separately have all the psychfunc parameters for each value of probabilityLeft
+
+        # link to their descriptions
+        ylabels = {'threshold': r'Threshold $(\sigma)$', 'bias': r'Bias $(\mu)$',
             'lapselow': r'Lapse low $(\gamma)$', 'lapsehigh': r'Lapse high $(\lambda)$'}
         ylims = [[-5, 105], [-105, 105], [-0.05, 1.05], [-0.05, 1.05]]
         yticks = [[0, 19, 100], [-100, -16, 0, 16, 100], [-0, 0.2, 0.5, 1], [-0, 0.2, 0.5, 1]]
@@ -161,7 +176,7 @@ for lidx, lab in enumerate(users):
         sns.set_palette(cmap)
 
         # plot the fitted parameters
-        for pidx, (var, labelname) in enumerate(parsdict.items()):
+        for pidx, (var, labelname) in enumerate(ylabels.items()):
             ax = axes[pidx,1]
             sns.lineplot(x="date", y=var, marker='o', hue="probabilityLeft_block", linestyle='', lw=0,
                 palette=cmap, data=pars, legend=None, ax=ax)
@@ -178,6 +193,7 @@ for lidx, lab in enumerate(users):
                 ax.axvline(trained_date, color="orange")
             elif training_status == 'ready for ephys':
                 # indicate date at which the animal is 'ready for ephys'
+                ax.axvline(trained_date, color="orange")
                 ax.axvline(biased_date, color="forestgreen")
 
         # ============================================= #

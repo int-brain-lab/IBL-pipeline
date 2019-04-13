@@ -33,9 +33,12 @@ path = '/Figures_DataJoint_shortcuts/'
 # START BIG OVERVIEW PLOT
 # ============================================= #
 
-allsubjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'sex!="U"'
-                                   & action.Weighing() & action.WaterAdministration()
-                                   ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
+allsubjects = pd.DataFrame.from_dict(
+	((subject.Subject - subject.Death) * subject.SubjectLab & 'sex!="U"' &
+	 action.Weighing & action.WaterAdministration).fetch(
+		as_dict=True, order_by=['lab_name', 'subject_nickname'])
+)
+
 if allsubjects.empty:
 	raise ValueError('DataJoint seems to be down, please try again later')
 
@@ -51,9 +54,10 @@ training_review = pd.DataFrame([])
 for lidx, lab in enumerate(users):
 
 	# take mice from this lab only
-	subjects = pd.DataFrame.from_dict(((subject.Subject() - subject.Death()) & 'sex!="U"' & 'lab_name="%s"'%lab
-                                   & action.Weighing() & action.WaterAdministration()
-                                   ).fetch(as_dict=True, order_by=['subject_nickname']))
+	subjects = pd.DataFrame.from_dict(
+		((subject.Subject - subject.Death) * subject.SubjectLab & 'sex!="U"' &
+		 'lab_name="%s"'%lab & action.Weighing & action.WaterAdministration).fetch(
+			 as_dict=True, order_by=['subject_nickname']))
 
 	# group by batches: mice that were born on the same day
 	batches = subjects.subject_birth_date.unique()
@@ -130,6 +134,7 @@ for lidx, lab in enumerate(users):
 					else:
 							days_to_trained = np.nan
 							days_to_biased = np.nan
+
 					# keep track
 					training_review = training_review.append(
 						pd.DataFrame({
@@ -149,6 +154,7 @@ for lidx, lab in enumerate(users):
 						ax.axvline(trained_date, color="orange")
 					elif training_status == 'ready for ephys':
 					# indicate date at which the animal is 'ready for ephys'
+						ax.axvline(trained_date, color="orange")
 						ax.axvline(biased_date, color="forestgreen")
 
 					plot_trialcounts_sessionlength(behav, ax, xlims)
@@ -164,6 +170,7 @@ for lidx, lab in enumerate(users):
 						ax.axvline(trained_date, color="orange")
 					elif training_status == 'ready for ephys':
 					# indicate date at which the animal is 'ready for ephys'
+						ax.axvline(trained_date, color="orange")
 						ax.axvline(biased_date, color="forestgreen")
 
 					fix_date_axis(ax)
@@ -174,6 +181,7 @@ for lidx, lab in enumerate(users):
 					plot_contrast_heatmap(behav, ax, xlims)
 
 				except:
+					print(mouse + ' error')
 					pass
 
 				elapsed = time.time() - t
