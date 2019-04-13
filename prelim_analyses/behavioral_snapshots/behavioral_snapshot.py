@@ -36,9 +36,11 @@ datapath = '/Data_shortcut/'
 
 # all mice that are alive, without those with undefined sex (i.e. example mice)
 # restrict to animals that have trial data, weights and water logged
-allsubjects = pd.DataFrame.from_dict(((subject.Subject - subject.Death) & 'sex!="U"'
-                                   & action.Weighing() & action.WaterAdministration()
-                                   ).fetch(as_dict=True, order_by=['lab_name', 'subject_nickname']))
+allsubjects = pd.DataFrame.from_dict(
+    ((subject.Subject - subject.Death) * subject.SubjectLab & 'sex!="U"' &
+     action.Weighing & action.WaterAdministration).fetch(
+         as_dict=True, order_by=['lab_name', 'subject_nickname']))
+
 if allsubjects.empty:
     raise ValueError('DataJoint seems to be down, please try again later')
 
@@ -48,9 +50,10 @@ print(users)
 for lidx, lab in enumerate(users):
 
     # take mice from this lab only
-    subjects = pd.DataFrame.from_dict((((subject.Subject - subject.Death) & 'sex!="U"' & 'lab_name="%s"'%lab)
-                                   & action.Weighing() & action.WaterAdministration()
-                                   ).fetch(as_dict=True, order_by=['subject_nickname']))
+    subjects = pd.DataFrame.from_dict(
+        ((subject.Subject - subject.Death) * subject.SubjectLab * subject.SubjectUser & 'sex!="U"' &
+         'lab_name="%s"' % lab & action.Weighing & action.WaterAdministration).fetch(
+             as_dict=True, order_by=['subject_nickname']))
 
     for i, mouse in enumerate(subjects['subject_nickname']):
 
@@ -121,6 +124,7 @@ for lidx, lab in enumerate(users):
             axes[1, 0].axvline(trained_date, color="orange")
         elif training_status == 'ready for ephys':
             # indicate date at which the animal is 'ready for ephys'
+            axes[1, 0].axvline(trained_date, color="orange")
             axes[1, 0].axvline(biased_date, color="forestgreen")
 
         # ============================================= #
@@ -133,6 +137,7 @@ for lidx, lab in enumerate(users):
             axes[2, 0].axvline(trained_date, color="orange")
         elif training_status == 'ready for ephys':
             # indicate date at which the animal is 'ready for ephys'
+            axes[2, 0].axvline(trained_date, color="orange")
             axes[2, 0].axvline(biased_date, color="forestgreen")
 
         # ============================================= #
@@ -188,6 +193,7 @@ for lidx, lab in enumerate(users):
                 ax.axvline(trained_date, color="orange")
             elif training_status == 'ready for ephys':
                 # indicate date at which the animal is 'ready for ephys'
+                ax.axvline(trained_date, color="orange")
                 ax.axvline(biased_date, color="forestgreen")
 
         # ============================================= #

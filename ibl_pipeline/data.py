@@ -9,7 +9,7 @@ class DataFormat(dj.Lookup):
     definition = """
     format_name:                    varchar(255)
     ---
-    format_uuid:                    varchar(64)
+    format_uuid:                    uuid
     file_extension='':              varchar(255)
     matlab_loader_function=null:    varchar(255)
     python_loader_function=null:    varchar(255)
@@ -22,7 +22,7 @@ class DataRepositoryType(dj.Lookup):
     definition = """
     repotype_name:  varchar(255)
     ---
-    repotype_uuid:  varchar(64)
+    repotype_uuid:  uuid
     """
 
 
@@ -32,7 +32,7 @@ class DataRepository(dj.Lookup):
     repo_name:          varchar(255)
     ---
     -> DataRepositoryType
-    repo_uuid:          varchar(64)
+    repo_uuid:          uuid
     repo_timezone:      varchar(255)
     repo_hostname:      varchar(255)
     globus_endpoint_id: varchar(255)
@@ -55,7 +55,7 @@ class DataSetType(dj.Lookup):
     definition = """
     dataset_type_name:              varchar(255)
     ---
-    dataset_type_uuid:              varchar(64)
+    dataset_type_uuid:              uuid
     -> [nullable] reference.LabMember.proj(dataset_type_created_by='user_name')
     filename_pattern:               varchar(255)
     dataset_type_description=null:  varchar(1024)
@@ -68,7 +68,7 @@ class DataSet(dj.Manual):
     -> acquisition.Session
     dataset_name:               varchar(255)
     ---
-    dataset_uuid:               varchar(64)
+    dataset_uuid:               uuid
     -> reference.LabMember.proj(dataset_created_by='user_name')
     -> DataSetType
     -> DataFormat
@@ -86,7 +86,7 @@ class FileRecord(dj.Manual):
     -> DataSet
     -> DataRepository
     ---
-    record_uuid:        varchar(64)
+    record_uuid:        uuid
     exists:             boolean
     relative_path:      varchar(255)
     """

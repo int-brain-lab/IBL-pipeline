@@ -11,15 +11,14 @@ def compute_psych_pars(trials):
         'trial_response_choice',
         signed_contrast='trial_stim_contrast_right \
         - trial_stim_contrast_left')
-    q_all = dj.U('signed_contrast').aggr(trials, n='count(*)')
-    q_right = dj.U('signed_contrast').aggr(
-        trials, n_right='sum(trial_response_choice="CCW")')
-    signed_contrasts, n_trials_stim = q_all.fetch(
-        'signed_contrast', 'n'
+    q = dj.U('signed_contrast').aggr(trials, n='count(*)',
+                                     n_right='sum(trial_response_choice="CCW")')
+    signed_contrasts, n_trials_stim, n_trials_stim_right = q.fetch(
+        'signed_contrast', 'n', 'n_right'
     )
     signed_contrasts = signed_contrasts.astype(float)
     n_trials_stim = n_trials_stim.astype(int)
-    n_trials_stim_right = q_right.fetch('n_right').astype(int)
+    n_trials_stim_right = n_trials_stim_right.astype(int)
 
     # merge left 0 and right 0
     data = pd.DataFrame({
@@ -30,8 +29,8 @@ def compute_psych_pars(trials):
     data = data.groupby('signed_contrasts').sum()
 
     signed_contrasts = np.unique(signed_contrasts)
-    n_trials_stim_right = data['n_trials_stim_right']
-    n_trials_stim = data['n_trials_stim']
+    n_trials_stim_right = np.array(data['n_trials_stim_right'])
+    n_trials_stim = np.array(data['n_trials_stim'])
 
     prob_choose_right = np.divide(n_trials_stim_right,
                                   n_trials_stim)
@@ -79,10 +78,15 @@ def compute_performance_easy(trials):
 
 
 def compute_reaction_time(trials):
+    # median reaction time
     trials_rt = trials.proj(
             signed_contrast='trial_stim_contrast_left- \
                              trial_stim_contrast_right',
             rt='trial_response_time-trial_stim_on_time')
 
-    q = dj.U('signed_contrast').aggr(trials_rt, mean_rt='avg(rt)')
-    return q.fetch('mean_rt').astype(float)
+    rt = trials_rt.fetch(as_dict=True)
+    rt = pd.DataFrame(rt)
+    rt = rt[['signed_contrast', 'rt']]
+    median_rt = rt.groupby('signed_contrast').median()
+
+    return np.array(median_rt['rt'])

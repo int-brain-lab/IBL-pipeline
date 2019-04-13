@@ -1,10 +1,12 @@
 import datajoint as dj
 import json
+import uuid
 
 from . import alyxraw, reference, subject, action
 from . import get_raw_field as grf
 
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_acquisition')
+schema = dj.schema(dj.config.get('database.prefix', '') +
+                   'ibl_ingest_acquisition')
 
 
 @schema
@@ -13,8 +15,7 @@ class Session(dj.Computed):
     (session_uuid) -> alyxraw.AlyxRaw
     ---
     session_number=null:        int
-    lab_name:                   varchar(255)
-    subject_nickname:           varchar(255)
+    subject_uuid:               uuid
     project_name=null:          varchar(255)
     session_start_time:         datetime
     session_end_time=null:      datetime
@@ -24,16 +25,17 @@ class Session(dj.Computed):
     session_narrative=null:     varchar(1024)
     task_protocol=null:         varchar(255)
     """
-    key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(session_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(
+        session_uuid='uuid')
 
     def make(self, key):
         key_session = key.copy()
         key['uuid'] = key['session_uuid']
+        key_session['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
 
-        subject_uuid = grf(key, 'subject')
-        try:
-            key_session['lab_name'], key_session['subject_nickname'] = (subject.Subject & 'subject_uuid="{}"'.format(subject_uuid)).fetch1('lab_name', 'subject_nickname')
-        except:
+        if not len(subject.Subject & key_session):
+            print('Subject {} is not in the table subject.Subject'.format(
+                key_session['subject_uuid']))
             return
 
         session_number = grf(key, 'number')
@@ -42,7 +44,10 @@ class Session(dj.Computed):
 
         proj_uuid = grf(key, 'project')
         if proj_uuid != 'None':
-            key_session['project_name'] = (reference.Project & 'project_uuid="{}"'.format(proj_uuid)).fetch1('project_name')
+            key_session['project_name'] = \
+                (reference.Project &
+                 dict(project_uuid=uuid.UUID(proj_uuid))).fetch1(
+                    'project_name')
 
         key_session['session_start_time'] = grf(key, 'start_time')
 
@@ -53,7 +58,9 @@ class Session(dj.Computed):
         location_uuid = grf(key, 'location')
         if location_uuid != 'None':
             key_session['session_lab'], key_session['session_location'] = \
-                (reference.LabLocation & 'location_uuid="{}"'.format(location_uuid)).fetch1('lab_name', 'location_name')
+                (reference.LabLocation &
+                 dict(location_uuid=uuid.UUID(location_uuid))).fetch1(
+                     'lab_name', 'location_name')
 
         session_type = grf(key, 'type')
         if session_type != 'None':
@@ -73,8 +80,7 @@ class Session(dj.Computed):
 @schema
 class ChildSession(dj.Manual):
     definition = """
-    lab_name:                   varchar(255)      
-    subject_nickname:           varchar(255)
+    subject_uuid:               uuid
     session_start_time:         datetime
     ---
     parent_session_start_time:  datetime
@@ -84,29 +90,26 @@ class ChildSession(dj.Manual):
 @schema
 class SessionUser(dj.Manual):
     definition = """
-    lab_name:               varchar(255)          
-    subject_nickname:       varchar(255)
+    subject_uuid:           uuid
     session_start_time:     datetime
     user_name:              varchar(255)
     """
 
 
 @schema
-class SessionProcedure(dj.Manual):  
+class SessionProcedure(dj.Manual):
     definition = """
-    lab_name:               varchar(255)          
-    subject_nickname:       varchar(255)
+    subject_uuid:           uuid
     session_start_time:     datetime
     procedure_type_name:    varchar(255)
     """
 
+
 @schema
 class WaterAdministrationSession(dj.Manual):
     definition = """
-    lab_name:               varchar(255)
-    subject_nickname:       varchar(255)
+    subject_uuid:           uuid
     administration_time:    datetime
     ---
     session_start_time:     datetime
     """
-    
