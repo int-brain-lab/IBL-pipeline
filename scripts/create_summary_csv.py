@@ -44,7 +44,7 @@ for ilab in reference.Lab:
             'task_protocol LIKE "{}%"'.format(protocol))
 
     summary = pd.DataFrame(summary)
-    summary.sort(['subject_nickname'], ascending=[1])
+    summary.sort_values(by='subject_nickname')
     summary.pop('subject_uuid')
     summary.index += 1
     cols = summary.columns.tolist()
