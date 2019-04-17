@@ -80,6 +80,7 @@ class BehavioralSummaryByDate(dj.Computed):
 
         master_entry = key.copy()
         rt = key.copy()
+        rt_overall = key.copy()
 
         # get all trial sets and trials from that date
         trial_sets_proj = (behavior.TrialSet.proj(
@@ -104,11 +105,22 @@ class BehavioralSummaryByDate(dj.Computed):
 
         self.insert1(master_entry)
 
+        # compute reaction time for all trials
+        trials_with_stim_on_time = trials & 'trial_stim_on_time is not NULL'
+
+        if len(trials_with_stim_on_time):
+            rts = trials_with_stim_on_time.proj(
+                rt='trial_response_time-trial_start_time').fetch('rt')
+            rt_overall['median_reaction_time'] = np.median(rts)
+            self.ReactionTimeByDate.insert1(rt_overall)
+
         # compute psych results for all trials
-        task_protocol = (acquisition.Session & trial_sets_keys[0]).fetch1(
+
+        task_protocols = (acquisition.Session & trial_sets_keys).fetch(
             'task_protocol')
 
-        if task_protocol and 'biased' in task_protocol:
+        if task_protocols and np.any(['biased' in task_protocol
+                                     for task_protocol in task_protocols]):
             prob_lefts = dj.U('trial_stim_prob_left') & trials
 
             for ileft, prob_left in enumerate(prob_lefts):
@@ -153,11 +165,18 @@ class BehavioralSummaryByDate(dj.Computed):
         lapse_high:             float
         """
 
-    class ReactionTime(dj.Part):
+    class ReactionTimeContrast(dj.Part):
         definition = """
         -> master.PsychResults
         ---
-        reaction_time: blob   # meadian reaction time for each contrast
+        reaction_time_contrast: blob   # median reaction time for each contrast
+        """
+
+    class ReactionTimeByDate(dj.Part):
+        definition = """
+        -> master
+        ---
+        median_reaction_time:    float  # median reaction time of the entire day
         """
 
 
