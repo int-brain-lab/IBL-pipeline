@@ -119,8 +119,10 @@ class BehavioralSummaryByDate(dj.Computed):
         task_protocols = (acquisition.Session & trial_sets_keys).fetch(
             'task_protocol')
 
-        if task_protocols and np.any(['biased' in task_protocol
-                                     for task_protocol in task_protocols]):
+        if len(task_protocols) and np.any(
+            ['biased' in task_protocol
+             for task_protocol in task_protocols]):
+
             prob_lefts = dj.U('trial_stim_prob_left') & trials
 
             for ileft, prob_left in enumerate(prob_lefts):
@@ -135,7 +137,8 @@ class BehavioralSummaryByDate(dj.Computed):
                 self.PsychResults.insert1(psych_results)
                 # compute reaction time
                 rt['prob_left_block'] = ileft
-                rt['reaction_time_contrast'] = utils.compute_reaction_time(trials_sub)
+                rt['reaction_time_contrast'] = utils.compute_reaction_time(
+                    trials_sub)
                 self.ReactionTimeContrast.insert1(rt)
         else:
             psych_results_tmp = utils.compute_psych_pars(trials)
