@@ -135,7 +135,7 @@ class BehavioralSummaryByDate(dj.Computed):
                 self.PsychResults.insert1(psych_results)
                 # compute reaction time
                 rt['prob_left_block'] = ileft
-                rt['reaction_time'] = utils.compute_reaction_time(trials_sub)
+                rt['reaction_time_contrast'] = utils.compute_reaction_time(trials_sub)
                 self.ReactionTimeContrast.insert1(rt)
         else:
             psych_results_tmp = utils.compute_psych_pars(trials)
@@ -146,7 +146,7 @@ class BehavioralSummaryByDate(dj.Computed):
 
             # compute reaction time
             rt['prob_left_block'] = 0
-            rt['reaction_time'] = utils.compute_reaction_time(trials)
+            rt['reaction_time_contrast'] = utils.compute_reaction_time(trials)
             self.ReactionTimeContrast.insert1(rt)
 
     class PsychResults(dj.Part):
