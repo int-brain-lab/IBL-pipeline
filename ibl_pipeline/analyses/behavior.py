@@ -129,11 +129,11 @@ class BehavioralSummaryByDate(dj.Computed):
             psych_results_tmp = utils.compute_psych_pars(trials)
             psych_results = {**key, **psych_results_tmp}
             psych_results['prob_left'] = 0.5
-            psych_results['prob_left_block'] = 1
+            psych_results['prob_left_block'] = 0
             self.PsychResults.insert1(psych_results)
 
             # compute reaction time
-            rt['prob_left_block'] = 1
+            rt['prob_left_block'] = 0
             rt['reaction_time'] = utils.compute_reaction_time(trials)
             self.ReactionTime.insert1(rt)
 
