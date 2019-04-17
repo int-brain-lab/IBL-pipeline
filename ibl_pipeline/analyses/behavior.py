@@ -119,42 +119,41 @@ class BehavioralSummaryByDate(dj.Computed):
 
         task_protocols = (acquisition.Session & trial_sets_keys).fetch(
             'task_protocol')
+        task_protocols = [protocol for protocol in task_protocols if protocol]
 
-        if task_protocols:
-            if len(task_protocols) and np.any(
-                ['biased' in task_protocol
-                 for task_protocol in task_protocols]):
+        if np.any(['biased' in task_protocol
+                   for task_protocol in task_protocols]):
 
-                prob_lefts = dj.U('trial_stim_prob_left') & trials
+            prob_lefts = dj.U('trial_stim_prob_left') & trials
 
-                for ileft, prob_left in enumerate(prob_lefts):
-                    p_left = prob_left['trial_stim_prob_left']
-                    trials_sub = trials & \
-                        'ABS(trial_stim_prob_left - {})<1e-6'.format(p_left)
-                    # compute psych results
-                    psych_results_tmp = utils.compute_psych_pars(trials_sub)
-                    psych_results = {**key, **psych_results_tmp}
-                    psych_results['prob_left'] = prob_left[
-                        'trial_stim_prob_left']
-                    psych_results['prob_left_block'] = ileft
-                    self.PsychResults.insert1(psych_results)
-                    # compute reaction time
-                    rt['prob_left_block'] = ileft
-                    rt['reaction_time_contrast'] = utils.compute_reaction_time(
-                        trials_sub)
-                    self.ReactionTimeContrast.insert1(rt)
-            else:
-                psych_results_tmp = utils.compute_psych_pars(trials)
+            for ileft, prob_left in enumerate(prob_lefts):
+                p_left = prob_left['trial_stim_prob_left']
+                trials_sub = trials & \
+                    'ABS(trial_stim_prob_left - {})<1e-6'.format(p_left)
+                # compute psych results
+                psych_results_tmp = utils.compute_psych_pars(trials_sub)
                 psych_results = {**key, **psych_results_tmp}
-                psych_results['prob_left'] = 0.5
-                psych_results['prob_left_block'] = 0
+                psych_results['prob_left'] = prob_left[
+                    'trial_stim_prob_left']
+                psych_results['prob_left_block'] = ileft
                 self.PsychResults.insert1(psych_results)
-
                 # compute reaction time
-                rt['prob_left_block'] = 0
+                rt['prob_left_block'] = ileft
                 rt['reaction_time_contrast'] = utils.compute_reaction_time(
-                    trials)
+                    trials_sub)
                 self.ReactionTimeContrast.insert1(rt)
+        else:
+            psych_results_tmp = utils.compute_psych_pars(trials)
+            psych_results = {**key, **psych_results_tmp}
+            psych_results['prob_left'] = 0.5
+            psych_results['prob_left_block'] = 0
+            self.PsychResults.insert1(psych_results)
+
+            # compute reaction time
+            rt['prob_left_block'] = 0
+            rt['reaction_time_contrast'] = utils.compute_reaction_time(
+                trials)
+            self.ReactionTimeContrast.insert1(rt)
 
     class PsychResults(dj.Part):
         definition = """
