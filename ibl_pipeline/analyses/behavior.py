@@ -78,7 +78,6 @@ class BehavioralSummaryByDate(dj.Computed):
 
     def make(self, key):
 
-        print(key)
         master_entry = key.copy()
         rt = key.copy()
         rt_overall = key.copy()
