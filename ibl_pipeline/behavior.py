@@ -628,9 +628,9 @@ class AmbientSensorData(dj.Imported):
     definition = """
     -> TrialSet.Trial
     ---
-    temperature_c:      float
-    air_pressure_mb:    float
-    relative_humidity:  float
+    temperature_c:           float
+    air_pressure_mb:         float
+    relative_humidity=null:  float
     """
     key_source = CompleteTrialSession & 'ambient_sensor_data_status="Complete"'
 
