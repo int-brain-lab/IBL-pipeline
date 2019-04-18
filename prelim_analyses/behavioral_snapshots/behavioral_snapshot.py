@@ -194,7 +194,6 @@ for lidx, lab in enumerate(users):
         if behav.empty:
             continue
 
-
         didx = 1
         sorteddays = behav['days'].sort_values(ascending=True).unique()
         for day in behav['days'].unique():

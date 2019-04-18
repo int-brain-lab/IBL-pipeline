@@ -168,6 +168,7 @@ def plot_contrast_heatmap(mouse, lab, ax, xlims):
     session_date, signed_contrasts, prob_choose_right, prob_left_block = (behavior_analysis.BehavioralSummaryByDate.PsychResults * subject.Subject * subject.SubjectLab &
        'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab).proj('signed_contrasts', 'prob_choose_right', 'session_date', 'prob_left_block').fetch(\
        'session_date', 'signed_contrasts', 'prob_choose_right', 'prob_left_block')
+    signed_contrasts = signed_contrasts * 100
 
     # reshape this to a heatmap format
     prob_left_block2 = signed_contrasts.copy()
@@ -181,9 +182,8 @@ def plot_contrast_heatmap(mouse, lab, ax, xlims):
 
     # only use the unbiased block for now
     result = result[result.prob_left_block == 0]
-
     pp2 = result.pivot("signed_contrasts", "session_date", "prob_choose_right").sort_values(by='signed_contrasts', ascending=False)
-    pp2 = pp2.reindex(sorted(np.round_(result.signed_contrasts.unique() * 100, decimals=1)))
+    pp2 = pp2.reindex(sorted(result.signed_contrasts.unique()))
 
     # evenly spaced date axis
     x = pd.date_range(xlims[0], xlims[1]).to_pydatetime()
@@ -248,9 +248,9 @@ def plot_psychometric(df, color='black', ax=None, **kwargs):
     # Reduce the clutter
     ax.set_xticks([-100, -50, 0, 50, 100])
     ax.set_xticklabels(['-100', '-50', '0', '50', '100'])
-    ax.set_yticks([0, .5, 1])
-    # Set the limits
     ax.set_xlim([-110, 110])
+
+    ax.set_yticks([0, .5, 1])
     ax.set_ylim([-0.03, 1.03])
     ax.set_xlabel('Contrast (%)')
 
