@@ -618,6 +618,37 @@ class TrialSet(dj.Imported):
 
 
 @schema
+class AmbientSensorData(dj.Imported):
+    definition = """
+    -> TrialSet.Trial
+    ---
+    temperature_c:      float
+    air_pressure_mb:    float
+    relative_humidity:  float
+    """
+    key_source = TrialSet
+
+    def make(self, key):
+        trial_key = key.copy()
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
+        asd = ONE().load(eID, dataset_types='_iblrig_ambientSensorData.raw')
+
+        if not asd[0]:
+            return
+
+        if not len(TrialSet.Trial & key) == len(asd[0]):
+            print('Size of ambient sensor data does not match the trial number')
+            return
+
+        for idx_trial, asd_trial in enumerate(asd[0]):
+            trial_key['trial_id'] = idx_trial + 1
+            trial_key['temperature_c'] = asd_trial['Temperature_C'][0]
+            trial_key['air_pressure_mb'] = asd_trial['AirPressure_mb'][0]
+            trial_key['relative_humidity'] = asd_trial['RelativeHumidity'][0]
+            self.insert1(trial_key)
+
+
+@schema
 class PassiveTrialSet(dj.Imported):
     definition = """
     -> acquisition.Session
