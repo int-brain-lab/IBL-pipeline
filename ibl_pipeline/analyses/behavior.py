@@ -69,11 +69,8 @@ class BehavioralSummaryByDate(dj.Computed):
     performance_easy=null:  float   # percentage correct of the easy trials for the day
     """
 
-    trial_sets_with_stim_on_times = behavior.TrialSet & \
-        (behavior.CompleteTrialSession &
-         'stim_on_times_status = "Complete"')
     key_source = dj.U('subject_uuid', 'session_date') \
-        & trial_sets_with_stim_on_times.proj(
+        & behavior.TrialSet.proj(
             session_date='DATE(session_start_time)')
 
     def make(self, key):
@@ -105,14 +102,19 @@ class BehavioralSummaryByDate(dj.Computed):
 
         self.insert1(master_entry)
 
-        # compute reaction time for all trials
-        trials_with_stim_on_time = trials & 'trial_stim_on_time is not NULL'
+        complete = (behavior.CompleteTrialSession & trial_sets_keys).fetch(
+            'stim_on_times_status'
+        )
 
-        if len(trials_with_stim_on_time):
-            rts = trials_with_stim_on_time.proj(
-                rt='trial_response_time-trial_start_time').fetch('rt')
-            rt_overall['median_reaction_time'] = np.median(rts)
-            self.ReactionTimeByDate.insert1(rt_overall)
+        # compute reaction time for all trials
+        if 'Complete' in complete:
+            trials_with_stim_on_time = trials & 'trial_stim_on_time is not NULL'
+
+            if len(trials_with_stim_on_time):
+                rts = trials_with_stim_on_time.proj(
+                    rt='trial_response_time-trial_start_time').fetch('rt')
+                rt_overall['median_reaction_time'] = np.median(rts)
+                self.ReactionTimeByDate.insert1(rt_overall)
 
         # compute psych results for all trials
 
@@ -137,10 +139,12 @@ class BehavioralSummaryByDate(dj.Computed):
                 psych_results['prob_left_block'] = ileft
                 self.PsychResults.insert1(psych_results)
                 # compute reaction time
-                rt['prob_left_block'] = ileft
-                rt['reaction_time_contrast'] = utils.compute_reaction_time(
-                    trials_sub)
-                self.ReactionTimeContrast.insert1(rt)
+                if 'Complete' in complete:
+                    trials_sub = trials_sub & 'trial_stim_on_time is not NULL'
+                    rt['prob_left_block'] = ileft
+                    rt['reaction_time_contrast'] = utils.compute_reaction_time(
+                        trials_sub)
+                    self.ReactionTimeContrast.insert1(rt)
         else:
             psych_results_tmp = utils.compute_psych_pars(trials)
             psych_results = {**key, **psych_results_tmp}
@@ -149,10 +153,12 @@ class BehavioralSummaryByDate(dj.Computed):
             self.PsychResults.insert1(psych_results)
 
             # compute reaction time
-            rt['prob_left_block'] = 0
-            rt['reaction_time_contrast'] = utils.compute_reaction_time(
-                trials)
-            self.ReactionTimeContrast.insert1(rt)
+            if 'Complete' in complete:
+                trials = trials & 'trial_stim_on_time is not NULL'
+                rt['prob_left_block'] = 0
+                rt['reaction_time_contrast'] = utils.compute_reaction_time(
+                    trials)
+                self.ReactionTimeContrast.insert1(rt)
 
     class PsychResults(dj.Part):
         definition = """
