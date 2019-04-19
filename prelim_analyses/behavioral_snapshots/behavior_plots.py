@@ -141,13 +141,11 @@ def plot_performance_rt(mouse, lab, ax, xlims):
         xlim=xlims, yticks=[0.5, 0.75, 1], ylim=[0.4, 1.01])
 
     # RTs on right y-axis
-    rt = pd.DataFrame(((behavior_analysis.BehavioralSummaryByDate.ReactionTime * subject.Subject * subject.SubjectLab &
-       'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab)).proj('session_date', 'reaction_time').fetch(as_dict=True, order_by='session_date'))
-
     righty = ax.twinx()
-    # TODO: add median RT of the session (now only returns per contrast)
-    # sns.lineplot(x="session_date", y="reaction_time", marker='o', color="firebrick", data=rt, ax=righty)
-
+    rt = pd.DataFrame(((behavior_analysis.BehavioralSummaryByDate.ReactionTimeByDate * subject.Subject * subject.SubjectLab &
+       'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab)).proj('session_date', 'median_reaction_time').fetch(as_dict=True, order_by='session_date'))
+    sns.lineplot(x="session_date", y="median_reaction_time", marker='o', color="firebrick", data=rt, ax=righty)
+    
     # layout
     righty.yaxis.label.set_color("firebrick")
     righty.tick_params(axis='y', colors='firebrick')
@@ -242,8 +240,8 @@ def plot_psychometric(df, color='black', ax=None, **kwargs):
         sns.lineplot(np.arange(-100,100), psy.erf_psycho_2gammas( pars, np.arange(-100,100)), color=color, ax=ax)
 
     if 100 in df.signedContrast.values and not 50 in df.signedContrast.values:
-        df['signedContrast'] = df['signedContrast'].replace(-100, -35)
-        df['signedContrast'] = df['signedContrast'].replace(100, 35)
+        df['signedContrast'] = df.signedContrast.replace(-100, -35)
+        df['signedContrast'] = df.signedContrast.replace(100, 35)
 
         brokenXaxis = True
     else:

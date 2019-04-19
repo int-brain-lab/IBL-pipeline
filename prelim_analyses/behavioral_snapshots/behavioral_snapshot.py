@@ -50,11 +50,7 @@ print(users)
 for lidx, lab in enumerate(users):
 
     # take mice from this lab only
-    # subjects = pd.DataFrame.from_dict(
-    #     ((subject.Subject - subject.Death) * subject.SubjectLab * subject.SubjectUser & 'sex!="U"' &
-    #      'lab_name="%s"' % lab & action.Weighing & action.WaterAdministration).fetch(
-    #          as_dict=True, order_by=['subject_nickname']))
-    subjects = allsubjects[allsubjects['lab_name'].str.contains(lab)]
+    subjects = allsubjects[allsubjects['lab_name'].str.contains(lab)].reset_index()
 
     for i, mouse in enumerate(subjects['subject_nickname']):
 
