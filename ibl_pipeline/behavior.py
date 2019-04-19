@@ -393,6 +393,7 @@ class CompleteTrialSession(dj.Computed):
     stim_on_times_status: enum('Complete', 'Partial', 'Missing')
     rep_num_status: enum('Complete', 'Missing')
     included_status: enum('Complete', 'Missing')
+    ambient_sensor_data_status: enum('Complete', 'Missing')
     """
 
     required_datasets = ["_ibl_trials.feedback_times.npy",
@@ -438,6 +439,11 @@ class CompleteTrialSession(dj.Computed):
                 key['included_status'] = 'Missing'
             else:
                 key['included_status'] = 'Complete'
+
+            if '_iblrig_ambientSensorData.raw.jsonable' not in datasets:
+                key['ambient_sensor_data_status'] = 'Missing'
+            else:
+                key['ambient_sensor_data_status'] = 'Complete'
 
             self.insert1(key)
 
@@ -615,6 +621,34 @@ class TrialSet(dj.Imported):
         -> master
         -> TrialSet.Trial
         """
+
+
+@schema
+class AmbientSensorData(dj.Imported):
+    definition = """
+    -> TrialSet.Trial
+    ---
+    temperature_c:           float
+    air_pressure_mb:         float
+    relative_humidity=null:  float
+    """
+    key_source = CompleteTrialSession & 'ambient_sensor_data_status="Complete"'
+
+    def make(self, key):
+        trial_key = key.copy()
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
+        asd = ONE().load(eID, dataset_types='_iblrig_ambientSensorData.raw')
+
+        if not len(TrialSet.Trial & key) == len(asd[0]):
+            print('Size of ambient sensor data does not match the trial number')
+            return
+
+        for idx_trial, asd_trial in enumerate(asd[0]):
+            trial_key['trial_id'] = idx_trial + 1
+            trial_key['temperature_c'] = asd_trial['Temperature_C'][0]
+            trial_key['air_pressure_mb'] = asd_trial['AirPressure_mb'][0]
+            trial_key['relative_humidity'] = asd_trial['RelativeHumidity'][0]
+            self.insert1(trial_key)
 
 
 @schema

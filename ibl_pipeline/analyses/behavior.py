@@ -69,17 +69,15 @@ class BehavioralSummaryByDate(dj.Computed):
     performance_easy=null:  float   # percentage correct of the easy trials for the day
     """
 
-    trial_sets_with_stim_on_times = behavior.TrialSet & \
-        (behavior.CompleteTrialSession &
-         'stim_on_times_status = "Complete"')
     key_source = dj.U('subject_uuid', 'session_date') \
-        & trial_sets_with_stim_on_times.proj(
+        & behavior.TrialSet.proj(
             session_date='DATE(session_start_time)')
 
     def make(self, key):
 
         master_entry = key.copy()
         rt = key.copy()
+        rt_overall = key.copy()
 
         # get all trial sets and trials from that date
         trial_sets_proj = (behavior.TrialSet.proj(
@@ -104,11 +102,29 @@ class BehavioralSummaryByDate(dj.Computed):
 
         self.insert1(master_entry)
 
-        # compute psych results for all trials
-        task_protocol = (acquisition.Session & trial_sets_keys[0]).fetch1(
-            'task_protocol')
+        complete = (behavior.CompleteTrialSession & trial_sets_keys).fetch(
+            'stim_on_times_status'
+        )
 
-        if task_protocol and 'biased' in task_protocol:
+        # compute reaction time for all trials
+        if 'Complete' in complete:
+            trials_with_stim_on_time = trials & 'trial_stim_on_time is not NULL'
+
+            if len(trials_with_stim_on_time):
+                rts = trials_with_stim_on_time.proj(
+                    rt='trial_response_time-trial_start_time').fetch('rt')
+                rt_overall['median_reaction_time'] = np.median(rts)
+                self.ReactionTimeByDate.insert1(rt_overall)
+
+        # compute psych results for all trials
+
+        task_protocols = (acquisition.Session & trial_sets_keys).fetch(
+            'task_protocol')
+        task_protocols = [protocol for protocol in task_protocols if protocol]
+
+        if np.any(['biased' in task_protocol
+                   for task_protocol in task_protocols]):
+
             prob_lefts = dj.U('trial_stim_prob_left') & trials
 
             for ileft, prob_left in enumerate(prob_lefts):
@@ -118,24 +134,31 @@ class BehavioralSummaryByDate(dj.Computed):
                 # compute psych results
                 psych_results_tmp = utils.compute_psych_pars(trials_sub)
                 psych_results = {**key, **psych_results_tmp}
-                psych_results['prob_left'] = prob_left['trial_stim_prob_left']
+                psych_results['prob_left'] = prob_left[
+                    'trial_stim_prob_left']
                 psych_results['prob_left_block'] = ileft
                 self.PsychResults.insert1(psych_results)
                 # compute reaction time
-                rt['prob_left_block'] = ileft
-                rt['reaction_time'] = utils.compute_reaction_time(trials_sub)
-                self.ReactionTime.insert1(rt)
+                if 'Complete' in complete:
+                    trials_sub = trials_sub & 'trial_stim_on_time is not NULL'
+                    rt['prob_left_block'] = ileft
+                    rt['reaction_time_contrast'] = utils.compute_reaction_time(
+                        trials_sub)
+                    self.ReactionTimeContrast.insert1(rt)
         else:
             psych_results_tmp = utils.compute_psych_pars(trials)
             psych_results = {**key, **psych_results_tmp}
             psych_results['prob_left'] = 0.5
-            psych_results['prob_left_block'] = 1
+            psych_results['prob_left_block'] = 0
             self.PsychResults.insert1(psych_results)
 
             # compute reaction time
-            rt['prob_left_block'] = 1
-            rt['reaction_time'] = utils.compute_reaction_time(trials)
-            self.ReactionTime.insert1(rt)
+            if 'Complete' in complete:
+                trials = trials & 'trial_stim_on_time is not NULL'
+                rt['prob_left_block'] = 0
+                rt['reaction_time_contrast'] = utils.compute_reaction_time(
+                    trials)
+                self.ReactionTimeContrast.insert1(rt)
 
     class PsychResults(dj.Part):
         definition = """
@@ -153,11 +176,18 @@ class BehavioralSummaryByDate(dj.Computed):
         lapse_high:             float
         """
 
-    class ReactionTime(dj.Part):
+    class ReactionTimeContrast(dj.Part):
         definition = """
         -> master.PsychResults
         ---
-        reaction_time: blob   # meadian reaction time for each contrast
+        reaction_time_contrast: blob   # median reaction time for each contrast
+        """
+
+    class ReactionTimeByDate(dj.Part):
+        definition = """
+        -> master
+        ---
+        median_reaction_time:    float  # median reaction time of the entire day
         """
 
 
