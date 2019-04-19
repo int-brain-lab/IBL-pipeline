@@ -1,6 +1,8 @@
 import datajoint as dj
 from ..analyses import behavior
+from .. import subject, action
 import numpy as np
+import pandas as pd
 from ..utils import psychofit as psy
 import plotly
 import plotly.graph_objs as go
@@ -64,5 +66,89 @@ class SessionPsychCurve(dj.Computed):
         fig = go.Figure(data=[go.Scatter(behavior_data),
                               go.Scatter(behavior_fit)], layout=layout)
 
+        key['plotting_data'] = fig.to_plotly_json()
+        self.insert1(key)
+
+
+@schema
+class WaterWeight(dj.Computed):
+    definition = """
+    -> subject.Subject
+    water_weight_date:   date    # last date of water weight
+    ---
+    plotting_data:  longblob     # dictionary for the plotting info
+    """
+
+    key_source = dj.U('subject_uuid', 'water_weight_date') & \
+        subject.Subject.aggr(
+            action.Weighing * action.WaterAdministration,
+            water_weight_date='DATE(GREATEST(MAX(weighing_time), \
+                MAX(administration_time)))'
+        )
+
+    def make(self, key):
+        subj = subject.Subject & key
+
+        water_info_query = (action.WaterAdministration & subj).proj(
+            'water_administered', 'watertype_name',
+            water_date='DATE(administration_time)')
+        water_info = pd.DataFrame(water_info_query.fetch(as_dict=True))
+        water_types = water_info.watertype_name.unique()
+        water_info.pop('administration_time')
+        water_info.pop('subject_uuid')
+        water_info_type = water_info.pivot_table(
+            index='water_date', columns='watertype_name',
+            values='water_administered', aggfunc='sum')
+
+        weight_info_query = (action.Weighing & subj).proj(
+            'weight', weighing_date='DATE(weighing_time)')
+
+        weight_info = pd.DataFrame(
+            weight_info_query.fetch(as_dict=True))
+        weight_info.pop('subject_uuid')
+        weight_info.pop('weighing_time')
+        weight_info.pivot_table(index='weighing_date', values='weight')
+
+        data = [
+            go.Bar(
+                x=[t.strftime('%Y-%m-%d')
+                    for t in water_info_type.index.tolist()],
+                y=water_info_type[water_type].tolist(),
+                name=water_type,
+                yaxis='y1')
+            for water_type in water_types
+        ]
+
+        data.append(
+            go.Scatter(
+                x=[t.strftime('%Y-%m-%d')
+                    for t in weight_info['weighing_date'].tolist()],
+                y=weight_info['weight'].tolist(),
+                mode='lines+markers',
+                name='Weight',
+                marker=dict(
+                    size=6,
+                    color='black'),
+                yaxis='y2'
+            ))
+
+        layout = go.Layout(
+            yaxis=dict(
+                title='Water intake (mL)'),
+            yaxis2=dict(
+                title='Weight (g)',
+                overlaying='y',
+                side='right'
+            ),
+            width=600,
+            height=400,
+            title='Water intake and weight',
+            xaxis=dict(title='Date'),
+            legend=dict(
+                x=0,
+                y=1.2,
+                orientation='h')
+        )
+        fig = go.Figure(data=data, layout=layout)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
