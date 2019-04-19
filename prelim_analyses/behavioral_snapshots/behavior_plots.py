@@ -241,14 +241,28 @@ def plot_psychometric(df, color='black', ax=None, **kwargs):
                                      parmax=np.array([df2['signedContrast'].max(), 100., 1, 1]))
         sns.lineplot(np.arange(-100,100), psy.erf_psycho_2gammas( pars, np.arange(-100,100)), color=color, ax=ax)
 
+    if 100 in df.signedContrast.values and not 50 in df.signedContrast.values:
+        df['signedContrast'] = df['signedContrast'].replace(-100, -35)
+        df['signedContrast'] = df['signedContrast'].replace(100, 35)
+
+        brokenXaxis = True
+    else:
+        brokenXaxis = False
+
     # plot datapoints on top
     sns.lineplot(x='signedContrast', y='choice2', err_style="bars", linewidth=0, linestyle='None', mew=0.5,
         marker='.', ci=68, data=df, color=color, ax=ax)
 
-    # Reduce the clutter
-    ax.set_xticks([-100, -50, 0, 50, 100])
-    ax.set_xticklabels(['-100', '-50', '0', '50', '100'])
-    ax.set_xlim([-110, 110])
+    if not brokenXaxis:
+        # Reduce the clutter
+        ax.set_xticks([-100, -50, 0, 50, 100])
+        ax.set_xticklabels(['-100', '-50', '0', '50', '100'])
+        ax.set_xlim([-110, 110])
+    else:
+        ax.set_xticks([-35, -25, -12.5, -6, 0, 6, 12.5, 25, 35])
+        ax.set_xticklabels(['-100', '-25', '-12.5', '-6.25', '0', '6.25', '12.5', '25', '100'], 
+            size='x-small', rotation=-90)   
+        ax.set_xlim([-40, 40])
 
     ax.set_yticks([0, .5, 1])
     ax.set_ylim([-0.03, 1.03])
@@ -258,12 +272,28 @@ def plot_psychometric(df, color='black', ax=None, **kwargs):
 
 def plot_chronometric(df, ax, color):
 
+    if 100 in df.signedContrast.values and not 50 in df.signedContrast.values:
+        df['signedContrast'] = df['signedContrast'].replace(-100, -35)
+        df['signedContrast'] = df['signedContrast'].replace(100, 35)
+        brokenXaxis = True
+    else:
+        brokenXaxis = False
+
     sns.lineplot(x='signedContrast', y='rt', err_style="bars", mew=0.5,
         estimator=np.median, marker='.', ci=68, data=df, color=color, ax=ax)
     ax.set(xlabel="Contrast (%)", ylabel="RT (s)")
     ax.grid(True)
-    ax.set_xticks([-100, -50, 0, 50, 100])
-    ax.set_xticklabels(['-100', '-50', '0', '50', '100'])
+
+    if not brokenXaxis:
+        # Reduce the clutter
+        ax.set_xticks([-100, -50, 0, 50, 100])
+        ax.set_xticklabels(['-100', '-50', '0', '50', '100'])
+        ax.set_xlim([-110, 110])
+    else:
+        ax.set_xticks([-35, -25, -12.5, -6, 0, 6, 12.5, 25, 35])
+        ax.set_xticklabels(['-100', '-25', '-12.5', '-6.25', '0', '6.25', '12.5', '25', '100'], 
+            size='x-small', rotation=-90)        
+        ax.set_xlim([-40, 40])
 
 
 def fix_date_axis(ax):
