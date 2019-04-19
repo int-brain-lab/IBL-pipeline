@@ -44,14 +44,16 @@ for ilab in reference.Lab:
             'task_protocol LIKE "{}%"'.format(protocol))
 
     summary = pd.DataFrame(summary)
+    summary.sort_values('subject_nickname', inplace=True, ascending=True)
     summary.pop('subject_uuid')
     summary.index += 1
     cols = summary.columns.tolist()
     cols = cols[-1:] + cols[:-1]
     summary = summary[cols]
     last_session_date = \
-        np.max(summary['lastest_session_start_time']).date().strftime('%Y-%m-%d')
+        np.max(summary['lastest_session_start_time']).date().strftime(
+            '%Y-%m-%d')
     summary.to_csv(
         '/src/IBL-pipeline/snapshots/{}_{}_summary.csv'.format(
-            last_session_date, ilab['lab_name']))
+            last_session_date, ilab['lab_name']), index=False)
     print('Saved {} current training status summary.'.format(ilab['lab_name']))
