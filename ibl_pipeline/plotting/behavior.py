@@ -149,7 +149,7 @@ class WaterWeight(dj.Computed):
                 x=0,
                 y=1.2,
                 orientation='h'),
-            barmode='stack
+            barmode='stack'
         )
         fig = go.Figure(data=data, layout=layout)
         key['plotting_data'] = fig.to_plotly_json()
