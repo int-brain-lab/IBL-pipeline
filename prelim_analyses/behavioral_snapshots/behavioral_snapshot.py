@@ -128,7 +128,7 @@ for lidx, lab in enumerate(users):
 
         # ============================================= #
         # PERFORMANCE AND MEDIAN RT
-        # ============================================= #
+        # ==== ========================================= #
 
         plot_performance_rt(mouse, lab, axes[2, 0], xlims)
         if training_status == 'trained':
@@ -168,7 +168,9 @@ for lidx, lab in enumerate(users):
         # plot the fitted parameters
         for pidx, (var, labelname) in enumerate(ylabels.items()):
             ax = axes[pidx,1]
-            sns.lineplot(x="session_date", y=var, marker='o', hue="prob_left_block", linestyle='', lw=0,
+
+            sns.lineplot(x="session_date", y=var, marker='o', hue="prob_left_block", 
+                hue_order=[1, 0, 2], linestyle='', lw=0,
                 palette=cmap, data=pars, legend=None, ax=ax)
             ax.set(xlabel='', ylabel=labelname, ylim=ylims[pidx],
                 yticks=yticks[pidx],

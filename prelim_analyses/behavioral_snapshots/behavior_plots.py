@@ -295,7 +295,6 @@ def plot_chronometric(df, ax, color):
             size='x-small', rotation=-90)        
         ax.set_xlim([-40, 40])
 
-
 def fix_date_axis(ax):
     # deal with date axis and make nice looking
     ax.xaxis_date()
