@@ -99,7 +99,8 @@ class WaterWeight(dj.Computed):
         water_info_type = water_info.pivot_table(
             index='water_date', columns='watertype_name',
             values='water_administered', aggfunc='sum')
-        weight_info = weight_info.where((pd.notnull(weight_info)), None)
+        water_info_type = water_info_type.where((pd.notnull(water_info_type)),
+                                                None)
 
         weight_info_query = (action.Weighing & subj).proj(
             'weight', weighing_date='DATE(weighing_time)')
