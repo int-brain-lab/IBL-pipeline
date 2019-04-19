@@ -99,6 +99,7 @@ class WaterWeight(dj.Computed):
         water_info_type = water_info.pivot_table(
             index='water_date', columns='watertype_name',
             values='water_administered', aggfunc='sum')
+        weight_info = weight_info.where((pd.notnull(weight_info)), None)
 
         weight_info_query = (action.Weighing & subj).proj(
             'weight', weighing_date='DATE(weighing_time)')
@@ -107,7 +108,7 @@ class WaterWeight(dj.Computed):
             weight_info_query.fetch(as_dict=True))
         weight_info.pop('subject_uuid')
         weight_info.pop('weighing_time')
-        weight_info.pivot_table(index='weighing_date', values='weight')
+        weight_info = weight_info.where((pd.notnull(weight_info)), None)
 
         data = [
             go.Bar(
@@ -147,7 +148,8 @@ class WaterWeight(dj.Computed):
             legend=dict(
                 x=0,
                 y=1.2,
-                orientation='h')
+                orientation='h'),
+            barmode='stack
         )
         fig = go.Figure(data=data, layout=layout)
         key['plotting_data'] = fig.to_plotly_json()

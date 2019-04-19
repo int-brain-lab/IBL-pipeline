@@ -119,7 +119,7 @@ def plot_trialcounts_sessionlength(mouse, lab, ax, xlims):
     # GET SESSION DURATION PER DAY
     duration = pd.DataFrame((acquisition.Session * subject.Subject * subject.SubjectLab & 'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab).proj(
         session_duration='TIMEDIFF(session_end_time, session_start_time)', session_date='DATE(session_start_time)').proj('session_date', 'session_duration').fetch())
-    duration['session_duration_minutes'] = duration.session_duration.dt.total_seconds() / 60   # convert to minutes                      
+    duration['session_duration_minutes'] = duration.session_duration.dt.total_seconds() / 60   # convert to minutes
 
     righty = ax.twinx()
     sns.lineplot(x="session_date", y="session_duration_minutes", marker='o', color="firebrick", data=duration, ax=righty)
@@ -141,8 +141,8 @@ def plot_performance_rt(mouse, lab, ax, xlims):
         xlim=xlims, yticks=[0.5, 0.75, 1], ylim=[0.4, 1.01])
 
     # RTs on right y-axis
-    rt = pd.DataFrame(((behavior_analysis.BehavioralSummaryByDate.ReactionTime * subject.Subject * subject.SubjectLab &
-       'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab)).proj('session_date', 'reaction_time').fetch(as_dict=True, order_by='session_date'))
+    rt = pd.DataFrame(((behavior_analysis.BehavioralSummaryByDate.ReactionTimeContrast * subject.Subject * subject.SubjectLab &
+       'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab)).proj('session_date', 'reaction_time_contrast').fetch(as_dict=True, order_by='session_date'))
 
     righty = ax.twinx()
     # TODO: add median RT of the session (now only returns per contrast)
@@ -176,8 +176,8 @@ def plot_contrast_heatmap(mouse, lab, ax, xlims):
         session_date[i] = np.repeat(date, len(signed_contrasts[i]))
         prob_left_block2[i] = np.repeat(prob_left_block[i], len(signed_contrasts[i]))
 
-    result = pd.DataFrame({'session_date':np.concatenate(session_date), 
-        'signed_contrasts':np.concatenate(signed_contrasts), 'prob_choose_right':np.concatenate(prob_choose_right), 
+    result = pd.DataFrame({'session_date':np.concatenate(session_date),
+        'signed_contrasts':np.concatenate(signed_contrasts), 'prob_choose_right':np.concatenate(prob_choose_right),
         'prob_left_block':np.concatenate(prob_left_block2)})
 
     # only use the unbiased block for now
@@ -260,8 +260,8 @@ def plot_psychometric(df, color='black', ax=None, **kwargs):
         ax.set_xlim([-110, 110])
     else:
         ax.set_xticks([-35, -25, -12.5, -6, 0, 6, 12.5, 25, 35])
-        ax.set_xticklabels(['-100', '-25', '-12.5', '-6.25', '0', '6.25', '12.5', '25', '100'], 
-            size='x-small', rotation=-90)   
+        ax.set_xticklabels(['-100', '-25', '-12.5', '-6.25', '0', '6.25', '12.5', '25', '100'],
+            size='x-small', rotation=-90)
         ax.set_xlim([-40, 40])
 
     ax.set_yticks([0, .5, 1])
@@ -291,8 +291,8 @@ def plot_chronometric(df, ax, color):
         ax.set_xlim([-110, 110])
     else:
         ax.set_xticks([-35, -25, -12.5, -6, 0, 6, 12.5, 25, 35])
-        ax.set_xticklabels(['-100', '-25', '-12.5', '-6.25', '0', '6.25', '12.5', '25', '100'], 
-            size='x-small', rotation=-90)        
+        ax.set_xticklabels(['-100', '-25', '-12.5', '-6.25', '0', '6.25', '12.5', '25', '100'],
+            size='x-small', rotation=-90)
         ax.set_xlim([-40, 40])
 
 def fix_date_axis(ax):
