@@ -112,7 +112,7 @@ class BehavioralSummaryByDate(dj.Computed):
 
             if len(trials_with_stim_on_time):
                 rts = trials_with_stim_on_time.proj(
-                    rt='trial_response_time-trial_start_time').fetch('rt')
+                    rt='trial_response_time-trial_stim_on_time').fetch('rt')
                 rt_overall['median_reaction_time'] = np.median(rts)
                 self.ReactionTimeByDate.insert1(rt_overall)
 
@@ -124,13 +124,35 @@ class BehavioralSummaryByDate(dj.Computed):
 
         if np.any(['biased' in task_protocol
                    for task_protocol in task_protocols]):
-
-            prob_lefts = dj.U('trial_stim_prob_left') & trials
+            trials_biased = trials & (acquisition.Session &
+                                      trial_sets_keys &
+                                      'task_protocol LIKE "%biased%"')
+            prob_lefts = dj.U('trial_stim_prob_left') & trials_biased
 
             for ileft, prob_left in enumerate(prob_lefts):
                 p_left = prob_left['trial_stim_prob_left']
-                trials_sub = trials & \
-                    'ABS(trial_stim_prob_left - {})<1e-6'.format(p_left)
+
+                if np.any(['training' in task_protocol
+                          for task_protocol in task_protocols]):
+                    if p_left != 0.5:
+                        trials_sub = trials_biased & \
+                            'ABS(trial_stim_prob_left - {})<1e-6'.format(
+                                p_left)
+                    else:
+                        trials_training = trials & \
+                            (acquisition.Session &
+                             trial_sets_keys &
+                             'task_protocol LIKE "%training%"')
+                        trials_50 = trials_biased & \
+                            'ABS(trial_stim_prob_left - {})<1e-6'.format(
+                                p_left)
+                        trials_sub = behavior.TrialSet.Trial & \
+                            [trials_training.fetch('KEY'),
+                             trials_50.fetch('KEY')]
+                else:
+                    trials_sub = trials & \
+                        'ABS(trial_stim_prob_left - {})<1e-6'.format(p_left)
+
                 # compute psych results
                 psych_results_tmp = utils.compute_psych_pars(trials_sub)
                 psych_results = {**key, **psych_results_tmp}
