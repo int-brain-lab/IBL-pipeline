@@ -174,6 +174,9 @@ def plot_contrast_heatmap(mouse, lab, ax, xlims):
     session_date, signed_contrasts, prob_choose_right, prob_left_block = (behavior_analysis.BehavioralSummaryByDate.PsychResults * subject.Subject * subject.SubjectLab &
        'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab).proj('signed_contrasts', 'prob_choose_right', 'session_date', 'prob_left_block').fetch(\
        'session_date', 'signed_contrasts', 'prob_choose_right', 'prob_left_block')
+    if not len(session_date):
+        return
+
     signed_contrasts = signed_contrasts * 100
 
     # reshape this to a heatmap format
