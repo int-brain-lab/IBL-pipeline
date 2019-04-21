@@ -87,9 +87,12 @@ for lidx, lab in enumerate(users):
         subj = subject.Subject & 'subject_nickname="{}"'.format(mouse)
         last_session = subj.aggr(
             behavior.TrialSet, session_start_time='max(session_start_time)')
-        training_status = \
-            (behavior_analysis.SessionTrainingStatus & last_session).fetch1(
-                'training_status')
+        if not len(last_session):
+            traing_status = 'training in progress'
+        else:
+            training_status = \
+                (behavior_analysis.SessionTrainingStatus & last_session).fetch1(
+                    'training_status')
         if training_status in ['trained', 'ready for ephys']:
             first_trained_session = subj.aggr(
                 behavior_analysis.SessionTrainingStatus &
@@ -145,7 +148,7 @@ for lidx, lab in enumerate(users):
         # PSYCHOMETRIC FUNCTION FITS OVER TIME
         # ============================================= #
 
-        # grab values from precomputed 
+        # grab values from precomputed
         pars = pd.DataFrame((behavior_analysis.BehavioralSummaryByDate.PsychResults * subject.Subject * subject.SubjectLab &
                    'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab).fetch(as_dict=True))
 
@@ -165,7 +168,7 @@ for lidx, lab in enumerate(users):
         for pidx, (var, labelname) in enumerate(ylabels.items()):
             ax = axes[pidx,1]
 
-            sns.lineplot(x="session_date", y=var, marker='o', hue="prob_left_block", 
+            sns.lineplot(x="session_date", y=var, marker='o', hue="prob_left_block",
                 hue_order=[1, 0, 2], linestyle='', lw=0,
                 palette=cmap, data=pars, legend=None, ax=ax)
             ax.set(xlabel='', ylabel=labelname, ylim=ylims[pidx],

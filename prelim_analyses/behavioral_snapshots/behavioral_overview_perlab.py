@@ -91,9 +91,13 @@ for lidx, lab in enumerate(users):
 				subj = subject.Subject & 'subject_nickname="{}"'.format(mouse)
 				last_session = subj.aggr(
 					behavior.TrialSet, session_start_time='max(session_start_time)')
-				training_status = \
-					(behavior_analysis.SessionTrainingStatus & last_session).fetch1(
-						'training_status')
+
+				if not len(last_session):
+					training_status = 'traing in progress'
+				else:
+					training_status = \
+						(behavior_analysis.SessionTrainingStatus & last_session).fetch1(
+							'training_status')
 
 				days_intraining = (subj * behavior.TrialSet.proj(session_date='DATE(session_start_time)')).fetch('session_start_time')
 
