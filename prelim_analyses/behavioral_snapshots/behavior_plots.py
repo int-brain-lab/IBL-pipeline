@@ -140,6 +140,10 @@ def plot_performance_rt(mouse, lab, ax, xlims):
     # performance on easy contrasts
     behav = pd.DataFrame((behavior_analysis.BehavioralSummaryByDate * subject.Subject * subject.SubjectLab &
        'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab).proj('session_date', 'performance_easy').fetch(as_dict=True, order_by='session_date'))
+
+    if not len(behav):
+        return
+
     sns.lineplot(x="session_date", y="performance_easy", marker='o', color=".15", data=behav, ax=ax)
     ax.set(xlabel='', ylabel="Performance (easy trials)",
         xlim=xlims, yticks=[0.5, 0.75, 1], ylim=[0.4, 1.01])
