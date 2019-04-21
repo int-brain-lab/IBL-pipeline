@@ -111,6 +111,10 @@ def plot_trialcounts_sessionlength(mouse, lab, ax, xlims):
     # GET THE NUMBER OF TRIALS PER DAY
     n_trials = pd.DataFrame((behavior.TrialSet.proj(session_date='DATE(session_start_time)') * \
         behavior.TrialSet * subject.Subject * subject.SubjectLab & 'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab).proj('session_date', 'n_trials').fetch(as_dict=True))
+
+    if not len(n_trials):
+        return
+
     n_trials = n_trials.groupby(['session_date'])['n_trials'].sum().reset_index()
 
     sns.lineplot(x="session_date", y="n_trials", marker='o', color=".15", data=n_trials, ax=ax)
