@@ -249,7 +249,7 @@ class SessionTrainingStatus(dj.Computed):
         task_protocol = (acquisition.Session & key).fetch1('task_protocol')
         if task_protocol and 'biased' in task_protocol:
             key['training_status'] = 'trained'
-            if len(status) and np.any(status == 'trained'):
+            if len(status) and np.any(status == 'ready for ephys'):
                 key['training_status'] = 'ready for ephys'
                 self.insert1(key)
                 return
