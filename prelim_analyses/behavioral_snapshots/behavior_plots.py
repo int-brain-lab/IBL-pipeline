@@ -196,6 +196,7 @@ def plot_contrast_heatmap(mouse, lab, ax, xlims):
 
     # only use the unbiased block for now
     result = result[result.prob_left_block == 0]
+    result = result.round({'signed_contrasts': 2})
     pp2 = result.pivot("signed_contrasts", "session_date", "prob_choose_right").sort_values(by='signed_contrasts', ascending=False)
     pp2 = pp2.reindex(sorted(result.signed_contrasts.unique()))
 
