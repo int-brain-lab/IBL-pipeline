@@ -251,6 +251,7 @@ class SessionTrainingStatus(dj.Computed):
             key['training_status'] = 'trained'
             if len(status) and np.any(status == 'trained'):
                 key['training_status'] = 'ready for ephys'
+                self.insert1(key)
                 return
 
             # Criteria for "ready for ephys" status
