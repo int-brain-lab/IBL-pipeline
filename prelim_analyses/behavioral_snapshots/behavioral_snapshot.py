@@ -45,7 +45,6 @@ if allsubjects.empty:
     raise ValueError('DataJoint seems to be down, please try again later')
 
 users = allsubjects['lab_name'].unique()
-users = ['danlab']
 print(users)
 
 for lidx, lab in enumerate(users):
