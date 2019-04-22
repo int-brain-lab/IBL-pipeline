@@ -237,12 +237,22 @@ class SessionTrainingStatus(dj.Computed):
         subject_key = key.copy()
         subject_key.pop('session_start_time')
 
+        previous_sessions = SessionTrainingStatus & subject_key & \
+            'session_start_time < "{}"'.format(
+                key['session_start_time'].strftime('%Y-%m-%d %H:%M:%S')
+            )
+        status = previous_sessions.fetch('training_status')
+
         # if the protocol for the current session is a biased session,
         # set the status to be "trained" and check up the criteria for
         # "read for ephys"
         task_protocol = (acquisition.Session & key).fetch1('task_protocol')
         if task_protocol and 'biased' in task_protocol:
             key['training_status'] = 'trained'
+            if len(status) and np.any(status == 'trained'):
+                key['training_status'] = 'ready for ephys'
+                return
+
             # Criteria for "ready for ephys" status
             sessions = (behavior.TrialSet & subject_key &
                         (acquisition.Session & 'task_protocol LIKE "%biased%"') &
@@ -296,6 +306,13 @@ class SessionTrainingStatus(dj.Computed):
 
         # if the current session is not a biased session
         key['training_status'] = 'training in progress'
+
+        # if has reached 'trained' before, mark the current session 'trained as well'
+        if len(status) and np.any(status == 'trained'):
+            key['training_status'] = 'trained'
+            self.insert1(key)
+            return
+
         # training in progress if the animals was trained in < 3 sessions
         sessions = (behavior.TrialSet & subject_key &
                     'session_start_time <= "{}"'.format(
