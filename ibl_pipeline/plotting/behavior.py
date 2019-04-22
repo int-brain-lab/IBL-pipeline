@@ -165,10 +165,11 @@ class TrialCountsSessionDuration(dj.Computed):
         )
 
     def make(self, key):
-        session_info = (behavior.TrialSet * acquisition.Session & key).proj(
-            'n_trials', session_date='DATE(session_start_time)',
-            session_duration='TIMESTAMPDIFF(MINUTE, session_start_time, \
-                session_end_time)').fetch(as_dict=True)
+        session_info = \
+            (behavior_ingest.TrialSet * acquisition.Session & key).proj(
+                'n_trials', session_date='DATE(session_start_time)',
+                session_duration='TIMESTAMPDIFF(MINUTE, session_start_time, \
+                    session_end_time)').fetch(as_dict=True)
         session_info = pd.DataFrame(session_info)
 
         trial_counts = go.Scatter(
