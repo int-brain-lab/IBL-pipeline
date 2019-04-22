@@ -156,7 +156,7 @@ class TrialCountsSessionDuration(dj.Computed):
     -> subject.Subject
     last_session_date:  date      # last date of session
     ---
-    plotting_date:      longblob  # dictionary for the plotting info
+    plotting_data:      longblob  # dictionary for the plotting info
     """
     key_source = dj.U('subject_uuid', 'last_session_date') & \
         subject.Subject.aggr(
