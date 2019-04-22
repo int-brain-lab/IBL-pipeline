@@ -1,6 +1,7 @@
 import datajoint as dj
 from ..analyses import behavior
-from .. import subject, action
+from .. import behavior as behavior_ingest
+from .. import subject, action, acquisition
 import numpy as np
 import pandas as pd
 from ..utils import psychofit as psy
@@ -144,6 +145,77 @@ class DatePsychCurve(dj.Computed):
                    'range': [-0.05, 1.05]},
         )
 
+        fig = go.Figure(data=data, layout=layout)
+        key['plotting_data'] = fig.to_plotly_json()
+        self.insert1(key)
+
+
+@schema
+class TrialCountsSessionDuration(dj.Computed):
+    definition = """
+    -> subject.Subject
+    last_session_date:  date      # last date of session
+    ---
+    plotting_date:      longblob  # dictionary for the plotting info
+    """
+    key_source = dj.U('subject_uuid', 'last_session_date') & \
+        subject.Subject.aggr(
+            behavior_ingest.TrialSet,
+            last_session_date='DATE(MAX(session_start_time))'
+        )
+
+    def make(self, key):
+        session_info = (behavior.TrialSet * acquisition.Session & key).proj(
+            'n_trials', session_date='DATE(session_start_time)',
+            session_duration='TIMESTAMPDIFF(MINUTE, session_start_time, \
+                session_end_time)').fetch(as_dict=True)
+        session_info = pd.DataFrame(session_info)
+
+        trial_counts = go.Scatter(
+            x=[t.strftime('%Y-%m-%d')
+                for t in session_info['session_date'].tolist()],
+            y=session_info['n_trials'].tolist(),
+            mode='markers+lines',
+            marker=dict(
+                size=6,
+                color='black'),
+            name='trial counts',
+            yaxis='y1'
+        )
+        session_length = go.Scatter(
+            x=[t.strftime('%Y-%m-%d')
+                for t in session_info['session_date'].tolist()],
+            y=session_info['session_duration'].tolist(),
+            mode='markers+lines',
+            marker=dict(
+                size=6,
+                color='red'),
+            name='session duration',
+            yaxis='y2'
+        )
+
+        data = [trial_counts, session_length]
+
+        layout = go.Layout(
+            yaxis=dict(
+                title='Trial counts',
+            ),
+            yaxis2=dict(
+                title='Session duration (mins)',
+                overlaying='y',
+                color='red',
+                side='right'
+            ),
+            xaxis=dict(
+                title='Date'),
+            width=500,
+            height=400,
+            title='Trial counts and session duration',
+            legend=dict(
+                x=0,
+                y=1.1,
+                orientation='v'),
+        )
         fig = go.Figure(data=data, layout=layout)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
