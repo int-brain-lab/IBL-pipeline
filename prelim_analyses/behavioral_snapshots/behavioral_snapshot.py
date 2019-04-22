@@ -45,6 +45,7 @@ if allsubjects.empty:
     raise ValueError('DataJoint seems to be down, please try again later')
 
 users = allsubjects['lab_name'].unique()
+users = ['danlab']
 print(users)
 
 for lidx, lab in enumerate(users):
@@ -84,7 +85,12 @@ for lidx, lab in enumerate(users):
         # check whether the subject is trained based the the lastest session
         # ============================================= #
 
-        subj = subject.Subject & 'subject_nickname="{}"'.format(mouse)
+        subj = subject.Subject & 'subject_nickname="{}"'.format(mouse) & \
+            (subject.SubjectLab & 'lab_name="{}"'.format(lab))
+        subj_sessions = behavior.TrialSet & subj
+        if not len(subj_sessions):
+            continue
+
         last_session = subj.aggr(
             behavior.TrialSet, session_start_time='max(session_start_time)')
         if not len(last_session):
@@ -150,7 +156,7 @@ for lidx, lab in enumerate(users):
 
         # grab values from precomputed
         pars = pd.DataFrame((behavior_analysis.BehavioralSummaryByDate.PsychResults * subject.Subject * subject.SubjectLab &
-                   'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab).fetch(as_dict=True))
+                'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab).fetch(as_dict=True))
 
         # link to their descriptions
         ylabels = {'threshold': r'Threshold $(\sigma)$', 'bias': r'Bias $(\mu)$',
@@ -192,8 +198,6 @@ for lidx, lab in enumerate(users):
         # ============================================= #
 
         behav = get_behavior(mouse, lab)
-        if behav.empty:
-            continue
 
         didx = 1
         sorteddays = behav['days'].sort_values(ascending=True).unique()
@@ -260,26 +264,27 @@ for lidx, lab in enumerate(users):
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
         # get most recent session_date for the naming of the plot
-        subj = subject.Subject & 'subject_nickname = "{}"'.format(mouse)
         subj_with_last_session = subj.aggr(
-            behavior.TrialSet, last_behavior = 'max(session_start_time)'
+            behavior.TrialSet, last_behavior='max(session_start_time)'
         )
 
         last_behavior_time = subj_with_last_session.fetch('last_behavior')
+        subj_with_last_weighing_water = subj.aggr(
+            action.Weighing * action.WaterAdministration,
+            last_weighing='max(weighing_time)',
+            last_water='max(administration_time)'
+        )
+        last_weighing_time, last_water_time = \
+            subj_with_last_weighing_water.fetch1(
+                'last_weighing', 'last_water')
 
-        if last_behavior_time.size > 0:
-            last_date = last_behavior_time[0].date().strftime("%Y-%m-%d")
+        if last_behavior_time.size:
+            last_time = max([last_weighing_time, last_water_time,
+                             last_behavior_time])
         else:
-            subj_with_last_weighing_water = subj.aggr(
-                action.Weighing * action.WaterAdministration, \
-                last_weighing = 'max(weighing_time)',
-                last_water = 'max(administration_time)'
-            )
-            last_weighing_time, last_water_time = subj_with_last_weighing_water.fetch1(
-                'last_weighing', 'last_water'
-            )
             last_time = max([last_weighing_time, last_water_time])
-            last_date = last_time.date().strftime("%Y-%m-%d")
+
+        last_date = last_time.date().strftime("%Y-%m-%d")
 
 
         fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.pdf' % (last_date,

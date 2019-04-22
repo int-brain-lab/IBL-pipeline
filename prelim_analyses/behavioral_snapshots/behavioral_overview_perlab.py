@@ -148,38 +148,39 @@ for lidx, lab in enumerate(users):
 					ignore_index=True)
 
 				# MAIN PLOTS
-				ax = plt.subplot2grid((4, sub_batch_size), (1, i))
-				if training_status == 'trained':
-				# indicate date at which the animal is 'trained'
-					# shell()
-					ax.axvline(trained_date, color="orange")
-				elif training_status == 'ready for ephys':
-				# indicate date at which the animal is 'ready for ephys'
-					ax.axvline(trained_date, color="orange")
-					ax.axvline(biased_date, color="forestgreen")
+				if len(last_session):
+					ax = plt.subplot2grid((4, sub_batch_size), (1, i))
+					if training_status == 'trained':
+					# indicate date at which the animal is 'trained'
+						# shell()
+						ax.axvline(trained_date, color="orange")
+					elif training_status == 'ready for ephys':
+					# indicate date at which the animal is 'ready for ephys'
+						ax.axvline(trained_date, color="orange")
+						ax.axvline(biased_date, color="forestgreen")
 
-				plot_trialcounts_sessionlength(mouse, lab, ax, xlims)
-				fix_date_axis(ax)
-				axes.append(ax)
+					plot_trialcounts_sessionlength(mouse, lab, ax, xlims)
+					fix_date_axis(ax)
+					axes.append(ax)
 
-				# PERFORMANCE AND MEDIAN RT
-				ax = plt.subplot2grid((4, sub_batch_size), (2, i))
-				plot_performance_rt(mouse, lab, ax, xlims)
-				if training_status == 'trained':
-				# indicate date at which the animal is 'trained'
-					# shell()
-					ax.axvline(trained_date, color="orange")
-				elif training_status == 'ready for ephys':
-				# indicate date at which the animal is 'ready for ephys'
-					ax.axvline(trained_date, color="orange")
-					ax.axvline(biased_date, color="forestgreen")
+					# PERFORMANCE AND MEDIAN RT
+					ax = plt.subplot2grid((4, sub_batch_size), (2, i))
+					plot_performance_rt(mouse, lab, ax, xlims)
+					if training_status == 'trained':
+					# indicate date at which the animal is 'trained'
+						# shell()
+						ax.axvline(trained_date, color="orange")
+					elif training_status == 'ready for ephys':
+					# indicate date at which the animal is 'ready for ephys'
+						ax.axvline(trained_date, color="orange")
+						ax.axvline(biased_date, color="forestgreen")
 
-				fix_date_axis(ax)
-				axes.append(ax)
+					fix_date_axis(ax)
+					axes.append(ax)
 
-				# CONTRAST/CHOICE HEATMAP
-				ax = plt.subplot2grid((4, sub_batch_size), (3, i))
-				plot_contrast_heatmap(mouse, lab, ax, xlims)
+					# CONTRAST/CHOICE HEATMAP
+					ax = plt.subplot2grid((4, sub_batch_size), (3, i))
+					plot_contrast_heatmap(mouse, lab, ax, xlims)
 
 				elapsed = time.time() - t
 				print( "Elapsed time: %f seconds.\n" %elapsed)
@@ -217,13 +218,16 @@ for lidx, lab in enumerate(users):
 				last_behavior = 'max(session_start_time)').fetch('last_behavior')
 
 			# include date of last change in data
+			last_weighing = mice_sub.aggr(action.Weighing,
+				last_weighing = 'max(weighing_time)').fetch('last_weighing')
+			last_water = mice_sub.aggr(action.WaterAdministration,
+				last_water = 'max(administration_time)').fetch('last_water')
+
 			if last_behavior.size:
-				last_date = max(last_behavior).date().strftime("%Y-%m-%d")
+				last_behavior = max(last_behavior)
+				last_date = max(np.hstack(
+					[last_weighing, last_water, last_behavior])).date().strftime("%Y-%m-%d")
 			else:
-				last_weighing = mice_sub.aggr(action.Weighing,
-					last_weighing = 'max(weighing_time)').fetch('last_weighing')
-				last_water = mice_sub.aggr(action.WaterAdministration,
-					last_water = 'max(administration_time)').fetch('last_water')
 				last_date = max(np.hstack([last_weighing, last_water])).date().strftime("%Y-%m-%d")
 
 			fig.savefig(os.path.join(path + '%s_%s_batch_%s_%s.pdf'%(last_date, lab, birth_date, str(int(sub_batch/sub_batch_size)+1))))

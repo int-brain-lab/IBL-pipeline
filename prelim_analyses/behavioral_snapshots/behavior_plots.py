@@ -101,8 +101,13 @@ def plot_water_weight_curve(weight_water, baseline, ax, xlims):
 
     # correct the ticks to show dates, not days
     # also indicate Mondays by grid lines
-    ax.set_xticks([weight_water.days[i] for i, dt in enumerate(weight_water.date) if dt.weekday() is 0])
-    ax.set_xticklabels([weight_water.date[i].strftime('%b-%d') for i, dt in enumerate(weight_water.date) if dt.weekday() is 0])
+    if (weight_water.days.max() - weight_water.days.min()) > 6:
+        ax.set_xticks([weight_water.days[i] for i, dt in enumerate(weight_water.date) if dt.weekday() is 0])
+        ax.set_xticklabels([weight_water.date[i].strftime('%b-%d') for i, dt in enumerate(weight_water.date) if dt.weekday() is 0])
+    else:
+        ax.set_xticks([weight_water.days[i] for i, dt in enumerate(weight_water.date)])
+        ax.set_xticklabels([weight_water.date[i].strftime('%b-%d') for i, dt in enumerate(weight_water.date)])
+
     for item in ax.get_xticklabels():
         item.set_rotation(60)
 
