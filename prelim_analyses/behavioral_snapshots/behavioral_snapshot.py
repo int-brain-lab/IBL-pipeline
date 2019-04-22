@@ -267,7 +267,7 @@ for lidx, lab in enumerate(users):
             behavior.TrialSet, last_behavior='max(session_start_time)'
         )
 
-        last_behavior_time = subj_with_last_session.fetch('last_behavior')
+        last_behavior_time = subj_with_last_session.fetch1('last_behavior')
         subj_with_last_weighing_water = subj.aggr(
             action.Weighing * action.WaterAdministration,
             last_weighing='max(weighing_time)',
