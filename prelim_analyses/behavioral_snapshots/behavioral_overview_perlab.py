@@ -225,8 +225,7 @@ for lidx, lab in enumerate(users):
 
 			if last_behavior.size:
 				last_behavior = max(last_behavior)
-				last_date = max(np.hstack(
-					[last_weighing, last_water, last_behavior])).date().strftime("%Y-%m-%d")
+				last_date = last_behavior.date().strftime("%Y-%m-%d")
 			else:
 				last_date = max(np.hstack([last_weighing, last_water])).date().strftime("%Y-%m-%d")
 

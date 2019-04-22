@@ -278,8 +278,7 @@ for lidx, lab in enumerate(users):
                 'last_weighing', 'last_water')
 
         if last_behavior_time.size:
-            last_time = max([last_weighing_time, last_water_time,
-                             last_behavior_time])
+            last_time = last_behavior_time
         else:
             last_time = max([last_weighing_time, last_water_time])
 
