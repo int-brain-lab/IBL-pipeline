@@ -212,11 +212,86 @@ class TrialCountsSessionDuration(dj.Computed):
             width=500,
             height=400,
             title='Trial counts and session duration',
-            legend=dict(
-                x=0,
-                y=1.1,
-                orientation='v'),
+            showlegend=False
         )
+        fig = go.Figure(data=data, layout=layout)
+        key['plotting_data'] = fig.to_plotly_json()
+        self.insert1(key)
+
+
+@schema
+class PerformanceReactionTime(dj.Computed):
+    definition = """
+    -> subject.Subject
+    last_session_date:      date        # last date of session
+    ---
+    plotting_data:          longblob    # dictionary for the plotting info
+    """
+
+    key_source = dj.U('subject_uuid', 'last_session_date') & \
+        subject.Subject.aggr(
+            behavior.BehavioralSummaryByDate,
+            last_session_date='DATE(MAX(session_start_time))'
+        )
+
+    def make(self, key):
+        session_info = \
+            (behavior.BehavioralSummaryByDate *
+             behavior.BehavioralSummaryByDate.ReactionTimeByDate &
+             key).proj(
+                 'session_date',
+                 'performance_easy',
+                 'median_reaction_time').fetch(as_dict=True)
+        session_info = pd.DataFrame(session_info)
+
+        performance_easy = go.Scatter(
+            x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
+            y=session_info['performance_easy'].tolist(),
+            mode='markers+lines',
+            marker=dict(
+                size=6,
+                color='black'),
+            name='performance easy',
+            yaxis='y1'
+        )
+        rt = go.Scatter(
+            x=[t.strftime('%Y-%m-%d')
+                for t in session_info['session_date'].tolist()],
+            y=session_info['median_reaction_time'].tolist(),
+            mode='markers+lines',
+            marker=dict(
+                size=6,
+                color='red'),
+            name='reaction time',
+            yaxis='y2'
+        )
+
+        data = [performance_easy, rt]
+
+        layout = go.Layout(
+            yaxis=dict(
+                title='Performance on easy trials',
+                range=[0, 1]
+            ),
+            yaxis2=dict(
+                title='Median reaction time (s)',
+                overlaying='y',
+                color='red',
+                side='right',
+                type='log',
+                range=np.log10([0.1, 10]).tolist(),
+                dtick=np.log10([0.1, 1, 10]).tolist()
+
+            ),
+            xaxis=dict(
+                title='Date',
+            ),
+            width=500,
+            height=400,
+            title='Performance and median reaction time',
+            showlegend=False
+        )
+
         fig = go.Figure(data=data, layout=layout)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
