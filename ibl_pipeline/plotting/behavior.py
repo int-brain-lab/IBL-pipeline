@@ -231,7 +231,7 @@ class PerformanceReactionTime(dj.Computed):
     key_source = dj.U('subject_uuid', 'last_session_date') & \
         subject.Subject.aggr(
             behavior.BehavioralSummaryByDate,
-            last_session_date='DATE(MAX(session_start_time))'
+            last_session_date='MAX(session_date)'
         )
 
     def make(self, key):
