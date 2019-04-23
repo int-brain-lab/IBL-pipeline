@@ -3,6 +3,8 @@ from .. import subject, action, acquisition, behavior
 from ..utils import psychofit as psy
 import numpy as np
 import pandas as pd
+import scipy
+import scikits.bootstrap as bootstrap
 
 
 def compute_psych_pars(trials):
