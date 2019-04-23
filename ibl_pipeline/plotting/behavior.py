@@ -298,6 +298,79 @@ class PerformanceReactionTime(dj.Computed):
 
 
 @schema
+class ContrastHeatmap(dj.Computed):
+    definition = """
+    -> subject.Subject
+    last_session_date:      date        # last date of session
+    ---
+    plotting_data:          longblob    # dictionary for the plotting info
+    """
+
+    key_source = dj.U('subject_uuid', 'last_session_date') & \
+        subject.Subject.aggr(
+            behavior.BehavioralSummaryByDate.PsychResults &
+            'ABS(prob_left-0.5) < 0.0001',
+            last_session_date='MAX(session_date)'
+        )
+
+    def make(self, key):
+
+        # get trial counts and session length to date
+        sessions = (behavior.BehavioralSummaryByDate.PsychResults & key).proj(
+                        'session_date', 'signed_contrasts',
+                        'prob_choose_right').fetch(as_dict=True)
+        # reshape to a heatmap format
+        contrast_list = []
+        for session in sessions:
+            for i, contrast in enumerate(session['signed_contrasts']):
+                contrast_list.append(
+                    {'session_date': session['session_date'],
+                     'signed_contrast': round(contrast, 2)*100,
+                     'prob_choose_right': session['prob_choose_right'][i]
+                     })
+        contrast_df = pd.DataFrame(contrast_list)
+        contrast_map = contrast_df.pivot(
+            'signed_contrast', 'session_date',
+            'prob_choose_right').sort_values(
+                by='signed_contrast', ascending=False)
+
+        contrast_map = contrast_map.where((pd.notnull(contrast_map)), None)
+
+        data = dict(
+            x=[t.strftime('%Y-%m-%d')
+                for t in contrast_map.columns.tolist()],
+            y=contrast_map.index.tolist(),
+            z=contrast_map.values.tolist(),
+            zmax=1,
+            zmin=0,
+            type='heatmap',
+            colorbar=dict(
+                thickness=10,
+                title='prob choosing left',
+                titleside='right',
+            )
+
+        )
+
+        layout = go.Layout(
+            xaxis=dict(title='Date'),
+            yaxis=dict(
+                title='Contrast (%)',
+                range=[-100, 100]
+            ),
+            width=500,
+            height=400,
+            title='Contrast heatmap',
+            showlegend=False
+        )
+
+        fig = go.Figure(data=[data], layout=layout)
+        key['plotting_data'] = fig.to_plotly_json()
+        self.insert1(key)
+
+
+
+@schema
 class FitPars(dj.Computed):
     definition = """
     -> subject.Subject
