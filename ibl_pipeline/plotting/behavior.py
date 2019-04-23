@@ -298,6 +298,84 @@ class PerformanceReactionTime(dj.Computed):
 
 
 @schema
+class FitPars(dj.Computed):
+    definition = """
+    -> subject.Subject
+    last_session_date:      date        # last date of session
+    par_name:               varchar(16) # name of parameter
+    ---
+    plotting_data:          longblob    # dictionary for the plotting info
+    """
+    key_source = dj.U('subject_uuid', 'last_session_date') & \
+        subject.Subject.aggr(
+            behavior.BehavioralSummaryByDate,
+            last_session_date='MAX(session_date)'
+        )
+
+    def make(self, key):
+        # get trial counts and session length to date
+        fit_pars = (behavior.BehavioralSummaryByDate.PsychResults * key).proj(
+            'session_date', 'prob_left',
+            'threshold', 'bias', 'lapse_low', 'lapse_high').fetch(as_dict=True)
+        fit_pars = pd.DataFrame(fit_pars)
+
+        par_names = ['threshold', 'bias', 'lapse_low', 'lapse_high']
+
+        pars = dict()
+        for par_name in par_names:
+            pars[par_name] = []
+
+        prob_lefts = fit_pars['prob_left'].unique()
+
+        for prob_left in prob_lefts:
+            prob_left_filter = fit_pars['prob_left'] == prob_left
+            if prob_left == 0.2:
+                dot_color = 'orange'
+            elif prob_left == 0.5:
+                dot_color = 'black'
+            elif prob_left == 0.8:
+                dot_color = 'cornflowerblue'
+            else:
+                dot_color = 'gray'
+
+            fit_pars_sub = fit_pars[prob_left_filter]
+
+            for par_name in par_names:
+                pars[par_name].append(
+                    go.Scatter(
+                        x=[t.strftime('%Y-%m-%d')
+                            for t in fit_pars_sub['session_date'].tolist()],
+                        y=fit_pars_sub[par_name].tolist(),
+                        mode='markers',
+                        marker=dict(
+                            size=5,
+                            color=dot_color),
+                        name=f'p_left = {prob_left}')
+                )
+
+        par_title_names = ['Threshold', 'Bias', 'Lapse\ low', 'Lapse\ high']
+        par_symbols = ['sigma', 'mu', 'gamma', 'lambda']
+        ranges = [[-5, 105], [-105, 105], [-0.02, 1.02], [-0.02, 1.02]]
+        for ipar, par_name in enumerate(par_names):
+            layout = go.Layout(
+                width=500,
+                height=400,
+                title='',
+                xaxis=dict(title='Date'),
+                yaxis=dict(
+                    title='${}\ (\\{})$'.format(
+                        par_title_names[ipar], par_symbols[ipar]),
+                    range=ranges[ipar]
+                ),
+            )
+            fig = go.Figure(data=pars[par_name], layout=layout)
+
+            key['par_name'] = par_name
+            key['plotting_data'] = fig.to_plotly_json()
+            self.insert1(key)
+
+
+@schema
 class WaterWeight(dj.Computed):
     definition = """
     -> subject.Subject
