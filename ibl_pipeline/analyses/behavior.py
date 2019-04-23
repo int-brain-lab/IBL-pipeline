@@ -164,8 +164,10 @@ class BehavioralSummaryByDate(dj.Computed):
                 if 'Complete' in complete:
                     trials_sub = trials_sub & 'trial_stim_on_time is not NULL'
                     rt['prob_left_block'] = ileft
-                    rt['reaction_time_contrast'] = utils.compute_reaction_time(
-                        trials_sub)
+                    rt['reaction_time_contrast'], rt['reaction_time_ci_low'], \
+                        rt['reaction_time_ci_high'] = \
+                        utils.compute_reaction_time(
+                            trials_sub, compute_ci=True)
                     self.ReactionTimeContrast.insert1(rt)
         else:
             psych_results_tmp = utils.compute_psych_pars(trials)
@@ -178,8 +180,9 @@ class BehavioralSummaryByDate(dj.Computed):
             if 'Complete' in complete:
                 trials = trials & 'trial_stim_on_time is not NULL'
                 rt['prob_left_block'] = 0
-                rt['reaction_time_contrast'] = utils.compute_reaction_time(
-                    trials)
+                rt['reaction_time_contrast'], rt['reaction_time_ci_low'], \
+                    rt['reaction_time_ci_high'] = utils.compute_reaction_time(
+                        trials, compute_ci=True)
                 self.ReactionTimeContrast.insert1(rt)
 
     class PsychResults(dj.Part):
@@ -203,6 +206,8 @@ class BehavioralSummaryByDate(dj.Computed):
         -> master.PsychResults
         ---
         reaction_time_contrast: blob   # median reaction time for each contrast
+        reaction_time_ci_high:  blob   # 68 percent confidence interval upper bound
+        reaction_time_ci_low:   blob   # 68 percent confidence interval lower bound
         """
 
     class ReactionTimeByDate(dj.Part):
