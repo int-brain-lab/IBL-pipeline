@@ -151,6 +151,71 @@ class DatePsychCurve(dj.Computed):
 
 
 @schema
+class DateReactionTime(dj.Computed):
+    definition = """
+    -> behavior.BehavioralSummaryByDate
+    ---
+    plotting_data:  longblob     # dictionary for the plotting info
+    """
+    key_source = behavior.BehavioralSummaryByDate & \
+        behavior.BehavioralSummaryByDate.ReactionTimeContrast
+
+    def make(self, key):
+        sessions = behavior.BehavioralSummaryByDate.PsychResults * \
+            behavior.BehavioralSummaryByDate.ReactionTimeContrast & key
+
+        data = []
+        for session in sessions.fetch('KEY'):
+            contrasts, prob_left, reaction_time, ci_low, ci_high = \
+                (sessions & session).fetch1(
+                    'signed_contrasts', 'prob_left', 'reaction_time_contrast',
+                    'reaction_time_ci_low', 'reaction_time_ci_high')
+            error_low = reaction_time - ci_low
+            error_high = ci_high - reaction_time
+
+            contrasts = contrasts * 100
+
+            if prob_left == 0.2:
+                curve_color = 'orange'
+            elif prob_left == 0.5:
+                curve_color = 'black'
+            elif prob_left == 0.8:
+                curve_color = 'cornflowerblue'
+            else:
+                continue
+
+            rt_data = go.Scatter(
+                x=contrasts.tolist(),
+                y=reaction_time.tolist(),
+                error_y=dict(
+                    type='data',
+                    array=error_high.tolist(),
+                    arrayminus=error_low.tolist(),
+                    visible=True
+                ),
+                marker=dict(
+                    size=6,
+                    color=curve_color),
+                mode='markers+lines',
+                name=f'p_left = {prob_left}'
+            )
+
+            data.append(rt_data)
+
+        layout = go.Layout(
+            width=630,
+            height=400,
+            title='Reaction time - contrast',
+            xaxis={'title': 'Contrast(%)'},
+            yaxis={'title': 'Reaction time (s)'},
+        )
+
+        fig = go.Figure(data=data, layout=layout)
+        key['plotting_data'] = fig.to_plotly_json()
+        self.insert1(key)
+
+
+@schema
 class TrialCountsSessionDuration(dj.Computed):
     definition = """
     -> subject.Subject
