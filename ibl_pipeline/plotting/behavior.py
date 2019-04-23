@@ -314,7 +314,7 @@ class FitPars(dj.Computed):
 
     def make(self, key):
         # get trial counts and session length to date
-        fit_pars = (behavior.BehavioralSummaryByDate.PsychResults * key).proj(
+        fit_pars = (behavior.BehavioralSummaryByDate.PsychResults & key).proj(
             'session_date', 'prob_left',
             'threshold', 'bias', 'lapse_low', 'lapse_high').fetch(as_dict=True)
         fit_pars = pd.DataFrame(fit_pars)
