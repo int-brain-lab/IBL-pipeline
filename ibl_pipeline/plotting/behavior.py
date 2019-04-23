@@ -314,9 +314,9 @@ class ContrastHeatmap(dj.Computed):
         )
 
     def make(self, key):
-
         # get trial counts and session length to date
-        sessions = (behavior.BehavioralSummaryByDate.PsychResults & key).proj(
+        sessions = (behavior.BehavioralSummaryByDate.PsychResults &
+                    'prob_left=0.5' & key).proj(
                         'session_date', 'signed_contrasts',
                         'prob_choose_right').fetch(as_dict=True)
         # reshape to a heatmap format
@@ -367,7 +367,6 @@ class ContrastHeatmap(dj.Computed):
         fig = go.Figure(data=[data], layout=layout)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
-
 
 
 @schema
