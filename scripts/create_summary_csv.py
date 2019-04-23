@@ -3,7 +3,7 @@ This script creates a summary of the training status of animals in each lab.
 '''
 
 import datajoint as dj
-from ibl_pipeline import reference, subject, action, acquisition, behavior
+from ibl_pipeline import reference, subject, action, acquisition, data, behavior
 from ibl_pipeline.analyses import behavior as behavior_analyses
 import pandas as pd
 import numpy as np
@@ -25,8 +25,14 @@ for ilab in reference.Lab:
         'subject_nickname', session_start_time='max(session_start_time)') \
         * acquisition.Session \
         * behavior_analyses.SessionTrainingStatus
-    summary = last_sessions.proj(
-        'subject_nickname', 'task_protocol', 'training_status').fetch(
+
+    filerecord = data.FileRecord & subjects & 'relative_path LIKE "%alf%"'
+    last_filerecord = subjects.aggr(
+        filerecord, lastest_session_on_flatiron='max(session_start_time)')
+
+    summary = (last_sessions*last_filerecord).proj(
+        'subject_nickname', 'task_protocol', 'training_status',
+        'lastest_session_on_flatiron').fetch(
             as_dict=True)
 
     task_protocols = last_sessions.fetch('task_protocol')
@@ -35,7 +41,7 @@ for ilab in reference.Lab:
     for i, entry in enumerate(summary):
         subj = subject.Subject & entry
         protocol = protocols[i]
-        entry['lastest_session_start_time'] = entry.pop('session_start_time')
+        entry['lastest_session_ingested'] = entry.pop('session_start_time')
         entry['latest_task_protocol'] = entry.pop('task_protocol')
         entry['latest_training_status'] = entry.pop('training_status')
         # get all sessions with this protocol
