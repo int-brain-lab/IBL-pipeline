@@ -151,7 +151,7 @@ class DatePsychCurve(dj.Computed):
 
 
 @schema
-class DateReactionTime(dj.Computed):
+class DateReactionTimeContrast(dj.Computed):
     definition = """
     -> behavior.BehavioralSummaryByDate
     ---
