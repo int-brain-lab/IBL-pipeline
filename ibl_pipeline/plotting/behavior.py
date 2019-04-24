@@ -574,7 +574,7 @@ class FitPars(dj.Computed):
                 domain=[0, 0.2],
                 anchor='x1',
                 range=[-0.02, 1.02],
-                title='$Lapse high\ (\\lambda)$'
+                title='$Lapse\ high\ (\\lambda)$'
             ),
             xaxis2=dict(
                 domain=[0, 1],
@@ -583,7 +583,7 @@ class FitPars(dj.Computed):
                 domain=[0.25, 0.45],
                 anchor='x2',
                 range=[-0.02, 1.02],
-                title='$Lapse low\ (\\gamma)$'
+                title='$Lapse\ low\ (\\gamma)$'
             ),
             xaxis3=dict(
                 domain=[0, 1],
