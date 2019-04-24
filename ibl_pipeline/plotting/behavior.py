@@ -299,6 +299,7 @@ class TrialCountsSessionDuration(dj.Computed):
                 session_duration='TIMESTAMPDIFF(MINUTE, session_start_time, \
                     session_end_time)').fetch(as_dict=True)
         session_info = pd.DataFrame(session_info)
+        session_info = session_info.where((pd.notnull(session_info)), None)
 
         trial_counts = go.Scatter(
             x=[t.strftime('%Y-%m-%d')
