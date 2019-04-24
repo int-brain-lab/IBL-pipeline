@@ -232,14 +232,14 @@ class DateReactionTimeTrialNumber(dj.Computed):
                       (behavior_ingest.CompleteTrialSession &
                        'stim_on_times_status="Complete"')).proj(
             session_date='DATE(session_start_time)')
-        trials = behavior.TrialSet.Trial & \
-            (behavior.TrialSet * trial_sets & key)
+        trials = behavior_ingest.TrialSet.Trial & \
+            (behavior_ingest.TrialSet * trial_sets & key)
         rt_trials = trials.proj(
             rt='trial_response_time-trial_stim_on_time').fetch(as_dict=True)
         rt_trials = pd.DataFrame(rt_trials)
         rt_trials.index = rt_trials.index + 1
         rt_rolled = rt_trials['rt'].rolling(window=10).median()
-        rt_rolled = rt.where((pd.notnull(rt)), None)
+        rt_rolled = rt_rolled.where((pd.notnull(rt_rolled)), None)
         data = dict(
             x=rt_trials.index.tolist(),
             y=rt_trials['rt'].tolist(),
