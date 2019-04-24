@@ -206,11 +206,74 @@ class DateReactionTimeContrast(dj.Computed):
             width=630,
             height=400,
             title='Reaction time - contrast',
-            xaxis={'title': 'Contrast(%)'},
+            xaxis={'title': 'Contrast (%)'},
             yaxis={'title': 'Reaction time (s)'},
         )
 
         fig = go.Figure(data=data, layout=layout)
+        key['plotting_data'] = fig.to_plotly_json()
+        self.insert1(key)
+
+
+@schema
+class DateReactionTimeTrialNumber(dj.Computed):
+    definition = """
+    -> behavior.BehavioralSummaryByDate
+    ---
+    plotting_data:  longblob     # dictionary for the plotting info
+    """
+
+    key_source = behavior.BehavioralSummaryByDate & \
+        behavior.BehavioralSummaryByDate.ReactionTimeContrast
+
+    def make(self, key):
+        # get all trial of the day
+        trial_sets = (behavior_ingest.TrialSet &
+                      (behavior_ingest.CompleteTrialSession &
+                       'stim_on_times_status="Complete"')).proj(
+            session_date='DATE(session_start_time)')
+        trials = behavior.TrialSet.Trial & \
+            (behavior.TrialSet * trial_sets & key)
+        rt_trials = trials.proj(
+            rt='trial_response_time-trial_stim_on_time').fetch(as_dict=True)
+        rt_trials = pd.DataFrame(rt_trials)
+        rt_trials.index = rt_trials.index + 1
+        rt_rolled = rt_trials['rt'].rolling(window=10).median()
+        rt_rolled = rt.where((pd.notnull(rt)), None)
+        data = dict(
+            x=rt_trials.index.tolist(),
+            y=rt_trials['rt'].tolist(),
+            name='data',
+            type='scatter',
+            mode='markers',
+            marker=dict(
+                color='lightgray'
+            )
+        )
+
+        rolled = dict(
+            x=rt_trials.index.tolist(),
+            y=rt.values.tolist(),
+            name='rolled data',
+            type='scatter',
+            marker=dict(
+                color='black'
+            )
+        )
+
+        layout = go.Layout(
+            width=630,
+            height=400,
+            title='Reaction time - trial number',
+            xaxis=dict(title='Trial number'),
+            yaxis=dict(
+                title='Reaction time (s)',
+                type='log',
+                range=np.log10([0.1, 100]).tolist(),
+                dtick=np.log10([0.1, 1, 10, 100]).tolist()),
+        )
+
+        fig = go.Figure(data=[data, rolled], layout=layout)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
 
