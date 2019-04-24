@@ -565,7 +565,7 @@ class FitPars(dj.Computed):
                      for i, prob_left in enumerate(prob_lefts)
                      for par_name in par_names]
 
-        layout = dict(
+        layout = go.Layout(
             xaxis1=dict(
                 domain=[0, 1],
                 title='Date'
