@@ -253,7 +253,7 @@ class DateReactionTimeTrialNumber(dj.Computed):
 
         rolled = dict(
             x=rt_trials.index.tolist(),
-            y=rt.values.tolist(),
+            y=rt_rolled.values.tolist(),
             name='rolled data',
             type='scatter',
             marker=dict(
