@@ -502,7 +502,6 @@ class FitPars(dj.Computed):
     definition = """
     -> subject.Subject
     last_session_date:      date        # last date of session
-    par_name:               varchar(16) # name of parameter
     ---
     plotting_data:          longblob    # dictionary for the plotting info
     """
@@ -540,7 +539,11 @@ class FitPars(dj.Computed):
 
             fit_pars_sub = fit_pars[prob_left_filter]
 
-            for par_name in par_names:
+            for ipar, par_name in enumerate(par_names):
+                if ipar == 0:
+                    show_legend = True
+                else:
+                    show_legend = False
                 pars[par_name].append(
                     go.Scatter(
                         x=[t.strftime('%Y-%m-%d')
@@ -550,29 +553,64 @@ class FitPars(dj.Computed):
                         marker=dict(
                             size=5,
                             color=dot_color),
-                        name=f'p_left = {prob_left}')
+                        name=f'p_left = {prob_left}',
+                        xaxis='x{}'.format(4-ipar),
+                        yaxis='y{}'.format(4-ipar),
+                        showlegend=show_legend
+                    )
                 )
 
-        par_title_names = ['Threshold', 'Bias', 'Lapse\ low', 'Lapse\ high']
-        par_symbols = ['sigma', 'mu', 'gamma', 'lambda']
-        ranges = [[-5, 105], [-105, 105], [-0.02, 1.02], [-0.02, 1.02]]
-        for ipar, par_name in enumerate(par_names):
-            layout = go.Layout(
-                width=500,
-                height=400,
-                title='',
-                xaxis=dict(title='Date'),
-                yaxis=dict(
-                    title='${}\ (\\{})$'.format(
-                        par_title_names[ipar], par_symbols[ipar]),
-                    range=ranges[ipar]
-                ),
-            )
-            fig = go.Figure(data=pars[par_name], layout=layout)
+        pars_data = [pars[par_name][i]
+                     for i, prob_left in enumerate(prob_lefts)
+                     for par_name in par_names]
 
-            key['par_name'] = par_name
-            key['plotting_data'] = fig.to_plotly_json()
-            self.insert1(key)
+        layout = dict(
+            xaxis1=dict(
+                domain=[0, 1],
+                title='Date'
+            ),
+            yaxis1=dict(
+                domain=[0, 0.2],
+                anchor='x1',
+                range=[-0.02, 1.02],
+                title='$Lapse high\ (\\lambda)$'
+            ),
+            xaxis2=dict(
+                domain=[0, 1],
+            ),
+            yaxis2=dict(
+                domain=[0.25, 0.45],
+                anchor='x2',
+                range=[-0.02, 1.02],
+                title='$Lapse low\ (\\gamma)$'
+            ),
+            xaxis3=dict(
+                domain=[0, 1],
+            ),
+            yaxis3=dict(
+                domain=[0.5, 0.7],
+                anchor='x3',
+                range=[-105, 105],
+                title='$Bias\ (\\mu)$'
+            ),
+            xaxis4=dict(
+                domain=[0, 1],
+            ),
+            yaxis4=dict(
+                domain=[0.75, 1],
+                anchor='x4',
+                range=[-5, 105],
+                title='$Threshold\ (\\sigma)$'
+            ),
+            height=1000,
+            width=500,
+            title='Fit Parameters',
+        )
+
+        fig = go.Figure(data=pars_data, layout=layout)
+
+        key['plotting_data'] = fig.to_plotly_json()
+        self.insert1(key)
 
 
 @schema
