@@ -129,7 +129,7 @@ class BehavioralSummaryByDate(dj.Computed):
                                       'task_protocol LIKE "%biased%"')
             prob_lefts = dj.U('trial_stim_prob_left') & trials_biased
 
-            for ileft, prob_left in enumerate(prob_lefts):
+            for prob_left in prob_lefts:
                 p_left = prob_left['trial_stim_prob_left']
 
                 if np.any(['training' in task_protocol
@@ -158,18 +158,18 @@ class BehavioralSummaryByDate(dj.Computed):
                 psych_results = {**key, **psych_results_tmp}
                 psych_results['prob_left'] = prob_left[
                     'trial_stim_prob_left']
-                if abs(prob_left - 0.8) < 0.001:
+                if abs(p_left - 0.8) < 0.001:
                     psych_results['prob_left_block'] = 2
-                elif abs(prob_left - 0.2) < 0.001:
+                elif abs(p_left - 0.2) < 0.001:
                     psych_results['prob_left_block'] = 1
 
                 self.PsychResults.insert1(psych_results)
                 # compute reaction time
                 if 'Complete' in complete:
                     trials_sub = trials_sub & 'trial_stim_on_time is not NULL'
-                    if abs(prob_left - 0.8) < 0.001:
+                    if abs(p_left - 0.8) < 0.001:
                         rt['prob_left_block'] = 2
-                    elif abs(prob_left - 0.2) < 0.001:
+                    elif abs(p_left - 0.2) < 0.001:
                         rt['prob_left_block'] = 1
                     rt['reaction_time_contrast'], rt['reaction_time_ci_low'], \
                         rt['reaction_time_ci_high'] = \
