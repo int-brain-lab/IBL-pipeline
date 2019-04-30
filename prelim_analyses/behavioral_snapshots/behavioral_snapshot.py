@@ -164,9 +164,11 @@ for lidx, lab in enumerate(users):
         yticks = [[0, 19, 100], [-100, -16, 0, 16, 100], [-0, 0.2, 0.5, 1], [-0, 0.2, 0.5, 1]]
 
         # pick a good-looking diverging colormap with black in the middle
-        cmap = sns.diverging_palette(20, 220, n=len(pars['prob_left_block'].unique()), center="dark")
-        if len(pars['prob_left_block'].unique()) == 1:
+        cmap = sns.diverging_palette(20, 220, n=3, center="dark")
+        left_blocks = pars['prob_left_block'].unique()
+        if len(left_blocks) == 1:
             cmap = "gist_gray"
+
         sns.set_palette(cmap)
 
         # plot the fitted parameters
@@ -213,7 +215,7 @@ for lidx, lab in enumerate(users):
             didx += 1
 
             # colormap for the asymmetric blocks
-            cmap = sns.diverging_palette(20, 220, n=len(dat['probabilityLeft_block'].unique()), center="dark")
+            cmap = sns.diverging_palette(20, 220, n=3, center="dark")
             if len(dat['probabilityLeft_block'].unique()) == 1:
                 cmap = [np.array([0,0,0,1])]
 
