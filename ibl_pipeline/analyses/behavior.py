@@ -122,8 +122,8 @@ class BehavioralSummaryByDate(dj.Computed):
             'task_protocol')
         task_protocols = [protocol for protocol in task_protocols if protocol]
 
-        if np.any(['biased' in task_protocol
-                   for task_protocol in task_protocols]):
+        if any('biased' in task_protocol
+               for task_protocol in task_protocols):
             trials_biased = trials & (acquisition.Session &
                                       trial_sets_keys &
                                       'task_protocol LIKE "%biased%"')
@@ -132,8 +132,8 @@ class BehavioralSummaryByDate(dj.Computed):
             for prob_left in prob_lefts:
                 p_left = prob_left['trial_stim_prob_left']
 
-                if np.any(['training' in task_protocol
-                          for task_protocol in task_protocols]):
+                if any('training' in task_protocol
+                       for task_protocol in task_protocols):
                     if p_left != 0.5:
                         trials_sub = trials_biased & \
                             'ABS(trial_stim_prob_left - {})<1e-6'.format(
@@ -233,7 +233,8 @@ class TrainingStatus(dj.Lookup):
     contents = zip(['untrainable',
                     'training in progress',
                     'trained',
-                    'ready for ephys'])
+                    'ready for ephys',
+                    'wrong session type run'])
 
 
 @schema
@@ -260,11 +261,17 @@ class SessionTrainingStatus(dj.Computed):
         # "read for ephys"
         task_protocol = (acquisition.Session & key).fetch1('task_protocol')
         if task_protocol and 'biased' in task_protocol:
-            key['training_status'] = 'trained'
-            if len(status) and np.any(status == 'ready for ephys'):
+            if not(len(status) and np.any(status == 'trained')):
+                key['training_status'] = 'wrong session_type run'
+                self.insert1(key)
+                return
+
+            elif len(status) and np.any(status == 'ready for ephys'):
                 key['training_status'] = 'ready for ephys'
                 self.insert1(key)
                 return
+
+            key['training_status'] = 'trained'
 
             # Criteria for "ready for ephys" status
             sessions = (behavior.TrialSet & subject_key &
@@ -288,7 +295,7 @@ class SessionTrainingStatus(dj.Computed):
                     'trial_stim_prob_left')
 
                 # if no 0.5 of prob_left, keep trained
-                if np.all(np.absolute(prob_lefts - 0.5) > 0.001):
+                if np.all(abs(prob_lefts - 0.5) > 0.001):
                     self.insert1(key)
                     return
 
@@ -305,7 +312,7 @@ class SessionTrainingStatus(dj.Computed):
                 psych_80 = utils.compute_psych_pars(trials_80)
                 psych_20 = utils.compute_psych_pars(trials_20)
 
-                criterion = np.abs(psych_unbiased['bias']) < 16 and \
+                criterion = abs(psych_unbiased['bias']) < 16 and \
                     psych_unbiased['threshold'] < 19 and \
                     psych_unbiased['lapse_low'] < 0.2 and \
                     psych_unbiased['lapse_high'] < 0.2 and \
@@ -345,7 +352,7 @@ class SessionTrainingStatus(dj.Computed):
         if np.all(n_trials > 200) and np.all(performance_easy > 0.8):
             # training in progress if the current session does not
             # have low contrasts
-            contrasts = np.absolute(
+            contrasts = abs(
                 (PsychResults & key).fetch1('signed_contrasts'))
             if 0 in contrasts and \
                np.sum((contrasts < 0.065) & (contrasts > 0.001)):
@@ -354,7 +361,7 @@ class SessionTrainingStatus(dj.Computed):
                 psych = utils.compute_psych_pars(trials)
                 cum_perform_easy = utils.compute_performance_easy(trials)
 
-                criterion = np.abs(psych['bias']) < 16 and \
+                criterion = abs(psych['bias']) < 16 and \
                     psych['threshold'] < 19 and \
                     psych['lapse_low'] < 0.2 and \
                     psych['lapse_high'] < 0.2
