@@ -262,7 +262,7 @@ class SessionTrainingStatus(dj.Computed):
         task_protocol = (acquisition.Session & key).fetch1('task_protocol')
         if task_protocol and 'biased' in task_protocol:
             if not(len(status) and np.any(status == 'trained')):
-                key['training_status'] = 'wrong session_type run'
+                key['training_status'] = 'wrong session type run'
                 self.insert1(key)
                 return
 
