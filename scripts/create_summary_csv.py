@@ -28,7 +28,7 @@ for ilab in reference.Lab:
 
     filerecord = data.FileRecord & subjects & 'relative_path LIKE "%alf%"'
     last_filerecord = subjects.aggr(
-        filerecord, lastest_session_on_flatiron='max(session_start_time)')
+        filerecord, latest_session_on_flatiron='max(session_start_time)')
 
     summary = (last_sessions*last_filerecord).proj(
         'subject_nickname', 'task_protocol', 'training_status',
