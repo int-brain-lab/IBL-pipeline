@@ -1,7 +1,7 @@
 import datajoint as dj
 from ..analyses import behavior
 from .. import behavior as behavior_ingest
-from .. import subject, action, acquisition
+from .. import reference, subject, action, acquisition, data
 import numpy as np
 import pandas as pd
 from ..utils import psychofit as psy
@@ -699,3 +699,69 @@ class WaterWeight(dj.Computed):
         fig = go.Figure(data=data, layout=layout)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
+
+
+ingested_sessions = acquisition.Session & 'task_protocol is not NULL' \
+    & behavior.TrialSet
+subjects_alive = (subject.Subject - subject.Death) & 'sex != "U"' \
+    & action.Weighing & action.WaterAdministration & ingested_sessions
+
+
+@schema
+class DailyLabSummary(dj.Computed):
+    definition = """
+    -> reference.Lab
+    last_session_time:      date        # last date of session
+    """
+
+    sessions_lab = acquisition.Session * subjects_alive * subject.SubjectLab \
+        * behavior_analyses.SessionTrainingStatus
+    key_source = dj.U('lab_name', 'last_session_date') & reference.Lab.aggr(
+        sessions_lab, last_session_time='MAX(session_start_time)')
+
+    def make(self, key):
+
+        self.insert1(key)
+        subjects = subjects_alive & key
+
+        last_sessions = subjects.aggr(
+            ingested_sessions,
+            'subject_nickname', session_start_time='max(session_start_time)') \
+            * acquisition.Session \
+            * behavior_analyses.SessionTrainingStatus
+
+        filerecord = data.FileRecord & subjects & 'relative_path LIKE "%alf%"'
+        last_filerecord = subjects.aggr(
+            filerecord, latest_session_on_flatiron='max(session_start_time)')
+
+        summary = (last_sessions*last_filerecord).proj(
+            'subject_nickname', 'task_protocol', 'training_status',
+            'latest_session_on_flatiron').fetch(
+                as_dict=True)
+
+        for entry in summary:
+            subj = subject.Subject & entry
+            protocol = entry['task_protocol'].partition('ChoiseWorld')[0]
+            subject_summary = key.copy()
+            subject_summary.update(
+                subject_nickname=entry['subject_nickname'],
+                latest_session_ingested=entry['session_start_time'],
+                latest_session_on_flatiron=entry['latest_session_on_flatiron'],
+                latest_task_protocol=entry['task_protocol'],
+                latest_training_status=entry['training_status'],
+                n_sessions_current_protocol=len(
+                    ingested_sessions & subj &
+                    'task_protocol LIKE "{}%"'.format(protocol))
+            )
+            self.SubjectSummary.insert1(subject_summary)
+
+    class SubjectSummary(dj.Part):
+        definition = """
+        -> master
+        subject_nickname:            varchar(64)
+        latest_session_ingested:     datetime
+        latest_session_on_flatiron:  datetime
+        latest_task_protocol:        varchar(128)
+        latest_training_status:      varchar(64)
+        n_sessions_current_protocol: int
+        """
