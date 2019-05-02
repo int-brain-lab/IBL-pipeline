@@ -716,7 +716,7 @@ class DailyLabSummary(dj.Computed):
 
     sessions_lab = acquisition.Session * subjects_alive * subject.SubjectLab \
         * behavior.SessionTrainingStatus
-    key_source = dj.U('lab_name', 'last_session_date') & reference.Lab.aggr(
+    key_source = dj.U('lab_name', 'last_session_time') & reference.Lab.aggr(
         sessions_lab, last_session_time='MAX(session_start_time)')
 
     def make(self, key):
