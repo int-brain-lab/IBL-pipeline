@@ -744,6 +744,7 @@ class DailyLabSummary(dj.Computed):
             protocol = entry['task_protocol'].partition('ChoiseWorld')[0]
             subject_summary = key.copy()
             subject_summary.update(
+                subject_uuid=entry['subject_uuid'],
                 subject_nickname=entry['subject_nickname'],
                 latest_session_ingested=entry['session_start_time'],
                 latest_session_on_flatiron=entry['latest_session_on_flatiron'],
@@ -758,6 +759,7 @@ class DailyLabSummary(dj.Computed):
     class SubjectSummary(dj.Part):
         definition = """
         -> master
+        subject_uuid:                uuid
         subject_nickname:            varchar(64)
         latest_session_ingested:     datetime
         latest_session_on_flatiron:  datetime
