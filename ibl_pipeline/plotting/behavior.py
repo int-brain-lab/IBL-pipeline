@@ -728,7 +728,7 @@ class DailyLabSummary(dj.Computed):
             ingested_sessions,
             'subject_nickname', session_start_time='max(session_start_time)') \
             * acquisition.Session \
-            * behavior_analyses.SessionTrainingStatus
+            * behavior.SessionTrainingStatus
 
         filerecord = data.FileRecord & subjects & 'relative_path LIKE "%alf%"'
         last_filerecord = subjects.aggr(
