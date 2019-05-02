@@ -702,7 +702,7 @@ class WaterWeight(dj.Computed):
 
 
 ingested_sessions = acquisition.Session & 'task_protocol is not NULL' \
-    & behavior.TrialSet
+    & behavior_ingest.TrialSet
 subjects_alive = (subject.Subject - subject.Death) & 'sex != "U"' \
     & action.Weighing & action.WaterAdministration & ingested_sessions
 
@@ -715,7 +715,7 @@ class DailyLabSummary(dj.Computed):
     """
 
     sessions_lab = acquisition.Session * subjects_alive * subject.SubjectLab \
-        * behavior_analyses.SessionTrainingStatus
+        * behavior.SessionTrainingStatus
     key_source = dj.U('lab_name', 'last_session_date') & reference.Lab.aggr(
         sessions_lab, last_session_time='MAX(session_start_time)')
 
