@@ -35,7 +35,7 @@ for ilab in reference.Lab:
         'latest_session_on_flatiron').fetch(
             as_dict=True)
 
-    for entry in enumerate(summary):
+    for entry in summary:
         subj = subject.Subject & entry
         protocol = entry['task_protocol'].partition('ChoiseWorld')[0]
         entry['latest_session_ingested'] = entry.pop('session_start_time')
