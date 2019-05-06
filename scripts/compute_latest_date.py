@@ -11,7 +11,7 @@ import numpy as np
 from datetime import datetime
 
 
-for key in subject.Subject():
+for key in subject.Subject.fetch('KEY'):
     behavior_summary = behavior_analyses.BehavioralSummaryByDate & key
     water_weight = action.Weighing * action.WaterAdministration & key
     if behavior_summary:
