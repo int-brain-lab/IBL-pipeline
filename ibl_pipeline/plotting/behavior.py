@@ -309,7 +309,7 @@ class LatestDate(dj.Computed):
         if not(latest_behavior or water_weight):
             return
         elif latest_behavior and water_weight:
-            last_behavior_date = lastest_behavior.fetch1(
+            last_behavior_date = latest_behavior.fetch1(
                 'last_behavior_date'
             )
             last_water_weight_date = water_weight.fetch1(
@@ -317,7 +317,7 @@ class LatestDate(dj.Computed):
             )
             latest_date = max([last_behavior_date, last_water_weight_date])
         elif latest_behavior:
-            latest_date = lastest_behavior.fetch1(
+            latest_date = latest_behavior.fetch1(
                 'last_behavior_date'
             )
         elif water_weight:
