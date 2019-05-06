@@ -305,7 +305,7 @@ class CumulativeSummary(dj.Computed):
         self.insert1(key)
 
         # plot for trial counts and session duration
-        if behavior.TrialSet & key:
+        if behavior_ingest.TrialSet & key:
             trial_cnts = key.copy()
 
             session_info = \
