@@ -15,16 +15,16 @@ for key in subject.Subject():
     behavior_summary = behavior_analyses.BehavioralSummaryByDate & key
     water_weight = action.Weighing * action.WaterAdministration & key
     if behavior_summary:
-        latest_behavior = (subject.Subject & key).aggr(
-            behavior_analyses.BehavioralSummaryByDate,
+        latest_behavior = subject.Subject.aggr(
+            behavior_summary,
             last_behavior_date='MAX(session_date)')
 
     if water_weight:
-        latest_weight = (subject.Subject & key).aggr(
-            action.Weighing,
+        latest_weight = subject.Subject.aggr(
+            action.Weighing & key,
             last_weighing_date='DATE(MAX(weighing_time))')
-        latest_water = (subject.Subject & key).aggr(
-            action.WaterAdministration,
+        latest_water = subject.Subject.aggr(
+            action.WaterAdministration & key,
             last_water_date='DATE(MAX(administration_time))')
 
         latest_water_weight = (latest_water * latest_weight).proj(
@@ -38,7 +38,7 @@ for key in subject.Subject():
         last_behavior_date = latest_behavior.fetch1(
             'last_behavior_date'
         )
-        last_water_weight_date = water_weight.fetch1(
+        last_water_weight_date = latest_water_weight.fetch1(
             'last_water_weight_date'
         )
         latest_date = max([last_behavior_date, last_water_weight_date])
@@ -47,7 +47,7 @@ for key in subject.Subject():
             'last_behavior_date'
         )
     elif water_weight:
-        latest_date = water_weight.fetch1(
+        latest_date = latest_water_weight.fetch1(
             'last_water_weight_date'
         )
 
