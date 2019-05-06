@@ -6,13 +6,14 @@ and manually insert into the table behavior_plotting.LatestDate
 import datajoint as dj
 from ibl_pipeline import reference, subject, action, acquisition, data, behavior
 from ibl_pipeline.analyses import behavior as behavior_analyses
+from ibl_pipeline.plotting import behavior as behavior_plotting
 import numpy as np
 from datetime import datetime
 
 
 for key in subject.Subject():
     latest_behavior = (subject.Subject & key).aggr(
-        behavior.BehavioralSummaryByDate,
+        behavior_analyses.BehavioralSummaryByDate,
         last_behavior_date='MAX(session_date)')
     latest_weight = (subject.Subject & key).aggr(
         action.Weighing,
@@ -45,4 +46,4 @@ for key in subject.Subject():
         )
 
     key['latest_date'] = latest_date
-    self.insert1(key)
+    behavior_plotting.LatestDate.insert1(key)
