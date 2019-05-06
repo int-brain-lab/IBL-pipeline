@@ -722,7 +722,7 @@ class DailyLabSummary(dj.Computed):
     def make(self, key):
 
         self.insert1(key)
-        subjects = subjects_alive & key
+        subjects = subjects_alive * subject.SubjectLab & key
 
         last_sessions = subjects.aggr(
             ingested_sessions,
@@ -759,6 +759,7 @@ class DailyLabSummary(dj.Computed):
     class SubjectSummary(dj.Part):
         definition = """
         -> master
+        ---
         subject_uuid:                uuid
         subject_nickname:            varchar(64)
         latest_session_ingested:     datetime
