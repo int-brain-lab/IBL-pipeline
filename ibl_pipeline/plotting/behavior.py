@@ -289,531 +289,409 @@ class LatestDate(dj.Manual):
     """
 
 
-# @schema
-# class CumulativeSummary(dj.Computed):
-#     # This table contains four plots of the cumulative summary
-#     definition = """
-#     -> subject.Subject
-#     latest_date:  date      # last date of any event for the subject
-#     """
-
-
-
-#     def make(self, key):
-#         self.insert1(key)
-#         session_info = \
-#             (behavior_ingest.TrialSet * acquisition.Session & key).proj(
-#                 'n_trials', session_date='DATE(session_start_time)',
-#                 session_duration='TIMESTAMPDIFF(MINUTE, session_start_time, \
-#                     session_end_time)').fetch(as_dict=True)
-#         session_info = pd.DataFrame(session_info)
-#         session_info = session_info.where((pd.notnull(session_info)), None)
-
-#         trial_counts = go.Scatter(
-#             x=[t.strftime('%Y-%m-%d')
-#                 for t in session_info['session_date'].tolist()],
-#             y=session_info['n_trials'].tolist(),
-#             mode='markers+lines',
-#             marker=dict(
-#                 size=6,
-#                 color='black'),
-#             name='trial counts',
-#             yaxis='y1'
-#         )
-#         session_length = go.Scatter(
-#             x=[t.strftime('%Y-%m-%d')
-#                 for t in session_info['session_date'].tolist()],
-#             y=session_info['session_duration'].tolist(),
-#             mode='markers+lines',
-#             marker=dict(
-#                 size=6,
-#                 color='red'),
-#             name='session duration',
-#             yaxis='y2'
-#         )
-
-#         data = [trial_counts, session_length]
-
-#         layout = go.Layout(
-#             yaxis=dict(
-#                 title='Trial counts',
-#             ),
-#             yaxis2=dict(
-#                 title='Session duration (mins)',
-#                 overlaying='y',
-#                 color='red',
-#                 side='right'
-#             ),
-#             xaxis=dict(
-#                 title='Date'),
-#             width=500,
-#             height=400,
-#             title='Trial counts and session duration',
-#             showlegend=False
-#         )
-#         fig = go.Figure(data=data, layout=layout)
-#         key['plotting_data'] = fig.to_plotly_json()
-
-#     class TrialCountsSessionDuration(dj.Part):
-#         definition = """
-#         -> master
-#         ---
-#         trial_counts_session_duration: longblob    # dict for the plotting info
-#         """
-
-#     class PerformanceReactionTime(dj.Part):
-#         definition = """
-#         -> master
-#         ---
-#         performance_reaction_time: longblob    # dict for the plotting info
-#         """
-
-#     class ContrastHeatmap(dj.Part):
-#         definition = """
-#         -> master
-#         ---
-#         contrast_heat_map: longblob    # dict for the plotting info
-#         """
-
-#     class FitPars(dj.Part):
-#         definition = """
-#         -> master
-#         ---
-#         fit_pars: longblob  # dict for the plotting info
-#         """
-
-#     class WaterWeight(dj.Part):
-#         definition = """
-#         -> master
-#         ---
-#         water_weight: longblob    # dict for the plotting info
-#         """
-
-
-
-
 @schema
-class TrialCountsSessionDuration(dj.Computed):
+class CumulativeSummary(dj.Computed):
+    # This table contains four plots of the cumulative summary
     definition = """
     -> subject.Subject
-    last_session_date:  date      # last date of session
-    ---
-    plotting_data:      longblob  # dictionary for the plotting info
+    latest_date:  date      # last date of any event for the subject
     """
-    key_source = dj.U('subject_uuid', 'last_session_date') & \
-        subject.Subject.aggr(
-            behavior_ingest.TrialSet,
-            last_session_date='DATE(MAX(session_start_time))'
-        )
+    key_source = dj.U('subject_uuid', 'latest_date') \
+        & subject.Subject.aggr(
+            behavior_plotting.LatestDate,
+            'latest_date',
+            lastest_timestamp='MAX(checking_ts)')
 
     def make(self, key):
-        session_info = \
-            (behavior_ingest.TrialSet * acquisition.Session & key).proj(
-                'n_trials', session_date='DATE(session_start_time)',
-                session_duration='TIMESTAMPDIFF(MINUTE, session_start_time, \
-                    session_end_time)').fetch(as_dict=True)
-        session_info = pd.DataFrame(session_info)
-        session_info = session_info.where((pd.notnull(session_info)), None)
-
-        trial_counts = go.Scatter(
-            x=[t.strftime('%Y-%m-%d')
-                for t in session_info['session_date'].tolist()],
-            y=session_info['n_trials'].tolist(),
-            mode='markers+lines',
-            marker=dict(
-                size=6,
-                color='black'),
-            name='trial counts',
-            yaxis='y1'
-        )
-        session_length = go.Scatter(
-            x=[t.strftime('%Y-%m-%d')
-                for t in session_info['session_date'].tolist()],
-            y=session_info['session_duration'].tolist(),
-            mode='markers+lines',
-            marker=dict(
-                size=6,
-                color='red'),
-            name='session duration',
-            yaxis='y2'
-        )
-
-        data = [trial_counts, session_length]
-
-        layout = go.Layout(
-            yaxis=dict(
-                title='Trial counts',
-            ),
-            yaxis2=dict(
-                title='Session duration (mins)',
-                overlaying='y',
-                color='red',
-                side='right'
-            ),
-            xaxis=dict(
-                title='Date'),
-            width=500,
-            height=400,
-            title='Trial counts and session duration',
-            showlegend=False
-        )
-        fig = go.Figure(data=data, layout=layout)
-        key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
 
+        # plot for trial counts and session duration
+        if behavior.TrialSet & key:
+            trial_cnts = key.copy()
 
-@schema
-class PerformanceReactionTime(dj.Computed):
-    definition = """
-    -> subject.Subject
-    last_session_date:      date        # last date of session
-    ---
-    plotting_data:          longblob    # dictionary for the plotting info
-    """
+            session_info = \
+                (behavior_ingest.TrialSet * acquisition.Session & key).proj(
+                    'n_trials', session_date='DATE(session_start_time)',
+                    session_duration='TIMESTAMPDIFF(MINUTE, session_start_time, \
+                        session_end_time)').fetch(as_dict=True)
+            session_info = pd.DataFrame(session_info)
+            session_info = session_info.where((pd.notnull(session_info)), None)
 
-    key_source = dj.U('subject_uuid', 'last_session_date') & \
-        subject.Subject.aggr(
-            behavior.BehavioralSummaryByDate,
-            last_session_date='MAX(session_date)'
-        )
-
-    def make(self, key):
-        session_info = \
-            (behavior.BehavioralSummaryByDate *
-             behavior.BehavioralSummaryByDate.ReactionTimeByDate &
-             key).proj(
-                 'session_date',
-                 'performance_easy',
-                 'median_reaction_time').fetch(as_dict=True)
-        session_info = pd.DataFrame(session_info)
-
-        performance_easy = go.Scatter(
-            x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
-            y=session_info['performance_easy'].tolist(),
-            mode='markers+lines',
-            marker=dict(
-                size=6,
-                color='black'),
-            name='performance easy',
-            yaxis='y1'
-        )
-        rt = go.Scatter(
-            x=[t.strftime('%Y-%m-%d')
-                for t in session_info['session_date'].tolist()],
-            y=session_info['median_reaction_time'].tolist(),
-            mode='markers+lines',
-            marker=dict(
-                size=6,
-                color='red'),
-            name='reaction time',
-            yaxis='y2'
-        )
-
-        data = [performance_easy, rt]
-
-        layout = go.Layout(
-            yaxis=dict(
-                title='Performance on easy trials',
-                range=[0, 1]
-            ),
-            yaxis2=dict(
-                title='Median reaction time (s)',
-                overlaying='y',
-                color='red',
-                side='right',
-                type='log',
-                range=np.log10([0.1, 10]).tolist(),
-                dtick=np.log10([0.1, 1, 10]).tolist()
-
-            ),
-            xaxis=dict(
-                title='Date',
-            ),
-            width=500,
-            height=400,
-            title='Performance and median reaction time',
-            showlegend=False
-        )
-
-        fig = go.Figure(data=data, layout=layout)
-        key['plotting_data'] = fig.to_plotly_json()
-        self.insert1(key)
-
-
-@schema
-class ContrastHeatmap(dj.Computed):
-    definition = """
-    -> subject.Subject
-    last_session_date:      date        # last date of session
-    ---
-    plotting_data:          longblob    # dictionary for the plotting info
-    """
-
-    key_source = dj.U('subject_uuid', 'last_session_date') & \
-        subject.Subject.aggr(
-            behavior.BehavioralSummaryByDate.PsychResults &
-            'ABS(prob_left-0.5) < 0.0001',
-            last_session_date='MAX(session_date)'
-        )
-
-    def make(self, key):
-        # get trial counts and session length to date
-        sessions = (behavior.BehavioralSummaryByDate.PsychResults &
-                    'ABS(prob_left-0.5)<0.001' & key).proj(
-                        'session_date', 'signed_contrasts',
-                        'prob_choose_right').fetch(as_dict=True)
-        # reshape to a heatmap format
-        contrast_list = []
-        for session in sessions:
-            for i, contrast in enumerate(session['signed_contrasts']):
-                contrast_list.append(
-                    {'session_date': session['session_date'],
-                     'signed_contrast': round(contrast, 2)*100,
-                     'prob_choose_right': session['prob_choose_right'][i]
-                     })
-        contrast_df = pd.DataFrame(contrast_list)
-        contrast_map = contrast_df.pivot(
-            'signed_contrast', 'session_date',
-            'prob_choose_right').sort_values(
-                by='signed_contrast', ascending=False)
-
-        contrast_map = contrast_map.where((pd.notnull(contrast_map)), None)
-
-        data = dict(
-            x=[t.strftime('%Y-%m-%d')
-                for t in contrast_map.columns.tolist()],
-            y=contrast_map.index.tolist(),
-            z=contrast_map.values.tolist(),
-            zmax=1,
-            zmin=0,
-            type='heatmap',
-            colorbar=dict(
-                thickness=10,
-                title='prob choosing left',
-                titleside='right',
-            )
-
-        )
-
-        layout = go.Layout(
-            xaxis=dict(title='Date'),
-            yaxis=dict(
-                title='Contrast (%)',
-                range=[-100, 100]
-            ),
-            width=500,
-            height=400,
-            title='Contrast heatmap',
-            showlegend=False
-        )
-
-        fig = go.Figure(data=[data], layout=layout)
-        key['plotting_data'] = fig.to_plotly_json()
-        self.insert1(key)
-
-
-@schema
-class FitPars(dj.Computed):
-    definition = """
-    -> subject.Subject
-    last_session_date:      date        # last date of session
-    ---
-    plotting_data:          longblob    # dictionary for the plotting info
-    """
-    key_source = dj.U('subject_uuid', 'last_session_date') & \
-        subject.Subject.aggr(
-            behavior.BehavioralSummaryByDate,
-            last_session_date='MAX(session_date)'
-        )
-
-    def make(self, key):
-        # get trial counts and session length to date
-        fit_pars = (behavior.BehavioralSummaryByDate.PsychResults & key).proj(
-            'session_date', 'prob_left',
-            'threshold', 'bias', 'lapse_low', 'lapse_high').fetch(as_dict=True)
-        fit_pars = pd.DataFrame(fit_pars)
-
-        par_names = ['threshold', 'bias', 'lapse_low', 'lapse_high']
-
-        pars = dict()
-        for par_name in par_names:
-            pars[par_name] = []
-
-        prob_lefts = fit_pars['prob_left'].unique()
-
-        for prob_left in prob_lefts:
-            prob_left_filter = fit_pars['prob_left'] == prob_left
-            if prob_left == 0.2:
-                dot_color = 'orange'
-            elif prob_left == 0.5:
-                dot_color = 'black'
-            elif prob_left == 0.8:
-                dot_color = 'cornflowerblue'
-            else:
-                dot_color = 'gray'
-
-            fit_pars_sub = fit_pars[prob_left_filter]
-
-            for ipar, par_name in enumerate(par_names):
-                if ipar == 0:
-                    show_legend = True
-                else:
-                    show_legend = False
-                pars[par_name].append(
-                    go.Scatter(
-                        x=[t.strftime('%Y-%m-%d')
-                            for t in fit_pars_sub['session_date'].tolist()],
-                        y=fit_pars_sub[par_name].tolist(),
-                        mode='markers',
-                        marker=dict(
-                            size=5,
-                            color=dot_color),
-                        name=f'p_left = {prob_left}',
-                        xaxis='x{}'.format(4-ipar),
-                        yaxis='y{}'.format(4-ipar),
-                        showlegend=show_legend
-                    )
-                )
-
-        pars_data = [pars[par_name][i]
-                     for i, prob_left in enumerate(prob_lefts)
-                     for par_name in par_names]
-
-        layout = go.Layout(
-            xaxis1=dict(
-                domain=[0, 1],
-                title='Date'
-            ),
-            yaxis1=dict(
-                domain=[0, 0.2],
-                anchor='x1',
-                range=[-0.02, 1.02],
-                title='$Lapse\ high\ (\\lambda)$'
-            ),
-            xaxis2=dict(
-                domain=[0, 1],
-            ),
-            yaxis2=dict(
-                domain=[0.25, 0.45],
-                anchor='x2',
-                range=[-0.02, 1.02],
-                title='$Lapse\ low\ (\\gamma)$'
-            ),
-            xaxis3=dict(
-                domain=[0, 1],
-            ),
-            yaxis3=dict(
-                domain=[0.5, 0.7],
-                anchor='x3',
-                range=[-105, 105],
-                title='$Bias\ (\\mu)$'
-            ),
-            xaxis4=dict(
-                domain=[0, 1],
-            ),
-            yaxis4=dict(
-                domain=[0.75, 1],
-                anchor='x4',
-                range=[-5, 105],
-                title='$Threshold\ (\\sigma)$'
-            ),
-            height=1000,
-            width=500,
-            title='Fit Parameters',
-        )
-
-        fig = go.Figure(data=pars_data, layout=layout)
-
-        key['plotting_data'] = fig.to_plotly_json()
-        self.insert1(key)
-
-
-@schema
-class WaterWeight(dj.Computed):
-    definition = """
-    -> subject.Subject
-    water_weight_date:   date    # last date of water weight
-    ---
-    plotting_data:  longblob     # dictionary for the plotting info
-    """
-
-    key_source = dj.U('subject_uuid', 'water_weight_date') & \
-        subject.Subject.aggr(
-            action.Weighing * action.WaterAdministration,
-            water_weight_date='DATE(GREATEST(MAX(weighing_time), \
-                MAX(administration_time)))'
-        )
-
-    def make(self, key):
-        subj = subject.Subject & key
-
-        water_info_query = (action.WaterAdministration & subj).proj(
-            'water_administered', 'watertype_name',
-            water_date='DATE(administration_time)')
-        water_info = pd.DataFrame(water_info_query.fetch(as_dict=True))
-        water_types = water_info.watertype_name.unique()
-        water_info.pop('administration_time')
-        water_info.pop('subject_uuid')
-        water_info_type = water_info.pivot_table(
-            index='water_date', columns='watertype_name',
-            values='water_administered', aggfunc='sum')
-        water_info_type = water_info_type.where((pd.notnull(water_info_type)),
-                                                None)
-
-        weight_info_query = (action.Weighing & subj).proj(
-            'weight', weighing_date='DATE(weighing_time)')
-
-        weight_info = pd.DataFrame(
-            weight_info_query.fetch(as_dict=True))
-        weight_info.pop('subject_uuid')
-        weight_info.pop('weighing_time')
-        weight_info = weight_info.where((pd.notnull(weight_info)), None)
-
-        data = [
-            go.Bar(
+            trial_counts = go.Scatter(
                 x=[t.strftime('%Y-%m-%d')
-                    for t in water_info_type.index.tolist()],
-                y=water_info_type[water_type].tolist(),
-                name=water_type,
-                yaxis='y1')
-            for water_type in water_types
-        ]
-
-        data.append(
-            go.Scatter(
-                x=[t.strftime('%Y-%m-%d')
-                    for t in weight_info['weighing_date'].tolist()],
-                y=weight_info['weight'].tolist(),
-                mode='lines+markers',
-                name='Weight',
+                    for t in session_info['session_date'].tolist()],
+                y=session_info['n_trials'].tolist(),
+                mode='markers+lines',
                 marker=dict(
                     size=6,
                     color='black'),
+                name='trial counts',
+                yaxis='y1'
+            )
+            session_length = go.Scatter(
+                x=[t.strftime('%Y-%m-%d')
+                    for t in session_info['session_date'].tolist()],
+                y=session_info['session_duration'].tolist(),
+                mode='markers+lines',
+                marker=dict(
+                    size=6,
+                    color='red'),
+                name='session duration',
                 yaxis='y2'
-            ))
+            )
 
-        layout = go.Layout(
-            yaxis=dict(
-                title='Water intake (mL)'),
-            yaxis2=dict(
-                title='Weight (g)',
-                overlaying='y',
-                side='right'
-            ),
-            width=600,
-            height=400,
-            title='Water intake and weight',
-            xaxis=dict(title='Date'),
-            legend=dict(
-                x=0,
-                y=1.2,
-                orientation='h'),
-            barmode='stack'
-        )
-        fig = go.Figure(data=data, layout=layout)
-        key['plotting_data'] = fig.to_plotly_json()
-        self.insert1(key)
+            data = [trial_counts, session_length]
 
+            layout = go.Layout(
+                yaxis=dict(
+                    title='Trial counts',
+                ),
+                yaxis2=dict(
+                    title='Session duration (mins)',
+                    overlaying='y',
+                    color='red',
+                    side='right'
+                ),
+                xaxis=dict(
+                    title='Date'),
+                width=500,
+                height=400,
+                title='Trial counts and session duration',
+                showlegend=False
+            )
+            fig = go.Figure(data=data, layout=layout)
+            trial_cnts['trial_counts_session_duration'] = fig.to_plotly_json()
+            self.TrialCountsSessionDuration.insert1(trial_cnts)
+
+        # plot for performance reaction time and fit pars
+        if behavior.BehavioralSummaryByDate & key:
+            perf_rt = key.copy()
+            session_info = \
+                (behavior.BehavioralSummaryByDate *
+                    behavior.BehavioralSummaryByDate.ReactionTimeByDate &
+                    key).proj(
+                        'session_date',
+                        'performance_easy',
+                        'median_reaction_time').fetch(as_dict=True)
+            session_info = pd.DataFrame(session_info)
+
+            performance_easy = go.Scatter(
+                x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
+                y=session_info['performance_easy'].tolist(),
+                mode='markers+lines',
+                marker=dict(
+                    size=6,
+                    color='black'),
+                name='performance easy',
+                yaxis='y1'
+            )
+            rt = go.Scatter(
+                x=[t.strftime('%Y-%m-%d')
+                    for t in session_info['session_date'].tolist()],
+                y=session_info['median_reaction_time'].tolist(),
+                mode='markers+lines',
+                marker=dict(
+                    size=6,
+                    color='red'),
+                name='reaction time',
+                yaxis='y2'
+            )
+
+            data = [performance_easy, rt]
+
+            layout = go.Layout(
+                yaxis=dict(
+                    title='Performance on easy trials',
+                    range=[0, 1]
+                ),
+                yaxis2=dict(
+                    title='Median reaction time (s)',
+                    overlaying='y',
+                    color='red',
+                    side='right',
+                    type='log',
+                    range=np.log10([0.1, 10]).tolist(),
+                    dtick=np.log10([0.1, 1, 10]).tolist()
+
+                ),
+                xaxis=dict(
+                    title='Date',
+                ),
+                width=500,
+                height=400,
+                title='Performance and median reaction time',
+                showlegend=False
+            )
+
+            fig = go.Figure(data=data, layout=layout)
+            perf_rt['performance_reaction_time'] = fig.to_plotly_json()
+            self.PerformanceReactionTime.insert1(perf_rt)
+
+            # plot for fit parameter changes over time
+            # get trial counts and session length to date
+            fit_pars_entry = key.copy()
+            fit_pars = (behavior.BehavioralSummaryByDate.PsychResults &
+                        key).proj(
+                'session_date', 'prob_left',
+                'threshold', 'bias',
+                'lapse_low', 'lapse_high').fetch(as_dict=True)
+            fit_pars = pd.DataFrame(fit_pars)
+
+            par_names = ['threshold', 'bias', 'lapse_low', 'lapse_high']
+
+            pars = dict()
+            for par_name in par_names:
+                pars[par_name] = []
+
+            prob_lefts = fit_pars['prob_left'].unique()
+
+            for prob_left in prob_lefts:
+                prob_left_filter = fit_pars['prob_left'] == prob_left
+                if prob_left == 0.2:
+                    dot_color = 'orange'
+                elif prob_left == 0.5:
+                    dot_color = 'black'
+                elif prob_left == 0.8:
+                    dot_color = 'cornflowerblue'
+                else:
+                    dot_color = 'gray'
+
+                fit_pars_sub = fit_pars[prob_left_filter]
+
+                for ipar, par_name in enumerate(par_names):
+                    if ipar == 0:
+                        show_legend = True
+                    else:
+                        show_legend = False
+                    pars[par_name].append(
+                        go.Scatter(
+                            x=[t.strftime('%Y-%m-%d')
+                                for t in fit_pars_sub['session_date'].tolist()],
+                            y=fit_pars_sub[par_name].tolist(),
+                            mode='markers',
+                            marker=dict(
+                                size=5,
+                                color=dot_color),
+                            name=f'p_left = {prob_left}',
+                            xaxis='x{}'.format(4-ipar),
+                            yaxis='y{}'.format(4-ipar),
+                            showlegend=show_legend
+                        )
+                    )
+
+            pars_data = [pars[par_name][i]
+                         for i, prob_left in enumerate(prob_lefts)
+                         for par_name in par_names]
+
+            layout = go.Layout(
+                xaxis1=dict(
+                    domain=[0, 1],
+                    title='Date'
+                ),
+                yaxis1=dict(
+                    domain=[0, 0.2],
+                    anchor='x1',
+                    range=[-0.02, 1.02],
+                    title='$Lapse\ high\ (\\lambda)$'
+                ),
+                xaxis2=dict(
+                    domain=[0, 1],
+                ),
+                yaxis2=dict(
+                    domain=[0.25, 0.45],
+                    anchor='x2',
+                    range=[-0.02, 1.02],
+                    title='$Lapse\ low\ (\\gamma)$'
+                ),
+                xaxis3=dict(
+                    domain=[0, 1],
+                ),
+                yaxis3=dict(
+                    domain=[0.5, 0.7],
+                    anchor='x3',
+                    range=[-105, 105],
+                    title='$Bias\ (\\mu)$'
+                ),
+                xaxis4=dict(
+                    domain=[0, 1],
+                ),
+                yaxis4=dict(
+                    domain=[0.75, 1],
+                    anchor='x4',
+                    range=[-5, 105],
+                    title='$Threshold\ (\\sigma)$'
+                ),
+                height=1000,
+                width=500,
+                title='Fit Parameters',
+            )
+
+            fig = go.Figure(data=pars_data, layout=layout)
+
+            fit_pars_entry['fit_pars'] = fig.to_plotly_json()
+            self.FitPars.insert1(fit_pars_entry)
+
+        # plot for contrast heatmap
+        if behavior.BehavioralSummaryByDate.PsychResults & key \
+                & 'ABS(prob_left-0.5)<0.001':
+            con_hm = key.copy()
+            # get trial counts and session length to date
+            sessions = (behavior.BehavioralSummaryByDate.PsychResults &
+                        'ABS(prob_left-0.5)<0.001' & key).proj(
+                            'session_date', 'signed_contrasts',
+                            'prob_choose_right').fetch(as_dict=True)
+            # reshape to a heatmap format
+            contrast_list = []
+            for session in sessions:
+                for i, contrast in enumerate(session['signed_contrasts']):
+                    contrast_list.append(
+                        {'session_date': session['session_date'],
+                         'signed_contrast': round(contrast, 2)*100,
+                         'prob_choose_right': session['prob_choose_right'][i]})
+            contrast_df = pd.DataFrame(contrast_list)
+            contrast_map = contrast_df.pivot(
+                'signed_contrast', 'session_date',
+                'prob_choose_right').sort_values(
+                    by='signed_contrast', ascending=False)
+
+            contrast_map = contrast_map.where((pd.notnull(contrast_map)), None)
+
+            data = dict(
+                x=[t.strftime('%Y-%m-%d')
+                    for t in contrast_map.columns.tolist()],
+                y=contrast_map.index.tolist(),
+                z=contrast_map.values.tolist(),
+                zmax=1,
+                zmin=0,
+                type='heatmap',
+                colorbar=dict(
+                    thickness=10,
+                    title='prob choosing left',
+                    titleside='right',
+                )
+
+            )
+
+            layout = go.Layout(
+                xaxis=dict(title='Date'),
+                yaxis=dict(
+                    title='Contrast (%)',
+                    range=[-100, 100]
+                ),
+                width=500,
+                height=400,
+                title='Contrast heatmap',
+                showlegend=False
+            )
+
+            fig = go.Figure(data=[data], layout=layout)
+            con_hm['contrast_heatmap'] = fig.to_plotly_json()
+            self.ContrastHeatmapinsert1(key)
+
+        # plot for water weight
+        if action.WaterAdministration * action.Weighing & key:
+            water_weight_entry = key.copy()
+            subj = subject.Subject & key
+
+            water_info_query = (action.WaterAdministration & subj).proj(
+                'water_administered', 'watertype_name',
+                water_date='DATE(administration_time)')
+            water_info = pd.DataFrame(water_info_query.fetch(as_dict=True))
+            water_types = water_info.watertype_name.unique()
+            water_info.pop('administration_time')
+            water_info.pop('subject_uuid')
+            water_info_type = water_info.pivot_table(
+                index='water_date', columns='watertype_name',
+                values='water_administered', aggfunc='sum')
+            water_info_type = water_info_type.where(
+                (pd.notnull(water_info_type)), None)
+
+            weight_info_query = (action.Weighing & subj).proj(
+                'weight', weighing_date='DATE(weighing_time)')
+
+            weight_info = pd.DataFrame(
+                weight_info_query.fetch(as_dict=True))
+            weight_info = weight_info.where((pd.notnull(weight_info)), None)
+
+            data = [
+                go.Bar(
+                    x=[t.strftime('%Y-%m-%d')
+                        for t in water_info_type.index.tolist()],
+                    y=water_info_type[water_type].tolist(),
+                    name=water_type,
+                    yaxis='y1')
+                for water_type in water_types
+            ]
+
+            data.append(
+                go.Scatter(
+                    x=[t.strftime('%Y-%m-%d')
+                        for t in weight_info['weighing_date'].tolist()],
+                    y=weight_info['weight'].tolist(),
+                    mode='lines+markers',
+                    name='Weight',
+                    marker=dict(
+                        size=6,
+                        color='black'),
+                    yaxis='y2'
+                ))
+
+            layout = go.Layout(
+                yaxis=dict(
+                    title='Water intake (mL)'),
+                yaxis2=dict(
+                    title='Weight (g)',
+                    overlaying='y',
+                    side='right'
+                ),
+                width=600,
+                height=400,
+                title='Water intake and weight',
+                xaxis=dict(title='Date'),
+                legend=dict(
+                    x=0,
+                    y=1.2,
+                    orientation='h'),
+                barmode='stack'
+            )
+            fig = go.Figure(data=data, layout=layout)
+            water_weight_entry['plotting_data'] = fig.to_plotly_json()
+            self.WaterWeight.insert1(water_weight_entry)
+
+    class TrialCountsSessionDuration(dj.Part):
+        definition = """
+        -> master
+        ---
+        trial_counts_session_duration: longblob    # dict for the plotting info
+        """
+
+    class PerformanceReactionTime(dj.Part):
+        definition = """
+        -> master
+        ---
+        performance_reaction_time: longblob    # dict for the plotting info
+        """
+
+    class ContrastHeatmap(dj.Part):
+        definition = """
+        -> master
+        ---
+        contrast_heatmap: longblob    # dict for the plotting info
+        """
+
+    class FitPars(dj.Part):
+        definition = """
+        -> master
+        ---
+        fit_pars: longblob  # dict for the plotting info
+        """
+
+    class WaterWeight(dj.Part):
+        definition = """
+        -> master
+        ---
+        water_weight: longblob    # dict for the plotting info
+        """
 
 ingested_sessions = acquisition.Session & 'task_protocol is not NULL' \
     & behavior_ingest.TrialSet
