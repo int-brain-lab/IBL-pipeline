@@ -288,8 +288,6 @@ class LatestDate(dj.Computed):
     latest_date: date
     """
 
-    key_source = subject.Subject()
-
     def make(self, key):
 
         latest_behavior = (subject.Subject & key).aggr(
