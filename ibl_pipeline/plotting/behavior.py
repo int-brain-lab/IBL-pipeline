@@ -585,7 +585,7 @@ class CumulativeSummary(dj.Computed):
 
             fig = go.Figure(data=[data], layout=layout)
             con_hm['contrast_heatmap'] = fig.to_plotly_json()
-            self.ContrastHeatmap.insert1(key)
+            self.ContrastHeatmap.insert1(con_hm)
 
         # plot for water weight
         if action.WaterAdministration * action.Weighing & key:
