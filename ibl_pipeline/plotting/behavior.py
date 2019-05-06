@@ -654,7 +654,7 @@ class CumulativeSummary(dj.Computed):
                 barmode='stack'
             )
             fig = go.Figure(data=data, layout=layout)
-            water_weight_entry['plotting_data'] = fig.to_plotly_json()
+            water_weight_entry['water_weight'] = fig.to_plotly_json()
             self.WaterWeight.insert1(water_weight_entry)
 
     class TrialCountsSessionDuration(dj.Part):
