@@ -298,8 +298,7 @@ class CumulativeSummary(dj.Computed):
     """
     key_source = dj.U('subject_uuid', 'latest_date') \
         & subject.Subject.aggr(
-            behavior_plotting.LatestDate,
-            'latest_date',
+            LatestDate, 'latest_date',
             lastest_timestamp='MAX(checking_ts)')
 
     def make(self, key):
