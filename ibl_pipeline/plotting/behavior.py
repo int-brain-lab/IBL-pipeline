@@ -759,8 +759,8 @@ class DailyLabSummary(dj.Computed):
     class SubjectSummary(dj.Part):
         definition = """
         -> master
-        ---
         subject_uuid:                uuid
+        ---
         subject_nickname:            varchar(64)
         latest_session_ingested:     datetime
         latest_session_on_flatiron:  datetime
