@@ -303,7 +303,7 @@ class LatestDate(dj.Computed):
             last_water_date='DATE(MAX(administration_time))')
 
         water_weight = (latest_water * latest_weight).proj(
-            latest_water_weight='GREATEST(last_water_date, last_weight_date)'
+            latest_water_weight='GREATEST(last_water_date, last_weighing_date)'
         )
 
         if not(latest_behavior or water_weight):
