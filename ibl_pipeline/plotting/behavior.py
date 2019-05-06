@@ -279,6 +279,160 @@ class DateReactionTimeTrialNumber(dj.Computed):
 
 
 @schema
+class LatestDate(dj.Computed):
+    # compute the last date of any event for individual subjects
+    definition = """
+    -> subject.Subject
+    checking_ts=CURRENT_TIMESTAMP: timestamp
+    ---
+    latest_date: date
+    """
+
+    key_source = subject.Subject()
+
+    def make(self, key):
+
+        latest_behavior = (subject.Subject & key).aggr(
+            behavior.BehavioralSummaryByDate,
+            last_behavior_date='MAX(session_date)')
+        latest_weight = (subject.Subject & key).aggr(
+            action.Weighing,
+            last_weighing_date='DATE(MAX(weighing_time))')
+        latest_water = (subject.Subject & key).aggr(
+            action.WaterAdministration,
+            last_water_date='DATE(MAX(administration_time))')
+
+        water_weight = (latest_water * latest_weight).proj(
+            latest_water_weight='GREATEST(last_water_date, last_weight_date)'
+        )
+
+        if not(latest_behavior or water_weight):
+            return
+        elif latest_behavior and water_weight:
+            last_behavior_date = lastest_behavior.fetch1(
+                'last_behavior_date'
+            )
+            last_water_weight_date = water_weight.fetch1(
+                'latest_water_weight'
+            )
+            latest_date = max([last_behavior_date, last_water_weight_date])
+        elif latest_behavior:
+            latest_date = lastest_behavior.fetch1(
+                'last_behavior_date'
+            )
+        elif water_weight:
+            latest_date = water_weight.fetch1(
+                'latest_water_weight'
+            )
+
+        key['latest_date'] = latest_date
+        self.insert1(key)
+
+
+# @schema
+# class CumulativeSummary(dj.Computed):
+#     # This table contains four plots of the cumulative summary
+#     definition = """
+#     -> subject.Subject
+#     latest_date:  date      # last date of any event for the subject
+#     """
+
+
+
+#     def make(self, key):
+#         self.insert1(key)
+#         session_info = \
+#             (behavior_ingest.TrialSet * acquisition.Session & key).proj(
+#                 'n_trials', session_date='DATE(session_start_time)',
+#                 session_duration='TIMESTAMPDIFF(MINUTE, session_start_time, \
+#                     session_end_time)').fetch(as_dict=True)
+#         session_info = pd.DataFrame(session_info)
+#         session_info = session_info.where((pd.notnull(session_info)), None)
+
+#         trial_counts = go.Scatter(
+#             x=[t.strftime('%Y-%m-%d')
+#                 for t in session_info['session_date'].tolist()],
+#             y=session_info['n_trials'].tolist(),
+#             mode='markers+lines',
+#             marker=dict(
+#                 size=6,
+#                 color='black'),
+#             name='trial counts',
+#             yaxis='y1'
+#         )
+#         session_length = go.Scatter(
+#             x=[t.strftime('%Y-%m-%d')
+#                 for t in session_info['session_date'].tolist()],
+#             y=session_info['session_duration'].tolist(),
+#             mode='markers+lines',
+#             marker=dict(
+#                 size=6,
+#                 color='red'),
+#             name='session duration',
+#             yaxis='y2'
+#         )
+
+#         data = [trial_counts, session_length]
+
+#         layout = go.Layout(
+#             yaxis=dict(
+#                 title='Trial counts',
+#             ),
+#             yaxis2=dict(
+#                 title='Session duration (mins)',
+#                 overlaying='y',
+#                 color='red',
+#                 side='right'
+#             ),
+#             xaxis=dict(
+#                 title='Date'),
+#             width=500,
+#             height=400,
+#             title='Trial counts and session duration',
+#             showlegend=False
+#         )
+#         fig = go.Figure(data=data, layout=layout)
+#         key['plotting_data'] = fig.to_plotly_json()
+
+#     class TrialCountsSessionDuration(dj.Part):
+#         definition = """
+#         -> master
+#         ---
+#         trial_counts_session_duration: longblob    # dict for the plotting info
+#         """
+
+#     class PerformanceReactionTime(dj.Part):
+#         definition = """
+#         -> master
+#         ---
+#         performance_reaction_time: longblob    # dict for the plotting info
+#         """
+
+#     class ContrastHeatmap(dj.Part):
+#         definition = """
+#         -> master
+#         ---
+#         contrast_heat_map: longblob    # dict for the plotting info
+#         """
+
+#     class FitPars(dj.Part):
+#         definition = """
+#         -> master
+#         ---
+#         fit_pars: longblob  # dict for the plotting info
+#         """
+
+#     class WaterWeight(dj.Part):
+#         definition = """
+#         -> master
+#         ---
+#         water_weight: longblob    # dict for the plotting info
+#         """
+
+
+
+
+@schema
 class TrialCountsSessionDuration(dj.Computed):
     definition = """
     -> subject.Subject
