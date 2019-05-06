@@ -27,7 +27,7 @@ for key in subject.Subject():
     )
 
     if not(latest_behavior or water_weight):
-        return
+        continue
     elif latest_behavior and water_weight:
         last_behavior_date = latest_behavior.fetch1(
             'last_behavior_date'
