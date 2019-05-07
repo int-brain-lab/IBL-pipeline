@@ -712,7 +712,7 @@ subjects_alive = (subject.Subject - subject.Death) & 'sex != "U"' \
 class DailyLabSummary(dj.Computed):
     definition = """
     -> reference.Lab
-    last_session_time:      date        # last date of session
+    last_session_time:      datetime        # last date of session
     """
 
     sessions_lab = acquisition.Session * subjects_alive * subject.SubjectLab \
