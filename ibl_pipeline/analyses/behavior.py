@@ -74,6 +74,7 @@ class BehavioralSummaryByDate(dj.Computed):
             session_date='DATE(session_start_time)')
 
     def make(self, key):
+        print(key)
 
         master_entry = key.copy()
         rt = key.copy()
@@ -162,6 +163,8 @@ class BehavioralSummaryByDate(dj.Computed):
                     psych_results['prob_left_block'] = 2
                 elif abs(p_left - 0.2) < 0.001:
                     psych_results['prob_left_block'] = 1
+                elif abs(p_left - 0.5) < 0.001:
+                    psych_results['prob_left_block'] = 0
 
                 self.PsychResults.insert1(psych_results)
                 # compute reaction time
@@ -171,6 +174,9 @@ class BehavioralSummaryByDate(dj.Computed):
                         rt['prob_left_block'] = 2
                     elif abs(p_left - 0.2) < 0.001:
                         rt['prob_left_block'] = 1
+                    elif abs(p_left - 0.5) < 0.001:
+                        rt['prob_left_block'] = 0
+
                     rt['reaction_time_contrast'], rt['reaction_time_ci_low'], \
                         rt['reaction_time_ci_high'] = \
                         utils.compute_reaction_time(
