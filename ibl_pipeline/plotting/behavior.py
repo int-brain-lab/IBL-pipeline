@@ -692,6 +692,16 @@ class CumulativeSummary(dj.Computed):
         water_weight: longblob    # dict for the plotting info
         """
 
+
+@schema
+class SubjectLatestDate(dj.Lookup):
+    definition = """
+    -> subject.Subject
+    ---
+    latest_date: date
+    """
+
+
 ingested_sessions = acquisition.Session & 'task_protocol is not NULL' \
     & behavior_ingest.TrialSet
 subjects_alive = (subject.Subject - subject.Death) & 'sex != "U"' \
