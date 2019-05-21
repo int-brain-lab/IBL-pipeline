@@ -191,9 +191,13 @@ class DataSet(dj.Computed):
                 'dataset_type_name')
 
         user = grf(key, 'created_by')
-        key_ds['dataset_created_by'] = \
-            (reference.LabMember & dict(user_uuid=uuid.UUID(user))).fetch1(
-                'user_name')
+
+        if user != 'None':
+            key_ds['dataset_created_by'] = \
+                (reference.LabMember & dict(user_uuid=uuid.UUID(user))).fetch1(
+                    'user_name')
+        else:
+            key_ds['dataset_created_by'] = 'vathes'
 
         format = grf(key, 'data_format')
         key_ds['format_name'] = \
