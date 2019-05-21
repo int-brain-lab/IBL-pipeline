@@ -154,7 +154,7 @@ class DataSet(dj.Computed):
     ---
     subject_uuid:               uuid
     session_start_time:         datetime
-    dataset_created_by:         varchar(255)
+    dataset_created_by=null:    varchar(255)
     dataset_name:               varchar(255)
     dataset_type_name:          varchar(255)
     format_name:                varchar(255)
@@ -196,8 +196,6 @@ class DataSet(dj.Computed):
             key_ds['dataset_created_by'] = \
                 (reference.LabMember & dict(user_uuid=uuid.UUID(user))).fetch1(
                     'user_name')
-        else:
-            key_ds['dataset_created_by'] = 'vathes'
 
         format = grf(key, 'data_format')
         key_ds['format_name'] = \
