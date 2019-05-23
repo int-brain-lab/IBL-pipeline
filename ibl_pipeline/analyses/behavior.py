@@ -236,7 +236,7 @@ class TrainingStatus(dj.Lookup):
     definition = """
     training_status: varchar(32)
     """
-    contents = zip(['untrainable',
+    contents = zip(['over40days',
                     'training in progress',
                     'trained',
                     'ready for ephys',
@@ -397,9 +397,9 @@ class SessionTrainingStatus(dj.Computed):
                     self.CumulativePsychResults.insert1(cum_psych_results)
                     return
 
-        # check whether the subject is untrainable
+        # check whether the subject has been trained over 40 days.
         if len(sessions) >= 40:
-            key['training_status'] = 'untrainable'
+            key['training_status'] = 'over40days'
 
         self.insert1(key)
 
