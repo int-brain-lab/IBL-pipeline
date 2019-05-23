@@ -18,7 +18,7 @@ def copy_table(target_schema, src_schema, table_name, fresh=False):
             for t in (src_table - target_table.proj()).fetch(as_dict=True):
                 try:
                     if table_name == 'DataSet' and \
-                         len(t['dataset_created_by']):
+                         not len(t['dataset_created_by']):
                         t.pop('dataset_created_by')
                     target_table.insert1(t, skip_duplicates=True)
                 except Exception:
