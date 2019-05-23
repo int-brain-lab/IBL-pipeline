@@ -74,7 +74,6 @@ class BehavioralSummaryByDate(dj.Computed):
             session_date='DATE(session_start_time)')
 
     def make(self, key):
-        print(key)
 
         master_entry = key.copy()
         rt = key.copy()
