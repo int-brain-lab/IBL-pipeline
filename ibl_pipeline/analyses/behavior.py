@@ -43,6 +43,62 @@ class PsychResults(dj.Computed):
 
 
 @schema
+class PsychResultsBlock(dj.Computed):
+    definition = """
+    -> behavior.TrialSet
+    prob_left_block:        int     # block number representing the probability left
+    ---
+    prob_left:              float   # 0.5 for trainingChoiceWorld, actual value for biasedChoiceWorld
+    signed_contrasts:       blob    # contrasts used in this session, negative when on the left
+    n_trials_stim:          blob    # number of trials for each contrast
+    n_trials_stim_right:    blob    # number of reporting "right" trials for each contrast
+    prob_choose_right:      blob    # probability of choosing right, same size as contrasts
+    threshold:              float
+    bias:                   float
+    lapse_low:              float
+    lapse_high:             float
+    """
+    key_source = behavior.TrialSet()
+
+    def make(self, key):
+
+        task_protocol = (acquisition.Session & key).fetch1(
+            'task_protocol')
+
+        trials = behavior.TrialSet.Trial & key
+
+        if task_protocol and ('biased' in task_protocol):
+            prob_lefts = dj.U('trial_stim_prob_left') & trials
+
+            for prob_left in prob_lefts:
+                p_left = prob_left['trial_stim_prob_left']
+                trials_sub = trials & \
+                    'ABS(trial_stim_prob_left - {})<1e-6'.format(p_left)
+
+                # compute psych results
+                psych_results = utils.compute_psych_pars(trials_sub)
+                psych_results = {**key, **psych_results}
+                psych_results['prob_left'] = prob_left[
+                    'trial_stim_prob_left']
+                if abs(p_left - 0.8) < 0.001:
+                    psych_results['prob_left_block'] = 80
+                elif abs(p_left - 0.2) < 0.001:
+                    psych_results['prob_left_block'] = 20
+                elif abs(p_left - 0.5) < 0.001:
+                    psych_results['prob_left_block'] = 50
+
+                self.insert1(psych_results)
+
+        else:
+            psych_results = utils.compute_psych_pars(trials)
+            psych_results = {**key, **psych_results}
+            psych_results['prob_left'] = 0.5
+            psych_results['prob_left_block'] = 50
+
+            self.insert1(psych_results)
+
+
+@schema
 class ReactionTime(dj.Computed):
     definition = """
     -> PsychResults
@@ -57,6 +113,59 @@ class ReactionTime(dj.Computed):
         trials = behavior.TrialSet.Trial & key
         key['reaction_time'] = utils.compute_reaction_time(trials)
         self.insert1(key)
+
+
+@schema
+class ReactionTimeContrastBlock(dj.Computed):
+    definition = """
+    -> behavior.TrialSet
+    prob_left_block:   int   #
+    ---
+    reaction_time_contrast: blob   # median reaction time for each contrast
+    reaction_time_ci_high:  blob   # 68 percent confidence interval upper bound
+    reaction_time_ci_low:   blob   # 68 percent confidence interval lower bound
+    """
+
+    key_source = behavior.TrialSet & \
+        (behavior.CompleteTrialSession &
+         'stim_on_times_status = "Complete"')
+
+    def make(self, key):
+        task_protocol = (acquisition.Session & key).fetch1(
+            'task_protocol')
+
+        trials = behavior.TrialSet.Trial & key
+
+        if task_protocol and ('biased' in task_protocol):
+            prob_lefts = dj.U('trial_stim_prob_left') & trials
+
+            for prob_left in prob_lefts:
+                rt = key.copy()
+                p_left = prob_left['trial_stim_prob_left']
+                trials_sub = trials & \
+                    'ABS(trial_stim_prob_left - {})<1e-6'.format(p_left)
+
+                # compute reaction_time
+                rt['reaction_time_contrast'], rt['reaction_time_ci_low'], \
+                    rt['reaction_time_ci_high'] = utils.compute_reaction_time(
+                        trials_sub, compute_ci=True)
+
+                if abs(p_left - 0.8) < 0.001:
+                    rt['prob_left_block'] = 80
+                elif abs(p_left - 0.2) < 0.001:
+                    psych_results['prob_left_block'] = 20
+                elif abs(p_left - 0.5) < 0.001:
+                    psych_results['prob_left_block'] = 50
+
+                self.insert1(rt)
+
+        else:
+            rt = key.copy()
+            rt['prob_left_block'] = 50
+            rt['reaction_time_contrast'], rt['reaction_time_ci_low'], \
+                rt['reaction_time_ci_high'] = utils.compute_reaction_time(
+                    trials, compute_ci=True)
+            self.insert1(rt)
 
 
 @schema
