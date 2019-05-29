@@ -21,52 +21,68 @@ class SessionPsychCurve(dj.Computed):
     """
 
     def make(self, key):
-        contrasts, prob_right, \
-            threshold, bias, lapse_low, lapse_high, \
-            n_trials, n_trials_right = (behavior.PsychResults & key).fetch1(
-                'signed_contrasts', 'prob_choose_right',
-                'threshold', 'bias', 'lapse_low', 'lapse_high',
-                'n_trials_stim', 'n_trials_stim_right')
-        pars = [bias, threshold, lapse_low, lapse_high]
-        contrasts = contrasts * 100
-        contrasts_fit = np.arange(-100, 100)
-        prob_right_fit = psy.erf_psycho_2gammas(pars, contrasts_fit)
+        sessions = behavior.BehavioralSummaryByDate.PsychResults & key
+        data = []
 
-        ci = smp.proportion_confint(
-            n_trials_right, n_trials,
-            alpha=0.032, method='normal') - prob_right
+        for session in sessions.fetch('KEY'):
+            contrasts, prob_right, prob_left, \
+                threshold, bias, lapse_low, lapse_high, \
+                n_trials, n_trials_right = \
+                (sessions & session).fetch1(
+                    'signed_contrasts', 'prob_choose_right', 'prob_left', 'threshold', 'bias',
+                    'lapse_low', 'lapse_high', 'n_trials_stim', 'n_trials_stim_right')
+            pars = [bias, threshold, lapse_low, lapse_high]
+            contrasts = contrasts * 100
+            contrasts_fit = np.arange(-100, 100)
+            prob_right_fit = psy.erf_psycho_2gammas(pars, contrasts_fit)
+            ci = smp.proportion_confint(
+                n_trials_right, n_trials, alpha=0.032, method='normal') - prob_right
 
-        behavior_data = dict(
-            x=contrasts.tolist(),
-            y=prob_right.tolist(),
-            error_y=dict(
-                type='data',
-                array=ci[0].tolist(),
-                arrayminus=np.negative(ci[1]).tolist(),
-                visible=True
-                ),
-            mode='markers',
-            name='data'
-        )
+            if prob_left == 0.2:
+                curve_color = 'orange'
+            elif prob_left == 0.5:
+                curve_color = 'black'
+            elif prob_left == 0.8:
+                curve_color = 'cornflowerblue'
+            else:
+                continue
 
-        behavior_fit = dict(
-            x=contrasts_fit.tolist(),
-            y=prob_right_fit.tolist(),
-            name='model fits'
-        )
+            behavior_data = go.Scatter(
+                x=contrasts.tolist(),
+                y=prob_right.tolist(),
+                error_y=dict(
+                    type='data',
+                    array=ci[0].tolist(),
+                    arrayminus=np.negative(ci[1]).tolist(),
+                    visible=True
+                    ),
+                marker=dict(
+                    size=6,
+                    color=curve_color),
+                mode='markers',
+                name=f'p_left = {prob_left}, data'
+            )
 
-        data = [behavior_data, behavior_fit]
+            behavior_fit = go.Scatter(
+                x=contrasts_fit.tolist(),
+                y=prob_right_fit.tolist(),
+                name=f'p_left = {prob_left} model fits',
+                marker=dict(color=curve_color)
+            )
+
+            data.append(behavior_data)
+            data.append(behavior_fit)
+
         layout = go.Layout(
-            width=600,
+            width=630,
             height=400,
             title='Psychometric Curve',
             xaxis={'title': 'Contrast(%)'},
-            yaxis={'title': 'Probability choose right',
-                   'range': [-0.05, 1.05]}
+            yaxis={'title': 'Probability choosing right',
+                   'range': [-0.05, 1.05]},
         )
 
-        fig = go.Figure(data=[go.Scatter(behavior_data),
-                              go.Scatter(behavior_fit)], layout=layout)
+        fig = go.Figure(data=data, layout=layout)
 
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
