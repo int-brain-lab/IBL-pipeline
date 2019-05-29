@@ -21,7 +21,7 @@ class SessionPsychCurve(dj.Computed):
     """
 
     def make(self, key):
-        sessions = behavior.BehavioralSummaryByDate.PsychResults & key
+        sessions = behavior.PsychResultsBlock & key
         data = []
 
         for session in sessions.fetch('KEY'):
