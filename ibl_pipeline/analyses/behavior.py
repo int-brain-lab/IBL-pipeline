@@ -153,9 +153,9 @@ class ReactionTimeContrastBlock(dj.Computed):
                 if abs(p_left - 0.8) < 0.001:
                     rt['prob_left_block'] = 80
                 elif abs(p_left - 0.2) < 0.001:
-                    psych_results['prob_left_block'] = 20
+                    rt['prob_left_block'] = 20
                 elif abs(p_left - 0.5) < 0.001:
-                    psych_results['prob_left_block'] = 50
+                    rt['prob_left_block'] = 50
 
                 self.insert1(rt)
 
