@@ -755,6 +755,7 @@ class CumulativeSummary(dj.Computed):
                 values='water_administered', aggfunc='sum')
             water_info_type = water_info_type.where(
                 (pd.notnull(water_info_type)), None)
+            water_types = water_info.watertype_name.unique()
 
             weight_info_query = (action.Weighing & subj).proj(
                 'weight', weighing_date='DATE(weighing_time)')
