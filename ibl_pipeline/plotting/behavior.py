@@ -728,6 +728,17 @@ class CumulativeSummary(dj.Computed):
             self.ContrastHeatmap.insert1(con_hm)
 
         # plot for water weight
+
+        water_types = water_types.watertype_name.unique()
+
+        water_type_colors = ['red', 'orange', 'blue',
+                             'rgba(55, 128, 191, 0.7)',
+                             'purple', 'rgba(50, 171, 96, 0.9)']
+        water_type_map = dict()
+
+        for watertype, color in zip(water_type_names, water_type_colors):
+            water_type_map.update({watertype: color})
+
         if action.WaterAdministration * action.Weighing & key:
             water_weight_entry = key.copy()
             subj = subject.Subject & key
@@ -736,7 +747,7 @@ class CumulativeSummary(dj.Computed):
                 'water_administered', 'watertype_name',
                 water_date='DATE(administration_time)')
             water_info = pd.DataFrame(water_info_query.fetch(as_dict=True))
-            water_types = water_info.watertype_name.unique()
+
             water_info.pop('administration_time')
             water_info.pop('subject_uuid')
             water_info_type = water_info.pivot_table(
@@ -757,6 +768,7 @@ class CumulativeSummary(dj.Computed):
                     x=[t.strftime('%Y-%m-%d')
                         for t in water_info_type.index.tolist()],
                     y=water_info_type[water_type].tolist(),
+                    marker=dict(color=water_type_map[water_type]),
                     name=water_type,
                     yaxis='y1')
                 for water_type in water_types
