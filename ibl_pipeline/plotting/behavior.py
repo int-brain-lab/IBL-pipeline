@@ -729,7 +729,7 @@ class CumulativeSummary(dj.Computed):
 
         # plot for water weight
 
-        water_types = water_types.watertype_name.unique()
+        water_type_names = action.WaterType.fetch('watertype_name')
 
         water_type_colors = ['red', 'orange', 'blue',
                              'rgba(55, 128, 191, 0.7)',
