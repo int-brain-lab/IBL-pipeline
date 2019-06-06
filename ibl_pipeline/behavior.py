@@ -86,9 +86,9 @@ class CompleteWheelSession(dj.Computed):
     def make(self, key):
         datasets = (data.FileRecord & key & {'exists': 1}).fetch(
             'dataset_name')
-        key['wheel_session_complete'] = bool(
-            np.all([req_ds in datasets for req_ds in self.required_datasets]))
-        self.insert1(key)
+        if np.all([req_ds in datasets
+                   for req_ds in self.required_datasets]):
+            self.insert1(key)
 
 
 @schema
@@ -97,17 +97,13 @@ class Wheel(dj.Imported):
     # raw wheel recording
     -> acquisition.Session
     ---
-    wheel_position:         longblob  # Absolute position of wheel (cm)
-    wheel_velocity:         longblob  # Signed velocity of wheel (cm/s) positive = CW
-    wheel_sample_ids:       longblob  # Sample ids corresponding to the timestamps
-    wheel_timestamps:       longblob  # Timestamps for wheel timeseries (seconds)
     wheel_start_time:       float     # Start time of wheel recording (seconds)
     wheel_end_time:         float     # End time of wheel recording (seconds)
     wheel_duration:         float     # Duration time of wheel recording (seconds)
     wheel_sampling_rate:    float     # Samples per second
     """
 
-    key_source = CompleteWheelSession & 'wheel_session_complete = 1'
+    key_source = CompleteWheelSession()
 
     def make(self, key):
 
