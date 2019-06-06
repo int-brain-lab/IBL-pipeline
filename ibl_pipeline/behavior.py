@@ -169,7 +169,7 @@ class WheelMoveSet(dj.Imported):
     ---
     wheel_move_number : int     # total number of movements in this set
     """
-    key_source = CompleteWheelMoveSession & 'wheelmove_session_complete = 1'
+    key_source = CompleteWheelMoveSession()
 
     def make(self, key):
         wheel_move_key = key.copy()
