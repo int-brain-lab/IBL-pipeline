@@ -104,7 +104,6 @@ class Wheel(dj.Imported):
     key_source = CompleteWheelSession()
 
     def make(self, key):
-        print(key)
 
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         wheel_position, wheel_velocity, wheel_timestamps = \
@@ -114,7 +113,7 @@ class Wheel(dj.Imported):
 
         wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
 
-        if np.nim(wheel_timestamps) == 2:
+        if np.dim(wheel_timestamps) == 2:
             wheel_timestamps = wheel_timestamps[:, 1]
 
         key['wheel_start_time'] = wheel_timestamps[0]
