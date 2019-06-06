@@ -148,8 +148,6 @@ class CompleteWheelMoveSession(dj.Computed):
     definition = """
     # sessions that are complete with wheel related information and thus may be ingested
     -> acquisition.Session
-    ---
-    wheelmove_session_complete: bool  # whether the session is complete
     """
 
     required_datasets = ["_ibl_wheelMoves.intervals.npy",
@@ -158,9 +156,9 @@ class CompleteWheelMoveSession(dj.Computed):
     def make(self, key):
         datasets = (data.FileRecord & key & {'exists': 1}).fetch(
             'dataset_name')
-        key['wheelmove_session_complete'] = bool(
-            np.all([req_ds in datasets for req_ds in self.required_datasets]))
-        self.insert1(key)
+        if bool(np.all([req_ds in datasets
+                for req_ds in self.required_datasets])):
+            self.insert1(key)
 
 
 @schema
