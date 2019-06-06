@@ -113,7 +113,7 @@ class Wheel(dj.Imported):
 
         wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
 
-        if np.dim(wheel_timestamps) == 2:
+        if np.ndim(wheel_timestamps) == 2:
             wheel_timestamps = wheel_timestamps[:, 1]
 
         key['wheel_start_time'] = wheel_timestamps[0]
