@@ -111,8 +111,6 @@ class Wheel(dj.Imported):
                                            '_ibl_wheel.velocity',
                                            '_ibl_wheel.timestamps'])
 
-        wheel_sample_ids = wheel_timestamps[:, 0]
-        wheel_timestamps = wheel_timestamps[:, 1]
         wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
 
         key['wheel_start_time'] = wheel_timestamps[0]
