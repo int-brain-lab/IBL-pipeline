@@ -69,7 +69,7 @@ class DataSet(dj.Manual):
     dataset_name:               varchar(255)
     ---
     dataset_uuid:               uuid
-    -> reference.LabMember.proj(dataset_created_by='user_name')
+    -> [nullable] reference.LabMember.proj(dataset_created_by='user_name')
     -> DataSetType
     -> DataFormat
     created_datetime:           datetime
