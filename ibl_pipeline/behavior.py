@@ -75,8 +75,6 @@ class CompleteWheelSession(dj.Computed):
     definition = """
     # sessions that are complete with wheel related information and thus may be ingested
     -> acquisition.Session
-    ---
-    wheel_session_complete: bool              # whether the session is complete
     """
 
     required_datasets = ["_ibl_wheel.position.npy",
@@ -117,10 +115,6 @@ class Wheel(dj.Imported):
         wheel_timestamps = wheel_timestamps[:, 1]
         wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
 
-        key['wheel_position'] = wheel_position
-        key['wheel_velocity'] = wheel_velocity
-        key['wheel_sample_ids'] = wheel_sample_ids
-        key['wheel_timestamps'] = wheel_timestamps
         key['wheel_start_time'] = wheel_timestamps[0]
         key['wheel_end_time'] = wheel_timestamps[-1]
         key['wheel_duration'] = wheel_timestamps[-1] - wheel_timestamps[0]
