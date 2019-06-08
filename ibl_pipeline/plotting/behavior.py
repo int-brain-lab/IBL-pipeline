@@ -27,7 +27,8 @@ class SessionPsychCurve(dj.Computed):
 
         sessions = behavior.PsychResultsBlock & key
         key['plotting_data'] = putils.create_psych_curve_plot(sessions)
-        key['fit_pars'] = putils.get_fit_pars(sessions)
+        fig = putils.get_fit_pars(sessions)
+        key['fit_pars'] = putils.create_psych_curve_plot(sessions)
         self.insert1(key)
 
 
@@ -43,7 +44,8 @@ class SessionReactionTimeContrast(dj.Computed):
     def make(self, key):
         sessions = behavior.PsychResultsBlock * \
             behavior.ReactionTimeContrastBlock & key
-        key['plotting_data'] = putils.create_rt_contrast_plot(sessions)
+        fig = putils.create_rt_contrast_plot(sessions)
+        key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
 
 
@@ -118,7 +120,8 @@ class DatePsychCurve(dj.Computed):
     def make(self, key):
 
         sessions = behavior.BehavioralSummaryByDate.PsychResults & key
-        key['plotting_data'] = putils.create_psych_curve_plot(sessions)
+        fig = putils.create_psych_curve_plot(sessions)
+        key['plotting_data'] = fig.to_plotly_json()
         key['fit_pars'] = putils.get_fit_pars(sessions)
         self.insert1(key)
 
@@ -136,7 +139,8 @@ class DateReactionTimeContrast(dj.Computed):
     def make(self, key):
         sessions = behavior.BehavioralSummaryByDate.PsychResults * \
             behavior.BehavioralSummaryByDate.ReactionTimeContrast & key
-        key['plotting_data'] = putils.create_rt_contrast_plot(sessions)
+        fig = putils.create_rt_contrast_plot(sessions)
+        key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
 
 
@@ -547,7 +551,9 @@ class CumulativeSummary(dj.Computed):
                     ))
             contrast_df = pd.DataFrame(contrast_list)
             contrast_map = contrast_df.pivot(
-                'signed_contrast', 'session_date', 'prob_choose_right').sort_values(
+                'signed_contrast',
+                'session_date',
+                'prob_choose_right').sort_values(
                     by='signed_contrast', ascending=False)
 
             contrast_map = contrast_map.where(pd.notnull(contrast_map), None)
