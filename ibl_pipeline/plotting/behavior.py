@@ -21,7 +21,7 @@ class SessionPsychCurve(dj.Computed):
     plotting_data:  longblob     # dictionary for the plotting info
     fit_pars:       longblob     # dictionary list for fit parameters
     """
-    key_source = behavior.PsychResults & behavior.PsychResultsBlock
+    key_source = behavior.PsychResults & behavior.PsychResultsBlock.proj()
 
     def make(self, key):
 
