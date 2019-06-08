@@ -26,9 +26,9 @@ class SessionPsychCurve(dj.Computed):
     def make(self, key):
 
         sessions = behavior.PsychResultsBlock & key
-        key['plotting_data'] = putils.create_psych_curve_plot(sessions)
-        fig = putils.get_fit_pars(sessions)
-        key['fit_pars'] = putils.create_psych_curve_plot(sessions)
+        fig = putils.create_psych_curve_plot(sessions)
+        key['plotting_data'] = fig.to_plotly_json()
+        key['fit_pars'] = putils.get_fit_pars(sessions)
         self.insert1(key)
 
 
