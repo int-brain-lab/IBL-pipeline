@@ -180,7 +180,8 @@ class CumulativeSummary(dj.Computed):
         if behavior_ingest.TrialSet & key:
             trial_cnts = key.copy()
             # get trial counts and session length to date
-            session_info = (behavior.TrialSet * acquisition.Session & subj).proj(
+            session_info = (behavior_ingest.TrialSet *
+                            acquisition.Session & subj).proj(
                 'n_trials', session_date='DATE(session_start_time)',
                 session_duration='TIMESTAMPDIFF(MINUTE, \
                     session_start_time, session_end_time)').fetch(as_dict=True)
