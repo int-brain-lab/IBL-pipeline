@@ -84,10 +84,10 @@ def get_date_range(subj):
                                 last_water_admin_date,
                                 last_weighing_date])
     last_date_array = last_date_array[~np.isnan(last_date_array)]
-    first_date = np.min(first_date_array)
+    first_date = np.min(first_date_array) \
         - datetime.timedelta(days=3)
 
-    last_date = np.max(last_date_array)
+    last_date = np.max(last_date_array) \
         + datetime.timedelta(days=3)
 
     first_date_str = first_date.strftime('%Y-%m-%d')
