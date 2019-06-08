@@ -2,6 +2,7 @@ import datajoint as dj
 from ..analyses import behavior
 from .. import behavior as behavior_ingest
 from .. import reference, subject, action, acquisition, data
+from . import plotting_utils as putils
 import numpy as np
 import pandas as pd
 from ..utils import psychofit as psy
@@ -18,74 +19,15 @@ class SessionPsychCurve(dj.Computed):
     -> behavior.PsychResults
     ---
     plotting_data:  longblob     # dictionary for the plotting info
+    fit_pars:       longblob     # dictionary list for fit parameters
     """
     key_source = behavior.PsychResults & behavior.PsychResultsBlock
 
     def make(self, key):
+
         sessions = behavior.PsychResultsBlock & key
-        data = []
-
-        for session in sessions.fetch('KEY'):
-            contrasts, prob_right, prob_left, \
-                threshold, bias, lapse_low, lapse_high, \
-                n_trials, n_trials_right = \
-                (sessions & session).fetch1(
-                    'signed_contrasts', 'prob_choose_right', 'prob_left', 'threshold', 'bias',
-                    'lapse_low', 'lapse_high', 'n_trials_stim', 'n_trials_stim_right')
-            pars = [bias, threshold, lapse_low, lapse_high]
-            contrasts = contrasts * 100
-            contrasts_fit = np.arange(-100, 100)
-            prob_right_fit = psy.erf_psycho_2gammas(pars, contrasts_fit)
-            ci = smp.proportion_confint(
-                n_trials_right, n_trials, alpha=0.032, method='normal') - prob_right
-
-            if prob_left == 0.2:
-                curve_color = 'orange'
-            elif prob_left == 0.5:
-                curve_color = 'black'
-            elif prob_left == 0.8:
-                curve_color = 'cornflowerblue'
-            else:
-                continue
-
-            behavior_data = go.Scatter(
-                x=contrasts.tolist(),
-                y=prob_right.tolist(),
-                error_y=dict(
-                    type='data',
-                    array=ci[0].tolist(),
-                    arrayminus=np.negative(ci[1]).tolist(),
-                    visible=True
-                    ),
-                marker=dict(
-                    size=6,
-                    color=curve_color),
-                mode='markers',
-                name=f'p_left = {prob_left}, data'
-            )
-
-            behavior_fit = go.Scatter(
-                x=contrasts_fit.tolist(),
-                y=prob_right_fit.tolist(),
-                name=f'p_left = {prob_left} model fits',
-                marker=dict(color=curve_color)
-            )
-
-            data.append(behavior_data)
-            data.append(behavior_fit)
-
-        layout = go.Layout(
-            width=630,
-            height=400,
-            title='Psychometric Curve',
-            xaxis={'title': 'Contrast(%)'},
-            yaxis={'title': 'Probability choosing right',
-                   'range': [-0.05, 1.05]},
-        )
-
-        fig = go.Figure(data=data, layout=layout)
-
-        key['plotting_data'] = fig.to_plotly_json()
+        key['plotting_data'] = putils.create_psych_curve_plot(sessions)
+        key['fit_pars'] = putils.get_fit_pars(sessions)
         self.insert1(key)
 
 
@@ -101,55 +43,7 @@ class SessionReactionTimeContrast(dj.Computed):
     def make(self, key):
         sessions = behavior.PsychResultsBlock * \
             behavior.ReactionTimeContrastBlock & key
-
-        data = []
-        for session in sessions.fetch('KEY'):
-            contrasts, prob_left, reaction_time, ci_low, ci_high = \
-                (sessions & session).fetch1(
-                    'signed_contrasts', 'prob_left', 'reaction_time_contrast',
-                    'reaction_time_ci_low', 'reaction_time_ci_high')
-            error_low = reaction_time - ci_low
-            error_high = ci_high - reaction_time
-
-            contrasts = contrasts * 100
-
-            if prob_left == 0.2:
-                curve_color = 'orange'
-            elif prob_left == 0.5:
-                curve_color = 'black'
-            elif prob_left == 0.8:
-                curve_color = 'cornflowerblue'
-            else:
-                continue
-
-            rt_data = go.Scatter(
-                x=contrasts.tolist(),
-                y=reaction_time.tolist(),
-                error_y=dict(
-                    type='data',
-                    array=error_high.tolist(),
-                    arrayminus=error_low.tolist(),
-                    visible=True
-                ),
-                marker=dict(
-                    size=6,
-                    color=curve_color),
-                mode='markers+lines',
-                name=f'p_left = {prob_left}'
-            )
-
-            data.append(rt_data)
-
-        layout = go.Layout(
-            width=630,
-            height=400,
-            title='Reaction time - contrast',
-            xaxis={'title': 'Contrast (%)'},
-            yaxis={'title': 'Reaction time (s)'},
-        )
-
-        fig = go.Figure(data=data, layout=layout)
-        key['plotting_data'] = fig.to_plotly_json()
+        key['plotting_data'] = putils.create_rt_contrast_plot(sessions)
         self.insert1(key)
 
 
@@ -218,75 +112,14 @@ class DatePsychCurve(dj.Computed):
     -> behavior.BehavioralSummaryByDate
     ---
     plotting_data:  longblob     # dictionary for the plotting info
+    fit_pars:       longblob     # dictionary list for fit parameters
     """
 
     def make(self, key):
 
         sessions = behavior.BehavioralSummaryByDate.PsychResults & key
-
-        data = []
-        for session in sessions.fetch('KEY'):
-            contrasts, prob_right, prob_left, \
-                threshold, bias, lapse_low, lapse_high, \
-                n_trials, n_trials_right = \
-                (sessions & session).fetch1(
-                    'signed_contrasts', 'prob_choose_right', 'prob_left',
-                    'threshold', 'bias', 'lapse_low', 'lapse_high',
-                    'n_trials_stim', 'n_trials_stim_right')
-            pars = [bias, threshold, lapse_low, lapse_high]
-            contrasts = contrasts * 100
-            contrasts_fit = np.arange(-100, 100)
-            prob_right_fit = psy.erf_psycho_2gammas(pars, contrasts_fit)
-            ci = smp.proportion_confint(
-                n_trials_right, n_trials,
-                alpha=0.032, method='normal') - prob_right
-
-            if prob_left == 0.2:
-                curve_color = 'orange'
-            elif prob_left == 0.5:
-                curve_color = 'black'
-            elif prob_left == 0.8:
-                curve_color = 'cornflowerblue'
-            else:
-                continue
-
-            behavior_data = go.Scatter(
-                x=contrasts.tolist(),
-                y=prob_right.tolist(),
-                error_y=dict(
-                    type='data',
-                    array=ci[0].tolist(),
-                    arrayminus=np.negative(ci[1]).tolist(),
-                    visible=True
-                ),
-                marker=dict(
-                    size=6,
-                    color=curve_color),
-                mode='markers',
-                name=f'p_left = {prob_left}, data'
-            )
-
-            behavior_fit = go.Scatter(
-                x=contrasts_fit.tolist(),
-                y=prob_right_fit.tolist(),
-                name=f'p_left = {prob_left} model fits',
-                marker=dict(color=curve_color)
-            )
-
-            data.append(behavior_data)
-            data.append(behavior_fit)
-
-        layout = go.Layout(
-            width=630,
-            height=400,
-            title='Psychometric Curve',
-            xaxis={'title': 'Contrast(%)'},
-            yaxis={'title': 'Probability choosing right',
-                   'range': [-0.05, 1.05]},
-        )
-
-        fig = go.Figure(data=data, layout=layout)
-        key['plotting_data'] = fig.to_plotly_json()
+        key['plotting_data'] = putils.create_psych_curve_plot(sessions)
+        key['fit_pars'] = putils.get_fit_pars(sessions)
         self.insert1(key)
 
 
@@ -303,118 +136,7 @@ class DateReactionTimeContrast(dj.Computed):
     def make(self, key):
         sessions = behavior.BehavioralSummaryByDate.PsychResults * \
             behavior.BehavioralSummaryByDate.ReactionTimeContrast & key
-
-        data = []
-        for session in sessions.fetch('KEY'):
-            contrasts, prob_left, reaction_time, ci_low, ci_high = \
-                (sessions & session).fetch1(
-                    'signed_contrasts', 'prob_left', 'reaction_time_contrast',
-                    'reaction_time_ci_low', 'reaction_time_ci_high')
-            error_low = reaction_time - ci_low
-            error_high = ci_high - reaction_time
-
-            contrasts = contrasts * 100
-
-            if prob_left == 0.2:
-                curve_color = 'orange'
-            elif prob_left == 0.5:
-                curve_color = 'black'
-            elif prob_left == 0.8:
-                curve_color = 'cornflowerblue'
-            else:
-                continue
-
-            rt_data = go.Scatter(
-                x=contrasts.tolist(),
-                y=reaction_time.tolist(),
-                error_y=dict(
-                    type='data',
-                    array=error_high.tolist(),
-                    arrayminus=error_low.tolist(),
-                    visible=True
-                ),
-                marker=dict(
-                    size=6,
-                    color=curve_color),
-                mode='markers+lines',
-                name=f'p_left = {prob_left}'
-            )
-
-            data.append(rt_data)
-
-        layout = go.Layout(
-            width=630,
-            height=400,
-            title='Reaction time - contrast',
-            xaxis={'title': 'Contrast (%)'},
-            yaxis={'title': 'Reaction time (s)'},
-        )
-
-        fig = go.Figure(data=data, layout=layout)
-        key['plotting_data'] = fig.to_plotly_json()
-        self.insert1(key)
-
-
-@schema
-class DateReactionTimeTrialNumber(dj.Computed):
-    definition = """
-    -> behavior.BehavioralSummaryByDate
-    ---
-    plotting_data:  longblob     # dictionary for the plotting info
-    """
-
-    key_source = behavior.BehavioralSummaryByDate & \
-        behavior.BehavioralSummaryByDate.ReactionTimeContrast
-
-    def make(self, key):
-        # get all trial of the day
-        trial_sets = (behavior_ingest.TrialSet &
-                      (behavior_ingest.CompleteTrialSession &
-                       'stim_on_times_status="Complete"')).proj(
-            session_date='DATE(session_start_time)')
-        trials = behavior_ingest.TrialSet.Trial & \
-            (behavior_ingest.TrialSet * trial_sets & key)
-        rt_trials = trials.proj(
-            rt='trial_response_time-trial_stim_on_time').fetch(as_dict=True)
-        rt_trials = pd.DataFrame(rt_trials)
-        rt_trials.index = rt_trials.index + 1
-        rt_rolled = rt_trials['rt'].rolling(window=10).median()
-        rt_rolled = rt_rolled.where((pd.notnull(rt_rolled)), None)
-        data = dict(
-            x=rt_trials.index.tolist(),
-            y=rt_trials['rt'].tolist(),
-            name='data',
-            type='scatter',
-            mode='markers',
-            marker=dict(
-                color='lightgray'
-            )
-        )
-
-        rolled = dict(
-            x=rt_trials.index.tolist(),
-            y=rt_rolled.values.tolist(),
-            name='rolled data',
-            type='scatter',
-            marker=dict(
-                color='black'
-            )
-        )
-
-        layout = go.Layout(
-            width=630,
-            height=400,
-            title='Reaction time - trial number',
-            xaxis=dict(title='Trial number'),
-            yaxis=dict(
-                title='Reaction time (s)',
-                type='log',
-                range=np.log10([0.1, 100]).tolist(),
-                dtick=np.log10([0.1, 1, 10, 100]).tolist()),
-        )
-
-        fig = go.Figure(data=[data, rolled], layout=layout)
-        key['plotting_data'] = fig.to_plotly_json()
+        key['plotting_data'] = putils.create_rt_contrast_plot(sessions)
         self.insert1(key)
 
 
@@ -444,46 +166,73 @@ class CumulativeSummary(dj.Computed):
     def make(self, key):
         self.insert1(key)
 
+        subj = subject.Subject & key
+        # get the first date when animal became "trained" and "ready for ephys"
+        status = putils.get_status(subj)
+        # get date range and mondays
+        d = putils.get_date_range(subj)
+
         # plot for trial counts and session duration
         if behavior_ingest.TrialSet & key:
             trial_cnts = key.copy()
-
-            session_info = \
-                (behavior_ingest.TrialSet * acquisition.Session & key).proj(
-                    'n_trials', session_date='DATE(session_start_time)',
-                    session_duration='TIMESTAMPDIFF(MINUTE, session_start_time, \
-                        session_end_time)').fetch(as_dict=True)
+            # get trial counts and session length to date
+            session_info = (behavior.TrialSet * acquisition.Session & subj).proj(
+                'n_trials', session_date='DATE(session_start_time)',
+                session_duration='TIMESTAMPDIFF(MINUTE, \
+                    session_start_time, session_end_time)').fetch(as_dict=True)
             session_info = pd.DataFrame(session_info)
             session_info = session_info.where((pd.notnull(session_info)), None)
 
+            n_trials = session_info['n_trials'].tolist()
+            max_trials = max(n_trials)
+            yrange = [0, max_trials+50]
+
             trial_counts = go.Scatter(
-                x=[t.strftime('%Y-%m-%d')
-                    for t in session_info['session_date'].tolist()],
+                x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
                 y=session_info['n_trials'].tolist(),
                 mode='markers+lines',
                 marker=dict(
                     size=6,
-                    color='black'),
+                    color='black',
+                    line=dict(
+                        color='white',
+                        width=1
+                    )
+                ),
                 name='trial counts',
-                yaxis='y1'
+                yaxis='y1',
+                showlegend=False
             )
+
             session_length = go.Scatter(
-                x=[t.strftime('%Y-%m-%d')
-                    for t in session_info['session_date'].tolist()],
+                x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
                 y=session_info['session_duration'].tolist(),
                 mode='markers+lines',
                 marker=dict(
                     size=6,
-                    color='red'),
+                    color='red',
+                    line=dict(
+                        color='white',
+                        width=1
+                    )
+                ),
                 name='session duration',
-                yaxis='y2'
+                yaxis='y2',
+                showlegend=False
             )
 
             data = [trial_counts, session_length]
 
+            # add monday plots
+            data = putils.create_monday_plot(data, yrange, d['mondays'])
+
+            # add status plots
+            data = putils.create_status_plot(data, yrange, status)
+
             layout = go.Layout(
                 yaxis=dict(
                     title='Trial counts',
+                    range=yrange
                 ),
                 yaxis2=dict(
                     title='Session duration (mins)',
@@ -492,12 +241,23 @@ class CumulativeSummary(dj.Computed):
                     side='right'
                 ),
                 xaxis=dict(
-                    title='Date'),
-                width=500,
+                    title='Date',
+                    range=[d['first_date_str'], d['last_date_str']],
+                    showgrid=False
+                ),
+                width=700,
                 height=400,
-                title='Trial counts and session duration',
-                showlegend=False
+                title=dict(
+                    text='Trial counts and session duration',
+                    x=0.18,
+                    y=0.85
+                ),
+                legend=dict(
+                    x=1.2,
+                    y=0.8,
+                    orientation='v'),
             )
+
             fig = go.Figure(data=data, layout=layout)
             trial_cnts['trial_counts_session_duration'] = fig.to_plotly_json()
             self.TrialCountsSessionDuration.insert1(trial_cnts)
@@ -513,35 +273,52 @@ class CumulativeSummary(dj.Computed):
                         'performance_easy',
                         'median_reaction_time').fetch(as_dict=True)
             session_info = pd.DataFrame(session_info)
-
+            yrange = [0, 1.1]
             performance_easy = go.Scatter(
                 x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
                 y=session_info['performance_easy'].tolist(),
                 mode='markers+lines',
                 marker=dict(
                     size=6,
-                    color='black'),
+                    color='black',
+                    line=dict(
+                        color='white',
+                        width=1
+                    )
+                ),
                 name='performance easy',
-                yaxis='y1'
+                yaxis='y1',
+                showlegend=False
             )
             rt = go.Scatter(
-                x=[t.strftime('%Y-%m-%d')
-                    for t in session_info['session_date'].tolist()],
+                x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
                 y=session_info['median_reaction_time'].tolist(),
                 mode='markers+lines',
                 marker=dict(
                     size=6,
-                    color='red'),
+                    color='red',
+                    line=dict(
+                        color='white',
+                        width=1)
+                ),
                 name='reaction time',
-                yaxis='y2'
+                yaxis='y2',
+                showlegend=False
             )
 
             data = [performance_easy, rt]
 
+            # add monday plots
+            data = putils.create_monday_plot(data, yrange, d['mondays'])
+
+            # add status plots
+            data = putils.create_status_plot(data, yrange, status)
+
             layout = go.Layout(
+
                 yaxis=dict(
                     title='Performance on easy trials',
-                    range=[0, 1]
+                    range=yrange
                 ),
                 yaxis2=dict(
                     title='Median reaction time (s)',
@@ -555,11 +332,19 @@ class CumulativeSummary(dj.Computed):
                 ),
                 xaxis=dict(
                     title='Date',
+                    showgrid=False
                 ),
-                width=500,
+                width=700,
                 height=400,
-                title='Performance and median reaction time',
-                showlegend=False
+                title=dict(
+                    text='Performance and median reaction time',
+                    x=0.14,
+                    y=0.85
+                ),
+                legend=dict(
+                    x=1.2,
+                    y=0.8,
+                    orientation='v')
             )
 
             fig = go.Figure(data=data, layout=layout)
@@ -575,8 +360,14 @@ class CumulativeSummary(dj.Computed):
                 'threshold', 'bias',
                 'lapse_low', 'lapse_high').fetch(as_dict=True)
             fit_pars = pd.DataFrame(fit_pars)
-
             par_names = ['threshold', 'bias', 'lapse_low', 'lapse_high']
+            thresholds = [[19, 19], [16, 16, -16, -16], [0.2, 0.2], [0.2, 0.2]]
+            xranges = \
+                [[d['first_date_str'], d['last_date_str']],
+                 [d['first_date_str'], d['last_date_str'], d['last_date_str'], d['first_date_str']],
+                 [d['first_date_str'], d['last_date_str']],
+                 [d['first_date_str'], d['last_date_str']]]
+            yranges = [[0, 100], [-100, 100], [0, 1], [0, 1]]
 
             pars = dict()
             for par_name in par_names:
@@ -584,16 +375,9 @@ class CumulativeSummary(dj.Computed):
 
             prob_lefts = fit_pars['prob_left'].unique()
 
-            for prob_left in prob_lefts:
+            for iprob_left, prob_left in enumerate(prob_lefts):
                 prob_left_filter = fit_pars['prob_left'] == prob_left
-                if prob_left == 0.2:
-                    dot_color = 'orange'
-                elif prob_left == 0.5:
-                    dot_color = 'black'
-                elif prob_left == 0.8:
-                    dot_color = 'cornflowerblue'
-                else:
-                    dot_color = 'gray'
+                dot_color, error_color = putils.get_color(prob_left)
 
                 fit_pars_sub = fit_pars[prob_left_filter]
 
@@ -605,68 +389,131 @@ class CumulativeSummary(dj.Computed):
                     pars[par_name].append(
                         go.Scatter(
                             x=[t.strftime('%Y-%m-%d')
-                                for t in fit_pars_sub['session_date'].tolist()],
+                               for t in fit_pars_sub['session_date'].tolist()],
                             y=fit_pars_sub[par_name].tolist(),
                             mode='markers',
                             marker=dict(
                                 size=5,
-                                color=dot_color),
+                                color=dot_color,
+                                opacity=0.8
+                            ),
                             name=f'p_left = {prob_left}',
                             xaxis='x{}'.format(4-ipar),
                             yaxis='y{}'.format(4-ipar),
-                            showlegend=show_legend
-                        )
-                    )
+                            showlegend=show_legend,
+                            legendgroup='p_left'
+                        ))
 
             pars_data = [pars[par_name][i]
                          for i, prob_left in enumerate(prob_lefts)
                          for par_name in par_names]
 
+            for ipar, par_name in enumerate(par_names):
+                if ipar == 0:
+                    show_legend = True
+                else:
+                    show_legend = False
+
+                pars_data.append(
+                    go.Scatter(
+                        x=xranges[ipar],
+                        y=thresholds[ipar],
+                        mode="lines",
+                        line=dict(
+                            width=1,
+                            color='darkgreen',
+                            dash='dashdot'),
+                        name='threshold for trained',
+                        xaxis='x{}'.format(4-ipar),
+                        yaxis='y{}'.format(4-ipar),
+                        showlegend=show_legend,
+                        legendgroup='date'
+                    )
+                )
+
+                # add monday plots
+                pars_data = putils.create_monday_plot(
+                    pars_data, yranges[ipar], d['mondays'],
+                    xaxis='x{}'.format(4-ipar),
+                    yaxis='y{}'.format(4-ipar),
+                    show_legend_external=show_legend
+                )
+
+                # add status plots
+                pars_data = putils.create_status_plot(
+                    pars_data, yranges[ipar], status,
+                    xaxis='x{}'.format(4-ipar),
+                    yaxis='y{}'.format(4-ipar),
+                    show_legend_external=show_legend
+                )
+
+            x_axis_range = \
+                [d['first_date_str'],
+                 (d['last_date'] - datetime.timedelta(days=1)).strftime('%Y-%m-%d')]
             layout = go.Layout(
                 xaxis1=dict(
                     domain=[0, 1],
-                    title='Date'
+                    range=x_axis_range,
+                    title='Date',
+                    showgrid=False
                 ),
                 yaxis1=dict(
                     domain=[0, 0.2],
                     anchor='x1',
+                    showgrid=False,
                     range=[-0.02, 1.02],
-                    title='$Lapse\ high\ (\\lambda)$'
+                    title='$Lapse high\ (\\lambda)$'
                 ),
                 xaxis2=dict(
                     domain=[0, 1],
+                    range=x_axis_range,
+                    showgrid=False
                 ),
                 yaxis2=dict(
                     domain=[0.25, 0.45],
                     anchor='x2',
+                    showgrid=False,
                     range=[-0.02, 1.02],
-                    title='$Lapse\ low\ (\\gamma)$'
+                    title='$Lapse low\ (\\gamma)$'
                 ),
                 xaxis3=dict(
                     domain=[0, 1],
+                    range=x_axis_range,
+                    showgrid=False
                 ),
                 yaxis3=dict(
                     domain=[0.5, 0.7],
                     anchor='x3',
+                    showgrid=False,
                     range=[-105, 105],
                     title='$Bias\ (\\mu)$'
                 ),
                 xaxis4=dict(
                     domain=[0, 1],
+                    range=x_axis_range,
+                    showgrid=False
                 ),
                 yaxis4=dict(
                     domain=[0.75, 1],
                     anchor='x4',
+                    showgrid=False,
                     range=[-5, 105],
                     title='$Threshold\ (\\sigma)$'
                 ),
                 height=1000,
-                width=500,
-                title='Fit Parameters',
+                width=600,
+                title=dict(
+                    text='Fit Parameters',
+                    x=0.3,
+                    y=0.93
+                ),
+                legend=dict(
+                    x=1.1,
+                    y=1,
+                    orientation='v')
             )
 
             fig = go.Figure(data=pars_data, layout=layout)
-
             fit_pars_entry['fit_pars'] = fig.to_plotly_json()
             self.FitPars.insert1(fit_pars_entry)
 
@@ -679,56 +526,84 @@ class CumulativeSummary(dj.Computed):
                         'ABS(prob_left-0.5)<0.001' & key).proj(
                             'session_date', 'signed_contrasts',
                             'prob_choose_right').fetch(as_dict=True)
-            # reshape to a heatmap format
+            # get contrast and p_prob_choose_right per day
             contrast_list = []
-            for session in sessions:
-                for i, contrast in enumerate(session['signed_contrasts']):
-                    contrast_list.append(
-                        {'session_date': session['session_date'],
-                         'signed_contrast': round(contrast, 2)*100,
-                         'prob_choose_right': session['prob_choose_right'][i]})
+            for day in date_array:
+                if sessions & {'session_date': day}:
+                    session = (sessions & {'session_date': day}).fetch(
+                        as_dict=True)
+                    session = session[0]
+                    for icontrast, contrast in \
+                            enumerate(session['signed_contrasts']):
+                        contrast_list.append(dict(
+                            session_date=session['session_date'],
+                            signed_contrast=round(contrast, 2)*100,
+                            prob_choose_right=session['prob_choose_right'][icontrast]))
+                else:
+                    contrast_list.append(dict(
+                        session_date=day,
+                        signed_contrast=100,
+                        prob_choose_right=np.nan
+                    ))
             contrast_df = pd.DataFrame(contrast_list)
             contrast_map = contrast_df.pivot(
-                'signed_contrast', 'session_date',
-                'prob_choose_right').sort_values(
+                'signed_contrast', 'session_date', 'prob_choose_right').sort_values(
                     by='signed_contrast', ascending=False)
 
-            contrast_map = contrast_map.where((pd.notnull(contrast_map)), None)
+            contrast_map = contrast_map.where(pd.notnull(contrast_map), None)
+            contrasts = np.sort(contrast_df['signed_contrast'].unique())
 
-            data = dict(
+            data = [dict(
                 x=[t.strftime('%Y-%m-%d')
-                    for t in contrast_map.columns.tolist()],
-                y=contrast_map.index.tolist(),
+                   for t in contrast_map.columns.tolist()],
+                y=list(range(len(contrast_map.index.tolist()))),
                 z=contrast_map.values.tolist(),
                 zmax=1,
                 zmin=0,
+                xgap=1,
+                ygap=1,
                 type='heatmap',
                 colorbar=dict(
                     thickness=10,
-                    title='prob choosing left',
+                    title='prob choosing right',
                     titleside='right',
                 )
 
-            )
+            )]
+
+            data = putils.create_monday_plot(data, [-100, 100], d['mondays'])
 
             layout = go.Layout(
-                xaxis=dict(title='Date'),
+                xaxis=dict(
+                    title='Date',
+                    showgrid=False
+                ),
                 yaxis=dict(
                     title='Contrast (%)',
-                    range=[-100, 100]
+                    range=[0, len(contrast_map.index.tolist())],
+                    tickmode='array',
+                    tickvals=list(range(0, len(contrast_map.index.tolist()))),
+                    ticktext=[str(contrast) for contrast in contrasts]
                 ),
-                width=500,
+                width=700,
                 height=400,
-                title='Contrast heatmap',
-                showlegend=False
+                title=dict(
+                    text='Contrast heatmap',
+                    x=0.3,
+                    y=0.85
+                ),
+                legend=dict(
+                    x=1.2,
+                    y=0.8,
+                    orientation='v'
+                )
             )
 
-            fig = go.Figure(data=[data], layout=layout)
+            fig = go.Figure(data=data, layout=layout)
             con_hm['contrast_heatmap'] = fig.to_plotly_json()
             self.ContrastHeatmap.insert1(con_hm)
 
         # plot for water weight
-
         water_type_names = action.WaterType.fetch('watertype_name')
 
         water_type_colors = ['red', 'orange', 'blue',
@@ -741,69 +616,176 @@ class CumulativeSummary(dj.Computed):
 
         if action.WaterAdministration * action.Weighing & key:
             water_weight_entry = key.copy()
-            subj = subject.Subject & key
-
+            # get water and date
             water_info_query = (action.WaterAdministration & subj).proj(
                 'water_administered', 'watertype_name',
                 water_date='DATE(administration_time)')
-            water_info = pd.DataFrame(water_info_query.fetch(as_dict=True))
-
-            water_info.pop('administration_time')
-            water_info.pop('subject_uuid')
+            water_info = water_info_query.fetch(as_dict=True)
+            water_info = pd.DataFrame(water_info)
+            water_types = water_info.watertype_name.unique()
             water_info_type = water_info.pivot_table(
                 index='water_date', columns='watertype_name',
                 values='water_administered', aggfunc='sum')
+            max_water_intake = np.nanmax(water_info_type.values) + 0.2
+            yrange_water = [0, max_water_intake]
             water_info_type = water_info_type.where(
                 (pd.notnull(water_info_type)), None)
-            water_types = water_info.watertype_name.unique()
-
             weight_info_query = (action.Weighing & subj).proj(
                 'weight', weighing_date='DATE(weighing_time)')
-
-            weight_info = pd.DataFrame(
-                weight_info_query.fetch(as_dict=True))
+            weight_info = weight_info_query.fetch(as_dict=True)
+            weight_info = pd.DataFrame(weight_info)
             weight_info = weight_info.where((pd.notnull(weight_info)), None)
+
+            # get water restriction period
+            water_restrictions = (action.WaterRestriction & subj).proj(
+                'reference_weight',
+                res_start='DATE(restriction_start_time)',
+                res_end='DATE(restriction_end_time)')
 
             data = [
                 go.Bar(
                     x=[t.strftime('%Y-%m-%d')
-                        for t in water_info_type.index.tolist()],
+                       for t in water_info_type.index.tolist()],
                     y=water_info_type[water_type].tolist(),
                     marker=dict(color=water_type_map[water_type]),
                     name=water_type,
-                    yaxis='y1')
+                    yaxis='y1',
+                    legendgroup='water_type'
+                )
                 for water_type in water_types
             ]
 
             data.append(
                 go.Scatter(
                     x=[t.strftime('%Y-%m-%d')
-                        for t in weight_info['weighing_date'].tolist()],
+                       for t in weight_info['weighing_date'].tolist()],
                     y=weight_info['weight'].tolist(),
                     mode='lines+markers',
                     name='Weight',
                     marker=dict(
                         size=6,
-                        color='black'),
+                        color='black',
+                        line=dict(
+                            color='white',
+                            width=1)
+                    ),
+                    legendgroup='weight',
                     yaxis='y2'
                 ))
 
+            # monday marks
+            data = putils.create_monday_plot(data, yrange_water, d['mondays'])
+
+            # water restriction marks and reference weight marks
+            for iwater, water_res in \
+                    enumerate(water_restrictions.fetch(as_dict=True)):
+
+                if iwater == 0:
+                    show_res_legend = True
+                else:
+                    show_res_legend = False
+
+                res_start = water_res['res_start'].strftime('%Y-%m-%d')
+
+                if water_res['res_end']:
+                    res_end = water_res['res_end'].strftime('%Y-%m-%d')
+                else:
+                    res_end = last_date_str
+                data.append(
+                    go.Scatter(
+                        x=[res_start, res_start],
+                        y=yrange_water,
+                        mode="lines",
+                        line=dict(
+                            width=1,
+                            color='red',
+                        ),
+                        name='Water restriction start',
+                        yaxis='y1',
+                        showlegend=show_res_legend,
+                        legendgroup='restriction'
+                    )
+                )
+
+                if water_res['res_end']:
+
+                    data.append(
+                        go.Scatter(
+                            x=[res_end, res_end],
+                            y=yrange_water,
+                            mode="lines",
+                            line=dict(
+                                width=1,
+                                color='darkgreen',
+                            ),
+                            name='Water restriction end',
+                            yaxis='y1',
+                            showlegend=show_res_legend,
+                            legendgroup='restriction'
+                        )
+                    )
+
+                data.append(
+                    go.Scatter(
+                        x=[res_start, res_end],
+                        y=[water_res['reference_weight']*0.85,
+                           water_res['reference_weight']*0.85],
+                        mode="lines",
+                        line=dict(
+                            width=1,
+                            color='orange',
+                            dash='dashdot'
+                        ),
+                        name='85% reference weight',
+                        yaxis='y2',
+                        showlegend=show_res_legend,
+                        legendgroup='weight_ref'
+                    )
+                )
+
+                data.append(
+                    go.Scatter(
+                        x=[res_start, res_end],
+                        y=[water_res['reference_weight']*0.75,
+                           water_res['reference_weight']*0.75],
+                        mode="lines",
+                        line=dict(
+                            width=1,
+                            color='red',
+                            dash='dashdot'
+                        ),
+                        name='75% reference weight',
+                        yaxis='y2',
+                        showlegend=show_res_legend,
+                        legendgroup='weight_ref'
+                    )
+                )
+
             layout = go.Layout(
                 yaxis=dict(
-                    title='Water intake (mL)'),
+                    title='Water intake (mL)',
+                    range=yrange_water
+                ),
                 yaxis2=dict(
                     title='Weight (g)',
                     overlaying='y',
-                    side='right'
+                    side='right',
                 ),
-                width=600,
-                height=400,
-                title='Water intake and weight',
-                xaxis=dict(title='Date'),
+                width=1000,
+                height=500,
+                title=dict(
+                    text='Water intake and weight',
+                    x=0.3,
+                    y=0.9
+                ),
+                xaxis=dict(
+                    title='Date',
+                    range=[d['first_date_str'], d['last_date_str']]
+                ),
                 legend=dict(
-                    x=0,
-                    y=1.2,
-                    orientation='h'),
+                    x=1.1,
+                    y=0.9,
+                    orientation='v'),
                 barmode='stack'
             )
             fig = go.Figure(data=data, layout=layout)

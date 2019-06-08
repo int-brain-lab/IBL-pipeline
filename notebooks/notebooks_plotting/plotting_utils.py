@@ -6,6 +6,7 @@ from uuid import UUID
 import numpy as np
 import datetime
 import datajoint as dj
+import plotly.graph_objs as go
 import pandas as pd
 import seaborn as sns
 import plotly
@@ -95,10 +96,73 @@ def get_status(subj):
     
     return result
 
-def get_color(prob_left, opacity):
+def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1', show_legend_external=True):
+    
+    if status['is_trained']:
+        data.append(
+           go.Scatter(
+               x=[status['first_trained_date'], status['first_trained_date']],
+               y=yrange,
+               mode="lines",
+               marker=dict(color='orange'),
+               name='first day got trained',
+               xaxis=xaxis,
+               yaxis=yaxis,
+               showlegend=show_legend_external,
+               legendgroup='status'
+            ) 
+        )
+    
+    if status['is_biased']:
+        data.append(
+           go.Scatter(
+               x=[status['first_biased_date'], status['first_biased_date']],
+               y=yrange,
+               mode="lines",
+               marker=dict(color='forestgreen'),
+               name='first day got biased',
+               xaxis=xaxis,
+               yaxis=yaxis,
+               showlegend=show_legend_external,
+               legendgroup='status'
+            ) 
+        )
+    
+    return data
+  
+
+def create_monday_plot(data, yrange, mondays, xaxis='x1', yaxis='y1', show_legend_external=True):
+ 
+    for imonday, monday in enumerate(mondays):
+        if imonday==0 and show_legend_external:
+            show_legend = True
+        else:
+            show_legend = False     
+    
+        data.append(
+            go.Scatter(
+                x=[monday, monday],
+                y=yrange,
+                mode="lines",
+                line=dict(
+                    width=0.5,
+                    color='gray',
+                    dash='dot'
+                ),
+                name='Mondays',
+                xaxis=xaxis,
+                yaxis=yaxis,
+                showlegend=show_legend,
+                legendgroup='monday'
+            )
+        )
+        
+    return data
+
+
+def get_color(prob_left, opacity=0.3):
     
     cmap = sns.diverging_palette(20, 220, n=3, center="dark")
-    opacity = 0.3
     
     if prob_left == 0.2:
         color = cmap[0]
@@ -121,7 +185,8 @@ def get_color(prob_left, opacity):
     else:
         return
     
-    return curve_color, error_color, ytext
+    return curve_color, error_color
+
 
                 
                 
