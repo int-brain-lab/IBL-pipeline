@@ -130,6 +130,34 @@ def get_fit_pars(sessions):
     return fit_pars_list
 
 
+def get_color(prob_left, opacity=0.3):
+
+    cmap = sns.diverging_palette(20, 220, n=3, center="dark")
+
+    if prob_left == 0.2:
+        color = cmap[0]
+        err_c = color.copy()
+        err_c[3] = err_c[3]*opacity
+        curve_color = 'rgba{}'.format(tuple(color))
+        error_color = 'rgba{}'.format(tuple(err_c))
+    elif prob_left == 0.5:
+        color = cmap[1]
+        err_c = color.copy()
+        err_c[3] = err_c[3]*opacity
+        curve_color = 'rgba{}'.format(tuple(color))
+        error_color = 'rgba{}'.format(tuple(err_c))
+    elif prob_left == 0.8:
+        color = cmap[2]
+        err_c = color.copy()
+        err_c[3] = err_c[3]*opacity
+        curve_color = 'rgba{}'.format(tuple(color))
+        error_color = 'rgba{}'.format(tuple(err_c))
+    else:
+        return
+
+    return curve_color, error_color
+
+
 def create_psych_curve_plot(sessions):
     data_mean = []
     data_errorbar = []
@@ -153,7 +181,7 @@ def create_psych_curve_plot(sessions):
             n_trials_right, n_trials,
             alpha=0.032, method='normal') - prob_right
 
-        curve_color, error_color = putils.get_color(prob_left, 0.3)
+        curve_color, error_color = get_color(prob_left, 0.3)
 
         behavior_data = go.Scatter(
             x=contrasts.tolist(),
@@ -233,7 +261,7 @@ def create_rt_contrast_plot(sessions):
         error_low = reaction_time - ci_low
         error_high = ci_high - reaction_time
 
-        curve_color, error_color = putils.get_color(prob_left, 0.3)
+        curve_color, error_color = get_color(prob_left, 0.3)
 
         rt_data = go.Scatter(
             x=contrasts.tolist(),
@@ -355,31 +383,3 @@ def create_monday_plot(data, yrange, mondays, xaxis='x1', yaxis='y1',
         )
 
     return data
-
-
-def get_color(prob_left, opacity=0.3):
-
-    cmap = sns.diverging_palette(20, 220, n=3, center="dark")
-
-    if prob_left == 0.2:
-        color = cmap[0]
-        err_c = color.copy()
-        err_c[3] = err_c[3]*opacity
-        curve_color = 'rgba{}'.format(tuple(color))
-        error_color = 'rgba{}'.format(tuple(err_c))
-    elif prob_left == 0.5:
-        color = cmap[1]
-        err_c = color.copy()
-        err_c[3] = err_c[3]*opacity
-        curve_color = 'rgba{}'.format(tuple(color))
-        error_color = 'rgba{}'.format(tuple(err_c))
-    elif prob_left == 0.8:
-        color = cmap[2]
-        err_c = color.copy()
-        err_c[3] = err_c[3]*opacity
-        curve_color = 'rgba{}'.format(tuple(color))
-        error_color = 'rgba{}'.format(tuple(err_c))
-    else:
-        return
-
-    return curve_color, error_color
