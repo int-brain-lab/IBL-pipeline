@@ -20,7 +20,7 @@ def get_date_range(subj):
     first_session_date, last_session_date = subj.aggr(
         acquisition.Session,
         first_session_date='min(DATE(session_start_time))',
-        last_session_date='max(DATE(session_end_time))').fetch1(
+        last_session_date='max(DATE(session_start_time))').fetch1(
             'first_session_date', 'last_session_date'
     )
 
