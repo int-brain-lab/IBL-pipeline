@@ -23,7 +23,6 @@ def get_date_range(subj):
         last_session_date='max(DATE(session_start_time))')
 
     if session_range:
-        has_session = True
         first_session_date, last_session_date = session_range.fetch1(
             'first_session_date', 'last_session_date'
         )
@@ -38,7 +37,6 @@ def get_date_range(subj):
         last_res_date='max(DATE(restriction_end_time))')
 
     if water_res_range:
-        has_water_res = True
         first_water_res_date, last_water_res_date = water_res_range.fetch1(
             'first_res_date', 'last_res_date'
         )
@@ -53,7 +51,6 @@ def get_date_range(subj):
         last_admin_date='max(DATE(administration_time))')
 
     if water_admin_range:
-        has_water_admin = True
         first_water_admin_date, last_water_admin_date = \
             water_admin_range.fetch1(
                 'first_admin_date', 'last_admin_date'
@@ -69,7 +66,6 @@ def get_date_range(subj):
         last_weighing_date='max(DATE(weighing_time))')
 
     if weighing_range:
-        has_weighing = True
         first_weighing_date, last_weighing_date = weighing_range.fetch1(
             'first_weighing_date', 'last_weighing_date'
         )
@@ -78,16 +74,20 @@ def get_date_range(subj):
         last_weighing_date = np.nan
 
     # get overall date range
-    first_date = np.nanmin([first_session_date,
-                            first_water_res_date,
-                            first_water_admin_date,
-                            first_weighing_date]) \
+    first_date_array = np.array([first_session_date,
+                                 first_water_res_date,
+                                 first_water_admin_date,
+                                 first_weighing_date])
+    first_date_array = first_date_array[~np.isnan(first_date_array)]
+    last_date_array = np.array([last_session_date,
+                                last_water_res_date,
+                                last_water_admin_date,
+                                last_weighing_date])
+    last_date_array = last_date_array[~np.isnan(last_date_array)]
+    first_date = np.min(first_date_array)
         - datetime.timedelta(days=3)
 
-    last_date = np.nanmax([last_session_date,
-                           last_water_res_date,
-                           last_water_admin_date,
-                           last_weighing_date]) \
+    last_date = np.max(last_date_array)
         + datetime.timedelta(days=3)
 
     first_date_str = first_date.strftime('%Y-%m-%d')
