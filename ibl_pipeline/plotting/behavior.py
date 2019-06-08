@@ -700,7 +700,7 @@ class CumulativeSummary(dj.Computed):
                 if water_res['res_end']:
                     res_end = water_res['res_end'].strftime('%Y-%m-%d')
                 else:
-                    res_end = last_date_str
+                    res_end = d['last_date_str']
                 data.append(
                     go.Scatter(
                         x=[res_start, res_start],
