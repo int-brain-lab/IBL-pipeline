@@ -528,10 +528,12 @@ class CumulativeSummary(dj.Computed):
                 & 'ABS(prob_left-0.5)<0.001':
             con_hm = key.copy()
             # get trial counts and session length to date
-            sessions = (behavior.BehavioralSummaryByDate.PsychResults &
-                        'ABS(prob_left-0.5)<0.001' & key).proj(
-                            'session_date', 'signed_contrasts',
-                            'prob_choose_right').fetch(as_dict=True)
+            sessions = (behavior.BehavioralSummaryByDate.PsychResults & 'prob_left=0.5' &
+                        key).proj('session_date', 'signed_contrasts', 'prob_choose_right')
+
+            # get date ranges and mondays
+            d = putils.get_date_range(subj)
+
             # get contrast and p_prob_choose_right per day
             contrast_list = []
             for day in d['date_array']:
@@ -541,16 +543,16 @@ class CumulativeSummary(dj.Computed):
                     session = session[0]
                     for icontrast, contrast in \
                             enumerate(session['signed_contrasts']):
-                        contrast_list.append(dict(
-                            session_date=session['session_date'],
-                            signed_contrast=round(contrast, 2)*100,
-                            prob_choose_right=session['prob_choose_right'][icontrast]))
+                        contrast_list.append(
+                            {'session_date': session['session_date'],
+                             'signed_contrast': round(contrast, 2)*100,
+                             'prob_choose_right': session['prob_choose_right'][icontrast]})
                 else:
-                    contrast_list.append(dict(
-                        session_date=day,
-                        signed_contrast=100,
-                        prob_choose_right=np.nan
-                    ))
+                    contrast_list.append(
+                        {'session_date': day,
+                         'signed_contrast': 100,
+                         'prob_choose_right': np.nan})
+
             contrast_df = pd.DataFrame(contrast_list)
             contrast_map = contrast_df.pivot(
                 'signed_contrast',
