@@ -8,6 +8,9 @@ kargs = dict(
     suppress_errors=True, display_progress=True
 )
 
+behavior.SessionPsychCurve.populate(**kargs)
+behavior.SessionReactionTimeContrast.populate(**kargs)
+behavior.SessionReactionTimeTrialNumber.populate(**kargs)
 behavior.DatePsychCurve.populate(**kargs)
 behavior.DateReactionTimeContrast.populate(**kargs)
 behavior.DateReactionTimeTrialNumber.populate(**kargs)
