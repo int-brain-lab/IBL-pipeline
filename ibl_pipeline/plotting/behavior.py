@@ -9,7 +9,7 @@ from ..utils import psychofit as psy
 import plotly
 import plotly.graph_objs as go
 import statsmodels.stats.proportion as smp
-from datetime import datetime
+import datetime
 
 schema = dj.schema('ibl_plotting_behavior')
 
