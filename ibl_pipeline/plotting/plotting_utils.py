@@ -17,53 +17,78 @@ import statsmodels.stats.proportion as smp
 def get_date_range(subj):
 
     # get date range of session
-    first_session_date, last_session_date = subj.aggr(
+    session_range = subj.aggr(
         acquisition.Session,
         first_session_date='min(DATE(session_start_time))',
-        last_session_date='max(DATE(session_start_time))').fetch1(
+        last_session_date='max(DATE(session_start_time))')
+
+    if session_range:
+        has_session = True
+        first_session_date, last_session_date = session_range.fetch1(
             'first_session_date', 'last_session_date'
-    )
+        )
+    else:
+        first_session_date = np.nan
+        last_session_date = np.nan
 
     # get date range of water restriction
-    first_water_res_date, last_water_res_date = subj.aggr(
+    water_res_range = subj.aggr(
         action.WaterRestriction,
         first_res_date='min(DATE(restriction_start_time))',
-        last_res_date='max(DATE(restriction_end_time))').fetch1(
-            'first_res_date', 'last_res_date')
+        last_res_date='max(DATE(restriction_end_time))')
+
+    if water_res_range:
+        has_water_res = True
+        first_water_res_date, last_water_res_date = water_res_range.fetch1(
+            'first_res_date', 'last_res_date'
+        )
+    else:
+        first_water_res_date = np.nan
+        last_water_res_date = np.nan
 
     # get date range of water administration
-    first_water_admin_date, last_water_admin_date = subj.aggr(
+    water_admin_range = subj.aggr(
         action.WaterAdministration,
         first_admin_date='min(DATE(administration_time))',
-        last_admin_date='max(DATE(administration_time))').fetch1(
-            'first_admin_date', 'last_admin_date')
+        last_admin_date='max(DATE(administration_time))')
+
+    if water_admin_range:
+        has_water_admin = True
+        first_water_admin_date, last_water_admin_date = \
+            water_admin_range.fetch1(
+                'first_admin_date', 'last_admin_date'
+            )
+    else:
+        first_water_admin_date = np.nan
+        last_water_admin_date = np.nan
 
     # get date range of weighing
-    first_weighing_date, last_weighing_date = subj.aggr(
+    weighing_range = subj.aggr(
         action.Weighing,
         first_weighing_date='min(DATE(weighing_time))',
-        last_weighing_date='max(DATE(weighing_time))').fetch1(
-            'first_weighing_date', 'last_weighing_date')
+        last_weighing_date='max(DATE(weighing_time))')
+
+    if weighing_range:
+        has_weighing = True
+        first_weighing_date, last_weighing_date = weighing_range.fetch1(
+            'first_weighing_date', 'last_weighing_date'
+        )
+    else:
+        first_weighing_date = np.nan
+        last_weighing_date = np.nan
 
     # get overall date range
-    first_date = min([first_session_date,
-                      first_water_res_date,
-                      first_water_admin_date,
-                      first_weighing_date]) \
+    first_date = np.nanmin([first_session_date,
+                            first_water_res_date,
+                            first_water_admin_date,
+                            first_weighing_date]) \
         - datetime.timedelta(days=3)
 
-    if last_water_res_date:
-        last_date = np.nanmax([last_session_date,
-                               last_water_res_date,
-                               last_water_admin_date,
-                               last_weighing_date]) \
-            + datetime.timedelta(days=3)
-
-    else:
-        last_date = np.nanmax([last_session_date,
-                               last_water_admin_date,
-                               last_weighing_date]) \
-            + datetime.timedelta(days=3)
+    last_date = np.nanmax([last_session_date,
+                           last_water_res_date,
+                           last_water_admin_date,
+                           last_weighing_date]) \
+        + datetime.timedelta(days=3)
 
     first_date_str = first_date.strftime('%Y-%m-%d')
     last_date_str = last_date.strftime('%Y-%m-%d')
