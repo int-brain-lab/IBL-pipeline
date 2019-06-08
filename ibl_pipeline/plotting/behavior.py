@@ -534,7 +534,7 @@ class CumulativeSummary(dj.Computed):
                             'prob_choose_right').fetch(as_dict=True)
             # get contrast and p_prob_choose_right per day
             contrast_list = []
-            for day in date_array:
+            for day in d['date_array']:
                 if sessions & {'session_date': day}:
                     session = (sessions & {'session_date': day}).fetch(
                         as_dict=True)
