@@ -11,6 +11,7 @@ import pandas as pd
 import seaborn as sns
 import plotly
 from plotly import tools
+import statsmodels.stats.proportion as smp
 
 
 def get_date_range(subj):
