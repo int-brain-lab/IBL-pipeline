@@ -528,8 +528,9 @@ class CumulativeSummary(dj.Computed):
                 & 'ABS(prob_left-0.5)<0.001':
             con_hm = key.copy()
             # get trial counts and session length to date
-            sessions = (behavior.BehavioralSummaryByDate.PsychResults & 'prob_left=0.5' &
-                        key).proj('session_date', 'signed_contrasts', 'prob_choose_right')
+            sessions = (behavior.BehavioralSummaryByDate.PsychResults &
+                        'prob_left=0.5' & key).proj(
+                'session_date', 'signed_contrasts', 'prob_choose_right')
 
             # get date ranges and mondays
             d = putils.get_date_range(subj)
@@ -659,8 +660,7 @@ class CumulativeSummary(dj.Computed):
                     y=water_info_type[water_type].tolist(),
                     marker=dict(color=water_type_map[water_type]),
                     name=water_type,
-                    yaxis='y1',
-                    legendgroup='water_type'
+                    yaxis='y1'
                 )
                 for water_type in water_types
             ]
