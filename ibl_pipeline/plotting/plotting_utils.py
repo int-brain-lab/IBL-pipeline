@@ -283,6 +283,8 @@ def create_rt_contrast_plot(sessions):
             (sessions & session).fetch1(
                 'signed_contrasts', 'prob_left', 'reaction_time_contrast',
                 'reaction_time_ci_low', 'reaction_time_ci_high')
+
+        contrasts = contrasts * 100
         error_low = reaction_time - ci_low
         error_high = ci_high - reaction_time
 
