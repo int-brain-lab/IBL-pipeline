@@ -6,15 +6,16 @@ from . import reference
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
 
+
 @schema
 class Ephys(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    ephys_raw_dir:              varchar(256)     # Path of Raw ephys file: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
+    ephys_raw_dir:          varchar(256)     # Path of Raw ephys file: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
     ephys_timestamps:       longblob     # Timestamps for raw ephys timeseries (seconds)
     ephys_start_time:       float        # (seconds)
-    ephys_stop_time:       float        # (seconds)
+    ephys_stop_time:        float        # (seconds)
     ephys_duration:         float        # (seconds)
     ephys_sampling_rate:    float        # samples per second
     """
@@ -35,7 +36,7 @@ class Ephys(dj.Imported):
 
 
 @schema
-class ProbeModel(dj.Lookup):
+class Probe(dj.Lookup):
     definition = """
     # Description of a particular model of probe.
     probe_model_name: varchar(128)      # String naming probe model, from probe.description
@@ -45,8 +46,9 @@ class ProbeModel(dj.Lookup):
 
     class Channel(dj.Part):
         definition = """
+        # positional information about every channel on this probe.
         -> master
-        channel_id:         smallint     # id of a channel on the probe
+        channel_id:     smallint    # id of a channel on the probe
         ---
         channel_x_pos:  float   # x position relative to the tip of the probe (um)
         channel_y_pos:  float   # y position relative to the tip of the probe (um)
@@ -54,34 +56,46 @@ class ProbeModel(dj.Lookup):
 
 
 @schema
-class ProbeSet(dj.Imported):
+class ChannelGroup(dj.Lookup):
     definition = """
-    -> Ephys
+    # group of channel on a particular probe model for clustering analyses
+    -> Probe
+    channel_group_id:         smallint     # id of a channel on the probe
+    ---
+    channel_group_name=null:  varchar(32)  # user friendly name
     """
 
-    class Probe(dj.Part):
+    class Channel(dj.Part):
         definition = """
+        # membership table for channel group and channel
         -> master
-        probe_idx:          tinyint     # probe number in this array
-        ---
-        -> ProbeModel
-        probe_set_raw_filename: varchar(256)      # Name of the raw data file this probe was recorded in
-        entry_point_rl:    float
-        entry_point_ap:    float
-        vertical_angle:    float
-        horizontal_angle:  float
-        axial_angle:       float
-        distance_advanced: float
+        -> Probe.Channel
         """
 
 
 @schema
-class Channel(dj.Imported):
+class ProbeInsertion(dj.Imported):
     definition = """
-    -> ProbeSet.Probe
-    -> ProbeModel.Channel
+    -> Ephys
+    probe_idx:    int    # probe insertion number
     ---
-    channel_index:          smallint    # position within the data array of recording
+    -> Probe
+    probe_set_raw_filename: varchar(256)      # Name of the raw data file this probe was recorded in
+    entry_point_rl:    float
+    entry_point_ap:    float
+    vertical_angle:    float
+    horizontal_angle:  float
+    axial_angle:       float
+    distance_advanced: float
+    """
+
+
+@schema
+class ChannelLocation(dj.Imported):
+    definition = """
+    -> ProbeInsertion
+    -> ChannelGroup.Channel
+    ---
     channel_ccf_ap:         float       # anterior posterior CCF coordinate (um)
     channel_ccf_dv:         float       # dorsal ventral CCF coordinate (um)
     channel_ccf_lr:         float       # left right CCF coordinate (um)
@@ -92,44 +106,28 @@ class Channel(dj.Imported):
 
 
 @schema
-class ClusterGroup(dj.Imported):
+class Cluster(dj.Imported):
     definition = """
-    -> ProbeSet
+    -> ProbeInsertion
+    cluster_id: smallint
     ---
-    """
-
-    class Cluster(dj.Part):
-        definition = """
-        -> master
-        cluster_id: smallint
-        ---
-        cluster_mean_waveform:      longblob      # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered): nClusters*nSamples*nChannels
-        cluster_template_waveform:  longblob      # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
-        cluster_depth :             float         # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
-        cluster_waveform_duration:  float         # trough to peak time (ms)
-        cluster_amp:                float         # Mean amplitude of each cluster (µV)
-        -> ProbeSet.Probe
-        (cluster_peak_channel)  -> Channel(channel_id)
-        cluster_phy_annotation:     tinyint       # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
-        """
-
-
-@schema
-class ClusterSpikes(dj.Imported):
-    definition = """
-    -> ClusterGroup.Cluster
-    ---
+    cluster_mean_waveform:      longblob      # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered): nClusters*nSamples*nChannels
+    cluster_template_waveform:  longblob      # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
+    cluster_depth :             float         # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
+    cluster_waveform_duration:  float         # trough to peak time (ms)
+    cluster_amp:                float         # Mean amplitude of each cluster (µV)
+    -> ChannelGroup.Channel                  # peak channel for the cluster
+    cluster_phy_annotation:     tinyint       # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
     cluster_spike_times:    longblob        # spike times of a particular cluster (seconds)
     cluster_spike_depth:    longblob        # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
     cluster_spike_amps:     longblob        # Amplitude of each spike (µV)
     """
-    key_source = Ephys
 
 
 @schema
 class LFP(dj.Imported):
     definition = """
-    -> ProbeSet
+    -> ProbeInsertion
     ---
     lfp_raw:              longblob     # LFP: array of size nSamples * nChannels. Channels from all probes are included
     lfp_timestamps:       longblob     # Timestamps for LFP timeseries in seconds
@@ -138,3 +136,11 @@ class LFP(dj.Imported):
     lfp_duration:         float        # (seconds)
     lfp_sampling_rate:    float        # samples per second
     """
+
+    class Channel(dj.Part):
+        definition = """
+        -> master
+        -> ChannelGroup.Channel
+        ---
+        lfp: longblob           # recorded lfp on this channel
+        """

@@ -75,8 +75,6 @@ class CompleteWheelSession(dj.Computed):
     definition = """
     # sessions that are complete with wheel related information and thus may be ingested
     -> acquisition.Session
-    ---
-    wheel_session_complete: bool              # whether the session is complete
     """
 
     required_datasets = ["_ibl_wheel.position.npy",
@@ -86,9 +84,9 @@ class CompleteWheelSession(dj.Computed):
     def make(self, key):
         datasets = (data.FileRecord & key & {'exists': 1}).fetch(
             'dataset_name')
-        key['wheel_session_complete'] = bool(
-            np.all([req_ds in datasets for req_ds in self.required_datasets]))
-        self.insert1(key)
+        if np.all([req_ds in datasets
+                   for req_ds in self.required_datasets]):
+            self.insert1(key)
 
 
 @schema
@@ -97,17 +95,13 @@ class Wheel(dj.Imported):
     # raw wheel recording
     -> acquisition.Session
     ---
-    wheel_position:         longblob  # Absolute position of wheel (cm)
-    wheel_velocity:         longblob  # Signed velocity of wheel (cm/s) positive = CW
-    wheel_sample_ids:       longblob  # Sample ids corresponding to the timestamps
-    wheel_timestamps:       longblob  # Timestamps for wheel timeseries (seconds)
     wheel_start_time:       float     # Start time of wheel recording (seconds)
     wheel_end_time:         float     # End time of wheel recording (seconds)
     wheel_duration:         float     # Duration time of wheel recording (seconds)
     wheel_sampling_rate:    float     # Samples per second
     """
 
-    key_source = CompleteWheelSession & 'wheel_session_complete = 1'
+    key_source = CompleteWheelSession()
 
     def make(self, key):
 
@@ -117,14 +111,11 @@ class Wheel(dj.Imported):
                                            '_ibl_wheel.velocity',
                                            '_ibl_wheel.timestamps'])
 
-        wheel_sample_ids = wheel_timestamps[:, 0]
-        wheel_timestamps = wheel_timestamps[:, 1]
         wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
 
-        key['wheel_position'] = wheel_position
-        key['wheel_velocity'] = wheel_velocity
-        key['wheel_sample_ids'] = wheel_sample_ids
-        key['wheel_timestamps'] = wheel_timestamps
+        if np.ndim(wheel_timestamps) == 2:
+            wheel_timestamps = wheel_timestamps[:, 1]
+
         key['wheel_start_time'] = wheel_timestamps[0]
         key['wheel_end_time'] = wheel_timestamps[-1]
         key['wheel_duration'] = wheel_timestamps[-1] - wheel_timestamps[0]
@@ -148,8 +139,6 @@ class CompleteWheelMoveSession(dj.Computed):
     definition = """
     # sessions that are complete with wheel related information and thus may be ingested
     -> acquisition.Session
-    ---
-    wheelmove_session_complete: bool  # whether the session is complete
     """
 
     required_datasets = ["_ibl_wheelMoves.intervals.npy",
@@ -158,9 +147,9 @@ class CompleteWheelMoveSession(dj.Computed):
     def make(self, key):
         datasets = (data.FileRecord & key & {'exists': 1}).fetch(
             'dataset_name')
-        key['wheelmove_session_complete'] = bool(
-            np.all([req_ds in datasets for req_ds in self.required_datasets]))
-        self.insert1(key)
+        if bool(np.all([req_ds in datasets
+                for req_ds in self.required_datasets])):
+            self.insert1(key)
 
 
 @schema
@@ -171,7 +160,7 @@ class WheelMoveSet(dj.Imported):
     ---
     wheel_move_number : int     # total number of movements in this set
     """
-    key_source = CompleteWheelMoveSession & 'wheelmove_session_complete = 1'
+    key_source = CompleteWheelMoveSession()
 
     def make(self, key):
         wheel_move_key = key.copy()

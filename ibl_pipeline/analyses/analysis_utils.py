@@ -3,6 +3,8 @@ from .. import subject, action, acquisition, behavior
 from ..utils import psychofit as psy
 import numpy as np
 import pandas as pd
+import scipy
+import scikits.bootstrap as bootstrap
 
 
 def compute_psych_pars(trials):
@@ -77,7 +79,7 @@ def compute_performance_easy(trials):
         return n_correct_trials_easy/len(trials_easy)
 
 
-def compute_reaction_time(trials):
+def compute_reaction_time(trials, compute_ci=False):
     # median reaction time
     trials_rt = trials.proj(
             signed_contrast='trial_stim_contrast_left- \
@@ -87,6 +89,14 @@ def compute_reaction_time(trials):
     rt = trials_rt.fetch(as_dict=True)
     rt = pd.DataFrame(rt)
     rt = rt[['signed_contrast', 'rt']]
-    median_rt = rt.groupby('signed_contrast').median()
+    grouped_rt = rt['rt'].groupby(rt['signed_contrast'])
+    median_rt = grouped_rt.median()
 
-    return np.array(median_rt['rt'])
+    if compute_ci:
+        ci_rt = grouped_rt.apply(
+            lambda x: bootstrap.ci(x, scipy.median, alpha=0.32))
+        ci_low = np.array([x[0] for x in ci_rt])
+        ci_high = np.array([x[1] for x in ci_rt])
+        return median_rt.values, ci_low, ci_high
+    else:
+        return median_rt.values
