@@ -360,6 +360,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,
+               hoverinfo='skip'
             )
         )
 
@@ -374,6 +375,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,
+               hoverinfo='skip'
             )
         )
 
@@ -403,7 +405,8 @@ def create_monday_plot(data, yrange, mondays, xaxis='x1', yaxis='y1',
                 xaxis=xaxis,
                 yaxis=yaxis,
                 showlegend=show_legend,
-                legendgroup='monday'
+                legendgroup='monday',
+                hoverinfo='skip'
             )
         )
 
