@@ -360,7 +360,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,
-               hoverinfo='skip'
+               hoverinfo='x'
             )
         )
 
@@ -375,7 +375,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,
-               hoverinfo='skip'
+               hoverinfo='x'
             )
         )
 
