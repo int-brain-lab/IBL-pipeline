@@ -749,7 +749,8 @@ class CumulativeSummary(dj.Computed):
                         name='85% reference weight',
                         yaxis='y2',
                         showlegend=show_res_legend,
-                        legendgroup='weight_ref'
+                        legendgroup='weight_ref',
+                        hoverinfo='skip'
                     )
                 )
 
@@ -767,7 +768,8 @@ class CumulativeSummary(dj.Computed):
                         name='75% reference weight',
                         yaxis='y2',
                         showlegend=show_res_legend,
-                        legendgroup='weight_ref'
+                        legendgroup='weight_ref',
+                        hoverinfo='skip'
                     )
                 )
 
