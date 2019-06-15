@@ -52,6 +52,7 @@ class Probe(dj.Lookup):
         ---
         channel_x_pos:  float   # x position relative to the tip of the probe (um)
         channel_y_pos:  float   # y position relative to the tip of the probe (um)
+        channel_z_pos=0: float  # z position
         """
 
 
@@ -80,29 +81,42 @@ class ProbeInsertion(dj.Imported):
     probe_idx:    int    # probe insertion number
     ---
     -> Probe
-    probe_set_raw_filename: varchar(256)      # Name of the raw data file this probe was recorded in
-    entry_point_rl:    float
-    entry_point_ap:    float
-    vertical_angle:    float
-    horizontal_angle:  float
-    axial_angle:       float
-    distance_advanced: float
     """
 
 
 @schema
-class ChannelLocation(dj.Imported):
+class ProbeInsertionLocation(dj.Imported):
+    definition = """
+    # data imported from probes.trajectory
+    -> ProbeInsertion
+    ---
+    probe_set_raw_filename: varchar(256)      # Name of the raw data file this probe was recorded in
+    entry_point_rl:     float
+    entry_point_ap:     float
+    entry_point_dv:     float
+    tip_point_rl:       float
+    tip_point_ap:       float
+    tip_point_dv:       float
+    axial_angle:        float
+    """
+
+
+@schema
+class ChannelBrainLocation(dj.Imported):
     definition = """
     -> ProbeInsertion
     -> ChannelGroup.Channel
+    -> reference.Atlas
+    histology_revision: varchar(64)
     ---
-    channel_ccf_ap:         float       # anterior posterior CCF coordinate (um)
-    channel_ccf_dv:         float       # dorsal ventral CCF coordinate (um)
-    channel_ccf_lr:         float       # left right CCF coordinate (um)
+    # from channels.brainlocation
+    version_time:       datetime
+    channel_ap:         float           # anterior posterior CCF coordinate (um)
+    channel_dv:         float           # dorsal ventral CCF coordinate (um)
+    channel_lr:         float           # left right CCF coordinate (um)
     -> reference.BrainLocationAcronym   # acronym of the brain location
-    channel_raw_row:        smallint     # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
+    channel_raw_row:        smallint    # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
     """
-    key_source = Ephys
 
 
 @schema
@@ -110,17 +124,18 @@ class Cluster(dj.Imported):
     definition = """
     -> ProbeInsertion
     cluster_id: smallint
+    cluster_revision:           varchar(64)
     ---
-    cluster_mean_waveform:      longblob      # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered): nClusters*nSamples*nChannels
-    cluster_template_waveform:  longblob      # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
-    cluster_depth :             float         # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
-    cluster_waveform_duration:  float         # trough to peak time (ms)
-    cluster_amp:                float         # Mean amplitude of each cluster (µV)
-    -> ChannelGroup.Channel                  # peak channel for the cluster
-    cluster_phy_annotation:     tinyint       # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
-    cluster_spike_times:    longblob        # spike times of a particular cluster (seconds)
-    cluster_spike_depth:    longblob        # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
-    cluster_spike_amps:     longblob        # Amplitude of each spike (µV)
+    -> ChannelGroup.Channel                 # peak channel for the cluster
+    cluster_mean_waveform:      longblob    # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered): nClusters*nSamples*nChannels
+    cluster_template_waveform:  longblob    # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
+    cluster_depth :             float       # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
+    cluster_waveform_duration:  float       # trough to peak time (ms)
+    cluster_amp:                float       # Mean amplitude of each cluster (µV)
+    cluster_phy_annotation:     tinyint     # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
+    cluster_spike_times:        longblob    # spike times of a particular cluster (seconds)
+    cluster_spike_depth:        longblob    # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
+    cluster_spike_amps:         longblob    # Amplitude of each spike (µV)
     """
 
 
@@ -129,7 +144,6 @@ class LFP(dj.Imported):
     definition = """
     -> ProbeInsertion
     ---
-    lfp_raw:              longblob     # LFP: array of size nSamples * nChannels. Channels from all probes are included
     lfp_timestamps:       longblob     # Timestamps for LFP timeseries in seconds
     lfp_start_time:       float        # (seconds)
     lfp_end_time:         float        # (seconds)
