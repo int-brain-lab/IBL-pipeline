@@ -80,7 +80,6 @@ def get_date_range(subj):
                         first_weighing_date]
     first_date_array = [x for x in first_date_array if x is not None]
     last_date_array = [last_session_date,
-                       last_water_res_date,
                        last_water_admin_date,
                        last_weighing_date]
     last_date_array = [x for x in last_date_array if x is not None]
