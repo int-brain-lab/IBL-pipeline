@@ -345,6 +345,35 @@ for key in keys:
                  'procedure_type_name')
         acquisition.SessionProcedure.insert1(key_sp, skip_duplicates=True)
 
+# acquisition.SessionProject
+print('Ingesting acquisition.SessionProject...')
+sessions = alyxraw.AlyxRaw & 'model="actions.session"'
+sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
+    'fname="project"' & 'fvalue!="None"'
+keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
+    session_uuid='uuid')
+
+for key in keys:
+    key['uuid'] = key['session_uuid']
+    if not len(acquisition.Session & key):
+        print('Session {} is not in the table acquisition.Session'.format(
+            key['session_uuid']))
+        continue
+    key_s = dict()
+    key_s['subject_uuid'], key_s['session_start_time'] = \
+        (acquisition.Session & key).fetch1(
+            'subject_uuid', 'session_start_time')
+
+    project = grf(key, 'project')
+
+    key_sp = key_s.copy()
+    key_sp['session_project'] = \
+        (reference.Project &
+         dict(project_uuid=uuid.UUID(project))).fetch1(
+        'project_name')
+
+    acquisition.SessionProject.insert1(key_sp, skip_duplicates=True)
+
 
 # acquisition.WaterAdminstrationSession
 print('Ingesting acquisition.WaterAdministrationSession...')
