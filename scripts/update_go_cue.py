@@ -1,4 +1,5 @@
 import datajoint as dj
+import numpy as np
 from ibl_pipeline import behavior, acquisition
 from oneibl.one import ONE
 
