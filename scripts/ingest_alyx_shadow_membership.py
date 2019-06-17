@@ -18,17 +18,20 @@ for key in keys:
     key_p = dict()
     key_p['project_name'] = (reference.Project & key).fetch1('project_name')
 
-    user_uuids = grf(key, 'user_uuids', multiple_entries=True,
+    user_uuids = grf(key, 'users', multiple_entries=True,
                      model='subjects.project')
 
-    for user_uuid in user_uuids:
-        key_pl = key_p.copy()
-        key_pl['user_name'] = \
-            (reference.LabMember &
-                dict(user_uuid=uuid.UUID(user_uuid))).fetch1(
-                    'user_name')
+    if len(user_uuids):
+        for user_uuid in user_uuids:
+            if user_uuid == 'None':
+                continue
+            key_pl = key_p.copy()
+            key_pl['user_name'] = \
+                (reference.LabMember &
+                    dict(user_uuid=uuid.UUID(user_uuid))).fetch1(
+                        'user_name')
 
-        reference.ProjectLabMember.insert1(key_pl, skip_duplicates=True)
+            reference.ProjectLabMember.insert1(key_pl, skip_duplicates=True)
 
 # subject.AlleleSequence
 print('Ingesting subject.AlleleSequence...')
