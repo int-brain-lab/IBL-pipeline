@@ -436,12 +436,12 @@ class CompleteTrialSession(dj.Computed):
             else:
                 key['ambient_sensor_data_status'] = 'Complete'
 
-            if '_ibl_goCue_times.npy' not in datasets:
+            if '_ibl_trials.goCue_times.npy' not in datasets:
                 key['go_cue_times_status'] = 'Missing'
             else:
                 key['go_cue_times_status'] = 'Complete'
 
-            if '_ibl_trials.goCueTrigger_times' not in datasets:
+            if '_ibl_trials.goCueTrigger_times.npy' not in datasets:
                 key['go_cue_trigger_times_status'] = 'Missing'
             else:
                 key['go_cue_trigger_times_status'] = 'Complete'
