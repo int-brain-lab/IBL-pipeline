@@ -404,10 +404,11 @@ class SubjectProject(dj.Computed):
                     (reference.Project &
                         dict(project_uuid=uuid.UUID(proj_uuid))).fetch1(
                             'project_name')
+                self.insert1(key_sp)
             except:
                 print(key['subject_uuid'])
 
-            self.insert1(key_sp)
+
 
 
 @schema
