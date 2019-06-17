@@ -21,7 +21,7 @@ if len(trial_sets_go_cue):
         for trial in trials.fetch('KEY'):
             dj.Table._update(
                 behavior.TrialSet.Trial & trial, 'trial_go_cue_time',
-                go_cue_times[trial['trial_id']])
+                go_cue_times[trial['trial_id']-1])
 
 
 if len(trial_sets_go_cue_trigger):
@@ -36,4 +36,4 @@ if len(trial_sets_go_cue_trigger):
         for trial in trials.fetch('KEY'):
             dj.Table._update(
                 behavior.TrialSet.Trial & trial, 'trial_go_cue_trigger_time',
-                go_cue_times[trial['trial_id']])
+                go_cue_times[trial['trial_id']-1])
