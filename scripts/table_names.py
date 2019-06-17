@@ -28,6 +28,7 @@ def init():
         'LineAllele',
         'Subject',
         'SubjectUser',
+        'SubjectProject',
         'SubjectLab',
         'BreedingPair',
         'Litter',
@@ -63,6 +64,7 @@ def init():
         'ChildSession',
         'SessionUser',
         'SessionProcedure',
+        'SessionProject',
         'WaterAdministrationSession'
     )
 
