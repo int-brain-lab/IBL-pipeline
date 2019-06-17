@@ -379,10 +379,12 @@ class CompleteTrialSession(dj.Computed):
     # sessions that are complete with trial information and thus may be ingested
     -> acquisition.Session
     ---
-    stim_on_times_status: enum('Complete', 'Partial', 'Missing')
-    rep_num_status: enum('Complete', 'Missing')
-    included_status: enum('Complete', 'Missing')
-    ambient_sensor_data_status: enum('Complete', 'Missing')
+    stim_on_times_status:           enum('Complete', 'Partial', 'Missing')
+    rep_num_status:                 enum('Complete', 'Missing')
+    included_status:                enum('Complete', 'Missing')
+    ambient_sensor_data_status:     enum('Complete', 'Missing')
+    go_cue_times_status:            enum('Complete', 'Missing')
+    go_cue_trigger_times_status:    enum('Complete', 'Missing')
     """
 
     required_datasets = ["_ibl_trials.feedback_times.npy",
@@ -433,6 +435,16 @@ class CompleteTrialSession(dj.Computed):
                 key['ambient_sensor_data_status'] = 'Missing'
             else:
                 key['ambient_sensor_data_status'] = 'Complete'
+
+            if '_ibl_goCue_times.npy' not in datasets:
+                key['go_cue_times_status'] = 'Missing'
+            else:
+                key['go_cue_times_status'] = 'Complete'
+
+            if '_ibl_trials.goCueTrigger_times' not in datasets:
+                key['go_cue_trigger_times_status'] = 'Missing'
+            else:
+                key['go_cue_trigger_times_status'] = 'Complete'
 
             self.insert1(key)
 
@@ -492,6 +504,14 @@ class TrialSet(dj.Imported):
         if included_status != 'Missing':
             trials_included = np.squeeze(ONE().load(
                 eID, dataset_types='_ibl_trials.included'))
+
+        if go_cue_time_status != 'Missing':
+            trials_go_cue_times = np.squeeze(ONE().load(
+                eID, dataset_types='_ibl_trials.goCue_times'))
+
+        if go_cue_time_trigger_status != 'Missing':
+            trials_go_cue_trigger_times = np.squeeze(ONE().load(
+                eID, dataset_types='_ibl_trials.goCueTrigger_times'))
 
         assert len(np.unique(np.array([len(trials_feedback_times),
                                        len(trials_feedback_types),
@@ -577,6 +597,14 @@ class TrialSet(dj.Imported):
 
             if included_status != 'Missing':
                 trial_key['trial_included'] = bool(trials_included[idx_trial])
+
+            if go_cue_times_status != 'Missing':
+                trial_key['trial_go_cue_time'] = float(
+                    trials_go_cue_times[idx_trial])
+
+            if go_cue_trigger_times_status != 'Missing':
+                trial_key['trial_go_cue_trigger_time'] = float(
+                    trials_go_cue_trigger_times[idx_trial])
 
             self.Trial().insert1(trial_key)
 

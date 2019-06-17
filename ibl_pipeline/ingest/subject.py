@@ -409,8 +409,6 @@ class SubjectProject(dj.Computed):
                 print(key['subject_uuid'])
 
 
-
-
 @schema
 class SubjectUser(dj.Computed):
     definition = """
