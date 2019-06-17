@@ -399,10 +399,14 @@ class SubjectProject(dj.Computed):
         proj_uuids = grf(key, 'projects', multiple_entries=True)
         for proj_uuid in proj_uuids:
             key_sp = key_s.copy()
-            key_sp['subject_project'] = \
-                (reference.Project &
-                    dict(project_uuid=uuid.UUID(proj_uuid))).fetch1(
-                        'project_name')
+            try:
+                key_sp['subject_project'] = \
+                    (reference.Project &
+                        dict(project_uuid=uuid.UUID(proj_uuid))).fetch1(
+                            'project_name')
+            except:
+                print(key['subject_uuid'])
+
             self.insert1(key_sp)
 
 
