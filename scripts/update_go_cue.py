@@ -17,7 +17,7 @@ if len(trial_sets_go_cue):
             eID, dataset_types='_ibl_trials.goCue_times'))
 
         # update go cue time value
-        trials = behavior.TrialSet & key
+        trials = behavior.TrialSet.Trial & key
         for trial in trials.fetch('KEY'):
             dj.Table._update(
                 behavior.TrialSet.Trial & trial, 'trial_go_cue_time',
@@ -32,7 +32,7 @@ if len(trial_sets_go_cue_trigger):
             eID, dataset_types='_ibl_trials.goCueTrigger_times'))
 
         # update go cue time value
-        trials = behavior.TrialSet & key
+        trials = behavior.TrialSet.Trial & key
         for trial in trials.fetch('KEY'):
             dj.Table._update(
                 behavior.TrialSet.Trial & trial, 'trial_go_cue_trigger_time',
