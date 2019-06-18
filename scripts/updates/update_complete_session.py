@@ -11,19 +11,18 @@ required_datasets = ["_ibl_trials.feedback_times.npy",
                      "_ibl_trials.probabilityLeft.npy"]
 
 for key in behavior.CompleteTrialSession.fetch('KEY'):
-    try:
-        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
-                    {'exists': 1}).fetch('dataset_name')
-        is_complete = bool(np.all([req_ds in datasets
-                                   for req_ds in self.required_datasets]))
-        if is_complete is True:
-            if '_ibl_trials.rewardVolume.npy' in datasets:
-                dj.Table._update(behavior.CompleteTrialSession & key,
-                                 'reward_volume_status', 'Complete')
+    #try:
+    datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
+                {'exists': 1}).fetch('dataset_name')
+    is_complete = bool(np.all([req_ds in datasets
+                                for req_ds in self.required_datasets]))
+    if is_complete is True:
+        if '_ibl_trials.rewardVolume.npy' in datasets:
+            dj.Table._update(behavior.CompleteTrialSession & key,
+                                'reward_volume_status', 'Complete')
 
-            if '_ibl_trials.itiDuration.npy' in datasets:
-                dj.Table._update(behavior.CompleteTrialSession & key,
-                                 'iti_duration_status', 'Complete')
+        if '_ibl_trials.itiDuration.npy' in datasets:
+            dj.Table._update(behavior.CompleteTrialSession & key,
+                             'iti_duration_status', 'Complete')
 
-    except:
-        print(key)
+    # print(key)
