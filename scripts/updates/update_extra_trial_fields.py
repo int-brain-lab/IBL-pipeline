@@ -4,18 +4,22 @@ from ibl_pipeline import behavior, acquisition
 from oneibl.one import ONE
 
 trial_sets_go_cue = behavior.CompleteTrialSession & \
+    (behavior.TrialSet.Trial & 'trial_go_cue_time is NULL') & \
     'go_cue_times_status = "Complete"'
 n_go_cue = len(trial_sets_go_cue)
 
 trial_sets_go_cue_trigger = behavior.CompleteTrialSession & \
+    (behavior.TrialSet.Trial & 'trial_go_cue_trigger_time is NULL') & \
     'go_cue_trigger_times_status = "Complete"'
 n_go_cue_trigger = len(trial_sets_go_cue_trigger)
 
 trial_sets_reward_volume = behavior.CompleteTrialSession & \
+    (behavior.TrialSet.Trial & 'trial_reward_volume is NULL') & \
     'reward_volume_status = "Complete"'
 n_reward_volume = len(trial_sets_reward_volume)
 
 trial_sets_iti_duration = behavior.CompleteTrialSession & \
+    (behavior.TrialSet.Trial & 'trial_iti_duration is NULL') & \
     'iti_duration_status = "Complete"'
 n_reward_volume = len(trial_sets_iti_duration)
 
@@ -28,10 +32,6 @@ if len(trial_sets_go_cue):
                 eID, dataset_types='_ibl_trials.goCue_times'))
 
             # update go cue time value
-            trials = behavior.TrialSet.Trial & key & \
-                'trial_go_cue_time is NULL'
-            if not len(trials):
-                continue
             for trial in trials.fetch('KEY'):
                 dj.Table._update(
                     behavior.TrialSet.Trial & trial, 'trial_go_cue_time',
@@ -52,12 +52,6 @@ if len(trial_sets_go_cue_trigger):
                 eID, dataset_types='_ibl_trials.goCueTrigger_times'))
 
             # update go cue time value
-            trials = behavior.TrialSet.Trial & key & \
-                'trial_go_cue_trigger_time is NULL'
-
-            if not len(trials):
-                continue
-
             for trial in trials.fetch('KEY'):
                 dj.Table._update(
                     behavior.TrialSet.Trial & trial,
@@ -78,12 +72,6 @@ if len(trial_sets_reward_volume):
                 eID, dataset_types='_ibl_trials.rewardVolume'))
 
             # update go cue time value
-            trials = behavior.TrialSet.Trial & key & \
-                'trial_reward_volume is NULL'
-
-            if not len(trials):
-                continue
-
             for trial in trials.fetch('KEY'):
                 dj.Table._update(
                     behavior.TrialSet.Trial & trial, 'trial_reward_volume',
@@ -103,12 +91,6 @@ if len(trial_sets_iti_duration):
                 eID, dataset_types='_ibl_trials.itiDuration'))
 
             # update go cue time value
-            trials = behavior.TrialSet.Trial & key & \
-                'trial_iti_duration is NULL'
-
-            if not len(trials):
-                continue
-
             for trial in trials.fetch('KEY'):
                 dj.Table._update(
                     behavior.TrialSet.Trial & trial, 'trial_iti_duration',
