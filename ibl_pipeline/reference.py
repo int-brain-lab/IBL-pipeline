@@ -103,6 +103,14 @@ class Severity(dj.Lookup):
 
 
 @schema
+class Atlas(dj.Lookup):
+    definition = """
+    atlas:      varchar(64)
+    """
+    contents = zip(['allen_ccf'])
+
+
+@schema
 class BrainLocationAcronym(dj.Lookup):
     definition = """
     acronym:  varchar(32) # acronym of a brain location

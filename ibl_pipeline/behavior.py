@@ -385,6 +385,8 @@ class CompleteTrialSession(dj.Computed):
     ambient_sensor_data_status:     enum('Complete', 'Missing')
     go_cue_times_status:            enum('Complete', 'Missing')
     go_cue_trigger_times_status:    enum('Complete', 'Missing')
+    reward_volume_status:           enum('Complete', 'Missing')
+    iti_duration_status:            enum('Complete', 'Missing')
     """
 
     required_datasets = ["_ibl_trials.feedback_times.npy",
@@ -446,6 +448,16 @@ class CompleteTrialSession(dj.Computed):
             else:
                 key['go_cue_trigger_times_status'] = 'Complete'
 
+            if '_ibl_trials.rewardVolume.npy' not in datasets:
+                key['reward_volume_status'] = 'Missing'
+            else:
+                key['reward_volume_status'] = 'Complete'
+
+            if '_ibl_trials.itiDuration.npy' not in datasets:
+                key['iti_duration_status'] = 'Missing'
+            else:
+                key['iti_duration_status'] = 'Complete'
+
             self.insert1(key)
 
 
@@ -480,9 +492,13 @@ class TrialSet(dj.Imported):
                                            '_ibl_trials.contrastRight',
                                            '_ibl_trials.probabilityLeft'])
 
-        stim_on_times_status, rep_num_status, included_status = \
+        stim_on_times_status, rep_num_status, included_status, \
+            go_cue_time_status, go_cue_trigger_time_status, \
+            reward_volume_status, iti_duration_status = \
             (CompleteTrialSession & key).fetch1(
-                'stim_on_times_status', 'rep_num_status', 'included_status')
+                'stim_on_times_status', 'rep_num_status', 'included_status',
+                'go_cue_time_status', 'go_cue_trigger_time_status',
+                'reward_volume_status', 'iti_duration_status')
 
         lab_name = (subject.SubjectLab & key).fetch1('lab_name')
         if stim_on_times_status != 'Missing':
@@ -512,6 +528,14 @@ class TrialSet(dj.Imported):
         if go_cue_time_trigger_status != 'Missing':
             trials_go_cue_trigger_times = np.squeeze(ONE().load(
                 eID, dataset_types='_ibl_trials.goCueTrigger_times'))
+
+        if reward_volume_status != 'Missing':
+            trials_reward_volume = np.squeeze(ONE().load(
+                eID, dataset_types='_ibl_trials.rewardVolume'))
+
+        if iti_duration_status != 'Missing':
+            trials_iti_duration = np.squeeze(ONE().load(
+                eID, dataset_types='_ibl_trials.itiDuration'))
 
         assert len(np.unique(np.array([len(trials_feedback_times),
                                        len(trials_feedback_types),
@@ -606,6 +630,14 @@ class TrialSet(dj.Imported):
                 trial_key['trial_go_cue_trigger_time'] = float(
                     trials_go_cue_trigger_times[idx_trial])
 
+            if reward_volume_status != 'Missing':
+                trial_key['trial_reward_volume'] = float(
+                    trials_reward_volume[idx_trial])
+
+            if iti_duration_status != 'Missing':
+                trial_key['trial_iti_duration'] = float(
+                    trials_iti_duration[idx_trial])
+
             self.Trial().insert1(trial_key)
 
         logger.info('Populated a TrialSet tuple, \
@@ -619,17 +651,19 @@ class TrialSet(dj.Imported):
         -> master
         trial_id:               int           # trial identification number
         ---
-        trial_start_time:           double         # beginning of quiescent period time (seconds)
-        trial_end_time:             double         # end of iti (seconds)
-        trial_response_time:        double         # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
+        trial_start_time:           double        # beginning of quiescent period time (seconds)
+        trial_end_time:             double        # end of iti (seconds)
+        trial_response_time:        double        # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
         trial_response_choice:      enum("CCW", "CW", "No Go")       # which choice was made in choiceworld
-        trial_stim_on_time=null:    double         # Time of stimulus in choiceworld (seconds)
+        trial_stim_on_time=null:    double        # Time of stimulus in choiceworld (seconds)
         trial_stim_contrast_left:   float	      # contrast of the stimulus on the left
         trial_stim_contrast_right:  float         # contrast of the stimulus on the right
-        trial_feedback_time:        double         # Time of feedback delivery (reward or not) in choiceworld
+        trial_feedback_time:        double        # Time of feedback delivery (reward or not) in choiceworld
         trial_feedback_type:        tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
         trial_rep_num=null:         int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
         trial_stim_prob_left:       float         # probability of the stimulus being present on left
+        trial_reward_volume=null:   float         # reward volume of each trial
+        trial_iti_duration=null:    float         # inter-trial interval
         trial_included=null:        bool          # whether the trial should be included
         """
 
