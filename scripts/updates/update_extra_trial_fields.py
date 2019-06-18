@@ -32,6 +32,8 @@ if len(trial_sets_go_cue):
                 eID, dataset_types='_ibl_trials.goCue_times'))
 
             # update go cue time value
+            trials = behavior.TrialSet.Trial & key & \
+                'trial_go_cue_time is NULL'
             for trial in trials.fetch('KEY'):
                 dj.Table._update(
                     behavior.TrialSet.Trial & trial, 'trial_go_cue_time',
@@ -51,7 +53,9 @@ if len(trial_sets_go_cue_trigger):
             go_cue_times = np.squeeze(ONE().load(
                 eID, dataset_types='_ibl_trials.goCueTrigger_times'))
 
-            # update go cue time value
+            # update go cue trigger time value
+            trials = behavior.TrialSet.Trial & key & \
+                'trial_go_cue_trigger_time is NULL'
             for trial in trials.fetch('KEY'):
                 dj.Table._update(
                     behavior.TrialSet.Trial & trial,
@@ -71,7 +75,9 @@ if len(trial_sets_reward_volume):
             go_cue_times = np.squeeze(ONE().load(
                 eID, dataset_types='_ibl_trials.rewardVolume'))
 
-            # update go cue time value
+            # update reward volume value
+            trials = behavior.TrialSet.Trial & key & \
+                'trial_reward_volume is NULL'
             for trial in trials.fetch('KEY'):
                 dj.Table._update(
                     behavior.TrialSet.Trial & trial, 'trial_reward_volume',
@@ -90,7 +96,9 @@ if len(trial_sets_iti_duration):
             go_cue_times = np.squeeze(ONE().load(
                 eID, dataset_types='_ibl_trials.itiDuration'))
 
-            # update go cue time value
+            # update iti duration value
+            trials = behavior.TrialSet.Trial & key & \
+                'trial_iti_duration is NULL'
             for trial in trials.fetch('KEY'):
                 dj.Table._update(
                     behavior.TrialSet.Trial & trial, 'trial_iti_duration',
