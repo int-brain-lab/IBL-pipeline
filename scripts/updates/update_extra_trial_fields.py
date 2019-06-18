@@ -29,7 +29,7 @@ if len(trial_sets_go_cue):
 
             # update go cue time value
             trials = behavior.TrialSet.Trial & key & \
-                'trial_go_cue_time is not NULL'
+                'trial_go_cue_time is NULL'
             if not len(trials):
                 continue
             for trial in trials.fetch('KEY'):
@@ -53,7 +53,7 @@ if len(trial_sets_go_cue_trigger):
 
             # update go cue time value
             trials = behavior.TrialSet.Trial & key & \
-                'trial_go_cue_trigger_time is not NULL'
+                'trial_go_cue_trigger_time is NULL'
 
             if not len(trials):
                 continue
@@ -79,7 +79,7 @@ if len(trial_sets_reward_volume):
 
             # update go cue time value
             trials = behavior.TrialSet.Trial & key & \
-                'trial_reward_volume is not NULL'
+                'trial_reward_volume is NULL'
 
             if not len(trials):
                 continue
@@ -104,7 +104,7 @@ if len(trial_sets_iti_duration):
 
             # update go cue time value
             trials = behavior.TrialSet.Trial & key & \
-                'trial_iti_duration is not NULL'
+                'trial_iti_duration is NULL'
 
             if not len(trials):
                 continue
