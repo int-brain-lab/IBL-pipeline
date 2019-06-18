@@ -15,7 +15,7 @@ for key in behavior.CompleteTrialSession.fetch('KEY'):
     datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
                 {'exists': 1}).fetch('dataset_name')
     is_complete = bool(np.all([req_ds in datasets
-                                for req_ds in self.required_datasets]))
+                                for req_ds in required_datasets]))
     if is_complete is True:
         if '_ibl_trials.rewardVolume.npy' in datasets:
             dj.Table._update(behavior.CompleteTrialSession & key,
