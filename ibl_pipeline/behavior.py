@@ -493,11 +493,11 @@ class TrialSet(dj.Imported):
                                            '_ibl_trials.probabilityLeft'])
 
         stim_on_times_status, rep_num_status, included_status, \
-            go_cue_time_status, go_cue_trigger_time_status, \
+            go, go_cue_trigger_times_status, \
             reward_volume_status, iti_duration_status = \
             (CompleteTrialSession & key).fetch1(
                 'stim_on_times_status', 'rep_num_status', 'included_status',
-                'go_cue_time_status', 'go_cue_trigger_time_status',
+                'go_cue_times_status', 'go_cue_trigger_times_status',
                 'reward_volume_status', 'iti_duration_status')
 
         lab_name = (subject.SubjectLab & key).fetch1('lab_name')
@@ -521,7 +521,7 @@ class TrialSet(dj.Imported):
             trials_included = np.squeeze(ONE().load(
                 eID, dataset_types='_ibl_trials.included'))
 
-        if go_cue_time_status != 'Missing':
+        if go_cue_times_status != 'Missing':
             trials_go_cue_times = np.squeeze(ONE().load(
                 eID, dataset_types='_ibl_trials.goCue_times'))
 
