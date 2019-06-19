@@ -525,7 +525,7 @@ class TrialSet(dj.Imported):
             trials_go_cue_times = np.squeeze(ONE().load(
                 eID, dataset_types='_ibl_trials.goCue_times'))
 
-        if go_cue_times_trigger_status != 'Missing':
+        if go_cue_trigger_times_status != 'Missing':
             trials_go_cue_trigger_times = np.squeeze(ONE().load(
                 eID, dataset_types='_ibl_trials.goCueTrigger_times'))
 
