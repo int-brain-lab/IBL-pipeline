@@ -493,7 +493,7 @@ class TrialSet(dj.Imported):
                                            '_ibl_trials.probabilityLeft'])
 
         stim_on_times_status, rep_num_status, included_status, \
-            go, go_cue_trigger_times_status, \
+            go_cue_times_status, go_cue_trigger_times_status, \
             reward_volume_status, iti_duration_status = \
             (CompleteTrialSession & key).fetch1(
                 'stim_on_times_status', 'rep_num_status', 'included_status',
