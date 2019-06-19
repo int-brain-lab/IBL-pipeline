@@ -1,6 +1,7 @@
 import datajoint as dj
 from ibl_pipeline import subject, acquisition, data, behavior
 from ibl_pipeline.ingest import acquisition as acquisition_ingest
+from ibl_pipeline.ingest import data as data_ingest
 from ibl_pipeline.ingest import alyxraw
 import datetime
 from oneibl.one import ONE
