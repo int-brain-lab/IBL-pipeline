@@ -16,11 +16,15 @@ for uuid in uuid_str:
     keys = (alyxraw.AlyxRaw.Field & 'fvalue="{}"'.format(uuid)).fetch('KEY')
     (alyxraw.AlyxRaw & keys).delete()
     (alyxraw.AlyxRaw & 'uuid ="{}"'.format(uuid)).delete()
-    subj_uuid, session_start_time = (
-        acquisition_ingest.Session &
-        {'session_uuid': UUID(uuid)}).fetch1(
-        'subject_uuid', 'session_start_time'
-        )
+
+    if len(acquisition_ingest.Session & {'session_uuid': UUID(uuid)}):
+        subj_uuid, session_start_time = (
+            acquisition_ingest.Session &
+            {'session_uuid': UUID(uuid)}).fetch1(
+            'subject_uuid', 'session_start_time'
+            )
+    else:
+        continue
 
     key = {
         'subject_uuid': subj_uuid,
