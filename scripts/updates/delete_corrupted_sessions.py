@@ -15,7 +15,7 @@ uuid_str = [str(uuid) for uuid in uuids]
 for uuid in uuid_str:
     keys = (alyxraw.AlyxRaw.Field & 'fvalue="{}"'.format(uuid)).fetch('KEY')
     (alyxraw.AlyxRaw & keys).delete()
-    (alyxraw.AlyxRaw & 'uuid ="{}"'.format(uuid)).delete()
+    (alyxraw.AlyxRaw & {'uuid': UUID(uuid)}).delete()
 
     if len(acquisition_ingest.Session & {'session_uuid': UUID(uuid)}):
         subj_uuid, session_start_time = (
