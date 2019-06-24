@@ -182,7 +182,7 @@ class ClusterGroup(dj.Imported):
                 channel_group_id=0,
                 probe_model_name='Neuropixels phase 3a',
                 channel_id=clusters_peak_channels[icluster])
-            print(channel_id)
+            print(cluster['channel_id'])
             self.Cluster.insert1(cluster)
 
     class Cluster(dj.Part):
