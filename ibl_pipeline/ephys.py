@@ -4,6 +4,7 @@ from os import path
 from . import acquisition
 from . import reference
 import numpy as np
+from oneibl.one import ONE
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
 
@@ -13,7 +14,7 @@ class Ephys(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    ephys_raw_dir:              varchar(256) # Path of Raw ephys file: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
+    ephys_raw_dir=null:         varchar(256) # Path of Raw ephys file: array of size nSamples * nChannels. Channels from all probes are included. NOTE: this is huge, and hardly even used. To allow people to load it, we need to add slice capabilities to ONE
     ephys_timestamps=null:      longblob     # Timestamps for raw ephys timeseries (seconds)
     ephys_start_time=null:      float        # (seconds)
     ephys_stop_time=null:       float        # (seconds)
@@ -135,16 +136,53 @@ class ClusterGroup(dj.Imported):
             clusters_waveform_duration = \
             ONE().load(
                 eID,
-                datasets=[
+                dataset_types=[
                     'clusters.amps',
                     'clusters.depths',
                     'clusters.peakChannel',
                     'clusters.waveformDuration'
                 ])
+        clusters_amps = np.squeeze(clusters_amps)
+        clusters_depths = np.squeeze(clusters_depths)
+        clusters_peak_channels = np.squeeze(clusters_peak_channels)
+        clusters_waveform_duration = np.squeeze(clusters_waveform_duration)
 
-        for icluster, cluster_amps in enumerate(clusters_amps):
-            cluster = cluster
+        spikes_amps, \
+            spikes_clusters, \
+            spikes_depths, \
+            spikes_times = \
+            ONE().load(
+                eID,
+                dataset_types=[
+                    'spikes.amps',
+                    'spikes.clusters',
+                    'spikes.depths',
+                    'spikes.times'
+                ])
+        spikes_amps = np.squeeze(spikes_amps)
+        spikes_clusters = np.squeeze(spikes_clusters)
+        spikes_depths = np.squeeze(spikes_depths)
+        spikes_times = np.squeeze(spikes_times)
 
+        key['cluster_revision'] = 0
+        self.insert1(key)
+
+        for icluster, cluster_depth in enumerate(clusters_depths):
+            cluster = key.copy()
+            idx = spikes_clusters == icluster
+            cluster_amps = list(clusters_amps['Amplitude'])
+            cluster.update(
+                cluster_id=icluster,
+                cluster_amp=cluster_amps[icluster],
+                cluster_depth=cluster_depth,
+                cluster_waveform_duration=clusters_waveform_duration[icluster],
+                cluster_spike_times=spikes_times[idx],
+                cluster_spike_depth=spikes_depths[idx],
+                cluster_spike_amps=spikes_amps[idx],
+                channel_group_id=0,
+                probe_model_name='Neuropixels phase 3a',
+                channel_id=clusters_peak_channels[icluster])
+            self.Cluster.insert1(cluster)
 
     class Cluster(dj.Part):
         definition = """
@@ -155,9 +193,9 @@ class ClusterGroup(dj.Imported):
         cluster_mean_waveform=null:     longblob    # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered): nClusters*nSamples*nChannels
         cluster_template_waveform=null: longblob    # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
         cluster_depth:                  float       # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
-        cluster_waveform_duration:      float       # trough to peak time (ms)
+        cluster_waveform_duration:      longblob    # trough to peak time (ms)
         cluster_amp:                    float       # Mean amplitude of each cluster (µV)
-        cluster_phy_annotation:         tinyint     # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
+        cluster_phy_annotation=null:    tinyint     # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
         cluster_spike_times:            longblob    # spike times of a particular cluster (seconds)
         cluster_spike_depth:            longblob    # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
         cluster_spike_amps:             longblob    # Amplitude of each spike (µV)
