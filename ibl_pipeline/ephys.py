@@ -1,8 +1,7 @@
 import datajoint as dj
 import numpy as np
 from os import path
-from . import acquisition
-from . import reference
+from . import acquisition, reference, behavior
 import numpy as np
 from oneibl.one import ONE
 
@@ -122,11 +121,24 @@ class ChannelBrainLocation(dj.Imported):
 
 
 @schema
-class ClusterGroup(dj.Imported):
+class Cluster(dj.Imported):
     definition = """
     -> ProbeInsertion
     cluster_revision:               varchar(64)
+    cluster_id:                     int
+    ---
+    -> ChannelGroup.Channel                     # peak channel for the cluster
+    cluster_mean_waveform=null:     longblob    # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered): nClusters*nSamples*nChannels
+    cluster_template_waveform=null: longblob    # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
+    cluster_depth:                  float       # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
+    cluster_waveform_duration:      longblob    # trough to peak time (ms)
+    cluster_amp:                    float       # Mean amplitude of each cluster (µV)
+    cluster_phy_annotation=null:    tinyint     # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
+    cluster_spike_times:            longblob    # spike times of a particular cluster (seconds)
+    cluster_spike_depth:            longblob    # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
+    cluster_spike_amps:             longblob    # Amplitude of each spike (µV)
     """
+    key_source = ProbeInsertion
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
@@ -165,7 +177,6 @@ class ClusterGroup(dj.Imported):
         spikes_times = np.squeeze(spikes_times)
 
         key['cluster_revision'] = 0
-        self.insert1(key)
 
         for icluster, cluster_depth in enumerate(clusters_depths):
             cluster = key.copy()
@@ -182,25 +193,21 @@ class ClusterGroup(dj.Imported):
                 channel_group_id=0,
                 probe_model_name='Neuropixels phase 3a',
                 channel_id=clusters_peak_channels[icluster])
-            print(cluster['channel_id'])
-            self.Cluster.insert1(cluster)
+            self.insert1(cluster)
 
-    class Cluster(dj.Part):
-        definition = """
-        -> master
-        cluster_id:                     smallint
-        ---
-        -> ChannelGroup.Channel                     # peak channel for the cluster
-        cluster_mean_waveform=null:     longblob    # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered): nClusters*nSamples*nChannels
-        cluster_template_waveform=null: longblob    # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
-        cluster_depth:                  float       # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
-        cluster_waveform_duration:      longblob    # trough to peak time (ms)
-        cluster_amp:                    float       # Mean amplitude of each cluster (µV)
-        cluster_phy_annotation=null:    tinyint     # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
-        cluster_spike_times:            longblob    # spike times of a particular cluster (seconds)
-        cluster_spike_depth:            longblob    # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
-        cluster_spike_amps:             longblob    # Amplitude of each spike (µV)
-        """
+
+@schema
+class TrialSpikes(dj.Computed):
+    definition = """
+    -> Cluster
+    -> behavior.TrialSet.Trial
+    ---
+    trial_spike_times:   longblob     # spike time for each trial, aligned to go cue time
+    """
+    key_source = Cluster()
+
+    def make(self, key):
+
 
 
 @schema
