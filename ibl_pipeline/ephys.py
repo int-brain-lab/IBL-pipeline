@@ -202,12 +202,32 @@ class TrialSpikes(dj.Computed):
     -> Cluster
     -> behavior.TrialSet.Trial
     ---
-    trial_spike_times:   longblob     # spike time for each trial, aligned to go cue time
+    trial_spike_times=null:   longblob     # spike time for each trial, aligned to go cue time
     """
-    key_source = Cluster()
+    key_source = behavior.TrialSet & Cluster()
 
     def make(self, key):
-        self.insert1(key)
+        trials = behavior.TrialSet.Trial & key
+        clusters = Cluster & key
+        for icluster in clusters.fetch('KEY'):
+            cluster = clusters & icluster
+            spike_times = cluster.fetch1('cluster_spike_times')
+            for itrial in trials.fetch('KEY'):
+                trial = trials & itrial
+                trial_spk = itrial.copy()
+                trial_spk.update(
+                    cluster_id=icluster['cluster_id'],
+                    cluster_revision=icluster['cluster_revision'],
+                    probe_idx=icluster['probe_idx']
+                )
+                trial_start, trial_end, go_cue = trial.fetch1(
+                    'trial_start_time', 'trial_end_time', 'trial_go_cue_time')
+                f = np.logical_and(spk_times < trial_end,
+                                   spk_times > trial_start)
+                if not np.any(f):
+                    continue
+                trial_spk['trial_spike_times'] = spike_times[f]
+                self.insert1(trial_spk)
 
 
 @schema

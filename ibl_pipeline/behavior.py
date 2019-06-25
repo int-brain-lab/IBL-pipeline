@@ -479,7 +479,6 @@ class TrialSet(dj.Imported):
     def make(self, key):
         trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        print(eID)
 
         trials_feedback_times, trials_feedback_types, trials_intervals, \
             trials_response_choice, trials_response_times, \
