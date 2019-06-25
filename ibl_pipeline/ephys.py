@@ -207,7 +207,7 @@ class TrialSpikes(dj.Computed):
     key_source = Cluster()
 
     def make(self, key):
-
+        self.insert1(key)
 
 
 @schema
