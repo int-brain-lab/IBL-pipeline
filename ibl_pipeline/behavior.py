@@ -558,7 +558,7 @@ class TrialSet(dj.Imported):
         #                                # len(trials_included),
         #                                len(trials_p_left)
         #                                ]))) == 1
-        #'Loaded trial files do not have the same length'
+        # 'Loaded trial files do not have the same length'
 
         key['n_trials'] = len(trials_response_choice)
 
@@ -580,6 +580,7 @@ class TrialSet(dj.Imported):
         key['trials_start_time'] = trials_intervals[0, 0]
         key['trials_end_time'] = trials_intervals[-1, 1]
 
+        print(key)
         self.insert1(key)
 
         for idx_trial in range(len(trials_response_choice)):
