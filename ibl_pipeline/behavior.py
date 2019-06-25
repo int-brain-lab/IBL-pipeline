@@ -546,19 +546,19 @@ class TrialSet(dj.Imported):
               len(trials_contrast_right),
               len(trials_p_left))
 
-        assert len(np.unique(np.array([len(trials_feedback_times),
-                                       len(trials_feedback_types),
-                                       len(trials_intervals),
-                                       # len(trials_rep_num),
-                                       len(trials_response_choice),
-                                       len(trials_response_times),
-                                       len(trials_contrast_left),
-                                       len(trials_contrast_right),
-                                       # len(trials_visual_stim_times),
-                                       # len(trials_included),
-                                       len(trials_p_left)
-                                       ]))) == 1
-        'Loaded trial files do not have the same length'
+        # assert len(np.unique(np.array([len(trials_feedback_times),
+        #                                len(trials_feedback_types),
+        #                                len(trials_intervals),
+        #                                # len(trials_rep_num),
+        #                                len(trials_response_choice),
+        #                                len(trials_response_times),
+        #                                len(trials_contrast_left),
+        #                                len(trials_contrast_right),
+        #                                # len(trials_visual_stim_times),
+        #                                # len(trials_included),
+        #                                len(trials_p_left)
+        #                                ]))) == 1
+        #'Loaded trial files do not have the same length'
 
         key['n_trials'] = len(trials_response_choice)
 
