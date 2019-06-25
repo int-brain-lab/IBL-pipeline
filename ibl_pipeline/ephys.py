@@ -222,8 +222,8 @@ class TrialSpikes(dj.Computed):
                 )
                 trial_start, trial_end, go_cue = trial.fetch1(
                     'trial_start_time', 'trial_end_time', 'trial_go_cue_time')
-                f = np.logical_and(spk_times < trial_end,
-                                   spk_times > trial_start)
+                f = np.logical_and(spike_times < trial_end,
+                                   spike_times > trial_start)
                 if not np.any(f):
                     continue
                 trial_spk['trial_spike_times'] = spike_times[f]
