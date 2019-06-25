@@ -226,7 +226,7 @@ class TrialSpikes(dj.Computed):
                                    spike_times > trial_start)
                 if not np.any(f):
                     continue
-                trial_spk['trial_spike_times'] = spike_times[f]
+                trial_spk['trial_spike_times'] = spike_times[f] - go_cue
                 self.insert1(trial_spk)
 
 
