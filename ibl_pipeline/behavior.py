@@ -492,14 +492,14 @@ class TrialSet(dj.Imported):
                                            '_ibl_trials.contrastLeft',
                                            '_ibl_trials.contrastRight',
                                            '_ibl_trials.probabilityLeft'])
-        print(len(trials_feedback_times),
-              len(trials_feedback_types),
-              len(trials_intervals),
-              len(trials_response_choice),
-              len(trials_response_times),
-              len(trials_contrast_left),
-              len(trials_contrast_right),
-              len(trials_p_left))
+        # print(len(trials_feedback_times),
+        #       len(trials_feedback_types),
+        #       len(trials_intervals),
+        #       len(trials_response_choice),
+        #       len(trials_response_times),
+        #       len(trials_contrast_left),
+        #       len(trials_contrast_right),
+        #       len(trials_p_left))
 
         stim_on_times_status, rep_num_status, included_status, \
             go_cue_times_status, go_cue_trigger_times_status, \
@@ -546,21 +546,19 @@ class TrialSet(dj.Imported):
             trials_iti_duration = np.squeeze(ONE().load(
                 eID, dataset_types='_ibl_trials.itiDuration'))
 
-
-
-        # assert len(np.unique(np.array([len(trials_feedback_times),
-        #                                len(trials_feedback_types),
-        #                                len(trials_intervals),
-        #                                # len(trials_rep_num),
-        #                                len(trials_response_choice),
-        #                                len(trials_response_times),
-        #                                len(trials_contrast_left),
-        #                                len(trials_contrast_right),
-        #                                # len(trials_visual_stim_times),
-        #                                # len(trials_included),
-        #                                len(trials_p_left)
-        #                                ]))) == 1
-        # 'Loaded trial files do not have the same length'
+        assert len(np.unique(np.array([len(trials_feedback_times),
+                                       len(trials_feedback_types),
+                                       len(trials_intervals),
+                                       # len(trials_rep_num),
+                                       len(trials_response_choice),
+                                       len(trials_response_times),
+                                       len(trials_contrast_left),
+                                       len(trials_contrast_right),
+                                       # len(trials_visual_stim_times),
+                                       # len(trials_included),
+                                       len(trials_p_left)
+                                       ]))) == 1
+        'Loaded trial files do not have the same length'
 
         key['n_trials'] = len(trials_response_choice)
 
@@ -582,7 +580,6 @@ class TrialSet(dj.Imported):
         key['trials_start_time'] = trials_intervals[0, 0]
         key['trials_end_time'] = trials_intervals[-1, 1]
 
-        print(key)
         self.insert1(key)
 
         for idx_trial in range(len(trials_response_choice)):
@@ -608,6 +605,10 @@ class TrialSet(dj.Imported):
 
             trial_key['trial_id'] = idx_trial + 1
             trial_key['trial_start_time'] = trials_intervals[idx_trial, 0]
+
+            if np.isnan(trials_intervals[idx_trial, 1]):
+                continue
+
             trial_key['trial_end_time'] = trials_intervals[idx_trial, 1]
             trial_key['trial_response_time'] = float(
                 trials_response_times[idx_trial])
@@ -665,7 +666,7 @@ class TrialSet(dj.Imported):
         ---
         trial_start_time:           double        # beginning of quiescent period time (seconds)
         trial_end_time:             double        # end of iti (seconds)
-        trial_response_time:        double        # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
+        trial_response_time=null:   double        # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
         trial_response_choice:      enum("CCW", "CW", "No Go")       # which choice was made in choiceworld
         trial_stim_on_time=null:    double        # Time of stimulus in choiceworld (seconds)
         trial_stim_contrast_left:   float	      # contrast of the stimulus on the left
