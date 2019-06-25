@@ -492,6 +492,14 @@ class TrialSet(dj.Imported):
                                            '_ibl_trials.contrastLeft',
                                            '_ibl_trials.contrastRight',
                                            '_ibl_trials.probabilityLeft'])
+        print(len(trials_feedback_times),
+              len(trials_feedback_types),
+              len(trials_intervals),
+              len(trials_response_choice),
+              len(trials_response_times),
+              len(trials_contrast_left),
+              len(trials_contrast_right),
+              len(trials_p_left))
 
         stim_on_times_status, rep_num_status, included_status, \
             go_cue_times_status, go_cue_trigger_times_status, \
@@ -538,14 +546,7 @@ class TrialSet(dj.Imported):
             trials_iti_duration = np.squeeze(ONE().load(
                 eID, dataset_types='_ibl_trials.itiDuration'))
 
-        print(len(trials_feedback_times),
-              len(trials_feedback_types),
-              len(trials_intervals),
-              len(trials_response_choice),
-              len(trials_response_times),
-              len(trials_contrast_left),
-              len(trials_contrast_right),
-              len(trials_p_left))
+
 
         # assert len(np.unique(np.array([len(trials_feedback_times),
         #                                len(trials_feedback_types),
