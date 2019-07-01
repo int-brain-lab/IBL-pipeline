@@ -29,9 +29,9 @@ if len(trial_sets_reward_volume):
             for trial in trials.fetch('KEY'):
                 dj.Table._update(
                     behavior.TrialSet.Trial & trial, 'trial_reward_volume',
-                    [trial['trial_id']-1])
+                    trial['trial_id']-1)
             if ikey % 100 == 0:
-                print('Entry number: {}/{}'.format(ikey, n_reward_volume))
+                print('reward volume entry number: {}/{}'.format(ikey, n_reward_volume))
         except:
             print(key)
 
@@ -50,9 +50,9 @@ if len(trial_sets_iti_duration):
             for trial in trials.fetch('KEY'):
                 dj.Table._update(
                     behavior.TrialSet.Trial & trial, 'trial_iti_duration',
-                    [trial['trial_id']-1])
+                    trial['trial_id']-1)
             if ikey % 100 == 0:
-                print('Entry number: {}/{}'.format(ikey, n_iti_duration))
+                print('iti duration entry number: {}/{}'.format(ikey, n_iti_duration))
 
         except:
             print(key)

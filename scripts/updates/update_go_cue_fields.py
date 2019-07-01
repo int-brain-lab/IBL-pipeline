@@ -53,7 +53,7 @@ if len(trial_sets_go_cue_trigger):
                     'trial_go_cue_trigger_time',
                     go_cue_times[trial['trial_id']-1])
             if ikey % 100 == 0:
-                print('Entry number: {}/{}'.format(ikey, n_go_cue_trigger))
+                print('Go Cue Trigger entry number: {}/{}'.format(ikey, n_go_cue_trigger))
 
         except:
             print(key)
