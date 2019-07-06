@@ -9,5 +9,5 @@ RUN pip install plotly
 RUN pip install statsmodels
 RUN pip install scikits.bootstrap
 
-RUN pip install "git+https://github.com/int-brain-lab/ibllib.git@develop#egg=ibllib&subdirectory=python"
+RUN pip install "git+https://github.com/int-brain-lab/ibllib.git@develop#egg=ibllib"
 RUN pip install "git+https://github.com/ixcat/djwip.git#egg=djwip"
