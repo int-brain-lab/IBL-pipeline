@@ -11,7 +11,8 @@ import plotly.graph_objs as go
 import statsmodels.stats.proportion as smp
 import datetime
 
-schema = dj.schema('ibl_plotting_behavior')
+schema = dj.schema(dj.config.get('database.prefix', '') +
+                   'ibl_plotting_behavior')
 
 
 @schema
