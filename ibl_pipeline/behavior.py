@@ -13,6 +13,7 @@ except:
 
 logger = logging.getLogger(__name__)
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
+one = ONE()
 
 
 @schema
@@ -41,10 +42,10 @@ class Eye(dj.Imported):
 
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         eye_area, eye_blink, eye_xypos, eye_timestamps = \
-            ONE().load(eID, dataset_types=['_ibl_eye.area',
-                                           '_ibl_eye.blink',
-                                           '_ibl_eye.xypos',
-                                           '_ibl_eye.timestamps'])
+            one.load(eID, dataset_types=['_ibl_eye.area',
+                                         '_ibl_eye.blink',
+                                         '_ibl_eye.xypos',
+                                         '_ibl_eye.timestamps'])
 
         eye_sample_ids = eye_timestamps[:, 0]
         eye_timestamps = eye_timestamps[:, 1]
@@ -107,9 +108,9 @@ class Wheel(dj.Imported):
 
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         wheel_position, wheel_velocity, wheel_timestamps = \
-            ONE().load(eID, dataset_types=['_ibl_wheel.position',
-                                           '_ibl_wheel.velocity',
-                                           '_ibl_wheel.timestamps'])
+            one.load(eID, dataset_types=['_ibl_wheel.position',
+                                         '_ibl_wheel.velocity',
+                                         '_ibl_wheel.timestamps'])
 
         wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
 
@@ -167,7 +168,7 @@ class WheelMoveSet(dj.Imported):
 
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         wheel_moves_intervals, wheel_moves_types = \
-            ONE().load(eID, dataset_types=['_ibl_wheelMoves.intervals',
+            one.load(eID, dataset_types=['_ibl_wheelMoves.intervals',
                                            '_ibl_wheelMoves.type'])
 
         wheel_moves_types = wheel_moves_types.columns
@@ -231,7 +232,7 @@ class SparseNoise(dj.Imported):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         sparse_noise_positions, sparse_noise_times = \
-            ONE().load(eID, dataset_types=['_ibl_sparseNoise.positions',
+            one.load(eID, dataset_types=['_ibl_sparseNoise.positions',
                                            '_ns_sparseNoise.times'])
 
         assert len(np.unique(np.array([len(sparse_noise_positions),
@@ -264,7 +265,7 @@ class ExtraRewards(dj.Imported):
         eID = (acquisition.Session & key).fetch1('session_uuid')
 
         extra_rewards_times = \
-            ONE().load(eID, dataset_types=['_ibl_extraRewards.times'])
+            one.load(eID, dataset_types=['_ibl_extraRewards.times'])
 
         key['extra_rewards_times'] = extra_rewards_times
 
@@ -294,7 +295,7 @@ class SpontaneousTimeSet(dj.Imported):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         spontaneous_intervals = \
-            ONE().load(eID, dataset_types=['_ibl_spontaneous.intervals'])
+            one.load(eID, dataset_types=['_ibl_spontaneous.intervals'])
 
         key['spontaneous_time_total_num'] = len(spontaneous_intervals)
         self.insert1(key)
@@ -350,9 +351,9 @@ class Lick(dj.Imported):
         eID = (acquisition.Session & key).fetch1('session_uuid')
 
         lick_times, lick_piezo_raw, lick_piezo_timestamps = \
-            ONE().load(eID, dataset_types=['_ibl_licks.times',
-                                           '_ibl_lickPiezo.raw',
-                                           '_ibl_lickPiezo.timestamps'])
+            one.load(eID, dataset_types=['_ibl_licks.times',
+                                         '_ibl_lickPiezo.raw',
+                                         '_ibl_lickPiezo.timestamps'])
 
         lick_sample_ids = lick_piezo_timestamps[:, 0]
         lick_piezo_timestamps = lick_piezo_timestamps[:, 1]
@@ -409,11 +410,11 @@ class CompleteTrialSession(dj.Computed):
                 eID = str((acquisition.Session & key).fetch1('session_uuid'))
                 lab_name = (subject.SubjectLab & key).fetch1('lab_name')
                 if lab_name == 'wittenlab':
-                    stimOn_times = np.squeeze(ONE().load(
+                    stimOn_times = np.squeeze(one.load(
                             eID, dataset_types='_ibl_trials.stimOn_times',
                             clobber=True))
                 else:
-                    stimOn_times = ONE().load(
+                    stimOn_times = one.load(
                         eID, dataset_types='_ibl_trials.stimOn_times')
 
                 if np.all(np.isnan(stimOn_times)):
@@ -484,14 +485,14 @@ class TrialSet(dj.Imported):
         trials_feedback_times, trials_feedback_types, trials_intervals, \
             trials_response_choice, trials_response_times, \
             trials_contrast_left, trials_contrast_right, trials_p_left = \
-            ONE().load(eID, dataset_types=['_ibl_trials.feedback_times',
-                                           '_ibl_trials.feedbackType',
-                                           '_ibl_trials.intervals',
-                                           '_ibl_trials.choice',
-                                           '_ibl_trials.response_times',
-                                           '_ibl_trials.contrastLeft',
-                                           '_ibl_trials.contrastRight',
-                                           '_ibl_trials.probabilityLeft'])
+            one.load(eID, dataset_types=['_ibl_trials.feedback_times',
+                                         '_ibl_trials.feedbackType',
+                                         '_ibl_trials.intervals',
+                                         '_ibl_trials.choice',
+                                         '_ibl_trials.response_times',
+                                         '_ibl_trials.contrastLeft',
+                                         '_ibl_trials.contrastRight',
+                                         '_ibl_trials.probabilityLeft'])
         # print(len(trials_feedback_times),
         #       len(trials_feedback_types),
         #       len(trials_intervals),
@@ -512,38 +513,38 @@ class TrialSet(dj.Imported):
         lab_name = (subject.SubjectLab & key).fetch1('lab_name')
         if stim_on_times_status != 'Missing':
             if lab_name == 'wittenlab':
-                trials_visual_stim_times = np.squeeze(ONE().load(
+                trials_visual_stim_times = np.squeeze(one.load(
                     eID, dataset_types='_ibl_trials.stimOn_times',
                     clobber=True))
             else:
-                trials_visual_stim_times = ONE().load(
+                trials_visual_stim_times = one.load(
                     eID, dataset_types='_ibl_trials.stimOn_times')
 
             if len(trials_visual_stim_times) == 1:
                 trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
 
         if rep_num_status != 'Missing':
-            trials_rep_num = np.squeeze(ONE().load(
+            trials_rep_num = np.squeeze(one.load(
                 eID, dataset_types='_ibl_trials.repNum'))
 
         if included_status != 'Missing':
-            trials_included = np.squeeze(ONE().load(
+            trials_included = np.squeeze(one.load(
                 eID, dataset_types='_ibl_trials.included'))
 
         if go_cue_times_status != 'Missing':
-            trials_go_cue_times = np.squeeze(ONE().load(
+            trials_go_cue_times = np.squeeze(one.load(
                 eID, dataset_types='_ibl_trials.goCue_times'))
 
         if go_cue_trigger_times_status != 'Missing':
-            trials_go_cue_trigger_times = np.squeeze(ONE().load(
+            trials_go_cue_trigger_times = np.squeeze(one.load(
                 eID, dataset_types='_ibl_trials.goCueTrigger_times'))
 
         if reward_volume_status != 'Missing':
-            trials_reward_volume = np.squeeze(ONE().load(
+            trials_reward_volume = np.squeeze(one.load(
                 eID, dataset_types='_ibl_trials.rewardVolume'))
 
         if iti_duration_status != 'Missing':
-            trials_iti_duration = np.squeeze(ONE().load(
+            trials_iti_duration = np.squeeze(one.load(
                 eID, dataset_types='_ibl_trials.itiDuration'))
 
         assert len(np.unique(np.array([len(trials_feedback_times),
@@ -703,7 +704,7 @@ class AmbientSensorData(dj.Imported):
     def make(self, key):
         trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        asd = ONE().load(eID, dataset_types='_iblrig_ambientSensorData.raw')
+        asd = one.load(eID, dataset_types='_iblrig_ambientSensorData.raw')
 
         if not len(TrialSet.Trial & key) == len(asd[0]):
             print('Size of ambient sensor data does not match the trial number')
@@ -739,9 +740,9 @@ class PassiveTrialSet(dj.Imported):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         passive_visual_stim_contrast_left, passive_visual_stim_contrast_right = \
-            ONE().load(eID, dataset_types=['_ibl_passiveVisual.contrastLeft',
-                                           '_ibl_passiveVisual.contrastRight',
-                                           '_ibl_passiveVisual.times'])
+            one.load(eID, dataset_types=['_ibl_passiveVisual.contrastLeft',
+                                         '_ibl_passiveVisual.contrastRight',
+                                         '_ibl_passiveVisual.times'])
 
         assert len(np.unique(np.array([len(passive_visual_stim_contrast_left),
                                        len(passive_visual_stim_contrast_right),
@@ -812,8 +813,8 @@ class PassiveRecordings(dj.Imported):
 
         key['passive_beep_times'], key['passive_valve_click_times'], \
             key['passive_white_noise_times'] = \
-            ONE().load(eID, dataset_types=['_ibl_passiveBeeps.times',
-                                           '_ibl_passiveValveClick.times',
-                                           '_ibl_passiveWhiteNoise.times'])
+            one.load(eID, dataset_types=['_ibl_passiveBeeps.times',
+                                         '_ibl_passiveValveClick.times',
+                                         '_ibl_passiveWhiteNoise.times'])
 
         self.insert1(key)
