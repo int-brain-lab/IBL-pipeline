@@ -1,7 +1,7 @@
 import datajoint as dj
 import numpy as np
 import pandas as pd
-from os import path
+from os import path, environ
 import logging
 from . import reference, subject, acquisition, data
 from .ingest import get_raw_field as grf
@@ -474,7 +474,8 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    key_source = acquisition.Session & CompleteTrialSession
+    if not environ.get('MODE') == 'test':
+        key_source = acquisition.Session & CompleteTrialSession
 
     def make(self, key):
         trial_key = key.copy()
