@@ -16,4 +16,5 @@ for subj in subjects.fetch('KEY'):
     if len(current_subj):
         current_subj._update('latest_date', new_date)
     else:
+        subj = (subjects & subj).fetch1()
         behavior.SubjectLatestDate.insert1(subj)
