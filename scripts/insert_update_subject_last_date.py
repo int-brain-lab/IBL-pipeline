@@ -12,7 +12,7 @@ subjects = subject.Subject.aggr(
 
 for subj in subjects:
     current_subj = behavior.SubjectLatestDate & subj
-    if current_subj:
+    if len(current_subj):
         current_subj._update('latest_date', subj['latest_date'])
     else:
         behavior.SubjectLatestDate.insert1(subj, skip_duplicates=True)
