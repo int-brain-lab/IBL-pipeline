@@ -164,10 +164,10 @@ class CumulativeSummary(dj.Computed):
     -> subject.Subject
     latest_date:  date      # last date of any event for the subject
     """
-    key_source = dj.U('subject_uuid', 'latest_date') \
-        & subject.Subject.aggr(
-            LatestDate, 'latest_date',
-            lastest_timestamp='MAX(checking_ts)')
+    latest = subject.Subject.aggr(
+        LatestDate,
+        checking_ts='MAX(checking_ts)') * LatestDate
+    key_source = dj.U('subject_uuid', 'latest_date') & latest
 
     def make(self, key):
         self.insert1(key)
