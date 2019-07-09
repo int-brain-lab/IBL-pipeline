@@ -15,4 +15,4 @@ for subj in subjects:
     if current_subj:
         current_subj._update('latest_date', subj['latest_date'])
     else:
-        behavior.SubjectLatestDate.insert1(subj)
+        behavior.SubjectLatestDate.insert1(subj, skip_duplicates=True)
