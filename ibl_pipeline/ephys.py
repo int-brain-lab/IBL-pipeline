@@ -197,10 +197,19 @@ class Cluster(dj.Imported):
 
 
 @schema
+class Event(dj.Lookup):
+    definition = """
+    event:       varchar(32)
+    """
+    contents = zip(['go cue', 'stim on', 'response', 'feedback'])
+
+
+@schema
 class TrialSpikes(dj.Computed):
     definition = """
     -> Cluster
     -> behavior.TrialSet.Trial
+    -> Event
     ---
     trial_spike_times=null:   longblob     # spike time for each trial, aligned to go cue time
     """
@@ -220,14 +229,32 @@ class TrialSpikes(dj.Computed):
                     cluster_revision=icluster['cluster_revision'],
                     probe_idx=icluster['probe_idx']
                 )
-                trial_start, trial_end, go_cue = trial.fetch1(
-                    'trial_start_time', 'trial_end_time', 'trial_go_cue_time')
+                trial_start, trial_end, \
+                    go_cue, stim_on, response, feedback = trial.fetch1(
+                        'trial_start_time', 'trial_end_time',
+                        'trial_go_cue_time', 'trial_stim_on_time',
+                        'trial_response_time', 'trial_feedback_time')
                 f = np.logical_and(spike_times < trial_end,
                                    spike_times > trial_start)
                 if not np.any(f):
                     continue
-                trial_spk['trial_spike_times'] = spike_times[f] - go_cue
-                self.insert1(trial_spk)
+
+                events = Event.fetch('event')
+                for event in events:
+                    if event == 'go cue':
+                        trial_spk['trial_spike_times'] = \
+                            spike_times[f] - go_cue
+                    elif event == 'stim_on':
+                        trial_spk['trial_spike_times'] = \
+                            spike_times[f] - stim_on
+                    elif event == 'response':
+                        trial_spk['trial_spike_times'] = \
+                            spike_times[f] - response
+                    elif event == 'feedback':
+                        trial_spk['trial_spike_times'] = \
+                            spike_times[f] - feedback
+                    trial_spk['event'] = event
+                    self.insert1(trial_spk)
 
 
 @schema
