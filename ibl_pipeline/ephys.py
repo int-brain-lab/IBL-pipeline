@@ -244,12 +244,12 @@ class TrialSpikes(dj.Computed):
                     if event == 'go cue':
                         trial_spk['trial_spike_times'] = \
                             spike_times[f] - go_cue
-                    elif event == 'stim_on':
+                    elif event == 'stim on':
                         trial_spk['trial_spike_times'] = \
                             spike_times[f] - stim_on
                     elif event == 'response':
                         trial_spk['trial_spike_times'] = \
-                            spike_times[f] - response
+                            spike_times[f] - (response + trial_start)
                     elif event == 'feedback':
                         trial_spk['trial_spike_times'] = \
                             spike_times[f] - feedback
