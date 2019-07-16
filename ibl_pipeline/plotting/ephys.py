@@ -97,6 +97,8 @@ class Raster(dj.Computed):
                 raise NameError(
                     'Unknown trial condition {}'.format(trial_condition))
 
+        if not len(trials):
+            return
         align_event = (ephys.Event & key).fetch1('event')
         sorting_var = (Sorting & key).fetch1('sort_by')
         x_lim = [-1, 1]
