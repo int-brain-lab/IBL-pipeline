@@ -56,8 +56,8 @@ class TrialCondition(dj.Lookup):
 @schema
 class Raster(dj.Computed):
     definition = """
-    -> behavior.TrialSet
     -> ValidAlignSort
+    -> TrialCondition
     -> ephys.Cluster
     ---
     plotting_data:      longblob
