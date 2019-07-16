@@ -58,7 +58,7 @@ class Raster(dj.Computed):
     definition = """
     -> behavior.TrialSet
     -> ValidAlignSort
-    -> Cluster
+    -> ephys.Cluster
     ---
     plotting_data:      longblob
     """
