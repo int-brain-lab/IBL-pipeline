@@ -7,6 +7,7 @@ import numpy as np
 import datetime
 import datajoint as dj
 import plotly.graph_objs as go
+import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import plotly
@@ -410,3 +411,92 @@ def create_monday_plot(data, yrange, mondays, xaxis='x1', yaxis='y1',
         )
 
     return data
+
+
+def create_raster_plot(trials, align_event,
+                       sorting_var='trial_id', x_lim=[-1, 1]):
+
+    if sorting_var == 'response - stim on':
+        sort_by = 'trial_response_time + trial_start_time - trial_stim_on_time'
+        if align_event == 'stim on':
+            mark = sort_by
+            label = sorting_var
+        elif align_event == 'repsonse':
+            mark = """trial_stim_on_time -
+                      trial_response_time - trial_start_time"""
+            label = 'stim on - response'
+        else:
+            raise NameError('Wrong combination of alignment and sorting.')
+    elif sorting_var == 'feedback - stim on':
+        sort_by = 'trial_feedback_time - trial_stim_on_time'
+        if align_event == 'stim on':
+            mark = sort_by
+            label = sorting_var
+        elif align_event == 'feedback':
+            mark = 'trial_stim_on_time - trial_feedback_time'
+            label = 'stim on - feedback'
+        else:
+            raise NameError('Wrong combination of alignment and sorting.')
+    elif sorting_var == 'feedback - response':
+        sort_by = """trial_feedback_time -
+                     trial_response_time - trial_start_time"""
+        if align_event == 'response':
+            mark = sort_by
+            label = sorting_var
+        elif align_event == 'feedback':
+            mark = """trial_response_time + trial_start_time -
+                      trial_feedback_time"""
+            label = 'response - feedback'
+        else:
+            raise NameError('Wrong combination of alignment and sorting.')
+    elif sorting_var == 'trial_id':
+        sort_by = 'trial_id'
+    else:
+        raise NameError("""
+            'Unknown sorting variable.\n
+            It has to be one of the following:\n
+            ["trial_id", \n
+             "response - stim on", \n
+             "feedback - stim on", \n
+             "feedback - response"]'""")
+
+    trials = (trials & 'event="{}"'.format(align_event)).proj(
+        'trial_id', 'trial_spike_times', sort_by=sort_by, mark=mark)
+    spk_times, marking_points = trials.fetch(
+        'trial_spike_times', 'mark', order_by='sort_by')
+
+    spk_times_all = np.hstack(spk_times)
+    id_all = [[i] * len(spike_time) for i, spike_time in enumerate(spk_times)]
+    id_all = np.hstack(id_all)
+
+    fig = plt.figure(dpi=300, frameon=False, figsize=[10, 5])
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.plot(spk_times_all, id_all, 'k.', alpha=0.4, markeredgewidth=0)
+    if sorting_var != 'trial_id':
+        ax.plot(marking_points, range(len(spk_times)), 'b', label=label)
+    ax.set_axis_off()
+    fig.add_axes(ax)
+
+    # hide the axis
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    # set the limits to be exactly what you want
+    ax.set_xlim(x_lim[0], x_lim[1])
+    y_lim = len(trials) * 1.15
+    ax.set_ylim(0, y_lim)
+    ax.axvline(0, linewidth=2, alpha=0.5, color='k', label=align_event)
+    ax.legend(loc=[0.01, 0.87], prop=dict(size=14))
+
+    # save the figure with `pad_inches=0` to remove
+    # any padding in the image
+    import tempfile
+    temp = tempfile.NamedTemporaryFile(suffix=".png")
+    fig.savefig(temp.name, pad_inches=0)
+    import tempfile
+
+    import base64
+    with open(temp.name, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read())
+    temp.close()
+    return encoded_string, [0, y_lim]

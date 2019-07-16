@@ -13,7 +13,10 @@ except:
 
 logger = logging.getLogger(__name__)
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
-one = ONE()
+try:
+    one = ONE()
+except:
+    pass
 
 
 @schema

@@ -3,9 +3,13 @@ import numpy as np
 from os import path
 from . import acquisition, reference, behavior
 import numpy as np
-from oneibl.one import ONE
+try:
+    from oneibl.one import ONE
+except:
+    pass
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
+one = ONE()
 
 
 @schema
@@ -146,7 +150,7 @@ class Cluster(dj.Imported):
             clusters_depths, \
             clusters_peak_channels, \
             clusters_waveform_duration = \
-            ONE().load(
+            one.load(
                 eID,
                 dataset_types=[
                     'clusters.amps',
@@ -162,8 +166,7 @@ class Cluster(dj.Imported):
         spikes_amps, \
             spikes_clusters, \
             spikes_depths, \
-            spikes_times = \
-            ONE().load(
+            one.load(
                 eID,
                 dataset_types=[
                     'spikes.amps',

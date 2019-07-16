@@ -10,6 +10,7 @@ import plotly
 import plotly.graph_objs as go
 import statsmodels.stats.proportion as smp
 import datetime
+import matplotlib.pyplot as plt
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_behavior')
