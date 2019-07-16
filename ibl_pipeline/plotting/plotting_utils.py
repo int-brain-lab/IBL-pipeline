@@ -426,7 +426,12 @@ def create_raster_plot(trials, align_event,
                       trial_response_time - trial_start_time"""
             label = 'stim on - response'
         else:
-            raise NameError('Wrong combination of alignment and sorting.')
+            raise NameError(
+                f"""
+                Wrong combination of alignment and sorting:\n
+                {sorting_var}, {align_event}
+                """
+            )
     elif sorting_var == 'feedback - stim on':
         sort_by = 'trial_feedback_time - trial_stim_on_time'
         if align_event == 'stim on':
@@ -436,7 +441,12 @@ def create_raster_plot(trials, align_event,
             mark = 'trial_stim_on_time - trial_feedback_time'
             label = 'stim on - feedback'
         else:
-            raise NameError('Wrong combination of alignment and sorting.')
+            raise NameError(
+                f"""
+                Wrong combination of alignment and sorting:\n
+                {sorting_var}, {align_event}
+                """
+            )
     elif sorting_var == 'feedback - response':
         sort_by = """trial_feedback_time -
                      trial_response_time - trial_start_time"""
@@ -448,7 +458,12 @@ def create_raster_plot(trials, align_event,
                       trial_feedback_time"""
             label = 'response - feedback'
         else:
-            raise NameError('Wrong combination of alignment and sorting.')
+            raise NameError(
+                f"""
+                Wrong combination of alignment and sorting:\n
+                {sorting_var}, {align_event}
+                """
+            )
     elif sorting_var == 'trial_id':
         sort_by = 'trial_id'
     else:
