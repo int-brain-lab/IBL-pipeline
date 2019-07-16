@@ -477,8 +477,12 @@ def create_raster_plot(trials, align_event,
 
     trials = (trials & 'event="{}"'.format(align_event)).proj(
         'trial_id', 'trial_spike_times', sort_by=sort_by, mark=mark)
-    spk_times, marking_points = trials.fetch(
-        'trial_spike_times', 'mark', order_by='sort_by')
+    if sorting_var != 'trial_id':
+        spk_times, marking_points = trials.fetch(
+            'trial_spike_times', 'mark', order_by='sort_by')
+    else:
+        spk_times = trials.fetch(
+            'trial_spike_times', order_by='sort_by')
 
     spk_times_all = np.hstack(spk_times)
     id_all = [[i] * len(spike_time) for i, spike_time in enumerate(spk_times)]
