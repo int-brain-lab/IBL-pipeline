@@ -9,7 +9,10 @@ except:
     pass
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
-one = ONE()
+try:
+    one = ONE()
+except:
+    pass
 
 
 @schema

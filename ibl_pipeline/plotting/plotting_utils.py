@@ -414,7 +414,8 @@ def create_monday_plot(data, yrange, mondays, xaxis='x1', yaxis='y1',
 
 
 def create_raster_plot(trials, align_event,
-                       sorting_var='trial_id', x_lim=[-1, 1]):
+                       sorting_var='trial_id', x_lim=[-1, 1],
+                       show_plot=False):
 
     if sorting_var == 'response - stim on':
         sort_by = 'trial_response_time + trial_start_time - trial_stim_on_time'
@@ -514,7 +515,9 @@ def create_raster_plot(trials, align_event,
     import tempfile
     temp = tempfile.NamedTemporaryFile(suffix=".png")
     fig.savefig(temp.name, pad_inches=0)
-    import tempfile
+
+    if not show_plot:
+        plt.close(fig)
 
     import base64
     with open(temp.name, "rb") as image_file:
