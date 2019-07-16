@@ -421,7 +421,7 @@ def create_raster_plot(trials, align_event,
         if align_event == 'stim on':
             mark = sort_by
             label = sorting_var
-        elif align_event == 'repsonse':
+        elif align_event == 'response':
             mark = """trial_stim_on_time -
                       trial_response_time - trial_start_time"""
             label = 'stim on - response'
