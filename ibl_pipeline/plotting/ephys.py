@@ -64,6 +64,7 @@ class Raster(dj.Computed):
     """
 
     def make(self, key):
+        print(key)
         cluster = ephys.Cluster & key
         trials_all = \
             (behavior.TrialSet.Trial * ephys.TrialSpikes & cluster).proj(
