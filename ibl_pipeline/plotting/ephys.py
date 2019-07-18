@@ -159,6 +159,8 @@ class Psth(dj.Computed):
     -> ephys.Cluster
     -> ephys.Event
     -> TrialCondition
+    ---
+    plotting_data:       longblob
     """
     key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"') * TrialCondition
 
