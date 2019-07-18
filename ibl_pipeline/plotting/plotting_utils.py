@@ -13,6 +13,7 @@ import seaborn as sns
 import plotly
 from plotly import tools
 import statsmodels.stats.proportion as smp
+import scipy.signal as signal
 
 
 def get_date_range(subj):
@@ -524,3 +525,48 @@ def create_raster_plot(trials, align_event,
         encoded_string = base64.b64encode(image_file.read())
     temp.close()
     return encoded_string, [0, y_lim]
+
+def create_psth_plot(trials, align_event, nbins, window_size, x_lim=[-1, 1], show_plot=False):
+    spk_times = (trials & 'event="{}"'.format(align_event)).fetch('trial_spike_times')
+    mean_counts = np.divide(
+        np.histogram(np.hstack(spk_times),
+                    range=x_lim,
+                    bins=nbins)[0],
+        len(spk_times))
+    time_bins=np.linspace(x_lim[0], x_lim[1], num=nbins)
+
+    # convolve with a box-car filter
+    dt = np.mean(np.diff(time_bins))
+    psth = np.divide(signal.convolve(mean_counts, signal.boxcar(window_size), mode='same'),
+                    window_size*dt)
+    fig = plt.figure(dpi=300, frameon=False, figsize=[10, 5])
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.plot(time_bins, psth, markeredgewidth=0)
+
+    ax.set_axis_off()
+    fig.add_axes(ax)
+
+    # hide the axis
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    # set the limits to be exactly what you want
+    ax.set_xlim(x_lim[0], x_lim[1])
+    ax.axvline(0, linewidth=2, alpha=0.5, color='k', label=align_event)
+    ax.legend(loc=[0.01, 0.87], prop=dict(size=14))
+    y_lim = ax.get_ylim()
+
+    # save the figure with `pad_inches=0` to remove
+    # any padding in the image
+    import tempfile
+    temp = tempfile.NamedTemporaryFile(suffix=".png")
+    fig.savefig(temp.name, pad_inches=0)
+
+    if not show_plot:
+        plt.close(fig)
+
+    import base64
+    with open(temp.name, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read())
+    temp.close()
+    return encoded_string, y_lim
