@@ -60,7 +60,7 @@ class Raster(dj.Computed):
     -> ValidAlignSort
     -> TrialCondition
     ---
-    plotting_data:      longblob
+    plotting_data:      blob@plotting_external
     """
 
     def make(self, key):
@@ -160,7 +160,7 @@ class Psth(dj.Computed):
     -> ephys.Event
     -> TrialCondition
     ---
-    plotting_data:       longblob
+    plotting_data:       blob@plotting_external
     """
     key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"') * TrialCondition
 

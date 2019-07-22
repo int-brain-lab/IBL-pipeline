@@ -134,16 +134,16 @@ class Cluster(dj.Imported):
     cluster_revision:               varchar(64)
     cluster_id:                     int
     ---
-    -> ChannelGroup.Channel                     # peak channel for the cluster
-    cluster_mean_waveform=null:     longblob    # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered): nClusters*nSamples*nChannels
-    cluster_template_waveform=null: longblob    # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
-    cluster_depth:                  float       # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
-    cluster_waveform_duration:      longblob    # trough to peak time (ms)
-    cluster_amp:                    float       # Mean amplitude of each cluster (µV)
-    cluster_phy_annotation=null:    tinyint     # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
-    cluster_spike_times:            longblob    # spike times of a particular cluster (seconds)
-    cluster_spike_depth:            longblob    # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
-    cluster_spike_amps:             longblob    # Amplitude of each spike (µV)
+    -> ChannelGroup.Channel                                 # peak channel for the cluster
+    cluster_mean_waveform=null:     blob@ephys_external     # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered): nClusters*nSamples*nChannels
+    cluster_template_waveform=null: blob@ephys_external     # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
+    cluster_depth:                  float                   # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
+    cluster_waveform_duration:      blob@ephys_external     # trough to peak time (ms)
+    cluster_amp:                    float                   # Mean amplitude of each cluster (µV)
+    cluster_phy_annotation=null:    tinyint                 # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
+    cluster_spike_times:            blob@ephys_external     # spike times of a particular cluster (seconds)
+    cluster_spike_depth:            blob@ephys_external     # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
+    cluster_spike_amps:             blob@ephys_external     # Amplitude of each spike (µV)
     """
     key_source = ProbeInsertion
 
@@ -217,7 +217,7 @@ class TrialSpikes(dj.Computed):
     -> behavior.TrialSet.Trial
     -> Event
     ---
-    trial_spike_times=null:   longblob     # spike time for each trial, aligned to go cue time
+    trial_spike_times=null:   blob@ephys_external     # spike time for each trial, aligned to go cue time
     """
     key_source = behavior.TrialSet & Cluster()
 
@@ -268,11 +268,11 @@ class LFP(dj.Imported):
     definition = """
     -> ProbeInsertion
     ---
-    lfp_timestamps:       longblob     # Timestamps for LFP timeseries in seconds
-    lfp_start_time:       float        # (seconds)
-    lfp_end_time:         float        # (seconds)
-    lfp_duration:         float        # (seconds)
-    lfp_sampling_rate:    float        # samples per second
+    lfp_timestamps:       blob@ephys_external   # Timestamps for LFP timeseries in seconds
+    lfp_start_time:       float                 # (seconds)
+    lfp_end_time:         float                 # (seconds)
+    lfp_duration:         float                 # (seconds)
+    lfp_sampling_rate:    float                 # samples per second
     """
 
     class Channel(dj.Part):
@@ -280,5 +280,5 @@ class LFP(dj.Imported):
         -> master
         -> ChannelGroup.Channel
         ---
-        lfp: longblob           # recorded lfp on this channel
+        lfp: blob@ephys_external           # recorded lfp on this channel
         """
