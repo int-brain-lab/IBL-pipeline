@@ -702,7 +702,6 @@ class Settings(dj.Imported):
     """
 
     def make(self, key):
-        print(key)
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         try:
             setting = one.load(eID, dataset_types='_iblrig_taskSettings.raw')
