@@ -704,6 +704,8 @@ class Settings(dj.Imported):
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         setting = one.load(eID, dataset_types='_iblrig_taskSettings.raw')
+        if settings[0]['PYBPOD_BOARD'] is None:
+            return
         key['pybpod_board'] = setting[0]['PYBPOD_BOARD']
         self.insert1(key)
 
