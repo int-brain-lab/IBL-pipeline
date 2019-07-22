@@ -5,7 +5,7 @@ import os
 if os.environ.get('MODE') == 'test':
     dj.config['database.prefix'] = 'test_'
 
-dj.config['storage'] = {
+dj.config['stores'] = {
     'ephys_external': dict(
         protocol='s3',
         endpoint='https://s3.amazonaws.com',
