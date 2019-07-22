@@ -706,6 +706,8 @@ class Settings(dj.Imported):
         setting = one.load(eID, dataset_types='_iblrig_taskSettings.raw')
         if setting is None:
             return
+        elif not len(setting):
+            return
         elif setting[0]['PYBPOD_BOARD'] is None:
             return
         key['pybpod_board'] = setting[0]['PYBPOD_BOARD']
