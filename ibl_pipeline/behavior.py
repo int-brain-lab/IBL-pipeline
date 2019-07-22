@@ -694,6 +694,21 @@ class TrialSet(dj.Imported):
 
 
 @schema
+class Settings(dj.Imported):
+    definition = """
+    -> acquisition.Session
+    ---
+    pybpod_board:    varchar(64)   # bpod machine that generated the session
+    """
+
+    def make(self, key):
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
+        setting = one.load(eID, dataset_types='_iblrig_taskSettings.raw')
+        key['pybpod_board'] = setting[0]['PYBPOD_BOARD']
+        self.insert1(key)
+
+
+@schema
 class AmbientSensorData(dj.Imported):
     definition = """
     -> TrialSet.Trial
