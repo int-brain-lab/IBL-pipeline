@@ -713,6 +713,8 @@ class Settings(dj.Imported):
             return
         elif not len(setting):
             return
+        elif setting[0] is None:
+            return
         elif setting[0]['PYBPOD_BOARD'] is None:
             return
         key['pybpod_board'] = setting[0]['PYBPOD_BOARD']
