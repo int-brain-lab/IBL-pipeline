@@ -11,7 +11,7 @@ dj.config['stores'] = {
         endpoint='https://s3.amazonaws.com',
         access_key='AKIAX2NIY5IRJVKSPHVW',
         secret_key='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',
-        bucket='ibl_external',
+        bucket='ibl-dj-external',
         location='ephys'
     ),
     'plotting': dict(
@@ -19,7 +19,7 @@ dj.config['stores'] = {
         endpoint='https://s3.amazonaws.com',
         access_key='AKIAX2NIY5IRJVKSPHVW',
         secret_key='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',
-        bucket='ibl_external',
+        bucket='ibl-dj-external',
         location='plotting'
     )
 }
