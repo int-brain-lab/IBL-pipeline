@@ -6,7 +6,7 @@ if os.environ.get('MODE') == 'test':
     dj.config['database.prefix'] = 'test_'
 
 dj.config['stores'] = {
-    'ephys_external': dict(
+    'ephys': dict(
         protocol='s3',
         endpoint='https://s3.amazonaws.com',
         access_key='AKIAX2NIY5IRJVKSPHVW',
@@ -14,7 +14,7 @@ dj.config['stores'] = {
         bucket='ibl_external',
         location='ephys'
     ),
-    'plotting_external': dict(
+    'plotting': dict(
         protocol='s3',
         endpoint='https://s3.amazonaws.com',
         access_key='AKIAX2NIY5IRJVKSPHVW',
