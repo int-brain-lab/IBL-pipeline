@@ -9,7 +9,7 @@ dj.config['stores'] = {
     'ephys': dict(
         protocol='s3',
         endpoint='https://s3.amazonaws.com',
-        access_key='AKIAX2NIY5IRJVKSPHVW',
+        access_key='ibl_external',
         secret_key='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',
         bucket='ibl-dj-external',
         location='ephys'
@@ -17,7 +17,7 @@ dj.config['stores'] = {
     'plotting': dict(
         protocol='s3',
         endpoint='https://s3.amazonaws.com',
-        access_key='AKIAX2NIY5IRJVKSPHVW',
+        access_key='ibl_external',
         secret_key='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',
         bucket='ibl-dj-external',
         location='plotting'
