@@ -169,6 +169,7 @@ class Cluster(dj.Imported):
         spikes_amps, \
             spikes_clusters, \
             spikes_depths, \
+            spike_times = \
             one.load(
                 eID,
                 dataset_types=[
