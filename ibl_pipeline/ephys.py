@@ -134,16 +134,16 @@ class Cluster(dj.Imported):
     cluster_revision:               varchar(64)
     cluster_id:                     int
     ---
-    -> ChannelGroup.Channel                         # peak channel for the cluster
-    cluster_mean_waveform=null:     blob@ephys      # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered): nClusters*nSamples*nChannels
-    cluster_template_waveform=null: blob@ephys      # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
-    cluster_depth:                  float           # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
-    cluster_waveform_duration:      blob@ephys      # trough to peak time (ms)
-    cluster_amp:                    float           # Mean amplitude of each cluster (µV)
-    cluster_phy_annotation=null:    tinyint         # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
-    cluster_spike_times:            blob@ephys      # spike times of a particular cluster (seconds)
-    cluster_spike_depth:            blob@ephys      # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
-    cluster_spike_amps:             blob@ephys      # Amplitude of each spike (µV)
+    -> ChannelGroup.Channel
+    cluster_mean_waveform=null:     blob@ephys
+    cluster_template_waveform=null: blob@ephys
+    cluster_depth:                  float
+    cluster_waveform_duration:      blob@ephys
+    cluster_amp:                    float
+    cluster_phy_annotation=null:    tinyint
+    cluster_spike_times:            blob@ephys
+    cluster_spike_depth:            blob@ephys
+    cluster_spike_amps:             blob@ephys
     """
     key_source = ProbeInsertion
 
