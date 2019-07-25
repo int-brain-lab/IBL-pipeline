@@ -621,7 +621,8 @@ class CumulativeSummary(dj.Computed):
 
         water_type_colors = ['red', 'orange', 'blue',
                              'rgba(55, 128, 191, 0.7)',
-                             'purple', 'rgba(50, 171, 96, 0.9)']
+                             'purple', 'rgba(50, 171, 96, 0.9)',
+                             'red']
         water_type_map = dict()
 
         for watertype, color in zip(water_type_names, water_type_colors):
