@@ -104,6 +104,11 @@ class SessionReactionTimeTrialNumber(dj.Computed):
                 type='log',
                 range=np.log10([0.1, 100]).tolist(),
                 dtick=np.log10([0.1, 1, 10, 100]).tolist()),
+            template=dict(
+                layout=dict(
+                    plot_bgcolor="white"
+                )
+            )
         )
 
         fig = go.Figure(data=[data, rolled], layout=layout)
@@ -264,6 +269,11 @@ class CumulativeSummary(dj.Computed):
                     x=1.2,
                     y=0.8,
                     orientation='v'),
+                template=dict(
+                    layout=dict(
+                        plot_bgcolor="white"
+                    )
+                )
             )
 
             fig = go.Figure(data=data, layout=layout)
@@ -352,7 +362,12 @@ class CumulativeSummary(dj.Computed):
                 legend=dict(
                     x=1.2,
                     y=0.8,
-                    orientation='v')
+                    orientation='v'),
+                template=dict(
+                    layout=dict(
+                        plot_bgcolor="white"
+                    )
+                )
             )
 
             fig = go.Figure(data=data, layout=layout)
@@ -518,7 +533,12 @@ class CumulativeSummary(dj.Computed):
                 legend=dict(
                     x=1.1,
                     y=1,
-                    orientation='v')
+                    orientation='v'),
+                template=dict(
+                    layout=dict(
+                        plot_bgcolor="white"
+                    )
+                )
             )
 
             fig = go.Figure(data=pars_data, layout=layout)
@@ -609,6 +629,11 @@ class CumulativeSummary(dj.Computed):
                     x=1.2,
                     y=0.8,
                     orientation='v'
+                ),
+                template=dict(
+                    layout=dict(
+                        plot_bgcolor="white"
+                    )
                 )
             )
 
@@ -801,7 +826,12 @@ class CumulativeSummary(dj.Computed):
                     x=1.1,
                     y=0.9,
                     orientation='v'),
-                barmode='stack'
+                barmode='stack',
+                template=dict(
+                    layout=dict(
+                        plot_bgcolor="white"
+                    )
+                )
             )
             fig = go.Figure(data=data, layout=layout)
             water_weight_entry['water_weight'] = fig.to_plotly_json()
