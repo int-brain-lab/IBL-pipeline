@@ -265,6 +265,11 @@ def create_psych_curve_plot(sessions):
         yaxis=dict(
             title='Probability choosing right',
             range=[-0.05, 1.05]),
+        template=dict(
+            layout=dict(
+                plot_bgcolor="white"
+            )
+        )
     )
 
     data = data_errorbar
@@ -342,6 +347,11 @@ def create_rt_contrast_plot(sessions):
             x=1.1,
             y=0.9,
             orientation='v'),
+        template=dict(
+            layout=dict(
+                plot_bgcolor="white"
+            )
+        )
     )
 
     return go.Figure(data=data, layout=layout)
@@ -416,17 +426,18 @@ def create_monday_plot(data, yrange, mondays, xaxis='x1', yaxis='y1',
 
 def create_raster_plot(trials, align_event,
                        sorting_var='trial_id', x_lim=[-1, 1],
+                       combined=False,
                        show_plot=False):
 
     if sorting_var == 'response - stim on':
         sort_by = 'trial_response_time + trial_start_time - trial_stim_on_time'
         if align_event == 'stim on':
             mark = sort_by
-            label = sorting_var
+            label = 'response'
         elif align_event == 'response':
             mark = """trial_stim_on_time -
                       trial_response_time - trial_start_time"""
-            label = 'stim on - response'
+            label = 'stim on'
         else:
             raise NameError(
                 f"""
@@ -438,10 +449,10 @@ def create_raster_plot(trials, align_event,
         sort_by = 'trial_feedback_time - trial_stim_on_time'
         if align_event == 'stim on':
             mark = sort_by
-            label = sorting_var
+            label = 'feedback'
         elif align_event == 'feedback':
             mark = 'trial_stim_on_time - trial_feedback_time'
-            label = 'stim on - feedback'
+            label = 'stim on'
         else:
             raise NameError(
                 f"""
@@ -492,7 +503,7 @@ def create_raster_plot(trials, align_event,
     id_all = [[i] * len(spike_time) for i, spike_time in enumerate(spk_times)]
     id_all = np.hstack(id_all)
 
-    fig = plt.figure(dpi=300, frameon=False, figsize=[10, 5])
+    fig = plt.figure(dpi=150, frameon=False, figsize=[10, 5])
     ax = plt.Axes(fig, [0., 0., 1., 1.])
     ax.plot(spk_times_all, id_all, 'k.', alpha=0.4, markeredgewidth=0)
     if sorting_var != 'trial_id':
