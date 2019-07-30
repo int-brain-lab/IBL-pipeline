@@ -152,8 +152,9 @@ def create_psth_plot(trials, align_event,
 
     # convolve with a box-car filter
     dt = np.mean(np.diff(time_bins))
-    psth = np.divide(signal.convolve(mean_counts, signal.boxcar(window_size), mode='same'),
-                     window_size*dt)
+    psth = np.divide(
+        signal.convolve(mean_counts, signal.boxcar(window_size), mode='same'),
+        window_size*dt)
     fig = plt.figure(dpi=300, frameon=False, figsize=[10, 5])
     ax = plt.Axes(fig, [0., 0., 1., 1.])
     ax.plot(time_bins, psth, markeredgewidth=0)
@@ -253,11 +254,13 @@ def create_raster_plot_combined(trials, align_event,
 
     spk_times_all_left = np.hstack(spk_times_left)
     spk_times_all_right = np.hstack(spk_times_right)
-    spk_times_all_incorrect = np.hstack(spk_times_incorrect)
-
-    id_incorrect = [[i] * len(spike_time)
-                    for i, spike_time in enumerate(spk_times_incorrect)]
-    id_incorrect = np.hstack(id_incorrect)
+    if len(spk_times_incorrect):
+        spk_times_all_incorrect = np.hstack(spk_times_incorrect)
+        id_incorrect = [[i] * len(spike_time)
+                        for i, spike_time in enumerate(spk_times_incorrect)]
+        id_incorrect = np.hstack(id_incorrect)
+    else:
+        id_incorrect = [0]
 
     id_left = [[i] * len(spike_time) + max(id_incorrect) + 10
                for i, spike_time in enumerate(spk_times_left)]
@@ -273,12 +276,15 @@ def create_raster_plot_combined(trials, align_event,
             markeredgewidth=0, label='left trials')
     ax.plot(spk_times_all_right, id_right, 'b.', alpha=0.5,
             markeredgewidth=0, label='right trials')
-    ax.plot(spk_times_all_incorrect, id_incorrect, 'r.', alpha=0.5,
-            markeredgewidth=0, label='incorrect trials')
+
+    if len(spk_times_incorrect):
+        ax.plot(spk_times_all_incorrect, id_incorrect, 'r.', alpha=0.5,
+                markeredgewidth=0, label='incorrect trials')
 
     if sorting_var != 'trial_id':
-        ax.plot(marking_points_incorrect,
-                range(len(spk_times_incorrect)), 'r', label=label)
+        if len(spk_times_incorrect):
+            ax.plot(marking_points_incorrect,
+                    range(len(spk_times_incorrect)), 'r', label=label)
         ax.plot(marking_points_left,
                 range(len(spk_times_left)) + max(id_incorrect) + 10, 'g')
         ax.plot(marking_points_right,

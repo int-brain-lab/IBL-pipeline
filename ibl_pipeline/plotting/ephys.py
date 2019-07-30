@@ -156,7 +156,6 @@ class Psth(dj.Computed):
     definition = """
     -> ephys.Cluster
     -> ephys.Event
-    -> TrialCondition
     ---
     plotting_data:       blob@plotting
     """
@@ -165,7 +164,7 @@ class Psth(dj.Computed):
 
     def make(self, key):
         cluster = ephys.Cluster & key
-        trials_all = \
+        trials = \
             (behavior.TrialSet.Trial * ephys.TrialSpikes & cluster).proj(
                 'trial_start_time', 'trial_stim_on_time',
                 'trial_response_time',
@@ -177,27 +176,9 @@ class Psth(dj.Computed):
                                          trial_stim_contrast_left"""
             ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
 
-        trial_condition = (TrialCondition & key).fetch1('trial_condition')
-
-        if trial_condition == 'all trials':
-            trials = trials_all
-        else:
-            trials_left = trials_all & 'trial_response_choice="CW"' & \
-                'trial_signed_contrast < 0'
-            trials_right = trials_all & 'trial_response_choice="CCW"' & \
-                'trial_signed_contrast > 0'
-            if trial_condition == 'correct trials':
-                trials = trials_all & [trials_left.proj(), trials_right.proj()]
-            elif trial_condition == 'left trials':
-                trials = trials_left
-            elif trial_condition == 'right trials':
-                trials = trials_right
-            else:
-                raise NameError(
-                    'Unknown trial condition {}'.format(trial_condition))
-
         if not len(trials):
             return
+
         align_event = (ephys.Event & key).fetch1('event')
         x_lim = [-1, 1]
         encoded_string, y_lim = putils.create_psth_plot(
