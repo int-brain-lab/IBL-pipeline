@@ -187,6 +187,49 @@ def create_psth_plot(trials, align_event,
     temp.close()
     return encoded_string, y_lim
 
+
+def compute_psth(trials, trial_type, align_event, nbins, window_size, x_lim=[-1, 1]):
+
+    if trial_type == 'left':
+        color = 'green'
+    elif trial_type == 'right':
+        color = 'blue'
+    elif trial_type == 'all':
+        color = 'black'
+    elif trial_type == 'incorrect':
+        color = 'red'
+    else:
+        raise NameError('Invalid type name')
+
+    spk_times = (trials & 'event="{}"'.format(align_event)).fetch(
+        'trial_spike_times')
+    mean_counts = np.divide(
+        np.histogram(np.hstack(spk_times),
+                     range=x_lim,
+                     bins=nbins)[0],
+        len(spk_times))
+
+    time_bins = np.linspace(x_lim[0], x_lim[1], num=nbins)
+
+    # convolve with a box-car filter
+    dt = np.mean(np.diff(time_bins))
+    psth = np.divide(
+        signal.convolve(mean_counts, signal.boxcar(window_size), mode='same'),
+        window_size*dt)
+
+    data = go.Scatter(
+        x=list(time_bins),
+        y=list(psth),
+        mode='lines',
+        marker=dict(
+            size=6,
+            color=color),
+        name='{} trials'.format(trial_type)
+    )
+
+    return data
+
+
 def get_spike_times(trials, sorting_var, align_event,
                     sort_by=None,
                     mark=None):
