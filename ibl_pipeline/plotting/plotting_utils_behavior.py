@@ -387,13 +387,22 @@ def create_rt_trialnum_plot(trials):
     layout = go.Layout(
         width=630,
         height=400,
-        title='Reaction time - trial number',
+        title=dict(
+            text='Reaction time - trial number',
+            x=0.26,
+            y=0.85
+        ),
         xaxis=dict(title='Trial number'),
         yaxis=dict(
             title='Reaction time (s)',
             type='log',
             range=np.log10([0.1, 100]).tolist(),
             dtick=np.log10([0.1, 1, 10, 100]).tolist()),
+        template=dict(
+            layout=dict(
+                plot_bgcolor="white"
+            )
+        )
     )
 
     return go.Figure(data=[data, rolled], layout=layout)
