@@ -1,6 +1,6 @@
 import datajoint as dj
 from .. import behavior, ephys
-from . import plotting_utils as putils
+from . import plotting_utils_ephys as putils
 import numpy as np
 import pandas as pd
 import plotly
@@ -58,14 +58,13 @@ class Raster(dj.Computed):
     definition = """
     -> ephys.Cluster
     -> ValidAlignSort
-    -> TrialCondition
     ---
     plotting_data:      blob@plotting
     """
 
     def make(self, key):
         cluster = ephys.Cluster & key
-        trials_all = \
+        trials = \
             (behavior.TrialSet.Trial * ephys.TrialSpikes & cluster).proj(
                 'trial_start_time', 'trial_stim_on_time',
                 'trial_response_time',
@@ -77,39 +76,29 @@ class Raster(dj.Computed):
                                          trial_stim_contrast_left"""
             ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
 
-        trial_condition = (TrialCondition & key).fetch1('trial_condition')
-
-        if trial_condition == 'all trials':
-            trials = trials_all
-        else:
-            trials_left = trials_all & 'trial_response_choice="CW"' & \
-                'trial_signed_contrast < 0'
-            trials_right = trials_all & 'trial_response_choice="CCW"' & \
-                'trial_signed_contrast > 0'
-            if trial_condition == 'correct trials':
-                trials = trials_all & [trials_left.proj(), trials_right.proj()]
-            elif trial_condition == 'left trials':
-                trials = trials_left
-            elif trial_condition == 'right trials':
-                trials = trials_right
-            else:
-                raise NameError(
-                    'Unknown trial condition {}'.format(trial_condition))
-
         if not len(trials):
             return
         align_event = (ephys.Event & key).fetch1('event')
         sorting_var = (Sorting & key).fetch1('sort_by')
         x_lim = [-1, 1]
-        encoded_string, y_lim = putils.create_raster_plot(
+        encoded_string, y_lim, label = putils.create_raster_plot_combined(
             trials, align_event, sorting_var)
 
-        data = go.Scatter(
+        axis = go.Scatter(
             x=x_lim,
             y=y_lim,
             mode='markers',
-            marker=dict(opacity=0)
+            marker=dict(opacity=0),
+            showlegend=False
         )
+
+        legend_left = putils.get_legend('left', 'spike')
+        legend_right = putils.get_legend('right', 'spike')
+        legend_incorrect = putils.get_legend('incorrect', 'spike')
+
+        legend_mark_left = putils.get_legend('left', label)
+        legend_mark_right = putils.get_legend('right', label)
+        legend_mark_incorrect = putils.get_legend('incorrect', label)
 
         layout = go.Layout(
             images=[dict(
@@ -122,7 +111,7 @@ class Raster(dj.Computed):
                 yref='y',
                 sizing='stretch',
                 layer='below'
-            )],
+                )],
             width=580,
             height=370,
             margin=go.layout.Margin(
@@ -134,10 +123,11 @@ class Raster(dj.Computed):
             ),
             title=dict(
                 text='Raster, aligned to {}'.format(align_event),
+                x=0.21,
                 y=0.87
             ),
             xaxis=dict(
-                title='Time/sec',
+                title='Time (sec)',
                 range=x_lim,
                 showgrid=False
             ),
@@ -146,9 +136,17 @@ class Raster(dj.Computed):
                 range=y_lim,
                 showgrid=False
             ),
+        #     template=dict(
+        #         layout=dict(
+        #             plot_bgcolor="#fff"
+        #         )
+        #     )
         )
 
-        fig = go.Figure(data=[data], layout=layout)
+        data = [axis, legend_left, legend_right, legend_incorrect,
+                legend_mark_left, legend_mark_right, legend_mark_incorrect]
+
+        fig = go.Figure(data=data, layout=layout)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
 
@@ -162,7 +160,8 @@ class Psth(dj.Computed):
     ---
     plotting_data:       blob@plotting
     """
-    key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"') * TrialCondition
+    key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"')\
+        * TrialCondition
 
     def make(self, key):
         cluster = ephys.Cluster & key
