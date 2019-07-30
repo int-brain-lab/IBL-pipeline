@@ -2,7 +2,7 @@ import datajoint as dj
 from ..analyses import behavior
 from .. import behavior as behavior_ingest
 from .. import reference, subject, action, acquisition, data
-from . import plotting_utils as putils
+from . import plotting_utils_behavior as putils
 import numpy as np
 import pandas as pd
 from ..utils import psychofit as psy
@@ -67,51 +67,7 @@ class SessionReactionTimeTrialNumber(dj.Computed):
     def make(self, key):
         # get all trial of the session
         trials = behavior_ingest.TrialSet.Trial & key
-        rt_trials = trials.proj(
-            rt='trial_response_time-trial_stim_on_time').fetch(as_dict=True)
-        rt_trials = pd.DataFrame(rt_trials)
-        rt_trials.index = rt_trials.index + 1
-        rt_rolled = rt_trials['rt'].rolling(window=10).median()
-        rt_rolled = rt_rolled.where((pd.notnull(rt_rolled)), None)
-        data = dict(
-            x=rt_trials.index.tolist(),
-            y=rt_trials['rt'].tolist(),
-            name='data',
-            type='scatter',
-            mode='markers',
-            marker=dict(
-                color='lightgray'
-            )
-        )
-
-        rolled = dict(
-            x=rt_trials.index.tolist(),
-            y=rt_rolled.values.tolist(),
-            name='rolled data',
-            type='scatter',
-            marker=dict(
-                color='black'
-            )
-        )
-
-        layout = go.Layout(
-            width=630,
-            height=400,
-            title='Reaction time - trial number',
-            xaxis=dict(title='Trial number'),
-            yaxis=dict(
-                title='Reaction time (s)',
-                type='log',
-                range=np.log10([0.1, 100]).tolist(),
-                dtick=np.log10([0.1, 1, 10, 100]).tolist()),
-            template=dict(
-                layout=dict(
-                    plot_bgcolor="white"
-                )
-            )
-        )
-
-        fig = go.Figure(data=[data, rolled], layout=layout)
+        fig = putils.create_rt_trialnum_plot(trials)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
 
@@ -148,6 +104,27 @@ class DateReactionTimeContrast(dj.Computed):
         sessions = behavior.BehavioralSummaryByDate.PsychResults * \
             behavior.BehavioralSummaryByDate.ReactionTimeContrast & key
         fig = putils.create_rt_contrast_plot(sessions)
+        key['plotting_data'] = fig.to_plotly_json()
+        self.insert1(key)
+
+
+@schema
+class DateReactionTimeTrialNumber(dj.Computed):
+    definition = """
+    -> behavior.BehavioralSummaryByDate
+    ---
+    plotting_data:  longblob   # dictionary for the plotting info
+    """
+
+    def make(self, key):
+        trial_sets = (behavior_ingest.TrialSet &
+                      (behavior_ingest.CompleteTrialSession &
+                       'stim_on_times_status="Complete"')).proj(
+                session_date='DATE(session_start_time)')
+        trials = behavior_ingest.TrialSet.Trial & \
+            (behavior_ingest.TrialSet * trial_sets & key)
+
+        fig = putils.create_rt_trialnum_plot(trials)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
 
