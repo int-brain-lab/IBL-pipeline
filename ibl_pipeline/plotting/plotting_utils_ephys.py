@@ -251,7 +251,7 @@ def create_raster_plot_combined(trials, align_event,
         get_spike_times_trials(
             trials, sorting_var, align_event, sort_by, mark)
 
-    id_gap = len(trials) * 0.05
+    id_gap = len(trials) * 0.02
 
     if len(spk_times_incorrect):
         spk_times_all_incorrect = np.hstack(spk_times_incorrect)
