@@ -187,7 +187,6 @@ def create_psth_plot(trials, align_event,
     temp.close()
     return encoded_string, y_lim
 
-
 def get_spike_times(trials, sorting_var, align_event,
                     sort_by=None,
                     mark=None):
@@ -252,9 +251,6 @@ def create_raster_plot_combined(trials, align_event,
         get_spike_times_trials(
             trials, sorting_var, align_event, sort_by, mark)
 
-    spk_times_all_left = np.hstack(spk_times_left)
-    spk_times_all_right = np.hstack(spk_times_right)
-
     id_gap = len(trials) * 0.05
 
     if len(spk_times_incorrect):
@@ -265,29 +261,44 @@ def create_raster_plot_combined(trials, align_event,
     else:
         id_incorrect = [0]
 
-    id_left = [[i + max(id_incorrect) + id_gap] * len(spike_time)
-               for i, spike_time in enumerate(spk_times_left)]
-    id_left = np.hstack(id_left)
+    if len(spk_times_left):
+        spk_times_all_left = np.hstack(spk_times_left)
+        id_left = [[i + max(id_incorrect) + id_gap] * len(spike_time)
+                   for i, spike_time in enumerate(spk_times_left)]
+        id_left = np.hstack(id_left)
+    else:
+        id_left = [max(id_incorrect)]
 
-    id_right = [[i + max(id_left) + id_gap] * len(spike_time)
-                for i, spike_time in enumerate(spk_times_right)]
-    id_right = np.hstack(id_right)
-
+    if len(spk_times_right):
+        spk_times_all_right = np.hstack(spk_times_right)
+        id_right = [[i + max(id_left) + id_gap] * len(spike_time)
+                    for i, spike_time in enumerate(spk_times_right)]
+        id_right = np.hstack(id_right)
+    else:
+        id_right = [max(id_right)]
 
     fig = plt.figure(dpi=150, frameon=False, figsize=[10, 5])
     ax = plt.Axes(fig, [0., 0., 1., 1.])
-    ax.plot(spk_times_all_left, id_left, 'g.', alpha=0.5, markeredgewidth=0, label='left trials')
-    ax.plot(spk_times_all_right, id_right, 'b.', alpha=0.5, markeredgewidth=0, label='right trials')
-
+    if len(spk_times_left):
+        ax.plot(spk_times_all_left, id_left, 'g.',
+                alpha=0.5, markeredgewidth=0, label='left trials')
+    if len(spk_times_right):
+        ax.plot(spk_times_all_right, id_right, 'b.',
+                alpha=0.5, markeredgewidth=0, label='right trials')
     if len(spk_times_incorrect):
         ax.plot(spk_times_all_incorrect, id_incorrect, 'r.',
                 alpha=0.5, markeredgewidth=0, label='incorrect trials')
 
     if sorting_var != 'trial_id':
         if len(spk_times_incorrect):
-            ax.plot(marking_points_incorrect, range(len(spk_times_incorrect)) , 'k', label=label)
-        ax.plot(marking_points_left, np.add(range(len(spk_times_left)), max(id_incorrect) + id_gap), 'g')
-        ax.plot(marking_points_right, np.add(range(len(spk_times_right)), max(id_left) + id_gap), 'b')
+            ax.plot(marking_points_incorrect,
+                    range(len(spk_times_incorrect)), 'r', label=label)
+        if len(spk_times_left):
+            ax.plot(marking_points_left,
+                    np.add(range(len(spk_times_left)), max(id_incorrect) + id_gap), 'g')
+        if len(spk_times_right):
+            ax.plot(marking_points_right,
+                    np.add(range(len(spk_times_right)), max(id_left) + id_gap), 'b')
 
     ax.set_axis_off()
     fig.add_axes(ax)
@@ -315,6 +326,7 @@ def create_raster_plot_combined(trials, align_event,
         encoded_string = base64.b64encode(image_file.read())
     temp.close()
     return encoded_string, [0, y_lim], label
+
 
 def get_legend(trials_type, legend_group):
     if trials_type == 'left':
