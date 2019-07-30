@@ -399,7 +399,7 @@ class CompleteTrialSession(dj.Computed):
                          "trials.response_times.npy",
                          "trials.contrastLeft.npy",
                          "trials.contrastRight.npy",
-                         "trials.probabilityLeft.npy"]
+                         "_ibl_trials.probabilityLeft.npy"]
 
     def make(self, key):
         datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
@@ -495,7 +495,7 @@ class TrialSet(dj.Imported):
                                          'trials.response_times',
                                          'trials.contrastLeft',
                                          'trials.contrastRight',
-                                         'trials.probabilityLeft'])
+                                         '_ibl_trials.probabilityLeft'])
         # print(len(trials_feedback_times),
         #       len(trials_feedback_types),
         #       len(trials_intervals),
