@@ -124,6 +124,9 @@ class DateReactionTimeTrialNumber(dj.Computed):
         trials = behavior_ingest.TrialSet.Trial & \
             (behavior_ingest.TrialSet * trial_sets & key)
 
+        if not len(trials):
+            return
+
         fig = putils.create_rt_trialnum_plot(trials)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
