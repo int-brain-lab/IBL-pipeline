@@ -180,15 +180,23 @@ class Psth(dj.Computed):
 
         align_event = (ephys.Event & key).fetch()
         x_lim = [-1, 1]
-        data_left = putils.compute_psth(
-            trials_left, 'left', align_event, 1000, 10, x_lim)
-        data_right = putils.compute_psth(
-            trials_right, 'right', align_event, 1000, 10, x_lim)
-        data_incorrect = putils.compute_psth(
-            trials_incorrect, 'incorrect', align_event, 1000, 10, x_lim)
-        data_all = putils.compute_psth(
-            trials_all, 'all', align_event, 1000, 10, x_lim)
-        data = [data_left, data_right, data_incorrect, data_all]
+        data = []
+        if len(trials_left):
+            data.append(
+                putils.compute_psth(trials_left, 'left', align_event, 1000, 10, x_lim)
+            )
+        if len(trials_right):
+            data.append(
+                putils.compute_psth(trials_right, 'right', align_event, 1000, 10, x_lim)
+            )
+        if len(trials_incorrect):
+            data.append(
+                putils.compute_psth(trials_incorrect, 'right', align_event, 1000, 10, x_lim)
+            )
+
+        data.append(
+            putils.compute_psth(trials_all, 'all', align_event, 1000, 10, x_lim)
+        )
 
         layout = go.Layout(
             width=580,
