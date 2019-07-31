@@ -169,12 +169,12 @@ class Psth(dj.Computed):
             'trial_response_choice', 'trial_spike_times',
             trial_duration='trial_end_time-trial_start_time',
             trial_signed_contrast='trial_stim_contrast_right - trial_stim_contrast_left'
-        ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
+        ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"' & key
 
         trials_left = trials_all & 'trial_response_choice="CW"' \
-            & 'trial_signed_contrast < 0' & key
+            & 'trial_signed_contrast < 0'
         trials_right = trials_all & 'trial_response_choice="CCW"' \
-            & 'trial_signed_contrast > 0' & key
+            & 'trial_signed_contrast > 0'
         trials_incorrect = trials_all - \
             trials_right.proj() - trials_left.proj()
 
