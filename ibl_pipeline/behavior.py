@@ -395,7 +395,7 @@ class CompleteTrialSession(dj.Computed):
 
     required_datasets = ["_ibl_trials.feedback_times.npy",
                          "_ibl_trials.feedbackType.npy",
-                         "_ibl_trials.intervals.npy", "trials.choice.npy",
+                         "_ibl_trials.intervals.npy", "_ibl_trials.choice.npy",
                          "_ibl_trials.response_times.npy",
                          "_ibl_trials.contrastLeft.npy",
                          "_ibl_trials.contrastRight.npy",
