@@ -384,7 +384,7 @@ class LitterSubject(dj.Computed):
 class SubjectProject(dj.Computed):
     definition = """
     -> Subject
-    project_name:           varchar(255)
+    subject_project:           varchar(255)
     """
 
     subjects_with_projects = alyxraw.AlyxRaw.Field & subjects & \
@@ -399,11 +399,14 @@ class SubjectProject(dj.Computed):
         proj_uuids = grf(key, 'projects', multiple_entries=True)
         for proj_uuid in proj_uuids:
             key_sp = key_s.copy()
-            key_sp['project_name'] = \
-                (reference.Project &
-                    dict(project_uuid=uuid.UUID(proj_uuid))).fetch1(
-                        'project_name')
-            self.insert1(key_sp)
+            try:
+                key_sp['subject_project'] = \
+                    (reference.Project &
+                        dict(project_uuid=uuid.UUID(proj_uuid))).fetch1(
+                            'project_name')
+                self.insert1(key_sp)
+            except:
+                print(key['subject_uuid'])
 
 
 @schema

@@ -176,6 +176,7 @@ class DataSet(dj.Computed):
                    dict(session_uuid=uuid.UUID(session))):
             print('Session {} is not in the table acquisition.Session'.format(
                 session))
+            print('dataset_uuid: {}'.format(str(key['uuid'])))
             return
 
         key_ds['subject_uuid'], key_ds['session_start_time'] = \
@@ -253,6 +254,7 @@ class FileRecord(dj.Computed):
         dataset = grf(key, 'dataset')
         if not len(DataSet & dict(dataset_uuid=uuid.UUID(dataset))):
             print('Dataset {} is not in the table data.DataSet')
+            print('Record_uuid: {}'.format(str(key['uuid'])))
             return
 
         key_fr['subject_uuid'], key_fr['session_start_time'], \

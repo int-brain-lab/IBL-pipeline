@@ -10,6 +10,7 @@ python create_summary_csv.py
 python compute_latest_date.py
 python plotting_behavior.py
 python insert_update_subject_last_date.py
+python populate_daily_summary.py
 cd ../prelim_analyses/behavioral_snapshots
 python behavioral_snapshot.py
 python behavioral_overview_perlab.py

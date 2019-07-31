@@ -16,13 +16,12 @@ class Session(dj.Computed):
     ---
     session_number=null:        int
     subject_uuid:               uuid
-    project_name=null:          varchar(255)
     session_start_time:         datetime
     session_end_time=null:      datetime
     session_lab=null:           varchar(255)
     session_location=null:      varchar(255)
     session_type=null:          varchar(255)
-    session_narrative=null:     varchar(1024)
+    session_narrative=null:     varchar(2048)
     task_protocol=null:         varchar(255)
     """
     key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(
@@ -41,13 +40,6 @@ class Session(dj.Computed):
         session_number = grf(key, 'number')
         if session_number != 'None':
             key_session['session_number'] = session_number
-
-        proj_uuid = grf(key, 'project')
-        if proj_uuid != 'None':
-            key_session['project_name'] = \
-                (reference.Project &
-                 dict(project_uuid=uuid.UUID(proj_uuid))).fetch1(
-                    'project_name')
 
         key_session['session_start_time'] = grf(key, 'start_time')
 
@@ -102,6 +94,16 @@ class SessionProcedure(dj.Manual):
     subject_uuid:           uuid
     session_start_time:     datetime
     procedure_type_name:    varchar(255)
+    """
+
+
+@schema
+class SessionProject(dj.Manual):
+    definition = """
+    subject_uuid:         uuid
+    session_start_time:   datetime
+    ---
+    session_project:      varchar(255)
     """
 
 

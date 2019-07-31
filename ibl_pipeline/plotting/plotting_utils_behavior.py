@@ -7,11 +7,13 @@ import numpy as np
 import datetime
 import datajoint as dj
 import plotly.graph_objs as go
+import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import plotly
 from plotly import tools
 import statsmodels.stats.proportion as smp
+import scipy.signal as signal
 
 
 def get_date_range(subj):
@@ -80,7 +82,6 @@ def get_date_range(subj):
                         first_weighing_date]
     first_date_array = [x for x in first_date_array if x is not None]
     last_date_array = [last_session_date,
-                       last_water_res_date,
                        last_water_admin_date,
                        last_weighing_date]
     last_date_array = [x for x in last_date_array if x is not None]
@@ -187,7 +188,6 @@ def create_psych_curve_plot(sessions):
     data_mean = []
     data_errorbar = []
     data_fit = []
-    data_text = []
 
     for session in sessions.fetch('KEY'):
         contrasts, prob_right, prob_left, \
@@ -264,6 +264,11 @@ def create_psych_curve_plot(sessions):
         yaxis=dict(
             title='Probability choosing right',
             range=[-0.05, 1.05]),
+        template=dict(
+            layout=dict(
+                plot_bgcolor="white"
+            )
+        )
     )
 
     data = data_errorbar
@@ -341,9 +346,66 @@ def create_rt_contrast_plot(sessions):
             x=1.1,
             y=0.9,
             orientation='v'),
+        template=dict(
+            layout=dict(
+                plot_bgcolor="white"
+            )
+        )
     )
 
     return go.Figure(data=data, layout=layout)
+
+
+def create_rt_trialnum_plot(trials):
+    rt_trials = trials.proj(
+        rt='trial_response_time-trial_stim_on_time').fetch(as_dict=True)
+    rt_trials = pd.DataFrame(rt_trials)
+    rt_trials.index = rt_trials.index + 1
+    rt_rolled = rt_trials['rt'].rolling(window=10).median()
+    rt_rolled = rt_rolled.where((pd.notnull(rt_rolled)), None)
+    data = dict(
+        x=rt_trials.index.tolist(),
+        y=rt_trials['rt'].tolist(),
+        name='data',
+        type='scatter',
+        mode='markers',
+        marker=dict(
+            color='lightgray'
+        )
+    )
+
+    rolled = dict(
+        x=rt_trials.index.tolist(),
+        y=rt_rolled.values.tolist(),
+        name='rolled data',
+        type='scatter',
+        marker=dict(
+            color='black'
+        )
+    )
+
+    layout = go.Layout(
+        width=630,
+        height=400,
+        title=dict(
+            text='Reaction time - trial number',
+            x=0.26,
+            y=0.85
+        ),
+        xaxis=dict(title='Trial number'),
+        yaxis=dict(
+            title='Reaction time (s)',
+            type='log',
+            range=np.log10([0.1, 100]).tolist(),
+            dtick=np.log10([0.1, 1, 10, 100]).tolist()),
+        template=dict(
+            layout=dict(
+                plot_bgcolor="white"
+            )
+        )
+    )
+
+    return go.Figure(data=[data, rolled], layout=layout)
 
 
 def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
@@ -360,7 +422,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,
-               legendgroup='status'
+               hoverinfo='x'
             )
         )
 
@@ -375,7 +437,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,
-               legendgroup='status'
+               hoverinfo='x'
             )
         )
 
@@ -405,7 +467,8 @@ def create_monday_plot(data, yrange, mondays, xaxis='x1', yaxis='y1',
                 xaxis=xaxis,
                 yaxis=yaxis,
                 showlegend=show_legend,
-                legendgroup='monday'
+                legendgroup='monday',
+                hoverinfo='skip'
             )
         )
 

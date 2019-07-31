@@ -2,7 +2,7 @@ import datajoint as dj
 from ..analyses import behavior
 from .. import behavior as behavior_ingest
 from .. import reference, subject, action, acquisition, data
-from . import plotting_utils as putils
+from . import plotting_utils_behavior as putils
 import numpy as np
 import pandas as pd
 from ..utils import psychofit as psy
@@ -10,8 +10,10 @@ import plotly
 import plotly.graph_objs as go
 import statsmodels.stats.proportion as smp
 import datetime
+import matplotlib.pyplot as plt
 
-schema = dj.schema('ibl_plotting_behavior')
+schema = dj.schema(dj.config.get('database.prefix', '') +
+                   'ibl_plotting_behavior')
 
 
 @schema
@@ -65,46 +67,7 @@ class SessionReactionTimeTrialNumber(dj.Computed):
     def make(self, key):
         # get all trial of the session
         trials = behavior_ingest.TrialSet.Trial & key
-        rt_trials = trials.proj(
-            rt='trial_response_time-trial_stim_on_time').fetch(as_dict=True)
-        rt_trials = pd.DataFrame(rt_trials)
-        rt_trials.index = rt_trials.index + 1
-        rt_rolled = rt_trials['rt'].rolling(window=10).median()
-        rt_rolled = rt_rolled.where((pd.notnull(rt_rolled)), None)
-        data = dict(
-            x=rt_trials.index.tolist(),
-            y=rt_trials['rt'].tolist(),
-            name='data',
-            type='scatter',
-            mode='markers',
-            marker=dict(
-                color='lightgray'
-            )
-        )
-
-        rolled = dict(
-            x=rt_trials.index.tolist(),
-            y=rt_rolled.values.tolist(),
-            name='rolled data',
-            type='scatter',
-            marker=dict(
-                color='black'
-            )
-        )
-
-        layout = go.Layout(
-            width=630,
-            height=400,
-            title='Reaction time - trial number',
-            xaxis=dict(title='Trial number'),
-            yaxis=dict(
-                title='Reaction time (s)',
-                type='log',
-                range=np.log10([0.1, 100]).tolist(),
-                dtick=np.log10([0.1, 1, 10, 100]).tolist()),
-        )
-
-        fig = go.Figure(data=[data, rolled], layout=layout)
+        fig = putils.create_rt_trialnum_plot(trials)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
 
@@ -146,6 +109,30 @@ class DateReactionTimeContrast(dj.Computed):
 
 
 @schema
+class DateReactionTimeTrialNumber(dj.Computed):
+    definition = """
+    -> behavior.BehavioralSummaryByDate
+    ---
+    plotting_data:  longblob   # dictionary for the plotting info
+    """
+
+    def make(self, key):
+        trial_sets = (behavior_ingest.TrialSet &
+                      (behavior_ingest.CompleteTrialSession &
+                       'stim_on_times_status="Complete"')).proj(
+                session_date='DATE(session_start_time)')
+        trials = behavior_ingest.TrialSet.Trial & \
+            (behavior_ingest.TrialSet * trial_sets & key)
+
+        if not len(trials):
+            return
+
+        fig = putils.create_rt_trialnum_plot(trials)
+        key['plotting_data'] = fig.to_plotly_json()
+        self.insert1(key)
+
+
+@schema
 class LatestDate(dj.Manual):
     # compute the last date of any event for individual subjects
     definition = """
@@ -163,10 +150,10 @@ class CumulativeSummary(dj.Computed):
     -> subject.Subject
     latest_date:  date      # last date of any event for the subject
     """
-    key_source = dj.U('subject_uuid', 'latest_date') \
-        & subject.Subject.aggr(
-            LatestDate, 'latest_date',
-            lastest_timestamp='MAX(checking_ts)')
+    latest = subject.Subject.aggr(
+        LatestDate,
+        checking_ts='MAX(checking_ts)') * LatestDate
+    key_source = dj.U('subject_uuid', 'latest_date') & latest
 
     def make(self, key):
         self.insert1(key)
@@ -262,6 +249,11 @@ class CumulativeSummary(dj.Computed):
                     x=1.2,
                     y=0.8,
                     orientation='v'),
+                template=dict(
+                    layout=dict(
+                        plot_bgcolor="white"
+                    )
+                )
             )
 
             fig = go.Figure(data=data, layout=layout)
@@ -350,7 +342,12 @@ class CumulativeSummary(dj.Computed):
                 legend=dict(
                     x=1.2,
                     y=0.8,
-                    orientation='v')
+                    orientation='v'),
+                template=dict(
+                    layout=dict(
+                        plot_bgcolor="white"
+                    )
+                )
             )
 
             fig = go.Figure(data=data, layout=layout)
@@ -516,7 +513,12 @@ class CumulativeSummary(dj.Computed):
                 legend=dict(
                     x=1.1,
                     y=1,
-                    orientation='v')
+                    orientation='v'),
+                template=dict(
+                    layout=dict(
+                        plot_bgcolor="white"
+                    )
+                )
             )
 
             fig = go.Figure(data=pars_data, layout=layout)
@@ -607,6 +609,11 @@ class CumulativeSummary(dj.Computed):
                     x=1.2,
                     y=0.8,
                     orientation='v'
+                ),
+                template=dict(
+                    layout=dict(
+                        plot_bgcolor="white"
+                    )
                 )
             )
 
@@ -619,7 +626,8 @@ class CumulativeSummary(dj.Computed):
 
         water_type_colors = ['red', 'orange', 'blue',
                              'rgba(55, 128, 191, 0.7)',
-                             'purple', 'rgba(50, 171, 96, 0.9)']
+                             'purple', 'rgba(50, 171, 96, 0.9)',
+                             'red']
         water_type_map = dict()
 
         for watertype, color in zip(water_type_names, water_type_colors):
@@ -749,7 +757,8 @@ class CumulativeSummary(dj.Computed):
                         name='85% reference weight',
                         yaxis='y2',
                         showlegend=show_res_legend,
-                        legendgroup='weight_ref'
+                        legendgroup='weight_ref',
+                        hoverinfo='y'
                     )
                 )
 
@@ -767,7 +776,8 @@ class CumulativeSummary(dj.Computed):
                         name='75% reference weight',
                         yaxis='y2',
                         showlegend=show_res_legend,
-                        legendgroup='weight_ref'
+                        legendgroup='weight_ref',
+                        hoverinfo='y'
                     )
                 )
 
@@ -796,7 +806,12 @@ class CumulativeSummary(dj.Computed):
                     x=1.1,
                     y=0.9,
                     orientation='v'),
-                barmode='stack'
+                barmode='stack',
+                template=dict(
+                    layout=dict(
+                        plot_bgcolor="white"
+                    )
+                )
             )
             fig = go.Figure(data=data, layout=layout)
             water_weight_entry['water_weight'] = fig.to_plotly_json()

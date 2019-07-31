@@ -153,7 +153,8 @@ def create_monday_plot(data, yrange, mondays, xaxis='x1', yaxis='y1', show_legen
                 xaxis=xaxis,
                 yaxis=yaxis,
                 showlegend=show_legend,
-                legendgroup='monday'
+                legendgroup='monday',
+                hoverinfo='skip'
             )
         )
         

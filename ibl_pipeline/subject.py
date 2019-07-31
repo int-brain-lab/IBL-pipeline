@@ -171,7 +171,7 @@ class LitterSubject(dj.Manual):
 class SubjectProject(dj.Manual):
     definition = """
     -> Subject
-    -> reference.Project
+    -> reference.Project.proj(subject_project='project_name')
     """
 
 

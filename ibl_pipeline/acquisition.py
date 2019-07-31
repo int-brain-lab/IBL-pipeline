@@ -54,11 +54,10 @@ class Session(dj.Manual):
     session_uuid:               uuid
     session_number=null:        int     	# number
     session_end_time=null:      datetime	# end time
-    -> [nullable] reference.Project
     -> [nullable] reference.LabLocation.proj(session_lab='lab_name', session_location='location_name')
     task_protocol=null:         varchar(255)
     session_type=null:		    varchar(255)	# type
-    session_narrative=null:     varchar(1024)
+    session_narrative=null:     varchar(2048)
     """
 
 
@@ -84,6 +83,15 @@ class SessionProcedure(dj.Manual):
     definition = """
     -> Session
     -> action.ProcedureType
+    """
+
+
+@schema
+class SessionProject(dj.Manual):
+    definition = """
+    -> Session
+    ---
+    -> reference.Project.proj(session_project='project_name')
     """
 
 
