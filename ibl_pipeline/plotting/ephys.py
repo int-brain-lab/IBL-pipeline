@@ -96,9 +96,10 @@ class Raster(dj.Computed):
         legend_right = putils.get_legend('right', 'spike')
         legend_incorrect = putils.get_legend('incorrect', 'spike')
 
-        legend_mark_left = putils.get_legend('left', label)
-        legend_mark_right = putils.get_legend('right', label)
-        legend_mark_incorrect = putils.get_legend('incorrect', label)
+        if sorting_var != 'trial_id':
+            legend_mark_left = putils.get_legend('left', label)
+            legend_mark_right = putils.get_legend('right', label)
+            legend_mark_incorrect = putils.get_legend('incorrect', label)
 
         layout = go.Layout(
             images=[dict(
@@ -143,8 +144,11 @@ class Raster(dj.Computed):
         #     )
         )
 
-        data = [axis, legend_left, legend_right, legend_incorrect,
-                legend_mark_left, legend_mark_right, legend_mark_incorrect]
+        if sorting_var != 'trial_id':
+            data = [axis, legend_left, legend_right, legend_incorrect,
+                    legend_mark_left, legend_mark_right, legend_mark_incorrect]
+        else:
+            data = [axis, legend_left, legend_right, legend_incorrect]
 
         fig = go.Figure(data=data, layout=layout)
         key['plotting_data'] = fig.to_plotly_json()
