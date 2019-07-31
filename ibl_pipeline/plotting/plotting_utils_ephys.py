@@ -201,8 +201,7 @@ def compute_psth(trials, trial_type, align_event, nbins, window_size, x_lim=[-1,
     else:
         raise NameError('Invalid type name')
 
-    spk_times = (trials & 'event="{}"'.format(align_event)).fetch(
-        'trial_spike_times')
+    spk_times = trials.fetch('trial_spike_times')
     mean_counts = np.divide(
         np.histogram(np.hstack(spk_times),
                      range=x_lim,

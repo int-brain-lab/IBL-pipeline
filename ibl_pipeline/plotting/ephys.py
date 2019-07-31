@@ -178,7 +178,7 @@ class Psth(dj.Computed):
         trials_incorrect = trials_all - \
             trials_right.proj() - trials_left.proj()
 
-        align_event = (ephys.Event & key).fetch()
+        align_event = (ephys.Event & key).fetch1('event')
         x_lim = [-1, 1]
         data = []
         if len(trials_left):
