@@ -172,9 +172,9 @@ class Psth(dj.Computed):
         ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
 
         trials_left = trials_all & 'trial_response_choice="CW"' \
-            & 'trial_signed_contrast < 0'
+            & 'trial_signed_contrast < 0' & key
         trials_right = trials_all & 'trial_response_choice="CCW"' \
-            & 'trial_signed_contrast > 0'
+            & 'trial_signed_contrast > 0' & key
         trials_incorrect = trials_all - \
             trials_right.proj() - trials_left.proj()
 
@@ -183,19 +183,23 @@ class Psth(dj.Computed):
         data = []
         if len(trials_left):
             data.append(
-                putils.compute_psth(trials_left, 'left', align_event, 1000, 10, x_lim)
+                putils.compute_psth(
+                    trials_left, 'left', align_event, 1000, 10, x_lim)
             )
         if len(trials_right):
             data.append(
-                putils.compute_psth(trials_right, 'right', align_event, 1000, 10, x_lim)
+                putils.compute_psth(
+                    trials_right, 'right', align_event, 1000, 10, x_lim)
             )
         if len(trials_incorrect):
             data.append(
-                putils.compute_psth(trials_incorrect, 'right', align_event, 1000, 10, x_lim)
+                putils.compute_psth(
+                    trials_incorrect, 'incorrect', align_event, 1000, 10, x_lim)
             )
 
         data.append(
-            putils.compute_psth(trials_all, 'all', align_event, 1000, 10, x_lim)
+            putils.compute_psth(
+                trials_all, 'all', align_event, 1000, 10, x_lim)
         )
 
         layout = go.Layout(
