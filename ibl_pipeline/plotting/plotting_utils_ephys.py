@@ -14,6 +14,7 @@ import plotly
 from plotly import tools
 import statsmodels.stats.proportion as smp
 import scipy.signal as signal
+import os
 
 
 def get_sort_and_marker(align_event, sorting_var):
@@ -281,7 +282,8 @@ def get_spike_times_trials(trials, sorting_var, align_event,
 def create_raster_plot_combined(trials, align_event,
                                 sorting_var='trial_id',
                                 x_lim=[-10, 10],
-                                show_plot=False):
+                                show_plot=False,
+                                fig_dir=None):
 
     sort_by, mark, label = get_sort_and_marker(
         align_event, sorting_var
@@ -354,20 +356,29 @@ def create_raster_plot_combined(trials, align_event,
     y_lim = max(id_right) * 1.02
     ax.set_ylim(-2, y_lim)
 
-    # save the figure with `pad_inches=0` to remove
-    # any padding in the image
-    import tempfile
-    temp = tempfile.NamedTemporaryFile(suffix=".png")
-    fig.savefig(temp.name, pad_inches=0)
-
     if not show_plot:
         plt.close(fig)
 
-    import base64
-    with open(temp.name, "rb") as image_file:
-        encoded_string = base64.b64encode(image_file.read())
-    temp.close()
-    return encoded_string, [0, y_lim], label
+    # save the figure with `pad_inches=0` to remove
+    # any padding in the image
+    if fig_dir:
+        if not os.path.exists(os.path.dirname(fig_dir)):
+            try:
+                os.makedirs(os.path.dirname(fig_dir))
+            except OSError as exc:  # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
+        fig.savefig(fig_dir, pad_inches=0)
+        return [0, y_lim], label
+    else:
+        import tempfile
+        temp = tempfile.NamedTemporaryFile(suffix=".png")
+        fig.savefig(temp.name, pad_inches=0)
+        import base64
+        with open(temp.name, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read())
+        temp.close()
+        return encoded_string, [0, y_lim], label
 
 
 def get_legend(trials_type, legend_group):

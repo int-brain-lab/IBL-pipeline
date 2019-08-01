@@ -6,6 +6,7 @@ import pandas as pd
 import plotly
 import plotly.graph_objs as go
 import json
+from os import path
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_ephys')
@@ -104,6 +105,116 @@ class Raster(dj.Computed):
         layout = go.Layout(
             images=[dict(
                 source='data:image/png;base64, ' + encoded_string.decode(),
+                sizex=x_lim[1] - x_lim[0],
+                sizey=y_lim[1] - y_lim[0],
+                x=x_lim[0],
+                y=y_lim[1],
+                xref='x',
+                yref='y',
+                sizing='stretch',
+                layer='below'
+                )],
+            width=580,
+            height=370,
+            margin=go.layout.Margin(
+                l=50,
+                r=30,
+                b=40,
+                t=80,
+                pad=0
+            ),
+            title=dict(
+                text='Raster, aligned to {}'.format(align_event),
+                x=0.21,
+                y=0.87
+            ),
+            xaxis=dict(
+                title='Time (sec)',
+                range=x_lim,
+                showgrid=False
+            ),
+            yaxis=dict(
+                title='Trial idx',
+                range=y_lim,
+                showgrid=False
+            ),
+        #     template=dict(
+        #         layout=dict(
+        #             plot_bgcolor="#fff"
+        #         )
+        #     )
+        )
+
+        if sorting_var != 'trial_id':
+            data = [axis, legend_left, legend_right, legend_incorrect,
+                    legend_mark_left, legend_mark_right, legend_mark_incorrect]
+        else:
+            data = [axis, legend_left, legend_right, legend_incorrect]
+
+        fig = go.Figure(data=data, layout=layout)
+        key['plotting_data'] = fig.to_plotly_json()
+        self.insert1(key)
+
+
+@schema
+class RasterLink(dj.Computed):
+    definition = """
+    -> ephys.Cluster
+    -> ValidAlignSort
+    ---
+    plotting_data:      varchar(255)
+    """
+
+    def make(self, key):
+        cluster = ephys.Cluster & key
+        trials = \
+            (behavior.TrialSet.Trial * ephys.TrialSpikes & cluster).proj(
+                'trial_start_time', 'trial_stim_on_time',
+                'trial_response_time',
+                'trial_feedback_time',
+                'trial_response_choice',
+                'trial_spike_times',
+                trial_duration='trial_end_time-trial_start_time',
+                trial_signed_contrast="""trial_stim_contrast_right -
+                                         trial_stim_contrast_left"""
+            ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
+
+        if not len(trials):
+            return
+        align_event = (ephys.Event & key).fetch1('event')
+        sorting_var = (Sorting & key).fetch1('sort_by')
+        x_lim = [-1, 1]
+        fig_link = path.join('/', 'raster',
+                             key['subject_uuid'],
+                             key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+                             key['probe_idx'],
+                             key['cluster_revision'],
+                             key['event'],
+                             key['sort_by'],
+                             key['cluster_id']) + '.png'
+        y_lim, label = putils.create_raster_plot_combined(
+            trials, align_event, sorting_var, fig_link)
+
+        axis = go.Scatter(
+            x=x_lim,
+            y=y_lim,
+            mode='markers',
+            marker=dict(opacity=0),
+            showlegend=False
+        )
+
+        legend_left = putils.get_legend('left', 'spike')
+        legend_right = putils.get_legend('right', 'spike')
+        legend_incorrect = putils.get_legend('incorrect', 'spike')
+
+        if sorting_var != 'trial_id':
+            legend_mark_left = putils.get_legend('left', label)
+            legend_mark_right = putils.get_legend('right', label)
+            legend_mark_incorrect = putils.get_legend('incorrect', label)
+
+        layout = go.Layout(
+            images=[dict(
+                source=path.join('localhost:3333', fig_link),
                 sizex=x_lim[1] - x_lim[0],
                 sizey=y_lim[1] - y_lim[0],
                 x=x_lim[0],
