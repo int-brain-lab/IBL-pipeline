@@ -162,7 +162,7 @@ class RasterLink(dj.Computed):
     -> ephys.Cluster
     -> ValidAlignSort
     ---
-    plotting_data:      varchar(255)
+    plotting_data:      blob@plotting
     """
 
     def make(self, key):
