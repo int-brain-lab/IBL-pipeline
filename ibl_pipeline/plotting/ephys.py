@@ -193,7 +193,7 @@ class RasterLink(dj.Computed):
                              key['sort_by'],
                              str(key['cluster_id'])) + '.png'
         y_lim, label = putils.create_raster_plot_combined(
-            trials, align_event, sorting_var, fig_link)
+            trials, align_event, sorting_var, fig_dir=fig_link)
 
         axis = go.Scatter(
             x=x_lim,
