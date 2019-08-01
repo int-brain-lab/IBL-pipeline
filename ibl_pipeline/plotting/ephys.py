@@ -185,13 +185,13 @@ class RasterLink(dj.Computed):
         sorting_var = (Sorting & key).fetch1('sort_by')
         x_lim = [-1, 1]
         fig_link = path.join('/', 'raster',
-                             key['subject_uuid'],
+                             str(key['subject_uuid']),
                              key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
-                             key['probe_idx'],
-                             key['cluster_revision'],
+                             str(key['probe_idx']),
+                             str(key['cluster_revision']),
                              key['event'],
                              key['sort_by'],
-                             key['cluster_id']) + '.png'
+                             str(key['cluster_id'])) + '.png'
         y_lim, label = putils.create_raster_plot_combined(
             trials, align_event, sorting_var, fig_link)
 
