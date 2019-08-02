@@ -302,8 +302,8 @@ class RasterLinkOnly(dj.Computed):
                              key['event'],
                              key['sort_by'],
                              str(key['cluster_id'])) + '.png'
-        y_lim, label = putils.create_raster_plot_combined(
-            trials, align_event, sorting_var, fig_dir=fig_link)
+        # y_lim, label = putils.create_raster_plot_combined(
+        #     trials, align_event, sorting_var, fig_dir=fig_link)
         key['plotting_data_link'] = 'localhost:3333' + fig_link
         self.insert1(key)
 
