@@ -267,6 +267,48 @@ class RasterLink(dj.Computed):
 
 
 @schema
+class RasterLinkOnly(dj.Computed):
+    definition = """
+    -> ephys.Cluster
+    -> ValidAlignSort
+    ---
+    plotting_data_link:      varchar(255)
+    """
+
+    def make(self, key):
+        cluster = ephys.Cluster & key
+        trials = \
+            (behavior.TrialSet.Trial * ephys.TrialSpikes & cluster).proj(
+                'trial_start_time', 'trial_stim_on_time',
+                'trial_response_time',
+                'trial_feedback_time',
+                'trial_response_choice',
+                'trial_spike_times',
+                trial_duration='trial_end_time-trial_start_time',
+                trial_signed_contrast="""trial_stim_contrast_right -
+                                         trial_stim_contrast_left"""
+            ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
+
+        if not len(trials):
+            return
+        align_event = (ephys.Event & key).fetch1('event')
+        sorting_var = (Sorting & key).fetch1('sort_by')
+        x_lim = [-1, 1]
+        fig_link = path.join('/', 'raster',
+                             str(key['subject_uuid']),
+                             key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+                             str(key['probe_idx']),
+                             str(key['cluster_revision']),
+                             key['event'],
+                             key['sort_by'],
+                             str(key['cluster_id'])) + '.png'
+        y_lim, label = putils.create_raster_plot_combined(
+            trials, align_event, sorting_var, fig_dir=fig_link)
+        key['plotting_data_link'] = 'localhost:3333' + fig_link
+        self.insert1(key)
+
+
+@schema
 class Psth(dj.Computed):
     definition = """
     -> ephys.Cluster
