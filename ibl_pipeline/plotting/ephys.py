@@ -247,12 +247,7 @@ class RasterLink(dj.Computed):
                 title='Trial idx',
                 range=y_lim,
                 showgrid=False
-            ),
-        #     template=dict(
-        #         layout=dict(
-        #             plot_bgcolor="#fff"
-        #         )
-        #     )
+            )
         )
 
         if sorting_var != 'trial_id':
@@ -267,12 +262,91 @@ class RasterLink(dj.Computed):
 
 
 @schema
+class RasterLayoutTemplate(dj.Lookup):
+    definition = """
+    template_idx:   int
+    ---
+    raster_data_template:   longblob
+    """
+
+    axis = go.Scatter(
+        x=[-1, 1],
+        # y=y_lim,
+        mode='markers',
+        marker=dict(opacity=0),
+        showlegend=False
+    )
+    legend_left = putils.get_legend('left', 'spike')
+    legend_right = putils.get_legend('right', 'spike')
+    legend_incorrect = putils.get_legend('incorrect', 'spike')
+
+    legend_mark_left = putils.get_legend('left', 'event')
+    legend_mark_right = putils.get_legend('right', 'event')
+    legend_mark_incorrect = putils.get_legend('incorrect', 'event')
+
+    layout = go.Layout(
+        images=[dict(
+            source='',
+            sizex=2,
+            #sizey=y_lim[1] - y_lim[0],
+            x=-1,
+            #y=y_lim[1],
+            xref='x',
+            yref='y',
+            sizing='stretch',
+            layer='below'
+            )],
+        width=580,
+        height=370,
+        margin=go.layout.Margin(
+            l=50,
+            r=30,
+            b=40,
+            t=80,
+            pad=0
+        ),
+        title=dict(
+            text='Raster, aligned to ', # add align_event here
+            x=0.21,
+            y=0.87
+        ),
+        xaxis=dict(
+            title='Time (sec)',
+            range=[-1, 1],
+            showgrid=False
+        ),
+        yaxis=dict(
+            title='Trial idx',
+            showgrid=False
+        ),
+    )
+    data1 = [axis, legend_left, legend_right, legend_incorrect]
+    data2 = [axis, legend_left, legend_right, legend_incorrect,
+             legend_mark_left, legend_mark_right, legend_mark_incorrect]
+    template_1 = dict(
+        template_idx=0,
+        raster_data_template=go.Figure(data=data1, layout=layout).to_plotly_json
+    )
+    template_2 = dict(
+        template_idx=1,
+        raster_data_template=go.Figure(data=data2, layout=layout).to_plotly_json
+    )
+    contents = [
+        template_1,
+        template_2
+    ]
+
+
+@schema
 class RasterLinkOnly(dj.Computed):
     definition = """
     -> ephys.Cluster
     -> ValidAlignSort
     ---
     plotting_data_link:      varchar(255)
+    plot_ylim:               float
+    mark_label=null:         varchar(32)
+    -> RasterLayoutTemplate
     """
 
     def make(self, key):
@@ -293,7 +367,6 @@ class RasterLinkOnly(dj.Computed):
             return
         align_event = (ephys.Event & key).fetch1('event')
         sorting_var = (Sorting & key).fetch1('sort_by')
-        x_lim = [-1, 1]
         fig_link = path.join('/', 'raster',
                              str(key['subject_uuid']),
                              key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
@@ -302,9 +375,17 @@ class RasterLinkOnly(dj.Computed):
                              key['event'],
                              key['sort_by'],
                              str(key['cluster_id'])) + '.png'
-        # y_lim, label = putils.create_raster_plot_combined(
-        #     trials, align_event, sorting_var, fig_dir=fig_link)
+        y_lim, label = putils.create_raster_plot_combined(
+            trials, align_event, sorting_var, fig_dir=fig_link)
         key['plotting_data_link'] = 'localhost:3333' + fig_link
+        key['plot_ylim'] = y_lim
+        key['mark_label'] = label
+
+        if key['sort_by'] == 'trial_id':
+            key['template_idx'] = 0
+        else:
+            key['template_idx'] = 1
+
         self.insert1(key)
 
 
