@@ -269,75 +269,75 @@ class RasterLayoutTemplate(dj.Lookup):
     raster_data_template:   longblob
     """
 
-    def __init__(self):
+    axis = go.Scatter(
+        x=[-1, 1],
+        # y=y_lim,
+        mode='markers',
+        marker=dict(opacity=0),
+        showlegend=False
+    )
+    legend_left = putils.get_legend('left', 'spike')
+    legend_right = putils.get_legend('right', 'spike')
+    legend_incorrect = putils.get_legend('incorrect', 'spike')
 
-        axis = go.Scatter(
-            x=[-1, 1],
-            # y=y_lim,
-            mode='markers',
-            marker=dict(opacity=0),
-            showlegend=False
-        )
-        legend_left = putils.get_legend('left', 'spike')
-        legend_right = putils.get_legend('right', 'spike')
-        legend_incorrect = putils.get_legend('incorrect', 'spike')
+    legend_mark_left = putils.get_legend('left', 'event')
+    legend_mark_right = putils.get_legend('right', 'event')
+    legend_mark_incorrect = putils.get_legend('incorrect', 'event')
 
-        legend_mark_left = putils.get_legend('left', 'event')
-        legend_mark_right = putils.get_legend('right', 'event')
-        legend_mark_incorrect = putils.get_legend('incorrect', 'event')
+    layout = go.Layout(
+        images=[dict(
+            source='',
+            sizex=2,
+            #sizey=y_lim[1] - y_lim[0],
+            x=-1,
+            #y=y_lim[1],
+            xref='x',
+            yref='y',
+            sizing='stretch',
+            layer='below'
+            )],
+        width=580,
+        height=370,
+        margin=go.layout.Margin(
+            l=50,
+            r=30,
+            b=40,
+            t=80,
+            pad=0
+        ),
+        title=dict(
+            text='Raster, aligned to ', # add align_event here
+            x=0.21,
+            y=0.87
+        ),
+        xaxis=dict(
+            title='Time (sec)',
+            range=[-1, 1],
+            showgrid=False
+        ),
+        yaxis=dict(
+            title='Trial idx',
+            showgrid=False
+        ),
+    )
+    data1 = [axis, legend_left, legend_right, legend_incorrect]
+    data2 = [axis, legend_left, legend_right, legend_incorrect,
+             legend_mark_left, legend_mark_right, legend_mark_incorrect]
+    template1 = go.Figure(data=data1, layout=layout).to_plotly_json
+    template2 = go.Figure(data=data2, layout=layout).to_plotly_json
 
-        layout = go.Layout(
-            images=[dict(
-                source='',
-                sizex=2,
-                #sizey=y_lim[1] - y_lim[0],
-                x=-1,
-                #y=y_lim[1],
-                xref='x',
-                yref='y',
-                sizing='stretch',
-                layer='below'
-                )],
-            width=580,
-            height=370,
-            margin=go.layout.Margin(
-                l=50,
-                r=30,
-                b=40,
-                t=80,
-                pad=0
-            ),
-            title=dict(
-                text='Raster, aligned to ', # add align_event here
-                x=0.21,
-                y=0.87
-            ),
-            xaxis=dict(
-                title='Time (sec)',
-                range=[-1, 1],
-                showgrid=False
-            ),
-            yaxis=dict(
-                title='Trial idx',
-                showgrid=False
-            ),
-        )
-        data1 = [axis, legend_left, legend_right, legend_incorrect]
-        data2 = [axis, legend_left, legend_right, legend_incorrect,
-                 legend_mark_left, legend_mark_right, legend_mark_incorrect]
-        template_1 = dict(
-            template_idx=0,
-            raster_data_template=go.Figure(data=data1, layout=layout).to_plotly_json
-        )
-        template_2 = dict(
-            template_idx=1,
-            raster_data_template=go.Figure(data=data2, layout=layout).to_plotly_json
-        )
-        contents = [
-            template_1,
-            template_2
-        ]
-        self.insert(contents)
+    template_1 = dict(
+        template_idx=0,
+        raster_data_template=template1
+    )
+    template_2 = dict(
+        template_idx=1,
+        raster_data_template=template2
+    )
+    contents = [
+        template_1,
+        template_2
+    ]
 
 
 @schema
