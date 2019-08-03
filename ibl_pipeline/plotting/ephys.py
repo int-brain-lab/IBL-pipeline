@@ -346,7 +346,7 @@ class RasterLinkOnly(dj.Computed):
     -> ValidAlignSort
     ---
     plotting_data_link:      varchar(255)
-    plot_ylim:               float
+    plot_ylim:               blob
     mark_label=null:         varchar(32)
     -> RasterLayoutTemplate
     """
