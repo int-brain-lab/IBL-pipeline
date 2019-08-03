@@ -332,12 +332,7 @@ class RasterLayoutTemplate(dj.Lookup):
         template_idx=1,
         raster_data_template=go.Figure(data=data2, layout=layout).to_plotly_json()
     )
-    print(
-        [
-        template_1,
-        template_2
-        ]
-    )
+
     contents = [
         template_1,
         template_2
