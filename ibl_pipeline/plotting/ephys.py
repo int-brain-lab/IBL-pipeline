@@ -269,7 +269,7 @@ class RasterLayoutTemplate(dj.Lookup):
     raster_data_template:   longblob
     """
 
-    def insert_contents(self)
+    def insert_contents(self):
 
         axis = go.Scatter(
             x=[-1, 1],
