@@ -269,7 +269,7 @@ class RasterLayoutTemplate(dj.Lookup):
     raster_data_template:   longblob
     """
 
-    def insert_contents(self):
+    def __init__(self):
 
         axis = go.Scatter(
             x=[-1, 1],
@@ -324,7 +324,7 @@ class RasterLayoutTemplate(dj.Lookup):
         )
         data1 = [axis, legend_left, legend_right, legend_incorrect]
         data2 = [axis, legend_left, legend_right, legend_incorrect,
-                legend_mark_left, legend_mark_right, legend_mark_incorrect]
+                 legend_mark_left, legend_mark_right, legend_mark_incorrect]
         template_1 = dict(
             template_idx=0,
             raster_data_template=go.Figure(data=data1, layout=layout).to_plotly_json
