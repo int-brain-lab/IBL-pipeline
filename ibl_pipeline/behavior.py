@@ -407,7 +407,7 @@ class CompleteTrialSession(dj.Computed):
         is_complete = bool(np.all([req_ds in datasets
                                    for req_ds in self.required_datasets]))
         if is_complete is True:
-            if 'trials.stimOn_times.npy' not in datasets:
+            if '_ibl_trials.stimOn_times.npy' not in datasets:
                 key['stim_on_times_status'] = 'Missing'
             else:
                 eID = str((acquisition.Session & key).fetch1('session_uuid'))
