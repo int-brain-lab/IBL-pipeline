@@ -323,16 +323,14 @@ class RasterLayoutTemplate(dj.Lookup):
     data1 = [axis, legend_left, legend_right, legend_incorrect]
     data2 = [axis, legend_left, legend_right, legend_incorrect,
              legend_mark_left, legend_mark_right, legend_mark_incorrect]
-    template1 = go.Figure(data=data1, layout=layout).to_plotly_json
-    template2 = go.Figure(data=data2, layout=layout).to_plotly_json
 
     template_1 = dict(
         template_idx=0,
-        raster_data_template=template1
+        raster_data_template=go.Figure(data=data1, layout=layout).to_plotly_json()
     )
     template_2 = dict(
         template_idx=1,
-        raster_data_template=template2
+        raster_data_template=go.Figure(data=data2, layout=layout).to_plotly_json()
     )
     contents = [
         template_1,
