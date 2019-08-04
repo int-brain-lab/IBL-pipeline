@@ -216,7 +216,7 @@ class BehavioralSummaryByDate(dj.Computed):
         )
 
         # compute reaction time for all trials
-        if 'Complete' in complete:
+        if complete in ['Partial', 'Complete']:
             trials_with_stim_on_time = trials & 'trial_stim_on_time is not NULL'
 
             if len(trials_with_stim_on_time):
