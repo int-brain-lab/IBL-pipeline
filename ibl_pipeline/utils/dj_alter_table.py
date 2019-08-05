@@ -11,6 +11,7 @@ We are working to add such "ALTER" method to DataJoint Python officially, and yo
 at https://github.com/datajoint/datajoint-python/issues/110.
 """
 
+
 def add_column(table, name, dtype, default_value=None, use_keyword_default=False, comment=None):
     """
     A (hacky) convenience function to add a new column into an existing table.
@@ -27,10 +28,11 @@ def add_column(table, name, dtype, default_value=None, use_keyword_default=False
     if default_value is None or default_value.strip().lower() == 'null':
         query = 'ALTER TABLE {} ADD {} {}'.format(full_table_name, name, dtype)
     elif use_keyword_default:
-		# if using MySQL keyword, don't parse the string
-		query = 'ALTER TABLE {} ADD {} {} NOT NULL DEFAULT {}'.format(full_table_name, name, dtype, default_value)
-	else:
+        # if using MySQL keyword, don't parse the string
+        query = 'ALTER TABLE {} ADD {} {} NOT NULL DEFAULT {}'.format(full_table_name, name, dtype, default_value)
+    else:
         query = 'ALTER TABLE {} ADD {} {} NOT NULL DEFAULT {}'.format(full_table_name, name, dtype, repr(default_value))
+
     if comment is not None:
         query += ' COMMENT "{}"'.format(comment)
     table.connection.query(query)
