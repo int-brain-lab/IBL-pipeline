@@ -1,6 +1,6 @@
 version: '3'
 services:
-  datajoint:
+  datajoint_updates:
     build: .
     container_name: ibl_datajoint_updates
     env_file: .env_update
