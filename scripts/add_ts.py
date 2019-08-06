@@ -23,19 +23,17 @@ def table_add_column(schema, table_name):
         default_value='CURRENT_TIMESTAMP', use_keyword_default=True)
 
 
-# for table in tables.REF_TABLES:
-#     table_add_column(reference_ingest, table)
-#     table_add_column(reference, table)
+for table in tables.REF_TABLES:
+    table_add_column(reference_ingest, table)
+    table_add_column(reference, table)
 
 for table in tables.SUBJECT_TABLES:
     table_add_column(subject_ingest, table)
     table_add_column(subject, table)
 
-
 for table in tables.ACTION_TABLES:
     table_add_column(action_ingest, table)
     table_add_column(action, table)
-
 
 for table in tables.ACQUISITION_TABLES:
     table_add_column(acquisition_ingest, table)
