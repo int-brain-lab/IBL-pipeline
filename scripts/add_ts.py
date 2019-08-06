@@ -9,7 +9,7 @@ from ibl_pipeline.ingest import action as action_ingest
 from ibl_pipeline.ingest import acquisition as acquisition_ingest
 from ibl_pipeline.ingest import data as data_ingest
 from ibl_pipeline import reference, subject, action, acquisition, data
-from ibl-pipeline.utils import dj_alter_table
+from ibl_pipeline.utils import dj_alter_table
 import tables_with_ts as tables
 
 tables.init()
