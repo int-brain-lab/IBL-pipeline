@@ -15,6 +15,7 @@ class ProcedureType(dj.Computed):
     ---
     procedure_type_name:                varchar(255)
     procedure_type_description=null:    varchar(1024)
+    proceduretype_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
     key_source = (alyxraw.AlyxRaw & 'model="actions.proceduretype"').proj(
@@ -42,6 +43,7 @@ class Weighing(dj.Computed):
     weighing_time:		datetime		# date time
     weight:	            float			# weight in grams
     weighing_user=null: varchar(255)
+    weighing_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="actions.weighing"').proj(
         weigh_uuid='uuid')
@@ -77,6 +79,7 @@ class WaterType(dj.Computed):
     (watertype_uuid) -> alyxraw.AlyxRaw
     ---
     watertype_name:     varchar(255)
+    watertype_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.watertype"').proj(
         watertype_uuid='uuid')
@@ -101,6 +104,7 @@ class WaterAdministration(dj.Computed):
     water_administered=null:		float			# water administered
     watertype_name:		            varchar(255)    # type of water
     adlib:                          boolean
+    wateradministration_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw &
                   'model = "actions.wateradministration"').proj(
@@ -152,6 +156,7 @@ class WaterRestriction(dj.Computed):
     reference_weight:           float
     restriction_lab=null:       varchar(255)
     restriction_location=null:  varchar(255)
+    waterrestriction_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.waterrestriction"').proj(
         restriction_uuid='uuid')
@@ -194,6 +199,8 @@ class WaterRestrictionUser(dj.Manual):
     subject_uuid:           uuid
     restriction_start_time: datetime
     user_name:              varchar(255)
+    ---
+    waterrestrictionuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -203,6 +210,8 @@ class WaterRestrictionProcedure(dj.Manual):
     subject_uuid:           uuid
     restriction_start_time: varchar(255)
     procedure_type_name:    varchar(255)
+    ---
+    waterrestrictionprocedure_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -219,6 +228,7 @@ class Surgery(dj.Computed):
     surgery_end_time=null:	    datetime        # surgery end time
     surgery_outcome_type:		enum('None', 'a', 'n', 'r')	    # outcome type
     surgery_narrative=null:     varchar(2048)    	# narrative
+    surgery_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.surgery"').proj(
         surgery_uuid='uuid')
@@ -261,6 +271,8 @@ class SurgeryUser(dj.Manual):
     subject_uuid:       uuid
     surgery_start_time: datetime
     user_name:          varchar(255)
+    ---
+    surgeryuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -270,6 +282,7 @@ class SurgeryProcedure(dj.Manual):
     subject_uuid:           uuid
     surgery_start_time:     datetime
     procedure_type_name:    varchar(255)
+    surgeryprocedure_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -284,6 +297,7 @@ class VirusInjection(dj.Computed):
     injection_volume:		float   		    # injection volume
     rate_of_injection:		float               # rate of injection
     injection_type:		    varchar(255)    	# injection type
+    virusinjection_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = alyxraw.AlyxRaw & 'model = "actions.virusinjection"'
     # data missing
@@ -300,6 +314,7 @@ class OtherAction(dj.Computed):
     other_action_end_time=null: datetime	    # end time
     other_action_lab=null:      varchar(255)
     other_action_location=null: varchar(255)    # refer to reference.Location
+    otheraction_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.otheraction"').proj(
         other_action_uuid='uuid')
@@ -337,6 +352,7 @@ class OtherActionUser(dj.Manual):
     subject_uuid:               uuid
     other_action_start_time:    datetime	    # start time
     user_name:        varchar(255)
+    otheractionuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -347,4 +363,5 @@ class OtherActionProcedure(dj.Manual):
     subject_uuid:               uuid
     other_action_start_time:    datetime	    # start time
     procedure_type_name:        varchar(255)
+    otheractionprocedure_ts=CURRENT_TIMESTAMP:   timestamp
     """

@@ -11,6 +11,7 @@ class ProcedureType(dj.Manual):
     ---
     procedure_type_uuid:                uuid
     procedure_type_description=null:    varchar(1024)
+    proceduretype_ts=CURRENT_TIMESTAMP: timestamp
     """
 
 
@@ -21,9 +22,10 @@ class Weighing(dj.Manual):
     -> subject.Subject
     weighing_time:		datetime		# date time
     ---
-    weigh_uuid:        uuid
+    weigh_uuid:         uuid
     weight:			    float			# weight
     -> [nullable] reference.LabMember.proj(weighing_user="user_name")
+    weighing_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -33,6 +35,7 @@ class WaterType(dj.Lookup):
     watertype_name:     varchar(255)
     ---
     watertype_uuid:     uuid
+    watertype_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -48,6 +51,7 @@ class WaterAdministration(dj.Manual):
     adlib:                      boolean
     -> WaterType
     -> [nullable] reference.LabMember.proj(administration_user="user_name")
+    wateradiministration_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -63,6 +67,7 @@ class WaterRestriction(dj.Manual):
     reference_weight:           float
     restriction_narrative=null: varchar(1024)
     -> [nullable] reference.LabLocation.proj(restriction_lab='lab_name', restriction_location='location_name')
+    waterrestriction_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -71,6 +76,7 @@ class WaterRestrictionUser(dj.Manual):
     definition = """
     -> WaterRestriction
     -> reference.LabMember
+    waterrestrictionuser=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -79,6 +85,7 @@ class WaterRestrictionProcedure(dj.Manual):
     definition = """
     -> WaterRestriction
     -> ProcedureType
+    waterrestrictionprocedure=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -94,6 +101,7 @@ class Surgery(dj.Manual):
     -> [nullable] reference.LabLocation.proj(surgery_lab='lab_name', surgery_location='location_name')
     surgery_outcome_type:   enum('None', 'a', 'n', 'r')	    # outcome type
     surgery_narrative=null: varchar(2048)	# narrative
+    surgery_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -102,6 +110,8 @@ class SurgeryUser(dj.Manual):
     definition = """
     -> Surgery
     -> reference.LabMember
+    ---
+    surgeryuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -110,6 +120,7 @@ class SurgeryProcedure(dj.Manual):
     definition = """
     -> Surgery
     -> ProcedureType
+    surgeryprocedure_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -125,6 +136,7 @@ class VirusInjection(dj.Manual):
     injection_volume:		float   		# injection volume
     rate_of_injection:		float           # rate of injection
     injection_type:		    varchar(255)    # injection type
+    virusinjection_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -139,6 +151,7 @@ class OtherAction(dj.Manual):
     other_action_end_time=null: datetime	# end time
     description=null:           varchar(1024)    # description
     -> [nullable] reference.LabLocation.proj(other_action_lab='lab_name', other_action_location='location_name')
+    otheraction_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -150,6 +163,7 @@ class OtherActionUser(dj.Manual):
     other_action_start_time:    datetime	# start time
     ---
     user_name:          varchar(255)
+    otheractiouser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -161,4 +175,5 @@ class OtherActionProcedure(dj.Manual):
     other_action_start_time:    datetime	# start time
     ---
     procedure_type_name:        varchar(255)
+    otheractionprocedure_ts=CURRENT_TIMESTAMP:   timestamp
     """

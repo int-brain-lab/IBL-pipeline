@@ -58,6 +58,7 @@ class Session(dj.Manual):
     task_protocol=null:         varchar(255)
     session_type=null:		    varchar(255)	# type
     session_narrative=null:     varchar(2048)
+    session_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -67,6 +68,7 @@ class ChildSession(dj.Manual):
     -> Session
     ---
     (parent_session_start_time) -> Session(session_start_time)
+    childsession_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -75,6 +77,8 @@ class SessionUser(dj.Manual):
     definition = """
     -> Session
     -> reference.LabMember
+    ---
+    sessionuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -83,6 +87,8 @@ class SessionProcedure(dj.Manual):
     definition = """
     -> Session
     -> action.ProcedureType
+    ---
+    sessionprocedure_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -92,6 +98,7 @@ class SessionProject(dj.Manual):
     -> Session
     ---
     -> reference.Project.proj(session_project='project_name')
+    sessionproject_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -101,4 +108,5 @@ class WaterAdministrationSession(dj.Manual):
     -> action.WaterAdministration
     ---
     -> Session
+    wateradministrationsession_ts=CURRENT_TIMESTAMP:   timestamp
     """
