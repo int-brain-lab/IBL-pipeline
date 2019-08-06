@@ -35,6 +35,8 @@ def add_column(table, name, dtype, default_value=None, use_keyword_default=False
 
     if comment is not None:
         query += ' COMMENT "{}"'.format(comment)
+
+    print(query)
     table.connection.query(query)
     print('Be sure to add following entry to your table definition')
     definition = '{}={}: {}'.format(name, repr(default_value), dtype)
