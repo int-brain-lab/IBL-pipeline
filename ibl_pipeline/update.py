@@ -17,7 +17,7 @@ class UpdateRecord(dj.Manual):
     ---
     original_value=null:blob
     updated_value=null: blob
-    update_narrative=null: varchar(1023)   # narrative of the change
+    update_narrative=null: varchar(2047)   # narrative of the change
     pk_dict:            longblob
     record_ts=CURRENT_TIMESTAMP :   timestamp
     responsible_user='alyx':   varchar(255)
@@ -36,7 +36,7 @@ class DeletionRecord(dj.Manual):
     ---
     pk_dict:            longblob
     record_ts=CURRENT_TIMESTAMP :   timestamp
-    deletion_narrative=null: varchar(1023)
+    deletion_narrative=null: varchar(2047)
     responsible_user='alyx': varchar(255)
     user_email='alyx@internationalbrainlab.org':         varchar(128)
     notified=0:         boolean

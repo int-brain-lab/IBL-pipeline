@@ -29,8 +29,8 @@ tablenames = [
     tables.REF_TABLES,
     tables.SUBJECT_TABLES,
     tables.ACTION_TABLES,
+    tables.ACQUISITION_TABLES,
     tables.DATA_TABLES,
-    tables.ACQUISITION_TABLES
 ]
 
 tablepairs = {t: (getattr(s_src, t), getattr(s_dest, t))
