@@ -1,17 +1,9 @@
 """
 functions to compare contents in shadow tables and real tables.
 """
-import logging
 import datajoint as dj
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-formatter = logging.Formatter('%(asctime)s:%(name)s:%(message)s')
-file_handler = logging.FileHandler('table-diff.log')
-file_handler.setFormatter(formatter)
-
-logger.addHandler(file_handler)
+from ibl_pipeline import reference, subject, acquisition
+from ibl_pipeline import update
 
 
 def show(tablepairs, comment=''):
@@ -33,33 +25,99 @@ def push(tablenames, tablepairs):
         print('# push error: {e}'.format(e=e))
 
 
+def get_user(key):
+    if len(acquisition.SessionUser & key) == 1:
+        user = (acquisition.SessionUser & key).fetch1(
+            'user_name')
+    elif len(subject.SubjectUser & key) == 1:
+        user = (subject.SubjectUser & key).fetch1(
+            'responsible_user')
+    elif len(reference.LabMember & key) == 1:
+        user = (reference.LabMember & key).fetch1(
+            'user_name')
+    else:
+        user = None
+    return user
+
+
 def diff(tablenames, tablepairs):
-    ndiff = 0
+    # tablepairs [shadow, real]
     for t in tablenames:
-        a, b = tablepairs[t]
+        ndiffs = 0
+        ndels = 0
+        shadow, real = tablepairs[t]
 
-        for i in ((a - b.proj()).fetch('KEY')):
-            logger.info('# {} only in {} - record deleted?'.format(i, a))
+        # only detect deleted entries in the shadow table
+        for deleted_key in (real - shadow.proj(*real.primary_key)).fetch('KEY'):
 
-        for i in ((b - a.proj()).fetch('KEY')):
-            logger.info('# {} only in {} - record deleted?'.format(i, b))
+            deleted_entry = (real & deleted_key).fetch1()
+            deleted_record = dict(
+                table=real.__module__+'.'+real.__name__,
+                pk_hash=str(hash(frozenset(deleted_key.items()))),
+                original_ts=deleted_entry[[key for key in deleted_entry.keys() if '_ts' in key][0]],
+                pk_dict=deleted_key,
+                deletion_narrative='{} only in {} - record deleted?'.format(
+                    deleted_key, real),
+            )
 
-        common = (a & b.proj(*a.primary_key))
-        kstr = ', '.join(a.primary_key)
-        srcrecs = (a & common.proj()).fetch(order_by=kstr, as_dict=True)
-        dstrecs = (b & common.proj()).fetch(order_by=kstr, as_dict=True)
+            user = get_user(deleted_key)
+            if user:
+                email = \
+                    (reference.LabMember &
+                     'user_name="{}"'.format(user)).fetch1(
+                         'email'
+                     )
+                deleted_record.update(
+                    responsible_user=user,
+                    user_email=email
+                )
 
-        for srce, dste in zip(srcrecs, dstrecs):
-            for attr in srce:
-                srcv = srce[attr]
-                dstv = dste[attr]
-                if srcv != dstv:
-                    print('# {t}.{a}: {s} != {d}'.format(
-                        t=t, a=attr, s=srcv, d=dstv))
-                    ndiff += 1
+            update.DeletionRecord.insert1(deleted_record, skip_duplicates=True)
+            ndels += 1
 
-        logger.info('# {} total differences.'.format(ndiff))
+        # detect updates in common records of shadow and real tables
+        common_records = (shadow & real.proj(*shadow.primary_key))
+        kstr = ', '.join(shadow.primary_key)
+        shadow_records = (shadow & common_records.proj()).fetch(
+            order_by=kstr, as_dict=True)
+        real_records = (real & common_records.proj()).fetch(
+            order_by=kstr, as_dict=True)
+        real_keys = (real & common_records.proj()).fetch('KEY', order_by=kstr)
 
+        for shadow_record, real_record, pk in \
+                zip(shadow_records, real_records, real_keys):
+
+            for attr in shadow_record:
+                shadow_value = shadow_record[attr]
+                real_value = real_record[attr]
+
+                if shadow_value != real_value and \
+                        (isinstance(shadow_value, str) and
+                            '_ts' not in shadow_value):
+
+                    update_record = dict(
+                        table=real.__module__+'.'+real.__name__,
+                        attribute=attr,
+                        pk_hash=str(hash(frozenset(pk.items()))),
+                        original_ts=real_record[[key for key in real_record.keys() if '_ts' in key][0]],
+                        update_ts=shadow_record[[key for key in shadow_record.keys() if '_ts' in key][0]],
+                        pk_dict=pk,
+                        original_value=real_value,
+                        updated_value=shadow_value,
+                        update_narrative='{t}.{a}: {s} != {d}'.format(
+                            t=t, a=attr, s=shadow_value, d=real_value)
+                    )
+                    user = get_user(pk)
+                    if user:
+                        update_record.update(
+                            responsible_user=user,
+                            user_email=email
+                        )
+                    update.UpdateRecord.insert1(update_record, skip_duplicates=True)
+                    ndiffs += 1
+
+        print('# {} total deleted records in table {}.'.format(ndels, t))
+        print('# {} total differences in table {}.'.format(ndiffs, t))
 
 
 def drop(schemas):
