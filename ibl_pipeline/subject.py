@@ -1,18 +1,13 @@
 import datajoint as dj
 from . import reference
+import os
 
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_subject')
+mode = os.environ.get('MODE')
 
-
-# Actions:
-# Refactor questions w/r/t old objs:
-#
-# - <class 'actions.models.ProcedureType'>: SKIPPED
-#   What does this do aside from provide a description?
-#   should be inclued for e.g. steps, etc?
-# - <class 'actions.models.BaseAction'>: SKIPPED
-#   Other than key info, does this provide anything other than 'narritive'?
-#   if so, needed?
+if mode == 'update':
+    schema = dj.schema('ibl_subject')
+else:
+    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_subject')
 
 
 @schema
@@ -177,7 +172,7 @@ class LitterSubject(dj.Manual):
     -> Subject
     ---
     -> Litter
-    littersubject=CURRENT_TIMESTAMP:   timestamp
+    littersubject_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -206,7 +201,7 @@ class SubjectLab(dj.Manual):
     -> Subject
     ---
     -> reference.Lab
-    subjectlab=CURRENT_TIMESTAMP:   timestamp
+    subjectlab_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 

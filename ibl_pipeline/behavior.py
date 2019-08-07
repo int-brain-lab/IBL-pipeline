@@ -12,7 +12,13 @@ except:
     pass
 
 logger = logging.getLogger(__name__)
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
+mode = environ.get('MODE')
+
+if mode == 'update':
+    schema = dj.schema('ibl_behavior')
+else:
+    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
+
 try:
     one = ONE()
 except:

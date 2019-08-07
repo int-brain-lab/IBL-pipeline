@@ -1,6 +1,6 @@
 import datajoint as dj
 import numpy as np
-from os import path
+from os import path, environ
 from . import acquisition, reference, behavior
 import numpy as np
 try:
@@ -8,7 +8,13 @@ try:
 except:
     pass
 
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
+mode = environ.get('MODE')
+
+if mode == 'update':
+    schema = dj.schema('ibl_ephys')
+else:
+    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
+
 try:
     one = ONE()
 except:

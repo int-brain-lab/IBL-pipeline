@@ -1,6 +1,12 @@
 import datajoint as dj
+import os
 
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_reference')
+mode = os.environ.get('MODE')
+
+if mode == 'update':
+    schema = dj.schema('ibl_reference')
+else:
+    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_reference')
 
 
 @schema
