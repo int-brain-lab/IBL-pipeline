@@ -23,8 +23,9 @@ schemas = [reference, subject, action, data, acquisition]
 schemas_shadow = [reference_shadow,
                   subject_shadow,
                   action_shadow,
-                  data_shadow,
-                  acquisition_shadow]
+                  acquisition_shadow,
+                  data_shadow
+                  ]
 tablenames = [
     tables.REF_TABLES,
     tables.SUBJECT_TABLES,
