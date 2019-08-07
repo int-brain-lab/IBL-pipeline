@@ -19,7 +19,7 @@ import numpy as np
 import tables_for_updates as tables
 
 tables.init()
-schemas = [reference, subject, action, data, acquisition]
+schemas = [reference, subject, action, acquisition, data]
 schemas_shadow = [reference_shadow,
                   subject_shadow,
                   action_shadow,
