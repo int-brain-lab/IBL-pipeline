@@ -76,8 +76,8 @@ def diff(tablenames, tablepairs):
             ndels += 1
 
         # detect updates in common records of shadow and real tables
-        common_records = (shadow & real.proj(*shadow.primary_key))
-        kstr = ', '.join(shadow.primary_key)
+        common_records = (real.proj() & shadow.proj(*real.primary_key))
+        kstr = ', '.join(real.primary_key)
         shadow_records = (shadow & common_records.proj()).fetch(
             order_by=kstr, as_dict=True)
         real_records = (real & common_records.proj()).fetch(
