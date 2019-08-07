@@ -25,20 +25,20 @@ def table_add_column(schema, table_name):
 
 for table in tables.REF_TABLES:
     table_add_column(reference_ingest, table)
-    table_add_column(reference, table)
+#     table_add_column(reference, table)
 
 for table in tables.SUBJECT_TABLES:
     table_add_column(subject_ingest, table)
-    table_add_column(subject, table)
+#     table_add_column(subject, table)
 
 for table in tables.ACTION_TABLES:
     table_add_column(action_ingest, table)
-    table_add_column(action, table)
+#     table_add_column(action, table)
 
 for table in tables.ACQUISITION_TABLES:
     table_add_column(acquisition_ingest, table)
-    table_add_column(acquisition, table)
+#     table_add_column(acquisition, table)
 
 for table in tables.DATA_TABLES:
     table_add_column(data_ingest, table)
-    table_add_column(data, table)
+#     table_add_column(data, table)
