@@ -379,7 +379,7 @@ class RasterLinkOnly(dj.Computed):
                              str(key['cluster_id'])) + '.png'
         y_lim, label = putils.create_raster_plot_combined(
             trials, align_event, sorting_var, fig_dir=fig_link)
-        key['plotting_data_link'] = 'localhost:3333' + fig_link
+        key['plotting_data_link'] = fig_link
         key['plot_ylim'] = y_lim
         key['mark_label'] = label
 
