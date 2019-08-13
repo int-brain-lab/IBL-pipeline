@@ -1,6 +1,6 @@
 import datajoint as dj
 from ibl_pipeline.ingest import alyxraw, data
-from ibl_pipeline.ingest import action, acquisition
+from ibl_pipeline.ingest import subject, action, acquisition
 
 
 dj.config['safemode'] = False
