@@ -181,6 +181,7 @@ class SubjectProject(dj.Manual):
     definition = """
     -> Subject
     -> reference.Project.proj(subject_project='project_name')
+    ---
     subjectproject_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
