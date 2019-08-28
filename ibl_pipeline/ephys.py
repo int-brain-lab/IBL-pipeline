@@ -191,22 +191,24 @@ class Cluster(dj.Imported):
 
         key['cluster_revision'] = 0
 
+        clusters = []
         for icluster, cluster_depth in enumerate(clusters_depths):
-            cluster = key.copy()
             idx = spikes_clusters == icluster
             cluster_amps = list(clusters_amps['Amplitude'])
-            cluster.update(
-                cluster_id=icluster,
-                cluster_amp=cluster_amps[icluster],
-                cluster_depth=cluster_depth,
-                cluster_waveform_duration=clusters_waveform_duration[icluster],
-                cluster_spike_times=spikes_times[idx],
-                cluster_spike_depth=spikes_depths[idx],
-                cluster_spike_amps=spikes_amps[idx],
-                channel_group_id=0,
-                probe_model_name='Neuropixels phase 3a',
-                channel_id=clusters_peak_channels[icluster])
-            self.insert1(cluster)
+            clusters.append(
+                dict(**key,
+                     cluster_id=icluster,
+                     cluster_amp=cluster_amps[icluster],
+                     cluster_depth=cluster_depth,
+                     cluster_waveform_duration=clusters_waveform_duration[icluster],
+                     cluster_spike_times=spikes_times[idx],
+                     cluster_spike_depth=spikes_depths[idx],
+                     cluster_spike_amps=spikes_amps[idx],
+                     channel_group_id=0,
+                     probe_model_name='Neuropixels phase 3a',
+                     channel_id=clusters_peak_channels[icluster]))
+
+        self.insert1(clusters)
 
 
 @schema
