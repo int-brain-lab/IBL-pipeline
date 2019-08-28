@@ -12,7 +12,13 @@ except:
     pass
 
 logger = logging.getLogger(__name__)
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
+mode = environ.get('MODE')
+
+if mode == 'update':
+    schema = dj.schema('ibl_behavior')
+else:
+    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
+
 try:
     one = ONE()
 except:
@@ -81,9 +87,9 @@ class CompleteWheelSession(dj.Computed):
     -> acquisition.Session
     """
 
-    required_datasets = ["wheel.position.npy",
-                         "wheel.velocity.npy",
-                         "wheel.timestamps.npy"]
+    required_datasets = ["_ibl_wheel.position.npy",
+                         "_ibl_wheel.velocity.npy",
+                         "_ibl_wheel.timestamps.npy"]
 
     def make(self, key):
         datasets = (data.FileRecord & key & {'exists': 1}).fetch(
@@ -145,8 +151,8 @@ class CompleteWheelMoveSession(dj.Computed):
     -> acquisition.Session
     """
 
-    required_datasets = ["wheelMoves.intervals.npy",
-                         "wheelMoves.type.csv"]
+    required_datasets = ["_ibl_wheelMoves.intervals.npy",
+                         "_ibl_wheelMoves.type.csv"]
 
     def make(self, key):
         datasets = (data.FileRecord & key & {'exists': 1}).fetch(
@@ -227,8 +233,8 @@ class SparseNoise(dj.Imported):
 
     key_source = acquisition.Session & \
         (data.FileRecord & {'exists': 1} &
-         'dataset_name in ("sparseNoise.positions.npy", \
-                           "sparseNoise.times.npy")')
+         'dataset_name in ("_ibl_sparseNoise.positions.npy", \
+                           "_ibl_sparseNoise.times.npy")')
 
     def make(self, key):
 
@@ -261,7 +267,7 @@ class ExtraRewards(dj.Imported):
 
     key_source = acquisition.Session & \
         (data.FileRecord & {'exists': 1} &
-            'dataset_name in ("extraRewards.times.npy")')
+            'dataset_name in ("_ibl_extraRewards.times.npy")')
 
     def make(self, key):
 
@@ -290,7 +296,7 @@ class SpontaneousTimeSet(dj.Imported):
 
     key_source = acquisition.Session & \
         (data.FileRecord & {'exists': 1} &
-         'dataset_name in ("spontaneous.intervals.npy")')
+         'dataset_name in ("_ibl_spontaneous.intervals.npy")')
 
     def make(self, key):
         spon_time_key = key.copy()
@@ -345,9 +351,9 @@ class Lick(dj.Imported):
 
     key_source = acquisition.Session & \
         (data.FileRecord & {'exists': 1} &
-         'dataset_name in ("licks.times.npy", \
-                           "lickPiezo.raw.npy", \
-                           "lickPiezo.timestamps.npy")')
+         'dataset_name in ("_ibl_licks.times.npy", \
+                           "_ibl_lickPiezo.raw.npy", \
+                           "_ibl_lickPiezo.timestamps.npy")')
 
     def make(self, key):
 
@@ -393,12 +399,12 @@ class CompleteTrialSession(dj.Computed):
     iti_duration_status:            enum('Complete', 'Missing')
     """
 
-    required_datasets = ["trials.feedback_times.npy",
-                         "trials.feedbackType.npy",
-                         "trials.intervals.npy", "trials.choice.npy",
-                         "trials.response_times.npy",
-                         "trials.contrastLeft.npy",
-                         "trials.contrastRight.npy",
+    required_datasets = ["_ibl_trials.feedback_times.npy",
+                         "_ibl_trials.feedbackType.npy",
+                         "_ibl_trials.intervals.npy", "_ibl_trials.choice.npy",
+                         "_ibl_trials.response_times.npy",
+                         "_ibl_trials.contrastLeft.npy",
+                         "_ibl_trials.contrastRight.npy",
                          "_ibl_trials.probabilityLeft.npy"]
 
     def make(self, key):
@@ -407,7 +413,7 @@ class CompleteTrialSession(dj.Computed):
         is_complete = bool(np.all([req_ds in datasets
                                    for req_ds in self.required_datasets]))
         if is_complete is True:
-            if 'trials.stimOn_times.npy' not in datasets:
+            if '_ibl_trials.stimOn_times.npy' not in datasets:
                 key['stim_on_times_status'] = 'Missing'
             else:
                 eID = str((acquisition.Session & key).fetch1('session_uuid'))

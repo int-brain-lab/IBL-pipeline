@@ -4,6 +4,8 @@ import os
 
 if os.environ.get('MODE') == 'test':
     dj.config['database.prefix'] = 'test_'
+elif os.environ.get('MODE') == 'update':
+    dj.config['database.prefix'] = 'update_'
 
 dj.config['stores'] = {
     'ephys': dict(

@@ -1,6 +1,6 @@
 import datajoint as dj
 from ibl_pipeline.ingest import alyxraw, data
-from ibl_pipeline.ingest import action, acquisition
+from ibl_pipeline.ingest import subject, action, acquisition
 
 
 dj.config['safemode'] = False
@@ -23,7 +23,7 @@ print('Deleting alyxraw entries of shadow weighing and water tables...')
 print('Deleting subject fields lab, user, user_hisotry and death date...')
 subject_fields = alyxraw.AlyxRaw.Field & \
     (alyxraw.AlyxRaw & 'model="subjects.subject"') & \
-    'fname in ("lab", "death_date", "responsible_user", "json")'
+    'fname in ("projects", "lab", "death_date", "responsible_user", "json")'
 subject_fields.delete_quick()
 
 # delete some shadow membership tables
@@ -31,3 +31,4 @@ print('Deleting shadow membership tables...')
 action.WaterRestrictionProcedure.delete()
 action.WaterRestrictionUser.delete()
 acquisition.WaterAdministrationSession.delete()
+subject.SubjectProject.delete()

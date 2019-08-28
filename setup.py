@@ -6,11 +6,11 @@ here = path.abspath(path.dirname(__file__))
 
 setup(
     name='ibl_pipeline',
-    version='0.1.0',
+    version='0.1.1',
     description='Datajoint schemas for IBL',
     author='Vathes',
     author_email='support@vathes.com',
     packages=find_packages(exclude=[]),
-    install_requires=['datajoint>=0.12.dev3'],
+    install_requires=['datajoint>=0.12.dev5'],
     scripts=['scripts/ibl-shell.py'],
 )
