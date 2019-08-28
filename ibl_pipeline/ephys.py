@@ -208,7 +208,7 @@ class Cluster(dj.Imported):
                      probe_model_name='Neuropixels phase 3a',
                      channel_id=clusters_peak_channels[icluster]))
 
-        self.insert1(clusters)
+        self.insert(clusters)
 
 
 @schema
