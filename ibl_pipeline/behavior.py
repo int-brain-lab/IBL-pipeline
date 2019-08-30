@@ -502,14 +502,6 @@ class TrialSet(dj.Imported):
                                          'trials.contrastLeft',
                                          'trials.contrastRight',
                                          '_ibl_trials.probabilityLeft'])
-        # print(len(trials_feedback_times),
-        #       len(trials_feedback_types),
-        #       len(trials_intervals),
-        #       len(trials_response_choice),
-        #       len(trials_response_times),
-        #       len(trials_contrast_left),
-        #       len(trials_contrast_right),
-        #       len(trials_p_left))
 
         stim_on_times_status, rep_num_status, included_status, \
             go_cue_times_status, go_cue_trigger_times_status, \
@@ -592,6 +584,7 @@ class TrialSet(dj.Imported):
 
         self.insert1(key)
 
+        trials = []
         for idx_trial in range(len(trials_response_choice)):
 
             if np.isnan(trials_contrast_left[idx_trial]):
@@ -661,7 +654,9 @@ class TrialSet(dj.Imported):
                 trial_key['trial_iti_duration'] = float(
                     trials_iti_duration[idx_trial])
 
-            self.Trial().insert1(trial_key)
+            trials.append(trial_key)
+
+        self.Trial.insert(trials)
 
         logger.info('Populated a TrialSet tuple, \
             all Trial tuples and Excluded Trial tuples for \
