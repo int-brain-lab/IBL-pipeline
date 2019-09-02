@@ -11,6 +11,6 @@ setup(
     author='Vathes',
     author_email='support@vathes.com',
     packages=find_packages(exclude=[]),
-    install_requires=['datajoint>=0.12.dev5', 'scikits.bootstrap>=1.0.0', 'statsmodels>=0.10.1', 'plotly>=4.1.0', 'globus_sdk>=1.8.0'],
+    install_requires=['datajoint>=0.12.dev5', 'scikits.bootstrap', 'statsmodels>=0.10.1', 'plotly>=4.1.0'],
     scripts=['scripts/ibl-shell.py'],
 )
