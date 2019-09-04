@@ -586,6 +586,7 @@ class TrialSet(dj.Imported):
 
         trials = []
         for idx_trial in range(len(trials_response_choice)):
+            trial = trial_key.copy()
 
             if np.isnan(trials_contrast_left[idx_trial]):
                 trial_stim_contrast_left = 0
@@ -606,62 +607,62 @@ class TrialSet(dj.Imported):
             else:
                 raise ValueError('Invalid reponse choice.')
 
-            trial_key['trial_id'] = idx_trial + 1
-            trial_key['trial_start_time'] = trials_intervals[idx_trial, 0]
+            trial['trial_id'] = idx_trial + 1
+            trial['trial_start_time'] = trials_intervals[idx_trial, 0]
 
             if np.isnan(trials_intervals[idx_trial, 1]):
                 continue
 
-            trial_key['trial_end_time'] = trials_intervals[idx_trial, 1]
-            trial_key['trial_response_time'] = float(
+            trial['trial_end_time'] = trials_intervals[idx_trial, 1]
+            trial['trial_response_time'] = float(
                 trials_response_times[idx_trial])
-            trial_key['trial_response_choice'] = trial_response_choice
+            trial['trial_response_choice'] = trial_response_choice
 
             if stim_on_times_status != 'Missing':
-                trial_key['trial_stim_on_time'] = trials_visual_stim_times[
+                trial['trial_stim_on_time'] = trials_visual_stim_times[
                     idx_trial]
 
-            trial_key['trial_stim_contrast_left'] = float(
+            trial['trial_stim_contrast_left'] = float(
                 trial_stim_contrast_left)
-            trial_key['trial_stim_contrast_right'] = float(
+            trial['trial_stim_contrast_right'] = float(
                 trial_stim_contrast_right)
-            trial_key['trial_feedback_time'] = float(
+            trial['trial_feedback_time'] = float(
                 trials_feedback_times[idx_trial])
-            trial_key['trial_feedback_type'] = int(
+            trial['trial_feedback_type'] = int(
                 trials_feedback_types[idx_trial])
 
             if rep_num_status != 'Missing':
-                trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
+                trial['trial_rep_num'] = int(trials_rep_num[idx_trial])
 
-            trial_key['trial_stim_prob_left'] = float(trials_p_left[idx_trial])
+            trial['trial_stim_prob_left'] = float(trials_p_left[idx_trial])
 
             if included_status != 'Missing':
-                trial_key['trial_included'] = bool(trials_included[idx_trial])
+                trial['trial_included'] = bool(trials_included[idx_trial])
 
             if go_cue_times_status != 'Missing':
-                trial_key['trial_go_cue_time'] = float(
+                trial['trial_go_cue_time'] = float(
                     trials_go_cue_times[idx_trial])
 
             if go_cue_trigger_times_status != 'Missing':
-                trial_key['trial_go_cue_trigger_time'] = float(
+                trial['trial_go_cue_trigger_time'] = float(
                     trials_go_cue_trigger_times[idx_trial])
 
             if reward_volume_status != 'Missing':
-                trial_key['trial_reward_volume'] = float(
+                trial['trial_reward_volume'] = float(
                     trials_reward_volume[idx_trial])
 
             if iti_duration_status != 'Missing':
-                trial_key['trial_iti_duration'] = float(
+                trial['trial_iti_duration'] = float(
                     trials_iti_duration[idx_trial])
 
-            trials.append(trial_key)
+            trials.append(trial)
 
         self.Trial.insert(trials)
 
         logger.info('Populated a TrialSet tuple, \
             all Trial tuples and Excluded Trial tuples for \
             subject {subject_uuid} in session started at \
-            {session_start_time}'.format(**key))
+            {session_start_time}'.format(**trial_key))
 
     class Trial(dj.Part):
         # all times are in absolute seconds, rather than relative to trial onset
