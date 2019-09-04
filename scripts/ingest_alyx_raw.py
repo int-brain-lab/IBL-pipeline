@@ -50,11 +50,13 @@ for key in keys:
     for field_name, field_value in key['fields'].items():
         key_field = dict(key_field, fname=field_name)
 
-        if field_name == 'json' and field_value is not None \
-                and len(field_value) < 40000:
-            key_field['value_idx'] = 0
-            key_field['fvalue'] = json.dumps(field_value)
-            ib_part.insert1(key_field)
+        if field_name == 'json' and field_value is not None:
+            if len(field_value) > 40000:
+                continue
+            else:
+                key_field['value_idx'] = 0
+                key_field['fvalue'] = json.dumps(field_value)
+                ib_part.insert1(key_field)
 
         elif field_value is None or field_value == '' or field_value == [] or \
                 (isinstance(field_value, float) and math.isnan(field_value)):
