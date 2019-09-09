@@ -144,6 +144,40 @@ class LatestDate(dj.Manual):
 
 
 @schema
+class WaterTypeColor(dj.Computed):
+    definition = """
+    -> action.WaterType
+    ---
+    water_type_color:  varchar(32)
+    """
+
+    def make(self, key):
+
+        original_water_types = ['Citric Acid Water 2%', 'Hydrogel',
+                                'Hydrogel 5% Citric Acid',
+                                'Water', 'Water 1% Citric Acid',
+                                'Water 10% Sucrose',
+                                'Water 15% Sucrose', 'Water 2% Citric Acid']
+        original_colors = ['red', 'orange', 'blue', 'rgba(55, 128, 191, 0.7)',
+                           'rgba(200, 128, 191, 0.7)',
+                           'purple', 'rgba(50, 171, 96, 0.9)', 'red']
+
+        mapping = {
+            watertype: color
+            for watertype, color in zip(original_water_types, original_colors)}
+
+        if key['watertype_name'] in original_water_types:
+            water_type_color = dict(
+                **key, water_type_color=mapping[key['watertype_name']])
+        else:
+            water_type_color = dict(
+                **key, water_type_color='rgba({}, {}, {}, 0.7)'.format(
+                    np.random.randint(255), np.random.randint(255), np.random.randint(255)))
+
+        self.insert1(water_type_color)
+
+
+@schema
 class CumulativeSummary(dj.Computed):
     # This table contains four plots of the cumulative summary
     definition = """
@@ -622,12 +656,8 @@ class CumulativeSummary(dj.Computed):
             self.ContrastHeatmap.insert1(con_hm)
 
         # plot for water weight
-        water_type_names = action.WaterType.fetch('watertype_name')
-
-        water_type_colors = ['red', 'orange', 'blue',
-                             'rgba(55, 128, 191, 0.7)',
-                             'purple', 'rgba(50, 171, 96, 0.9)',
-                             'red']
+        water_type_names, water_type_colors = WaterTypeColor.fetch(
+            'watertype_name', 'water_type_color')
         water_type_map = dict()
 
         for watertype, color in zip(water_type_names, water_type_colors):
