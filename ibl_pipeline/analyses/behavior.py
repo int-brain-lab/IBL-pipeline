@@ -591,7 +591,7 @@ class SessionTrainingStatusNew(dj.Computed):
                 if len(ephys_board) == 3:
 
                     n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
-                    performance_easy = (behavioral_analyses.PsychResults & sessions_rel).fetch(
+                    performance_easy = (PsychResults & sessions_rel).fetch(
                         'performance_easy')
 
                     # criterion: 3 sessions with >400 trials, and >90% correct on high contrasts
@@ -670,7 +670,7 @@ class SessionTrainingStatusNew(dj.Computed):
 
                 sessions_rel = sessions[-3:]
                 n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
-                performance_easy = (behavioral_analyses.PsychResults & sessions_rel).fetch(
+                performance_easy = (PsychResults & sessions_rel).fetch(
                     'performance_easy')
 
                 # criterion: 3 sessions with >400 trials, and >90% correct on high contrasts
@@ -738,14 +738,14 @@ class SessionTrainingStatusNew(dj.Computed):
             # < 400 trials or performance of easy trials < 0.8
             sessions_rel = sessions[-3:]
             n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
-            performance_easy = (behavioral_analyses.PsychResults & sessions_rel).fetch(
+            performance_easy = (PsychResults & sessions_rel).fetch(
                 'performance_easy')
 
             if np.all(n_trials > 400) and np.all(performance_easy > 0.9):
                 # training in progress if the current session does not
                 # have low contrasts
                 contrasts = abs(
-                    (behavioral_analyses.PsychResults & key).fetch1('signed_contrasts'))
+                    (PsychResults & key).fetch1('signed_contrasts'))
                 if 0 in contrasts and \
                    np.sum((contrasts < 0.065) & (contrasts > 0.001)):
                     # compute psych results of last three sessions
@@ -789,14 +789,14 @@ class SessionTrainingStatusNew(dj.Computed):
             # < 400 trials or performance of easy trials < 0.8
             sessions_rel = sessions[-3:]
             n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
-            performance_easy = (behavioral_analyses.PsychResults & sessions_rel).fetch(
+            performance_easy = (PsychResults & sessions_rel).fetch(
                 'performance_easy')
 
             if np.all(n_trials > 200) and np.all(performance_easy > 0.8):
                 # training in progress if the current session does not
                 # have low contrasts
                 contrasts = abs(
-                    (behavioral_analyses.PsychResults & key).fetch1('signed_contrasts'))
+                    (PsychResults & key).fetch1('signed_contrasts'))
                 if 0 in contrasts and \
                    np.sum((contrasts < 0.065) & (contrasts > 0.001)):
                     # compute psych results of last three sessions
