@@ -637,6 +637,9 @@ class SessionTrainingStatusNew(dj.Computed):
                             trials_20 = trials & \
                                 'ABS(trial_stim_prob_left - 0.8) < 0.001'
 
+                            if not (len(trials_80) and len(trials_20)):
+                                key['training_status'] = 'trained_1b'
+
                             # also compute the median reaction time
                             medRT = compute_reaction_time(trials)
 
@@ -652,7 +655,7 @@ class SessionTrainingStatusNew(dj.Computed):
                                 psych_20['lapse_low'] < 0.1 and \
                                 psych_20['lapse_high'] < 0.1 and \
                                 psych_20['bias'] - psych_80['bias'] > 5 and \
-                                medRT.loc[medRT['signed_contrast'] == 0, 'rt'].item() < 2
+                                medRT.loc[medRT['signed_contrast'] == 0, 'rt'].iloc[0] < 2
 
                             if criterion:
                                 # were all 3 sessions done on an ephys rig already?
@@ -731,7 +734,7 @@ class SessionTrainingStatusNew(dj.Computed):
                             psych_20['lapse_low'] < 0.1 and \
                             psych_20['lapse_high'] < 0.1 and \
                             psych_20['bias'] - psych_80['bias'] > 5 and \
-                            medRT.loc[medRT['signed_contrast'] == 0, 'rt'].item() < 2
+                            medRT.loc[medRT['signed_contrast'] == 0, 'rt'].iloc[0] < 2
 
                         if criterion:
                             key['training_status'] = 'ready4ephysrig'
@@ -783,7 +786,7 @@ class SessionTrainingStatusNew(dj.Computed):
                         psych['threshold'] < 20 and \
                         psych['lapse_low'] < 0.1 and \
                         psych['lapse_high'] < 0.1 and \
-                        medRT.loc[medRT['signed_contrast'] == 0, 'rt'].item() < 2
+                        medRT.loc[medRT['signed_contrast'] == 0, 'rt'].iloc[0] < 2
 
                     if criterion:
                         key['training_status'] = 'trained_1b'
@@ -795,7 +798,7 @@ class SessionTrainingStatusNew(dj.Computed):
         # 1A training
         # ========================================================= #
 
-        # if has reached 'trained_1b' before, mark the current session 'trained_1b' as well
+        # if has reached 'trained_1a' before, mark the current session 'trained_1a' as well
         if len(status) and np.any(status == 'trained_1a'):
             key['training_status'] = 'trained_1a'
             self.insert1(key)
