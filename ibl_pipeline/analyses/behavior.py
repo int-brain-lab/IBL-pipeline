@@ -9,6 +9,26 @@ schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_analyses_behavior')
 
 
+def compute_reaction_time(trials):
+    # median reaction time
+    trials_rt = trials.proj(
+            signed_contrast='trial_stim_contrast_left- \
+                             trial_stim_contrast_right',
+            rt='trial_response_time-trial_stim_on_time')
+
+    rt = trials_rt.fetch(as_dict=True)
+    rt = pd.DataFrame(rt)
+    rt = rt[['signed_contrast', 'rt']]
+
+    try:
+        median_rt = rt.groupby('signed_contrast').median().reset_index()
+    except:
+        median_rt = rt.groupby('signed_contrast').count().reset_index()
+        median_rt['rt'] = np.nan
+
+    return median_rt
+
+
 @schema
 class PsychResults(dj.Computed):
     definition = """
