@@ -4,6 +4,7 @@ from ..utils import psychofit as psy
 from . import analysis_utils as utils
 from datetime import datetime
 import numpy as np
+import pandas as pd
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_analyses_behavior')
