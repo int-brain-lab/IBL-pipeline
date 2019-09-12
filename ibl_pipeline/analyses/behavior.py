@@ -585,7 +585,7 @@ class SessionTrainingStatusNew(dj.Computed):
                 sessions_rel = sessions[-3:]
 
                 # were these last 3 sessions done on an ephys rig?
-                bpod_board = (behavior_bpod.Settings & sessions_rel).fetch('pybpod_board')
+                bpod_board = (behavior.Settings & sessions_rel).fetch('pybpod_board')
                 ephys_board = [True for i in list(bpod_board) if 'ephys' in i]
 
                 if len(ephys_board) == 3:
