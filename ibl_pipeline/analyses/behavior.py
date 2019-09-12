@@ -718,6 +718,10 @@ class SessionTrainingStatusNew(dj.Computed):
                         trials_20 = trials & \
                             'ABS(trial_stim_prob_left - 0.8) < 0.001'
 
+                        if not (len(trials_80) and len(trials_20)):
+                            key['training_status'] = 'trained_1b'
+                            return
+
                         # also compute the median reaction time
                         medRT = compute_reaction_time(trials)
 
