@@ -570,7 +570,7 @@ class SessionTrainingStatusNew(dj.Computed):
         subject_key = key.copy()
         subject_key.pop('session_start_time')
 
-        previous_sessions = SessionTrainingStatus & subject_key & \
+        previous_sessions = SessionTrainingStatusNew & subject_key & \
             'session_start_time < "{}"'.format(
                 key['session_start_time'].strftime('%Y-%m-%d %H:%M:%S')
             )
