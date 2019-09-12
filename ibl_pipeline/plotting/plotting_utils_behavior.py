@@ -111,28 +111,52 @@ def get_date_range(subj):
 
 
 def get_status(subj):
-    # get the first date when animal became "trained" and "ready for ephys"
-    first_trained = subj.aggr(
-        behavior.SessionTrainingStatus & 'training_status = "trained"',
+    # get the first date when animal achieved the next stage
+    first_trained_1a = subj.aggr(
+        behavior.SessionTrainingStatus & 'training_status = "trained_1a"',
         first_session='DATE(min(session_start_time))')
-    first_biased = subj.aggr(
-        behavior.SessionTrainingStatus & 'training_status = "ready for ephys"',
+    first_trained_1b = subj.aggr(
+        behavior.SessionTrainingStatus & 'training_status = "trained_1b"',
+        first_session='DATE(min(session_start_time))')
+    first_ready4ephysrig = subj.aggr(
+        behavior.SessionTrainingStatus & 'training_status = "ready4ephysrig"',
+        first_session='DATE(min(session_start_time))')
+    first_ready4recording = subj.aggr(
+        behavior.SessionTrainingStatus & 'training_status = "ready4ephysrecording"',
         first_session='DATE(min(session_start_time))')
 
     result = dict()
-    if len(first_trained):
-        first_trained_date = first_trained.fetch1(
+    if len(first_trained_1a):
+        first_trained_1a_date = first_trained_1a.fetch1(
             'first_session').strftime('%Y-%m-%d')
-        result.update(is_trained=True, first_trained_date=first_trained_date)
+        result.update(is_trained_1a=True,
+                      first_trained_1a_date=first_trained_1a_date)
     else:
-        result.update(is_trained=False)
+        result.update(is_trained_1a=False)
 
-    if len(first_biased):
-        first_biased_date = first_biased.fetch1(
+    if len(first_trained_1b):
+        first_trained_1b_date = first_trained_1b.fetch1(
             'first_session').strftime('%Y-%m-%d')
-        result.update(is_biased=True, first_biased_date=first_biased_date)
+        result.update(is_trained_1b=True,
+                      first_trained_1b_date=first_trained_1b_date)
     else:
-        result.update(is_biased=False)
+        result.update(is_trained_1b=False)
+
+    if len(first_ready4ephysrig):
+        first_ready4ephysrig_date = first_ready4ephysrig.fetch1(
+            'first_session').strftime('%Y-%m-%d')
+        result.update(is_ready4ephysrig=True,
+                      first_ready4ephysrig_date=first_ready4ephysrig_date)
+    else:
+        result.update(is_ready4ephysrig=False)
+
+    if len(first_ready4recording):
+        first_ready4recording_date = first_ready4recording.fetch1(
+            'first_session').strftime('%Y-%m-%d')
+        result.update(is_ready4recording=True,
+                      first_ready4recording_date=first_ready4recording_date)
+    else:
+        result.update(is_ready4recording=False)
 
     return result
 
@@ -411,14 +435,15 @@ def create_rt_trialnum_plot(trials):
 def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                        show_legend_external=True):
 
-    if status['is_trained']:
+    if status['is_trained_1a']:
         data.append(
            go.Scatter(
-               x=[status['first_trained_date'], status['first_trained_date']],
+               x=[status['first_trained_1a_date'],
+                  status['first_trained_1a_date']],
                y=yrange,
                mode="lines",
-               marker=dict(color='orange'),
-               name='first day got trained',
+               marker=dict(color='rgba(195, 90, 80, 1)'),
+               name='first day got trained 1a',
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,
@@ -426,13 +451,46 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
             )
         )
 
-    if status['is_biased']:
+    if status['is_trained_1b']:
         data.append(
            go.Scatter(
-               x=[status['first_biased_date'], status['first_biased_date']],
+               x=[status['first_trained_1b_date'],
+                  status['first_trained_1b_date']],
                y=yrange,
                mode="lines",
-               marker=dict(color='forestgreen'),
+               marker=dict(color='rgba(255, 153, 20, 1)'),
+               name='first day got trained 1b',
+               xaxis=xaxis,
+               yaxis=yaxis,
+               showlegend=show_legend_external,
+               hoverinfo='x'
+            )
+        )
+
+    if status['is_ready4ephysrig']:
+        data.append(
+           go.Scatter(
+               x=[status['first_ready4ephysrig_date'],
+                  status['first_ready4ephysrig_date']],
+               y=yrange,
+               mode="lines",
+               marker=dict(color='rgba(28, 20, 255, 1)'),
+               name='first day got biased',
+               xaxis=xaxis,
+               yaxis=yaxis,
+               showlegend=show_legend_external,
+               hoverinfo='x'
+            )
+        )
+
+    if status['is_ready4recording']:
+        data.append(
+           go.Scatter(
+               x=[status['first_ready4recording_date'],
+                  status['first_ready4recording_date']],
+               y=yrange,
+               mode="lines",
+               marker=dict(color='rgba(20, 255, 91, 1)'),
                name='first day got biased',
                xaxis=xaxis,
                yaxis=yaxis,
