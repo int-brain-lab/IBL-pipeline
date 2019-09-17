@@ -1,8 +1,8 @@
 version: '3'
 services:
-  datajoint_:
+  datajoint_public:
     build: .
-    container_name: ibl_datajoint_updates
+    container_name: ibl_datajoint_public
     env_file: .env_public
     volumes:
       - ./notebooks:/notebooks
