@@ -1,0 +1,15 @@
+version: '3'
+services:
+  datajoint_:
+    build: .
+    container_name: ibl_datajoint_updates
+    env_file: .env_public
+    volumes:
+      - ./notebooks:/notebooks
+      - ./images:/images
+      - .:/src/IBL-pipeline
+      - ./data:/data
+      - ./root/.one_params:/root/.one_params
+      - ./snapshots:/Figures_DataJoint_shortcuts
+    ports:
+      - "8300:8888"
