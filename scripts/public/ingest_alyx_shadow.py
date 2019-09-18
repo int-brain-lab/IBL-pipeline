@@ -43,7 +43,7 @@ subject.Death.populate(subj_res, suppress_errors=True)
 # action tables
 action.ProcedureType.populate(suppress_errors=True)
 action.Weighing.populate(
-    utils.get_uuids('actions.weighing', 'weighing_uuid', subject_uuids),
+    utils.get_uuids('actions.weighing', 'weigh_uuid', subject_uuids),
     suppress_errors=True)
 action.WaterType.populate(suppress_errors=True)
 action.WaterAdministration.populate(
