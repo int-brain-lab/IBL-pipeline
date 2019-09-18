@@ -1,6 +1,6 @@
 import datajoint as dj
 from uuid import UUID
-from ibl_pipeline.ingest import alyxraw.AlyxRaw
+from ibl_pipeline.ingest import alyxraw
 from ibl_pipeline import public
 
 
