@@ -82,7 +82,7 @@ class WaterRestrictionUser(dj.Manual):
     definition = """
     -> WaterRestriction
     -> reference.LabMember
-    waterrestrictionuser=CURRENT_TIMESTAMP:   timestamp
+    waterrestrictionuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -91,7 +91,7 @@ class WaterRestrictionProcedure(dj.Manual):
     definition = """
     -> WaterRestriction
     -> ProcedureType
-    waterrestrictionprocedure=CURRENT_TIMESTAMP:   timestamp
+    waterrestrictionprocedure_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
