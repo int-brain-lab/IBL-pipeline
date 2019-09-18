@@ -63,7 +63,7 @@ def get_uuids(model_name, uuid_name, subject_uuids):
                          (alyxraw.AlyxRaw.Field & sessions)).fetch('uuid')
             else:
                 dataset_uuids = (alyxraw.AlyxRaw & {'model': model_name} &
-                                 (alyxraw.AlyxRaw.Field & subjects)).fetch('uuid')
+                                 (alyxraw.AlyxRaw.Field & sessions)).fetch('uuid')
                 datasets = [dict(fname='dataset', fvalue=str(uuid))
                             for uuid in dataset_uuids]
                 uuids = (alyxraw.AlyxRaw & {'model': model_name} &
