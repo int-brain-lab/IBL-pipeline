@@ -232,9 +232,30 @@ for key in keys:
 
 # acquisition.ChildSession
 print('Ingesting acquisition.ChildSession...')
-sessions = alyxraw.AlyxRaw & 'model="actions.session"'
+
+# get session restrictor
+sessions_list = []
+for subj_uuid, subj in zip(subject_uuids, subjects):
+
+    session_start, session_end = (
+        public.PublicSubject &
+        (public.PublicSubjectUuid & {'subject_uuid': subj_uuid})).fetch1(
+        'session_start_date', 'session_end_date')
+    session_start = session_start.strftime('%Y-%m-%d')
+    session_end = session_end.strftime('%Y-%m-%d')
+    session_uuids = (alyxraw.AlyxRaw &
+                     {'model': 'actions.session'} &
+                     (alyxraw.AlyxRaw.Field & subj) &
+                     (alyxraw.AlyxRaw.Field &
+                      'fname="start_time"' &
+                      'fvalue between "{}" and "{}"'.format(
+                        session_start, session_end))).fetch(
+                            'uuid')
+    sessions_list += [dict(uuid=uuid) for uuid in session_uuids]
+
+sessions = alyxraw.AlyxRaw & 'model="actions.session"' & sessions_list
 sessions_with_parents = alyxraw.AlyxRaw.Field & sessions & \
-    'fname="parent_session"' & 'fvalue!="None"' & subjects
+    'fname="parent_session"' & 'fvalue!="None"'
 
 keys = (alyxraw.AlyxRaw & sessions_with_parents).proj(
     session_uuid='uuid')
@@ -264,29 +285,8 @@ for key in keys:
 
 # acquisition.SessionUser
 print('Ingesting acquisition.SessionUser...')
-# get session restrictor
-sessions_list = []
-for subj_uuid, subj in zip(subject_uuids, subjects):
-
-    session_start, session_end = (
-        public.PublicSubject &
-        (public.PublicSubjectUuid & {'subject_uuid': subj_uuid})).fetch1(
-        'session_start_date', 'session_end_date')
-    session_start = session_start.strftime('%Y-%m-%d')
-    session_end = session_end.strftime('%Y-%m-%d')
-    session_uuids = (alyxraw.AlyxRaw &
-                     {'model': 'actions.session'} &
-                     (alyxraw.AlyxRaw.Field & subj) &
-                     (alyxraw.AlyxRaw.Field &
-                      'fname="start_time"' &
-                      'fvalue between "{}" and "{}"'.format(
-                        session_start, session_end))).fetch(
-                            'uuid')
-    sessions_list += [dict(uuid=uuid) for uuid in session_uuids]
-
-sessions = alyxraw.AlyxRaw & 'model="actions.session"' & sessions_list
-sessions_with_users = alyxraw.AlyxRaw.Field & sessions & \
-    'fname="users"' & 'fvalue!="None"' & subjects
+sessions_with_users = alyxraw.AlyxRaw.Field & sessions_list & \
+    'fname="users"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & sessions_with_users).proj(
     session_uuid='uuid')
 
@@ -316,9 +316,8 @@ for key in keys:
 
 # acquisition.SessionProcedure
 print('Ingesting acquisition.SessionProcedure...')
-sessions = alyxraw.AlyxRaw & 'model="actions.session"' & sessions_list
-sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
-    'fname="procedures"' & 'fvalue!="None"' & subjects
+sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions_list & \
+    'fname="procedures"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
     session_uuid='uuid')
 
@@ -346,9 +345,8 @@ for key in keys:
 
 # acquisition.SessionProject
 print('Ingesting acquisition.SessionProject...')
-sessions = alyxraw.AlyxRaw & 'model="actions.session"' & sessions_list
-sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
-    'fname="project"' & 'fvalue!="None"' & subjects
+sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions_list & \
+    'fname="project"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
     session_uuid='uuid')
 
@@ -378,7 +376,7 @@ for key in keys:
 print('Ingesting acquisition.WaterAdministrationSession...')
 admin = alyxraw.AlyxRaw & 'model="actions.wateradministration"'
 admin_with_session = alyxraw.AlyxRaw.Field & admin & \
-    'fname="session"' & 'fvalue!="None"' & subjects
+    [dict(fname='session', fvalue=str(uuid)) for uuid in sessions_list]
 keys = (alyxraw.AlyxRaw & admin_with_session).proj(wateradmin_uuid='uuid')
 for key in keys:
     key['uuid'] = key['wateradmin_uuid']
