@@ -20,7 +20,6 @@ def get_uuids(model_name, uuid_name, subject_uuids):
         return [dict(subject_uuid=subject_uuid)
                 for subject_uuid in subject_uuids]
     else:
-        session_start_date, session_end_date = public.
 
         subjects = [dict(fname='subject', fvalue=str(uuid))
                     for uuid in subject_uuids]
