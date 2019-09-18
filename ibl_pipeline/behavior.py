@@ -680,8 +680,8 @@ class TrialSet(dj.Imported):
         trial_feedback_time:        double        # Time of feedback delivery (reward or not) in choiceworld
         trial_feedback_type:        tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
         trial_rep_num=null:         int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
-        trial_go_cue_time:          float
-        trial_go_cue_trigger_time:  float
+        trial_go_cue_time=null:     float
+        trial_go_cue_trigger_time=null:  float
         trial_stim_prob_left:       float         # probability of the stimulus being present on left
         trial_reward_volume=null:   float         # reward volume of each trial
         trial_iti_duration=null:    float         # inter-trial interval
