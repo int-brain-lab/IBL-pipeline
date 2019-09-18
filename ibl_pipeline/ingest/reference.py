@@ -192,5 +192,5 @@ class ProjectLabMember(dj.Manual):
     definition = """
     project_name:   varchar(255)
     user_name:      varchar(255)
-    projectlabmember=CURRENT_TIMESTAMP:   timestamp
+    projectlabmember_ts=CURRENT_TIMESTAMP:   timestamp
     """
