@@ -5,6 +5,7 @@ via auto-populating.
 
 import datajoint as dj
 from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data
+from ibl_pipeline import public
 import utils
 
 # reference tables
