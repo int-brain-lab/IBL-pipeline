@@ -25,7 +25,7 @@ def get_uuids(model_name, uuid_name, subject_uuids):
                     for uuid in subject_uuids]
 
         if 'actions.' in model_name:
-            uuids = (alyxraw.AlyxRaw & {'model_name': model_name} &
+            uuids = (alyxraw.AlyxRaw & {'model': model_name} &
                      (alyxraw.AlyxRaw.Field & subjects)).fetch('uuid')
 
         elif 'data.' in model_name:
@@ -42,7 +42,7 @@ def get_uuids(model_name, uuid_name, subject_uuids):
                 session_start = session_start.strftime('%Y-%m-%d')
                 session_end = session_end.strftime('%Y-%m-%d')
                 session_uuids = (alyxraw.AlyxRaw &
-                                 {'model_name': 'actions.session'} &
+                                 {'model': 'actions.session'} &
                                  (alyxraw.AlyxRaw.Field & subj) &
                                  (alyxraw.AlyxRaw.Field &
                                   'fname="start_time"' &
@@ -53,14 +53,14 @@ def get_uuids(model_name, uuid_name, subject_uuids):
                              for uuid in session_uuids]
 
             if model_name != 'data.filerecord':
-                uuids = (alyxraw.AlyxRaw & {'model_name': model_name} &
+                uuids = (alyxraw.AlyxRaw & {'model': model_name} &
                          (alyxraw.AlyxRaw.Field & subjects)).fetch('uuid')
             else:
-                dataset_uuids = (alyxraw.AlyxRaw & {'model_name': model_name} &
+                dataset_uuids = (alyxraw.AlyxRaw & {'model': model_name} &
                                  (alyxraw.AlyxRaw.Field & subjects)).fetch('uuid')
                 datasets = [dict(fname='dataset', fvalue=str(uuid))
                             for uuid in dataset_uuids]
-                uuids = (alyxraw.AlyxRaw & {'model_name': model_name} &
+                uuids = (alyxraw.AlyxRaw & {'model': model_name} &
                          (alyxraw.AlyxRaw.Field & datasets)).fetch('uuid')
 
         return [{uuid_name: uuid} for uuid in uuids]
