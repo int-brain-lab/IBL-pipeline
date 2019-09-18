@@ -22,7 +22,7 @@ subject.Sequence.populate(suppress_errors=True)
 subject.Allele.populate(suppress_errors=True)
 subject.Line.populate(suppress_errors=True)
 
-#
+# select specific subjects for the public website
 subject_uuids = public.PublicSubjectUuid.fetch('subject_uuid')
 subj_res = utils.get_uuids('subjects.subject', 'subject_uuid', subject_uuids)
 subject.Subject.populate(subj_res, suppress_errors=True)
