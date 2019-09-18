@@ -24,11 +24,11 @@ def get_uuids(model_name, uuid_name, subject_uuids):
         subjects = [dict(fname='subject', fvalue=str(uuid))
                     for uuid in subject_uuids]
 
-        if 'actions.' in model_name:
+        if 'actions.' in model_name and model_name != 'actions.session':
             uuids = (alyxraw.AlyxRaw & {'model': model_name} &
                      (alyxraw.AlyxRaw.Field & subjects)).fetch('uuid')
 
-        elif 'data.' in model_name:
+        elif 'data.' in model_name or model_name == 'actions.session':
 
             # loop over subjects and get sessions between the session range
 
@@ -49,12 +49,18 @@ def get_uuids(model_name, uuid_name, subject_uuids):
                                   'fvalue between "{}" and "{}"'.format(
                                       session_start, session_end))).fetch(
                                           'uuid')
-                sessions += [dict(fname='session', fvalue=str(uuid))
-                             for uuid in session_uuids]
+                if model_name == 'actions.session':
+                    sessions += [dict(uuid=uuid) for uuid in session_uuids]
+                else:
+                    sessions += [dict(fname='session', fvalue=str(uuid))
+                                 for uuid in session_uuids]
 
-            if model_name != 'data.filerecord':
+            if model_name == 'actions.session':
+                uuids = (alyxraw.AlyxRaw & {'model': model_name} & sessions).fetch('uuid')
+
+            elif model_name != 'data.filerecord':
                 uuids = (alyxraw.AlyxRaw & {'model': model_name} &
-                         (alyxraw.AlyxRaw.Field & subjects)).fetch('uuid')
+                         (alyxraw.AlyxRaw.Field & sessions)).fetch('uuid')
             else:
                 dataset_uuids = (alyxraw.AlyxRaw & {'model': model_name} &
                                  (alyxraw.AlyxRaw.Field & subjects)).fetch('uuid')
