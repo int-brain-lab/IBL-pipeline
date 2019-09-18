@@ -57,7 +57,7 @@ class WaterAdministration(dj.Manual):
     adlib:                      boolean
     -> WaterType
     -> [nullable] reference.LabMember.proj(administration_user="user_name")
-    wateradiministration_ts=CURRENT_TIMESTAMP:   timestamp
+    wateradministration_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
