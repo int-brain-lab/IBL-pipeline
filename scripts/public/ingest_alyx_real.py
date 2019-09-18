@@ -1,6 +1,8 @@
 '''
 This script copies tuples in the shadow tables into the real tables for alyx.
 '''
+import sys
+sys.path.append('/src/IBL-pipeline/scripts')
 
 import datajoint as dj
 from ibl_pipeline.ingest import reference as reference_ingest
