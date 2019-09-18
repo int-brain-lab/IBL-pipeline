@@ -80,8 +80,9 @@ for key in keys:
 print('Ingesting action.WaterRestrictionUser...')
 restrictions = alyxraw.AlyxRaw & 'model = "actions.waterrestriction"'
 restr_with_users = alyxraw.AlyxRaw.Field & restrictions & 'fname="users"' & \
-    'fvalue!="None"' & subjects
-keys = (alyxraw.AlyxRaw & restr_with_users).proj(
+    'fvalue!="None"'
+restr_subjects = alyxraw.AlyxRaw.Field & subjects
+keys = (alyxraw.AlyxRaw & restr_with_users & restr_subjects).proj(
     restriction_uuid='uuid')
 
 for key in keys:
@@ -111,8 +112,8 @@ for key in keys:
 print('Ingesting action.WaterRestrictionProcedure...')
 restrictions = alyxraw.AlyxRaw & 'model = "actions.waterrestriction"'
 restr_with_procedures = alyxraw.AlyxRaw.Field & restrictions & \
-    'fname="procedures"' & 'fvalue!="None"' & subjects
-keys = (alyxraw.AlyxRaw & restr_with_procedures).proj(
+    'fname="procedures"' & 'fvalue!="None"'
+keys = (alyxraw.AlyxRaw & restr_with_procedures & restr_subjects).proj(
     restriction_uuid='uuid')
 
 for key in keys:
@@ -143,8 +144,8 @@ for key in keys:
 print('Ingesting action.SurgeryUser...')
 surgeries = alyxraw.AlyxRaw & 'model = "actions.surgery"'
 surgeries_with_users = alyxraw.AlyxRaw.Field & surgeries & \
-    'fname="users"' & 'fvalue!="None"' & subjects
-keys = (surgeries & surgeries_with_users).proj(
+    'fname="users"' & 'fvalue!="None"'
+keys = (surgeries & surgeries_with_users & restr_subjects).proj(
     surgery_uuid='uuid')
 
 for key in keys:
@@ -173,9 +174,9 @@ for key in keys:
 print('Ingesting action.SurgeryProcedure...')
 surgeries = alyxraw.AlyxRaw & 'model = "actions.surgery"'
 surgeries_with_procedures = alyxraw.AlyxRaw.Field & surgeries & \
-    'fname="procedures"' & 'fvalue!="None"' & subjects
+    'fname="procedures"' & 'fvalue!="None"'
 
-keys = (surgeries & surgeries_with_procedures).proj(
+keys = (surgeries & surgeries_with_procedures & restr_subjects).proj(
     surgery_uuid='uuid')
 
 for key in keys:
@@ -205,8 +206,8 @@ for key in keys:
 print('Ingesting action.OtherActionUser...')
 other_actions = alyxraw.AlyxRaw & 'model = "actions.otheraction"'
 other_actions_with_users = alyxraw.AlyxRaw.Field & other_actions & \
-    'fname="users"' & 'fvalue!="None"' & subjects
-keys = (other_actions & other_actions_with_users).proj(
+    'fname="users"' & 'fvalue!="None"'
+keys = (other_actions & other_actions_with_users & restr_subjects).proj(
     other_action_uuid='uuid')
 
 for key in keys:
