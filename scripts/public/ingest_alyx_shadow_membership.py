@@ -264,7 +264,27 @@ for key in keys:
 
 # acquisition.SessionUser
 print('Ingesting acquisition.SessionUser...')
-sessions = alyxraw.AlyxRaw & 'model="actions.session"'
+# get session restrictor
+sessions_list = []
+for subj_uuid, subj in zip(subject_uuids, subjects):
+
+    session_start, session_end = (
+        public.PublicSubject &
+        (public.PublicSubjectUuid & {'subject_uuid': subj_uuid})).fetch1(
+        'session_start_date', 'session_end_date')
+    session_start = session_start.strftime('%Y-%m-%d')
+    session_end = session_end.strftime('%Y-%m-%d')
+    session_uuids = (alyxraw.AlyxRaw &
+                     {'model': 'actions.session'} &
+                     (alyxraw.AlyxRaw.Field & subj) &
+                     (alyxraw.AlyxRaw.Field &
+                      'fname="start_time"' &
+                      'fvalue between "{}" and "{}"'.format(
+                        session_start, session_end))).fetch(
+                            'uuid')
+    sessions_list += [dict(uuid=uuid) for uuid in session_uuids]
+
+sessions = alyxraw.AlyxRaw & 'model="actions.session"' & sessions_list
 sessions_with_users = alyxraw.AlyxRaw.Field & sessions & \
     'fname="users"' & 'fvalue!="None"' & subjects
 keys = (alyxraw.AlyxRaw & sessions_with_users).proj(
@@ -296,7 +316,7 @@ for key in keys:
 
 # acquisition.SessionProcedure
 print('Ingesting acquisition.SessionProcedure...')
-sessions = alyxraw.AlyxRaw & 'model="actions.session"'
+sessions = alyxraw.AlyxRaw & 'model="actions.session"' & sessions_list
 sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
     'fname="procedures"' & 'fvalue!="None"' & subjects
 keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
@@ -326,7 +346,7 @@ for key in keys:
 
 # acquisition.SessionProject
 print('Ingesting acquisition.SessionProject...')
-sessions = alyxraw.AlyxRaw & 'model="actions.session"'
+sessions = alyxraw.AlyxRaw & 'model="actions.session"' & sessions_list
 sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
     'fname="project"' & 'fvalue!="None"' & subjects
 keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
