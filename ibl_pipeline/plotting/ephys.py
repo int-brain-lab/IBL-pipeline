@@ -392,6 +392,94 @@ class RasterLinkOnly(dj.Computed):
 
 
 @schema
+class RasterLinkS3(dj.Computed):
+    definition = """
+    -> ephys.Cluster
+    -> ValidAlignSort
+    ---
+    plotting_data_link:      varchar(255)
+    plot_ylim:               blob
+    mark_label=null:         varchar(32)
+    -> RasterLayoutTemplate
+    """
+
+    def make(self, key):
+        cluster = ephys.Cluster & key
+        trials = \
+            (behavior.TrialSet.Trial * ephys.TrialSpikes & cluster).proj(
+                'trial_start_time', 'trial_stim_on_time',
+                'trial_response_time',
+                'trial_feedback_time',
+                'trial_response_choice',
+                'trial_spike_times',
+                trial_duration='trial_end_time-trial_start_time',
+                trial_signed_contrast="""trial_stim_contrast_right -
+                                         trial_stim_contrast_left"""
+            ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
+
+        if not len(trials):
+            return
+        align_event = (ephys.Event & key).fetch1('event')
+        sorting_var = (Sorting & key).fetch1('sort_by')
+
+        fig_link = path.join('raster',
+                             str(key['subject_uuid']),
+                             key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+                             str(key['probe_idx']),
+                             str(key['cluster_revision']),
+                             key['event'],
+                             key['sort_by'],
+                             str(key['cluster_id'])) + '.png'
+        y_lim, label = putils.create_raster_plot_combined(
+            trials, align_event, sorting_var, fig_dir=fig_link, store_type='s3')
+        key['plotting_data_link'] = fig_link
+        key['plot_ylim'] = y_lim
+        key['mark_label'] = label
+
+        if key['sort_by'] == 'trial_id':
+            key['template_idx'] = 0
+        else:
+            key['template_idx'] = 1
+
+        self.insert1(key)
+
+
+@schema
+class PsthLayoutTemplate(dj.Lookup):
+    definition = """
+    psth_template_idx:   int
+    ---
+    psth_data_template:   longblob
+    """
+
+    layout = go.Layout(
+            width=580,
+            height=370,
+            margin=go.layout.Margin(
+                l=50,
+                r=30,
+                b=40,
+                t=80,
+                pad=0
+            ),
+            title=dict(
+                # text='PSTH, aligned to {} time'.format(align_event),  # to be inserted
+                x=0.2,
+                y=0.87
+            ),
+            xaxis=dict(
+                title='Time (sec)',
+                # range=x_lim,  # to be filled
+                showgrid=False
+            ),
+            yaxis=dict(
+                title='Firing rate (spks/sec)',
+                showgrid=False
+            ),
+        )
+
+
+@schema
 class Psth(dj.Computed):
     definition = """
     -> ephys.Cluster
