@@ -518,8 +518,8 @@ class PsthTemplate(dj.Lookup):
 
     contents = [dict(
         psth_template_idx=0,
-        raster_data_template=go.Figure(data=[left, right, incorrect, all],
-                                       layout=layout).to_plotly_json())]
+        psth_data_template=go.Figure(data=[left, right, incorrect, all],
+                                     layout=layout).to_plotly_json())]
 
 
 @schema
