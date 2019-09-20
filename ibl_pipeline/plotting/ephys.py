@@ -643,18 +643,22 @@ class PsthData(dj.Computed):
         data = []
         if len(trials_left):
             _, key['psth_left'] = putils.compute_psth(
-                trials_left, 'left', align_event, 1000, 10, x_lim)
+                trials_left, 'left', align_event,
+                1000, 10, x_lim, as_dict=False)
 
         if len(trials_right):
             _, key['psth_right'] = putils.compute_psth(
-                trials_right, 'right', align_event, 1000, 10, x_lim)
+                trials_right, 'right', align_event,
+                1000, 10, x_lim, as_dict=False)
 
         if len(trials_incorrect):
             _, key['psth_incorrect'] = putils.compute_psth(
-                trials_incorrect, 'incorrect', align_event, 1000, 10, x_lim)
+                trials_incorrect, 'incorrect', align_event,
+                1000, 10, x_lim, as_dict=False)
 
         key['psth_time'], key['psth_all'] = putils.compute_psth(
-            trials_all, 'all', align_event, 1000, 10, x_lim)
+            trials_all, 'all', align_event,
+            1000, 10, x_lim, as_dict=False)
 
         key['psth_template_idx'] = 0
         self.insert1(key)
