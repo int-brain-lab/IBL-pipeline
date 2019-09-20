@@ -722,12 +722,12 @@ class PsthDataVarchar(dj.Computed):
             trials_all, 'all', align_event,
             1000, 10, x_lim, as_dict=False)
 
-        self.insert1(dict(
-            psth_x_lim=','.join('{:0.2f}'.format(x) for x in x_lim),
-            psth_left=','.join('{:0.5f}'.format(x) for x in psth_left),
-            psth_right=','.join('{:0.5f}'.format(x) for x in psth_right),
-            psth_incorrect=','.join('{:0.5f}'.format(x) for x in psth_incorrect),
-            psth_all=','.join('{:0.5f}'.format(x) for x in psth_all),
-            psth_time=','.join('{:0.5f}'.format(x) for x in psth_time),
-            psth_template_idx=0
-        ))
+        self.insert1(
+            dict(**key,
+                 psth_x_lim=','.join('{:0.2f}'.format(x) for x in x_lim),
+                 psth_left=','.join('{:0.5f}'.format(x) for x in psth_left),
+                 psth_right=','.join('{:0.5f}'.format(x) for x in psth_right),
+                 psth_incorrect=','.join('{:0.5f}'.format(x) for x in psth_incorrect),
+                 psth_all=','.join('{:0.5f}'.format(x) for x in psth_all),
+                 psth_time=','.join('{:0.5f}'.format(x) for x in psth_time),
+                 psth_template_idx=0))
