@@ -395,6 +395,7 @@ def create_raster_plot_combined(trials, align_event,
             bucket.put_object(Body=img_data,
                               ContentType='image/png',
                               Key=fig_dir)
+            return [0, y_lim], label
 
     else:
         import tempfile
