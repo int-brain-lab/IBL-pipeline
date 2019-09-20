@@ -402,7 +402,7 @@ class RasterLinkS3(dj.Computed):
     mark_label=null:         varchar(32)
     -> RasterLayoutTemplate
     """
-    key_source = ephys.Cluster * ValidAlignSort & (ephys.Ephys & behavior.TrialSet)
+    key_source = ephys.Cluster * ValidAlignSort & behavior.TrialSet
 
     def make(self, key):
         cluster = ephys.Cluster & key
@@ -450,34 +450,76 @@ class PsthLayoutTemplate(dj.Lookup):
     definition = """
     psth_template_idx:   int
     ---
-    psth_data_template:   longblob
+    psth_left_data_template:   longblob
+    psth_right_data_template:  longblob
+    psth_incorrect_data_template:  longblob
+    psth_all_data_template:     longblob
+    psth_layout_template:  longblob
     """
 
+    left = go.Scatter(
+        # x=psth_time, # fetched from the table PsthData
+        # y=psth_left, # fetched from the table PsthData
+        mode='lines',
+        marker=dict(
+            size=6,
+            color='green'),
+        name='left trials'
+    )
+    right = go.Scatter(
+        # x=psth_time, # fetched from the table PsthData
+        # y=psth_right, # fetched from the table PsthData
+        mode='lines',
+        marker=dict(
+            size=6,
+            color='blue'),
+        name='right trials'
+    )
+    incorrect = go.Scatter(
+        # x=psth_time, # fetched from the table PsthData
+        # y=psth_incorrect, # fetched from the table PsthData
+        mode='lines',
+        marker=dict(
+            size=6,
+            color='red'),
+        name='incorrect trials'
+    )
+    all = go.Scatter(
+        # x=psth_time, # fetched from the table PsthData
+        # y=psth_all, # fetched from the table PsthData
+        mode='lines',
+        marker=dict(
+            size=6,
+            color='black'),
+        name='all trials'
+    )
+
     layout = go.Layout(
-            width=580,
-            height=370,
-            margin=go.layout.Margin(
-                l=50,
-                r=30,
-                b=40,
-                t=80,
-                pad=0
-            ),
-            title=dict(
-                # text='PSTH, aligned to {} time'.format(align_event),  # to be inserted
-                x=0.2,
-                y=0.87
-            ),
-            xaxis=dict(
-                title='Time (sec)',
-                # range=x_lim,  # to be filled
-                showgrid=False
-            ),
-            yaxis=dict(
-                title='Firing rate (spks/sec)',
-                showgrid=False
-            ),
-        )
+        width=580,
+        height=370,
+        margin=go.layout.Margin(
+            l=50,
+            r=30,
+            b=40,
+            t=80,
+            pad=0
+        ),
+        title=dict(
+            # text='PSTH, aligned to {} time'.format(align_event),  # to be inserted
+            x=0.2,
+            y=0.87
+        ),
+        xaxis=dict(
+            title='Time (sec)',
+            # range=psth_x_lim,  # to be filled, fetch from PsthData
+            showgrid=False
+        ),
+        yaxis=dict(
+            title='Firing rate (spks/sec)',
+            showgrid=False
+        ),
+    )
+    contents = [[1, left, right, incorrect, all, layout]]
 
 
 @schema
@@ -559,4 +601,57 @@ class Psth(dj.Computed):
 
         fig = go.Figure(data=data, layout=layout)
         key['plotting_data'] = fig.to_plotly_json()
+        self.insert1(key)
+
+
+@schema
+class PsthData(dj.Computed):
+    definition = """
+    -> ephys.Cluster
+    -> ephys.Event
+    ---
+    psth_x_lim:             blob
+    psth_left=null:         longblob
+    psth_right=null:        longblob
+    psth_incorrect=null:    longblob
+    psth_all:               longblob
+    psth_time:              longblob
+    """
+    key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"')
+
+    def make(self, key):
+        cluster = ephys.Cluster & key
+        trials_all = (behavior.TrialSet.Trial * ephys.TrialSpikes & cluster).proj(
+            'trial_start_time', 'trial_stim_on_time',
+            'trial_response_time', 'trial_feedback_time',
+            'trial_response_choice', 'trial_spike_times',
+            trial_duration='trial_end_time-trial_start_time',
+            trial_signed_contrast='trial_stim_contrast_right - trial_stim_contrast_left'
+        ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"' & key
+
+        trials_left = trials_all & 'trial_response_choice="CW"' \
+            & 'trial_signed_contrast < 0'
+        trials_right = trials_all & 'trial_response_choice="CCW"' \
+            & 'trial_signed_contrast > 0'
+        trials_incorrect = trials_all - \
+            trials_right.proj() - trials_left.proj()
+
+        align_event = (ephys.Event & key).fetch1('event')
+        key['psth_x_lim'] = [-1, 1]
+        data = []
+        if len(trials_left):
+            _, key['psth_left'] = putils.compute_psth(
+                trials_left, 'left', align_event, 1000, 10, x_lim)
+
+        if len(trials_right):
+            _, key['psth_right'] = putils.compute_psth(
+                trials_right, 'right', align_event, 1000, 10, x_lim)
+
+        if len(trials_incorrect):
+            _, key['psth_incorrect'] = putils.compute_psth(
+                trials_incorrect, 'incorrect', align_event, 1000, 10, x_lim)
+
+        key['psth_time'], key['psth_all'] = putils.compute_psth(
+            trials_all, 'all', align_event, 1000, 10, x_lim)
+
         self.insert1(key)
