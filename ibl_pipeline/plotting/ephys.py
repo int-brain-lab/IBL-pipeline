@@ -618,7 +618,8 @@ class PsthData(dj.Computed):
     psth_time:              longblob
     -> PsthTemplate
     """
-    key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"')
+    key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"') & \
+        behavior.TrialSet
 
     def make(self, key):
         cluster = ephys.Cluster & key
