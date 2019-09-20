@@ -638,7 +638,8 @@ class PsthData(dj.Computed):
             trials_right.proj() - trials_left.proj()
 
         align_event = (ephys.Event & key).fetch1('event')
-        key['psth_x_lim'] = [-1, 1]
+        x_lim = [-1, 1]
+        key['psth_x_lim'] = x_lim
         data = []
         if len(trials_left):
             _, key['psth_left'] = putils.compute_psth(
