@@ -192,7 +192,8 @@ def create_psth_plot(trials, align_event,
     return encoded_string, y_lim
 
 
-def compute_psth(trials, trial_type, align_event, nbins, window_size, x_lim=[-1, 1]):
+def compute_psth(trials, trial_type, align_event, nbins,
+                 window_size, x_lim=[-1, 1], as_dict=True):
 
     if trial_type == 'left':
         color = 'green'
@@ -229,8 +230,10 @@ def compute_psth(trials, trial_type, align_event, nbins, window_size, x_lim=[-1,
             color=color),
         name='{} trials'.format(trial_type)
     )
-
-    return data
+    if as_dict:
+        return data
+    else:
+        return list(time_bins), list(psth)
 
 
 def get_spike_times(trials, sorting_var, align_event,
