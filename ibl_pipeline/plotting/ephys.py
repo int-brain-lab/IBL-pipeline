@@ -446,7 +446,7 @@ class RasterLinkS3(dj.Computed):
 
 
 @schema
-class PsthLayoutTemplate(dj.Lookup):
+class PsthTemplate(dj.Lookup):
     definition = """
     psth_template_idx:   int
     ---
@@ -519,7 +519,7 @@ class PsthLayoutTemplate(dj.Lookup):
             showgrid=False
         ),
     )
-    # contents = [[1, left, right, incorrect, all, layout]]
+    contents = [[1, left, right, incorrect, all, layout]]
 
 
 @schema
@@ -616,6 +616,7 @@ class PsthData(dj.Computed):
     psth_incorrect=null:    longblob
     psth_all:               longblob
     psth_time:              longblob
+    -> PsthTemplate
     """
     key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"')
 
@@ -654,4 +655,5 @@ class PsthData(dj.Computed):
         key['psth_time'], key['psth_all'] = putils.compute_psth(
             trials_all, 'all', align_event, 1000, 10, x_lim)
 
+        key['psth_template_idx'] = 1
         self.insert1(key)
