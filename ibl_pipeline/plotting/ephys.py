@@ -519,7 +519,14 @@ class PsthTemplate(dj.Lookup):
             showgrid=False
         ),
     )
-    contents = [[1, left, right, incorrect, all, layout]]
+
+    contents = [
+        dict(
+            psth_left_template=left,
+            psth_right_tempolate=right,
+            psth_incorrect_template=incorrect,
+            psth_all_template=all,
+            psth_layout_template=layout)]
 
 
 @schema
