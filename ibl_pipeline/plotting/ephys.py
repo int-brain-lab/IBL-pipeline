@@ -663,3 +663,71 @@ class PsthData(dj.Computed):
 
         key['psth_template_idx'] = 0
         self.insert1(key)
+
+
+@schema
+class PsthDataVarchar(dj.Computed):
+    definition = """
+    -> ephys.Cluster
+    -> ephys.Event
+    ---
+    psth_x_lim:             varchar(32)
+    psth_left=null:         varchar(10000)
+    psth_right=null:        varchar(10000)
+    psth_incorrect=null:    varchar(10000)
+    psth_all:               varchar(10000)
+    psth_time:              varchar(10000)
+    -> PsthTemplate
+    """
+    key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"') & \
+        behavior.TrialSet
+
+    def make(self, key):
+        cluster = ephys.Cluster & key
+        trials_all = (behavior.TrialSet.Trial * ephys.TrialSpikes & cluster).proj(
+            'trial_start_time', 'trial_stim_on_time',
+            'trial_response_time', 'trial_feedback_time',
+            'trial_response_choice', 'trial_spike_times',
+            trial_duration='trial_end_time-trial_start_time',
+            trial_signed_contrast='trial_stim_contrast_right - trial_stim_contrast_left'
+        ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"' & key
+
+        trials_left = trials_all & 'trial_response_choice="CW"' \
+            & 'trial_signed_contrast < 0'
+        trials_right = trials_all & 'trial_response_choice="CCW"' \
+            & 'trial_signed_contrast > 0'
+        trials_incorrect = trials_all - \
+            trials_right.proj() - trials_left.proj()
+
+        align_event = (ephys.Event & key).fetch1('event')
+        x_lim = [-1, 1]
+
+        data = []
+        if len(trials_left):
+            _, psth_left = putils.compute_psth(
+                trials_left, 'left', align_event,
+                1000, 10, x_lim, as_dict=False)
+
+        if len(trials_right):
+            _, psth_right = putils.compute_psth(
+                trials_right, 'right', align_event,
+                1000, 10, x_lim, as_dict=False)
+
+        if len(trials_incorrect):
+            _, psth_incorrect = putils.compute_psth(
+                trials_incorrect, 'incorrect', align_event,
+                1000, 10, x_lim, as_dict=False)
+
+        psth_time, psth_all = putils.compute_psth(
+            trials_all, 'all', align_event,
+            1000, 10, x_lim, as_dict=False)
+
+        self.insert1(dict(
+            psth_x_lim=','.join('{:0.2f}'.format(x) for x in x_lim),
+            psth_left=','.join('{:0.5f}'.format(x) for x in psth_left),
+            psth_right=','.join('{:0.5f}'.format(x) for x in psth_right),
+            psth_incorrect=','.join('{:0.5f}'.format(x) for x in psth_incorrect),
+            psth_all=','.join('{:0.5f}'.format(x) for x in psth_all),
+            psth_time=','.join('{:0.5f}'.format(x) for x in psth_time),
+            psth_template_idx=0
+        ))
