@@ -402,6 +402,7 @@ class RasterLinkS3(dj.Computed):
     mark_label=null:         varchar(32)
     -> RasterLayoutTemplate
     """
+    key_source = ephys.Cluster * ValidAlignSort & (ephys.Ephys & behavior.TrialSet)
 
     def make(self, key):
         cluster = ephys.Cluster & key
