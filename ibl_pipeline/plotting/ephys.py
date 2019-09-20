@@ -519,7 +519,7 @@ class PsthLayoutTemplate(dj.Lookup):
             showgrid=False
         ),
     )
-    contents = [[1, left, right, incorrect, all, layout]]
+    # contents = [[1, left, right, incorrect, all, layout]]
 
 
 @schema
