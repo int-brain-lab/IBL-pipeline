@@ -522,10 +522,10 @@ class PsthTemplate(dj.Lookup):
 
     contents = [
         dict(
-            psth_left_template=left,
-            psth_right_tempolate=right,
-            psth_incorrect_template=incorrect,
-            psth_all_template=all,
+            psth_left_data_template=left,
+            psth_right_data_template=right,
+            psth_incorrect_data_template=incorrect,
+            psth_all_data_template=all,
             psth_layout_template=layout)]
 
 
