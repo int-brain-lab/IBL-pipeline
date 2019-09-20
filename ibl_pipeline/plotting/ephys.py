@@ -450,11 +450,7 @@ class PsthTemplate(dj.Lookup):
     definition = """
     psth_template_idx:   int
     ---
-    psth_left_data_template:   longblob
-    psth_right_data_template:  longblob
-    psth_incorrect_data_template:  longblob
-    psth_all_data_template:     longblob
-    psth_layout_template:  longblob
+    psth_data_template:  longblob
     """
 
     left = go.Scatter(
@@ -520,13 +516,10 @@ class PsthTemplate(dj.Lookup):
         ),
     )
 
-    contents = [
-        dict(
-            psth_left_data_template=left,
-            psth_right_data_template=right,
-            psth_incorrect_data_template=incorrect,
-            psth_all_data_template=all,
-            psth_layout_template=layout)]
+    # contents = [dict(
+    #     template_idx=0,
+    #     raster_data_template=go.Figure(data=[left, right, incorrect, all],
+    #                                    layout=layout).to_plotly_json())]
 
 
 @schema
@@ -662,5 +655,5 @@ class PsthData(dj.Computed):
         key['psth_time'], key['psth_all'] = putils.compute_psth(
             trials_all, 'all', align_event, 1000, 10, x_lim)
 
-        key['psth_template_idx'] = 1
+        key['psth_template_idx'] = 0
         self.insert1(key)
