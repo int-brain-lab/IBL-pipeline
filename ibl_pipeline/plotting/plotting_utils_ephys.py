@@ -390,7 +390,7 @@ def create_raster_plot_combined(trials, align_event,
 
             # upload to s3
             img_data = io.BytesIO()
-            plt.savefig(img_data, format='png')
+            fig.savefig(img_data, format='png')
             img_data.seek(0)
             bucket.put_object(Body=img_data,
                               ContentType='image/png',
