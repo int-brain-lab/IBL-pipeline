@@ -4,6 +4,7 @@ functions to compare contents in shadow tables and real tables.
 import datajoint as dj
 from ibl_pipeline import reference, subject, acquisition
 from ibl_pipeline import update
+from uuid import UUID
 
 
 def show(tablepairs, comment=''):
@@ -53,7 +54,7 @@ def diff(tablenames, tablepairs):
             deleted_entry = (real & deleted_key).fetch1()
             deleted_record = dict(
                 table=real.__module__+'.'+real.__name__,
-                pk_hash=str(hash(frozenset(deleted_key.items()))),
+                pk_hash=UUID(dj.hash.key_hash(deleted_key)),
                 original_ts=deleted_entry[[key for key in deleted_entry.keys() if '_ts' in key][0]],
                 pk_dict=deleted_key,
                 deletion_narrative='{} only in {} - record deleted?'.format(
@@ -98,7 +99,7 @@ def diff(tablenames, tablepairs):
                     update_record = dict(
                         table=real.__module__+'.'+real.__name__,
                         attribute=attr,
-                        pk_hash=str(hash(frozenset(pk.items()))),
+                        pk_hash=UUID(dj.hash.key_hash(pk)),
                         original_ts=real_record[[key for key in real_record.keys() if '_ts' in key][0]],
                         update_ts=shadow_record[[key for key in shadow_record.keys() if '_ts' in key][0]],
                         pk_dict=pk,
