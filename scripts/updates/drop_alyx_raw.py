@@ -6,7 +6,7 @@ from ibl_pipeline.ingest import alyxraw, reference, subject, \
 dj.config['safemode'] = False
 
 # delete alyxraw for data.filerecord if exists = 0
-print('Deleting alyxraw entries corresponding to file records...')
+print('Deleting all alyx raw...')
 alyxraw.AlyxRaw.delete()
 
 # delete shadow membership tables
