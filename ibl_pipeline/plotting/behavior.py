@@ -959,11 +959,11 @@ class DailyLabSummary(dj.Computed):
                     """.format(last_date)
                 elif not len(behavior_ingest.TrialSet & last_session):
                     data_update_status = """
-                    Ingest error in behavior.TrialSet for data on {}.
+                    Ingest error in TrialSet for data on {}.
                     """.format(last_date)
                 elif not len(behavior.BehavioralSummaryByDate & last_session_date):
                     data_update_status = """
-                    Ingest error in behavior_analyses.BehavioralSummaryByDate for
+                    Ingest error in BehavioralSummaryByDate for
                     data on {}
                     """.format(last_date)
                 elif not len(CumulativeSummary & last_session.proj(latest_session='session_date')):
@@ -972,7 +972,7 @@ class DailyLabSummary(dj.Computed):
                     """.format(last_date)
                 else:
                     data_update_status = """
-                    Data up to date, latest session collected on {}
+                    Data up to date
                     """.format(last_date)
 
                 # existence of plotting tuples
