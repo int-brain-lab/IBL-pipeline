@@ -933,8 +933,53 @@ class DailyLabSummary(dj.Computed):
         for entry in summary:
             subj = subject.Subject & entry
             protocol = entry['task_protocol'].partition('ChoiseWorld')[0]
-            subject_summary = key.copy()
-            subject_summary.update(
+
+            # --- check for data availability ---
+
+            # last session_start_time in table acquisition.Session
+            if not len(acquisition.Session & subj):
+                data_update_status = 'No behavioral data collected'
+            else:
+                # get the latest session query
+                last_session = subj.aggr(
+                    acquisition.Session,
+                    session_start_time='max(session_start_time)')
+
+                last_session_date = last_session.proj(
+                    session_date='date(session_start_time)')
+
+                last_date = last_session_date.fetch1(
+                    'session_date').strftime('%Y-%m-%d')
+
+                # existence of CompleteTrialSet tuple for latest session
+                if not len(behavior_ingest.CompleteTrialSession & last_session):
+                    data_update_status = """
+                    Data in the last session on {} were not uploaded
+                    or partially uploaded to FlatIron.
+                    """.format(last_date)
+                elif not len(behavior_ingest.TrialSet & last_session):
+                    data_update_status = """
+                    Ingest error in behavior.TrialSet for data on {}.
+                    """.format(last_date)
+                elif not len(behavior.BehavioralSummaryByDate & last_session_date):
+                    data_update_status = """
+                    Ingest error in behavior_analyses.BehavioralSummaryByDate for
+                    data on {}
+                    """.format(last_date)
+                elif not len(CumulativeSummary & last_session.proj(latest_session='session_date')):
+                    data_update_status = """
+                    Error in creating cumulative plots for data on {}
+                    """.format(last_date)
+                else:
+                    data_update_status = """
+                    Data up to date, latest session collected on {}
+                    """.format(last_date)
+
+                # existence of plotting tuples
+                CumulativeSummary & last_session.proj(latest_session='')
+
+            subject_summary = dict(
+                **key,
                 subject_uuid=entry['subject_uuid'],
                 subject_nickname=entry['subject_nickname'],
                 latest_session_ingested=entry['session_start_time'],
@@ -943,7 +988,8 @@ class DailyLabSummary(dj.Computed):
                 latest_training_status=entry['training_status'],
                 n_sessions_current_protocol=len(
                     ingested_sessions & subj &
-                    'task_protocol LIKE "{}%"'.format(protocol))
+                    'task_protocol LIKE "{}%"'.format(protocol)),
+                data_update_status=data_update_status
             )
             self.SubjectSummary.insert1(subject_summary)
 
@@ -958,4 +1004,5 @@ class DailyLabSummary(dj.Computed):
         latest_task_protocol:        varchar(128)
         latest_training_status:      varchar(64)
         n_sessions_current_protocol: int
+        data_update_status:          varchar(255)
         """
