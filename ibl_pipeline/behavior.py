@@ -488,6 +488,7 @@ class TrialSet(dj.Imported):
         key_source = acquisition.Session & CompleteTrialSession
 
     def make(self, key):
+        print(key)
         trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
@@ -610,7 +611,14 @@ class TrialSet(dj.Imported):
             trial['trial_id'] = idx_trial + 1
             trial['trial_start_time'] = trials_intervals[idx_trial, 0]
 
-            if np.isnan(trials_intervals[idx_trial, 1]):
+            if np.any(np.isnan([trials_intervals[idx_trial, 1],
+                                trials_feedback_times[idx_trial],
+                                trials_feedback_times[idx_trial],
+                                trials_response_times[idx_trial],
+                                trials_response_choice[idx_trial],
+                                trials_contrast_left[idx_trial],
+                                trials_contrast_right[idx_trial],
+                                trials_p_left[idx_trial]])):
                 continue
 
             trial['trial_end_time'] = trials_intervals[idx_trial, 1]
