@@ -17,8 +17,7 @@ def get_ts_attr(table):
     return [attr for attr in table.heading.secondary_attributes if '_ts' in attr][0]
 
 # get the unique records
-records_for_updating = dj.U('table', 'attribute', 'pk_hash') & update.UpdateRecord & \
-                       'table in ("ibl_pipeline.subject.Subject")'
+records_for_updating = dj.U('table', 'attribute', 'pk_hash') & update.UpdateRecord
 
 updated_errors = []
 for r in records_for_updating:
