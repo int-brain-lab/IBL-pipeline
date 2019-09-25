@@ -237,7 +237,7 @@ class BehavioralSummaryByDate(dj.Computed):
         )
 
         # compute reaction time for all trials
-        if np.any(complete in ['Partial', 'Complete']):
+        if np.any([c in ['Complete', 'Partial'] for c in complete]):
             trials_with_stim_on_time = trials & 'trial_stim_on_time is not NULL'
 
             if len(trials_with_stim_on_time):
