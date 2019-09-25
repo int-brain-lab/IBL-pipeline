@@ -612,9 +612,6 @@ class TrialSet(dj.Imported):
             trial['trial_start_time'] = trials_intervals[idx_trial, 0]
 
             if np.any(np.isnan([trials_intervals[idx_trial, 1],
-                                trials_feedback_times[idx_trial],
-                                trials_feedback_times[idx_trial],
-                                trials_response_times[idx_trial],
                                 trials_response_choice[idx_trial],
                                 trials_p_left[idx_trial]])):
                 continue
@@ -683,8 +680,8 @@ class TrialSet(dj.Imported):
         trial_stim_on_time=null:    double        # Time of stimulus in choiceworld (seconds)
         trial_stim_contrast_left:   float	      # contrast of the stimulus on the left
         trial_stim_contrast_right:  float         # contrast of the stimulus on the right
-        trial_feedback_time:        double        # Time of feedback delivery (reward or not) in choiceworld
-        trial_feedback_type:        tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
+        trial_feedback_time=null:   double        # Time of feedback delivery (reward or not) in choiceworld
+        trial_feedback_type=null:   tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
         trial_rep_num=null:         int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
         trial_go_cue_time=null:     float
         trial_go_cue_trigger_time=null:  float
