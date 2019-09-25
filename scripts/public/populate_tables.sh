@@ -1,5 +1,4 @@
-python ingest_alyx_shadow.py
-python ingest_alyx_shadow_membership.py
+# python ingest_alyx_shadow_membership.py
 python ../ingest_alyx_real.py
 python ../ingest_behavior.py
 python ../analyses_behavior.py
