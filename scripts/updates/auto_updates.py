@@ -1,5 +1,5 @@
 import datajoint as dj
-from ibl_pipeline import uptdate, reference, subject
+from ibl_pipeline import update, reference, subject
 
 schema = dj.schema('ibl_update')
 
