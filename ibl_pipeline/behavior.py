@@ -488,7 +488,7 @@ class TrialSet(dj.Imported):
         key_source = acquisition.Session & CompleteTrialSession
 
     def make(self, key):
-        print(key)
+
         trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
@@ -616,8 +616,6 @@ class TrialSet(dj.Imported):
                                 trials_feedback_times[idx_trial],
                                 trials_response_times[idx_trial],
                                 trials_response_choice[idx_trial],
-                                trials_contrast_left[idx_trial],
-                                trials_contrast_right[idx_trial],
                                 trials_p_left[idx_trial]])):
                 continue
 
