@@ -35,6 +35,7 @@ def init():
         'LitterSubject',
         'Weaning',
         'Death',
+        'SubjectCullMethod',
         'Caging',
         'UserHistory',
         'GenotypeTest',

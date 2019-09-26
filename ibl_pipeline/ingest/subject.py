@@ -269,6 +269,26 @@ class Subject(dj.Computed):
 
 
 @schema
+class SubjectCullMethod(dj.Computed):
+    definition = """
+    -> Subject
+    ---
+    cull_method:       varchar(255)
+    cull_method_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+    subjects_with_cull = alyxraw.AlyxRaw.Field & subjects & \
+        'fname="cull_method"' & 'fvalue!="None"'
+    key_source = (subjects & subjects_with_cull).proj(
+        subject_uuid='uuid')
+
+    def make(self, key):
+        key_c = key.copy()
+        key['uuid'] = key['subject_uuid']
+        self.insert1(dict(
+            **key_c, cull_method=grf(key, 'cull_method')))
+
+
+@schema
 class BreedingPair(dj.Computed):
     # <class 'subjects.models.BreedingPair'>
     definition = """
