@@ -238,7 +238,7 @@ for key in keys:
 
     if not len(action.Surgery & key):
         print('Surgery {} not in the table action.Surgery'.format(
-            key['suggery_uuid']))
+            key['surgery_uuid']))
         continue
 
     key_o = dict()
