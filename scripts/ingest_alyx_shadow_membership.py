@@ -236,9 +236,9 @@ for key in keys:
     key['uuid'] = key['other_action_uuid']
     key['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
 
-    if not len(action.Surgery & key):
-        print('Surgery {} not in the table action.Surgery'.format(
-            key['surgery_uuid']))
+    if not len(action.OtherAction & key):
+        print('OtherAction {} not in the table action.OtherAction'.format(
+            key['other_action_uuid']))
         continue
 
     key_o = dict()
