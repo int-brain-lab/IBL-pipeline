@@ -15,6 +15,9 @@ if len(subject_ingest.SubjectUser()):
 if len(subject_ingest.SubjectLab()):
     subject.SubjectLab.delete()
 
+if len(subject_ingest.Death()):
+    subject.Death.delete()
+
 if len(subject_ingest.SubjectProject()):
     subject.SubjectProject.delete()
 
