@@ -4,6 +4,7 @@ This script populate all behavioral plotting table for the website
 
 import datajoint as dj
 from ibl_pipeline.plotting import behavior
+from ibl_pipline import subject
 
 dj.config['safemode'] = False
 
