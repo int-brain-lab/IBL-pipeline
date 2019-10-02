@@ -128,10 +128,10 @@ class ReactionTime(dj.Computed):
     """
     key_source = PsychResults & \
         (behavior.CompleteTrialSession &
-         'stim_on_times_status = "Complete"')
+         'stim_on_times_status in ("Complete", "Partial")')
 
     def make(self, key):
-        trials = behavior.TrialSet.Trial & key
+        trials = behavior.TrialSet.Trial & key & 'trial_stim_on_time is not NULL'
         key['reaction_time'] = utils.compute_reaction_time(trials)
         self.insert1(key)
 
@@ -149,13 +149,13 @@ class ReactionTimeContrastBlock(dj.Computed):
 
     key_source = behavior.TrialSet & \
         (behavior.CompleteTrialSession &
-         'stim_on_times_status = "Complete"')
+         'stim_on_times_status in ("Complete", "Partial")')
 
     def make(self, key):
         task_protocol = (acquisition.Session & key).fetch1(
             'task_protocol')
 
-        trials = behavior.TrialSet.Trial & key
+        trials = behavior.TrialSet.Trial & key & 'trial_stim_on_time is not NULL'
 
         if task_protocol and ('biased' in task_protocol):
             prob_lefts = dj.U('trial_stim_prob_left') & trials
