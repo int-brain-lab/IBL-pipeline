@@ -119,7 +119,7 @@ class DateReactionTimeTrialNumber(dj.Computed):
     def make(self, key):
         trial_sets = (behavior_ingest.TrialSet &
                       (behavior_ingest.CompleteTrialSession &
-                       'stim_on_times_status="Complete"')).proj(
+                       'stim_on_times_status in ("Complete", "Partial")')).proj(
                 session_date='DATE(session_start_time)')
         trials = behavior_ingest.TrialSet.Trial & \
             (behavior_ingest.TrialSet * trial_sets & key)
