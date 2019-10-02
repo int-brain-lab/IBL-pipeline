@@ -297,7 +297,7 @@ class BehavioralSummaryByDate(dj.Computed):
 
                 self.PsychResults.insert1(psych_results)
                 # compute reaction time
-                if 'Complete' in complete:
+                if np.any([c in ['Complete', 'Partial'] for c in complete]):
                     trials_sub = trials_sub & 'trial_stim_on_time is not NULL'
                     if abs(p_left - 0.8) < 0.001:
                         rt['prob_left_block'] = 2
@@ -319,7 +319,7 @@ class BehavioralSummaryByDate(dj.Computed):
             self.PsychResults.insert1(psych_results)
 
             # compute reaction time
-            if 'Complete' in complete:
+            if np.any([c in ['Complete', 'Partial'] for c in complete]):
                 trials = trials & 'trial_stim_on_time is not NULL'
                 rt['prob_left_block'] = 0
                 rt['reaction_time_contrast'], rt['reaction_time_ci_low'], \
