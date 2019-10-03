@@ -385,8 +385,10 @@ def create_rt_trialnum_plot(trials):
         rt='trial_response_time-trial_stim_on_time').fetch(as_dict=True)
     rt_trials = pd.DataFrame(rt_trials)
     rt_trials.index = rt_trials.index + 1
-    rt_rolled = rt_trials['rt'].rolling(window=10).median()
+    rt_rolled = rt_trials['rt'].rolling(window=10).nanmedian()
     rt_rolled = rt_rolled.where((pd.notnull(rt_rolled)), None)
+    rt_trials = rt_trials.where((pd.notnull(rt_trials)), None)
+
     data = dict(
         x=rt_trials.index.tolist(),
         y=rt_trials['rt'].tolist(),
