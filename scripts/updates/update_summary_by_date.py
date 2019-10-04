@@ -1,6 +1,7 @@
 import tqdm
 from ibl_pipeline import subject, acquisition, behavior
 from ibl_pipeline.analyses import behavior as behavior_analyses
+import numpy as np
 
 
 for key in tqdm(
