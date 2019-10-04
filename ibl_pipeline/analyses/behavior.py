@@ -236,7 +236,8 @@ class BehavioralSummaryByDate(dj.Computed):
         master_entry['n_trials_date'] = len(trials)
         master_entry['training_day'] = len(
             dj.U('session_date') &
-            acquisition.Session.proj(session_date='date(session_start_time)') &
+            (acquisition.Session.proj(session_date='date(session_start_time)') &
+             {'subject_uuid': key['subject_uuid']}) &
             'session_date<="{}"'.format(
                 key['session_date'].strftime('%Y-%m-%d')))
         master_entry['training_week'] = np.floor(master_entry['training_day'] / 5)
