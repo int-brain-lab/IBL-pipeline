@@ -12,7 +12,8 @@ for key in tqdm(
     n_trials_date = len(behavior.TrialSet.Trial & trial_sets)
     training_day = len(
         dj.U('session_date') &
-        acquisition.Session.proj(session_date='date(session_start_time)') &
+        (acquisition.Session.proj(session_date='date(session_start_time)') &
+         {'subject_uuid': key['subject_uuid']}) &
         'session_date<="{}"'.format(key['session_date'].strftime('%Y-%m-%d')))
     training_week = np.floor(training_day / 5)
     q = behavior_analyses.BehavioralSummaryByDate & key
