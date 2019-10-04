@@ -197,6 +197,9 @@ class BehavioralSummaryByDate(dj.Computed):
     ---
     performance:            float   # percentage correct for the day
     performance_easy=null:  float   # percentage correct of the easy trials for the day
+    n_trials_date=null:     int     # total number of trials on the date
+    training_day=null:      int     # days since training
+    training_week=null:     int     # weeks since training
     """
 
     key_source = dj.U('subject_uuid', 'session_date') \
@@ -229,6 +232,13 @@ class BehavioralSummaryByDate(dj.Computed):
         # compute the performance for all trials
         master_entry['performance'] = np.divide(
             np.sum(n_correct_trials), np.sum(n_trials))
+
+        master_entry['n_trials_date'] = len(trials)
+        master_entry['training_day'] = len(
+            dj.U('session_date') &
+            acquisition.Session.proj(session_date='date(session_start_time)') &
+            f'session_date<="{key['session_date'].strftime('%Y-%m-%d')}"')
+        master_entry['training_week'] = np.floor(master_entry['training_day'] / 5)
 
         self.insert1(master_entry)
 
