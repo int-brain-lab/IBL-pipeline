@@ -12,7 +12,7 @@ for key in tqdm(
     training_day = len(
         dj.U('session_date') &
         acquisition.Session.proj(session_date='date(session_start_time)') &
-        f'session_date<="{key['session_date'].strftime('%Y-%m-%d')}"')
+        'session_date<="{}"'.format(key['session_date'].strftime('%Y-%m-%d')))
     training_week = np.floor(training_day / 5)
     q = behavior_analyses.BehavioralSummaryByDate & key
     dj.Table._update(q, 'n_trials_date', n_trials_date)
