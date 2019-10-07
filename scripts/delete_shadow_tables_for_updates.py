@@ -26,9 +26,16 @@ subject_fields = alyxraw.AlyxRaw.Field & \
     'fname in ("projects", "lab", "death_date", "responsible_user", "json")'
 subject_fields.delete_quick()
 
+print('Deleting project records...')
+projects = (alyxraw.AlyxRaw & 'model="subjects.project"')
+projects.delete()
+
+
 # delete some shadow membership tables
 print('Deleting shadow membership tables...')
 action.WaterRestrictionProcedure.delete()
 action.WaterRestrictionUser.delete()
 acquisition.WaterAdministrationSession.delete()
+
 subject.SubjectProject.delete()
+action.SessionProject.delete()
