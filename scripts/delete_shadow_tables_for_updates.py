@@ -36,6 +36,6 @@ print('Deleting shadow membership tables...')
 action.WaterRestrictionProcedure.delete()
 action.WaterRestrictionUser.delete()
 acquisition.WaterAdministrationSession.delete()
-
+reference.Project.delete()
 subject.SubjectProject.delete()
 action.SessionProject.delete()
