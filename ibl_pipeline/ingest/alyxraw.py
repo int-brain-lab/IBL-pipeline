@@ -19,4 +19,5 @@ class AlyxRaw(dj.Manual):
         value_idx: tinyint
         ---
         fvalue=null: varchar(40000)  # field value in the position of value_idx
+        index (fname)
         '''
