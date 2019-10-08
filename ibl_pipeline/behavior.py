@@ -502,7 +502,7 @@ class TrialSet(dj.Imported):
                                          'trials.response_times',
                                          'trials.contrastLeft',
                                          'trials.contrastRight',
-                                         '_ibl_trials.probabilityLeft'])
+                                         'trials.probabilityLeft'])
 
         stim_on_times_status, rep_num_status, included_status, \
             go_cue_times_status, go_cue_trigger_times_status, \
@@ -539,7 +539,7 @@ class TrialSet(dj.Imported):
 
         if go_cue_trigger_times_status != 'Missing':
             trials_go_cue_trigger_times = np.squeeze(one.load(
-                eID, dataset_types='_ibl_trials.goCueTrigger_times'))
+                eID, dataset_types='trials.goCueTrigger_times'))
 
         if reward_volume_status != 'Missing':
             trials_reward_volume = np.squeeze(one.load(
