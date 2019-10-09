@@ -7,6 +7,12 @@ import json
 import uuid
 from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data
 from ibl_pipeline.ingest import get_raw_field as grf
+from ibl_pipeline import public
+
+
+subject_uuids = public.PublicSubjectUuid.fetch('subject_uuid')
+subjects = [dict(fname='subject', fvalue=str(uuid))
+            for uuid in subject_uuids]
 
 # reference.ProjectLabMember
 print('Ingesting reference.ProjectLabMember...')
@@ -75,7 +81,8 @@ print('Ingesting action.WaterRestrictionUser...')
 restrictions = alyxraw.AlyxRaw & 'model = "actions.waterrestriction"'
 restr_with_users = alyxraw.AlyxRaw.Field & restrictions & 'fname="users"' & \
     'fvalue!="None"'
-keys = (alyxraw.AlyxRaw & restr_with_users).proj(
+restr_subjects = alyxraw.AlyxRaw.Field & subjects
+keys = (alyxraw.AlyxRaw & restr_with_users & restr_subjects).proj(
     restriction_uuid='uuid')
 
 for key in keys:
@@ -106,7 +113,7 @@ print('Ingesting action.WaterRestrictionProcedure...')
 restrictions = alyxraw.AlyxRaw & 'model = "actions.waterrestriction"'
 restr_with_procedures = alyxraw.AlyxRaw.Field & restrictions & \
     'fname="procedures"' & 'fvalue!="None"'
-keys = (alyxraw.AlyxRaw & restr_with_procedures).proj(
+keys = (alyxraw.AlyxRaw & restr_with_procedures & restr_subjects).proj(
     restriction_uuid='uuid')
 
 for key in keys:
@@ -138,7 +145,7 @@ print('Ingesting action.SurgeryUser...')
 surgeries = alyxraw.AlyxRaw & 'model = "actions.surgery"'
 surgeries_with_users = alyxraw.AlyxRaw.Field & surgeries & \
     'fname="users"' & 'fvalue!="None"'
-keys = (surgeries & surgeries_with_users).proj(
+keys = (surgeries & surgeries_with_users & restr_subjects).proj(
     surgery_uuid='uuid')
 
 for key in keys:
@@ -169,7 +176,7 @@ surgeries = alyxraw.AlyxRaw & 'model = "actions.surgery"'
 surgeries_with_procedures = alyxraw.AlyxRaw.Field & surgeries & \
     'fname="procedures"' & 'fvalue!="None"'
 
-keys = (surgeries & surgeries_with_procedures).proj(
+keys = (surgeries & surgeries_with_procedures & restr_subjects).proj(
     surgery_uuid='uuid')
 
 for key in keys:
@@ -177,7 +184,7 @@ for key in keys:
     key['uuid'] = key['surgery_uuid']
     if not len(action.Surgery & key):
         print('Surgery {} not in the table action.Surgery'.format(
-            key['surgery_uuid']))
+            key['suggery_uuid']))
         continue
 
     key_s = dict()
@@ -200,7 +207,7 @@ print('Ingesting action.OtherActionUser...')
 other_actions = alyxraw.AlyxRaw & 'model = "actions.otheraction"'
 other_actions_with_users = alyxraw.AlyxRaw.Field & other_actions & \
     'fname="users"' & 'fvalue!="None"'
-keys = (other_actions & other_actions_with_users).proj(
+keys = (other_actions & other_actions_with_users & restr_subjects).proj(
     other_action_uuid='uuid')
 
 for key in keys:
@@ -224,43 +231,33 @@ for key in keys:
         action.OtherActionUser.insert1(key_ou, skip_duplicates=True)
 
 
-# action.OtherActionProcedure
-print('Ingesting action.OtherActionProcedure...')
-other_actions = alyxraw.AlyxRaw & 'model = "actions.otheraction"'
-other_actions_with_procedures = alyxraw.AlyxRaw.Field & other_actions & \
-    'fname="procedures"' & 'fvalue!="None"'
-keys = (other_actions & other_actions_with_procedures).proj(
-    other_action_uuid='uuid')
-
-for key in keys:
-    key['uuid'] = key['other_action_uuid']
-    key['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
-
-    if not len(action.OtherAction & key):
-        print('OtherAction {} not in the table action.OtherAction'.format(
-            key['other_action_uuid']))
-        continue
-
-    key_o = dict()
-    key_o['subject_uuid'], key_o['other_action_start_time'] = \
-        (action.OtherAction & key).fetch1(
-            'subject_uuid', 'other_action_start_time')
-
-    procedures = grf(key, 'procedures', multiple_entries=True)
-    for procedure in procedures:
-        key_op = key_o.copy()
-        key_op['procedure_type_name'] = \
-            (action.ProcedureType &
-             dict(procedure_type_uuid=uuid.UUID(procedure))).fetch1(
-                 'procedure_type_name')
-        action.OtherActionProcedure.insert1(key_op, skip_duplicates=True)
-
-
 # acquisition.ChildSession
 print('Ingesting acquisition.ChildSession...')
-sessions = alyxraw.AlyxRaw & 'model="actions.session"'
+
+# get session restrictor
+sessions_list = []
+for subj_uuid, subj in zip(subject_uuids, subjects):
+
+    session_start, session_end = (
+        public.PublicSubject &
+        (public.PublicSubjectUuid & {'subject_uuid': subj_uuid})).fetch1(
+        'session_start_date', 'session_end_date')
+    session_start = session_start.strftime('%Y-%m-%d')
+    session_end = session_end.strftime('%Y-%m-%d')
+    session_uuids = (alyxraw.AlyxRaw &
+                     {'model': 'actions.session'} &
+                     (alyxraw.AlyxRaw.Field & subj) &
+                     (alyxraw.AlyxRaw.Field &
+                      'fname="start_time"' &
+                      'fvalue between "{}" and "{}"'.format(
+                        session_start, session_end))).fetch(
+                            'uuid')
+    sessions_list += [dict(uuid=uuid) for uuid in session_uuids]
+
+sessions = alyxraw.AlyxRaw & 'model="actions.session"' & sessions_list
 sessions_with_parents = alyxraw.AlyxRaw.Field & sessions & \
     'fname="parent_session"' & 'fvalue!="None"'
+
 keys = (alyxraw.AlyxRaw & sessions_with_parents).proj(
     session_uuid='uuid')
 for key in keys:
@@ -289,8 +286,7 @@ for key in keys:
 
 # acquisition.SessionUser
 print('Ingesting acquisition.SessionUser...')
-sessions = alyxraw.AlyxRaw & 'model="actions.session"'
-sessions_with_users = alyxraw.AlyxRaw.Field & sessions & \
+sessions_with_users = alyxraw.AlyxRaw.Field & sessions_list & \
     'fname="users"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & sessions_with_users).proj(
     session_uuid='uuid')
@@ -321,8 +317,7 @@ for key in keys:
 
 # acquisition.SessionProcedure
 print('Ingesting acquisition.SessionProcedure...')
-sessions = alyxraw.AlyxRaw & 'model="actions.session"'
-sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
+sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions_list & \
     'fname="procedures"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
     session_uuid='uuid')
@@ -348,10 +343,10 @@ for key in keys:
                  'procedure_type_name')
         acquisition.SessionProcedure.insert1(key_sp, skip_duplicates=True)
 
+
 # acquisition.SessionProject
 print('Ingesting acquisition.SessionProject...')
-sessions = alyxraw.AlyxRaw & 'model="actions.session"'
-sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
+sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions_list & \
     'fname="project"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
     session_uuid='uuid')
@@ -382,7 +377,7 @@ for key in keys:
 print('Ingesting acquisition.WaterAdministrationSession...')
 admin = alyxraw.AlyxRaw & 'model="actions.wateradministration"'
 admin_with_session = alyxraw.AlyxRaw.Field & admin & \
-    'fname="session"' & 'fvalue!="None"'
+    [dict(fname='session', fvalue=str(uuid)) for uuid in sessions_list]
 keys = (alyxraw.AlyxRaw & admin_with_session).proj(wateradmin_uuid='uuid')
 for key in keys:
     key['uuid'] = key['wateradmin_uuid']
@@ -411,8 +406,8 @@ for key in keys:
             dict(session_uuid=uuid.UUID(session))).fetch1(
                 'session_start_time')
 
-    acquisition.WaterAdministrationSession.insert1(key_ws,
-                                                   skip_duplicates=True)
+    acquisition.WaterAdministrationSession.insert1(
+        key_ws, skip_duplicates=True)
 
 
 # data.ProjectRepository

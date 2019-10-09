@@ -19,7 +19,7 @@ dir_name = path.dirname(__file__)
 
 if len(sys.argv) < 2:  # no arguments given
     # if no argument given, assume a canonical file location and name
-    filename = path.join(dir_name, '..', 'data', 'alyxfull.json')
+    filename = path.join('/data', 'alyxfull.json')
 else:
     filename = path.join(dir_name, sys.argv[1])
 
@@ -66,9 +66,15 @@ for key in keys:
 
         elif type(field_value) is list and \
                 (type(field_value[0]) is dict or type(field_value[0]) is str):
-            ib_part.insert(dict(key_field, value_idx=value_idx,
-                           fvalue=str(value))
-                           for value_idx, value in enumerate(field_value))
+            for value_idx, value in enumerate(field_value):
+                key_field['value_idx'] = value_idx
+                key_field['fvalue'] = str(value)
+                ib_part.insert1(key_field)
+        # elif isinstance(field_value, collections.Sequence) and \
+        #         isinstance(field_value, (collections.Mapping, str)):
+        #     ib_part.insert(dict(key_field, value_idx=value_idx,
+        #                    fvalue=str(value))
+        #                    for value_idx, value in enumerate(field_value))
         else:
             key_field['value_idx'] = 0
             key_field['fvalue'] = str(field_value)

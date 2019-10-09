@@ -1,9 +1,9 @@
 version: '3'
 services:
-  datajoint_updates:
+  datajoint_public:
     build: .
-    container_name: ibl_datajoint
-    env_file: .env_update
+    container_name: ibl_datajoint_public
+    env_file: .env_public
     volumes:
       - ./notebooks:/notebooks
       - ./images:/images
@@ -12,4 +12,4 @@ services:
       - ./root/.one_params:/root/.one_params
       - ./snapshots:/Figures_DataJoint_shortcuts
     ports:
-      - "8902:8888"
+      - "8300:8888"

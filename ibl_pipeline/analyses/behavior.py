@@ -4,9 +4,30 @@ from ..utils import psychofit as psy
 from . import analysis_utils as utils
 from datetime import datetime
 import numpy as np
+import pandas as pd
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_analyses_behavior')
+
+
+def compute_reaction_time(trials):
+    # median reaction time
+    trials_rt = trials.proj(
+            signed_contrast='trial_stim_contrast_left- \
+                             trial_stim_contrast_right',
+            rt='trial_response_time-trial_stim_on_time')
+
+    rt = trials_rt.fetch(as_dict=True)
+    rt = pd.DataFrame(rt)
+    rt = rt[['signed_contrast', 'rt']]
+
+    try:
+        median_rt = rt.groupby('signed_contrast').median().reset_index()
+    except:
+        median_rt = rt.groupby('signed_contrast').count().reset_index()
+        median_rt['rt'] = np.nan
+
+    return median_rt
 
 
 @schema
@@ -107,10 +128,10 @@ class ReactionTime(dj.Computed):
     """
     key_source = PsychResults & \
         (behavior.CompleteTrialSession &
-         'stim_on_times_status = "Complete"')
+         'stim_on_times_status in ("Complete", "Partial")')
 
     def make(self, key):
-        trials = behavior.TrialSet.Trial & key
+        trials = behavior.TrialSet.Trial & key & 'trial_stim_on_time is not NULL'
         key['reaction_time'] = utils.compute_reaction_time(trials)
         self.insert1(key)
 
@@ -128,13 +149,13 @@ class ReactionTimeContrastBlock(dj.Computed):
 
     key_source = behavior.TrialSet & \
         (behavior.CompleteTrialSession &
-         'stim_on_times_status = "Complete"')
+         'stim_on_times_status in ("Complete", "Partial")')
 
     def make(self, key):
         task_protocol = (acquisition.Session & key).fetch1(
             'task_protocol')
 
-        trials = behavior.TrialSet.Trial & key
+        trials = behavior.TrialSet.Trial & key & 'trial_stim_on_time is not NULL'
 
         if task_protocol and ('biased' in task_protocol):
             prob_lefts = dj.U('trial_stim_prob_left') & trials
@@ -176,6 +197,9 @@ class BehavioralSummaryByDate(dj.Computed):
     ---
     performance:            float   # percentage correct for the day
     performance_easy=null:  float   # percentage correct of the easy trials for the day
+    n_trials_date=null:     int     # total number of trials on the date
+    training_day=null:      int     # days since training
+    training_week=null:     int     # weeks since training
     """
 
     key_source = dj.U('subject_uuid', 'session_date') \
@@ -209,6 +233,15 @@ class BehavioralSummaryByDate(dj.Computed):
         master_entry['performance'] = np.divide(
             np.sum(n_correct_trials), np.sum(n_trials))
 
+        master_entry['n_trials_date'] = len(trials)
+        master_entry['training_day'] = len(
+            dj.U('session_date') &
+            (acquisition.Session.proj(session_date='date(session_start_time)') &
+             {'subject_uuid': key['subject_uuid']}) &
+            'session_date<="{}"'.format(
+                key['session_date'].strftime('%Y-%m-%d')))
+        master_entry['training_week'] = np.floor(master_entry['training_day'] / 5)
+
         self.insert1(master_entry)
 
         complete = (behavior.CompleteTrialSession & trial_sets_keys).fetch(
@@ -216,7 +249,7 @@ class BehavioralSummaryByDate(dj.Computed):
         )
 
         # compute reaction time for all trials
-        if complete in ['Partial', 'Complete']:
+        if np.any([c in ['Complete', 'Partial'] for c in complete]):
             trials_with_stim_on_time = trials & 'trial_stim_on_time is not NULL'
 
             if len(trials_with_stim_on_time):
@@ -276,7 +309,7 @@ class BehavioralSummaryByDate(dj.Computed):
 
                 self.PsychResults.insert1(psych_results)
                 # compute reaction time
-                if 'Complete' in complete:
+                if np.any([c in ['Complete', 'Partial'] for c in complete]):
                     trials_sub = trials_sub & 'trial_stim_on_time is not NULL'
                     if abs(p_left - 0.8) < 0.001:
                         rt['prob_left_block'] = 2
@@ -298,7 +331,7 @@ class BehavioralSummaryByDate(dj.Computed):
             self.PsychResults.insert1(psych_results)
 
             # compute reaction time
-            if 'Complete' in complete:
+            if np.any([c in ['Complete', 'Partial'] for c in complete]):
                 trials = trials & 'trial_stim_on_time is not NULL'
                 rt['prob_left_block'] = 0
                 rt['reaction_time_contrast'], rt['reaction_time_ci_low'], \
@@ -344,11 +377,13 @@ class TrainingStatus(dj.Lookup):
     definition = """
     training_status: varchar(32)
     """
-    contents = zip(['over40days',
-                    'training in progress',
-                    'trained',
-                    'ready for ephys',
-                    'wrong session type run'])
+    contents = zip(['untrainable',
+                    'unbiasable',
+                    'in_training',
+                    'trained_1a',
+                    'trained_1b',
+                    'ready4ephysrig',
+                    'ready4recording'])
 
 
 @schema
@@ -360,7 +395,7 @@ class SessionTrainingStatus(dj.Computed):
     """
 
     def make(self, key):
-        cum_psych_results = key.copy()
+
         subject_key = key.copy()
         subject_key.pop('session_start_time')
 
@@ -370,80 +405,182 @@ class SessionTrainingStatus(dj.Computed):
             )
         status = previous_sessions.fetch('training_status')
 
+        # ========================================================= #
+        # is the animal ready to be recorded?
+        # ========================================================= #
+
+        # if the previous status was 'ready4recording', keep
+        if len(status) and np.any(status == 'ready4recording'):
+            key['training_status'] = 'ready4recording'
+            self.insert1(key)
+            return
+
         # if the protocol for the current session is a biased session,
         # set the status to be "trained" and check up the criteria for
         # "read for ephys"
         task_protocol = (acquisition.Session & key).fetch1('task_protocol')
         if task_protocol and 'biased' in task_protocol:
-            if not(len(status) and np.any(status == 'trained')):
-                key['training_status'] = 'wrong session type run'
-                self.insert1(key)
-                return
 
-            elif len(status) and np.any(status == 'ready for ephys'):
-                key['training_status'] = 'ready for ephys'
-                self.insert1(key)
-                return
-
-            key['training_status'] = 'trained'
-
-            # Criteria for "ready for ephys" status
+            # Criteria for "ready4recording"
             sessions = (behavior.TrialSet & subject_key &
                         (acquisition.Session & 'task_protocol LIKE "%biased%"') &
                         'session_start_time <= "{}"'.format(
                             key['session_start_time'].strftime(
                                 '%Y-%m-%d %H:%M:%S')
                             )).fetch('KEY')
-            # if not more than 3 biased sessions, keep status trained
-            if len(sessions) < 3:
-                self.insert1(key)
-                return
 
-            sessions_rel = sessions[-3:]
-            n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
-            performance_easy = (PsychResults & sessions_rel).fetch(
-                'performance_easy')
-            if np.all(n_trials > 200) and np.all(performance_easy > 0.8):
-                trials = behavior.TrialSet.Trial & sessions_rel
-                prob_lefts = (dj.U('trial_stim_prob_left') & trials).fetch(
-                    'trial_stim_prob_left')
+            # if more than 3 biased sessions, see what's up
+            if len(sessions) >= 3:
 
-                # if no 0.5 of prob_left, keep trained
-                if np.all(abs(prob_lefts - 0.5) > 0.001):
-                    self.insert1(key)
-                    return
+                sessions_rel = sessions[-3:]
 
-                trials_unbiased = trials & \
-                    'ABS(trial_stim_prob_left - 0.5) < 0.001'
+                # were these last 3 sessions done on an ephys rig?
+                bpod_board = (behavior.Settings & sessions_rel).fetch('pybpod_board')
+                ephys_board = [True for i in list(bpod_board) if 'ephys' in i]
 
-                trials_80 = trials & \
-                    'ABS(trial_stim_prob_left - 0.2) < 0.001'
+                if len(ephys_board) == 3:
 
-                trials_20 = trials & \
-                    'ABS(trial_stim_prob_left - 0.8) < 0.001'
+                    n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
+                    performance_easy = (PsychResults & sessions_rel).fetch(
+                        'performance_easy')
 
-                psych_unbiased = utils.compute_psych_pars(trials_unbiased)
-                psych_80 = utils.compute_psych_pars(trials_80)
-                psych_20 = utils.compute_psych_pars(trials_20)
+                    # criterion: 3 sessions with >400 trials, and >90% correct on high contrasts
+                    if np.all(n_trials > 400) and np.all(performance_easy > 0.9):
 
-                criterion = abs(psych_unbiased['bias']) < 16 and \
-                    psych_unbiased['threshold'] < 19 and \
-                    psych_unbiased['lapse_low'] < 0.2 and \
-                    psych_unbiased['lapse_high'] < 0.2 and \
-                    psych_20['bias'] - psych_80['bias'] > 5
+                        trials = behavior.TrialSet.Trial & sessions_rel
+                        prob_lefts = (dj.U('trial_stim_prob_left') & trials).fetch(
+                            'trial_stim_prob_left')
 
-                if criterion:
-                    key['training_status'] = 'ready for ephys'
+                        # if no 0.5 of prob_left, keep trained
+                        if not np.all(abs(prob_lefts - 0.5) > 0.001):
 
+                            # compute psychometric functions for each of 3 conditions
+                            # trials_50 = trials & \
+                            #     'ABS(trial_stim_prob_left - 0.5) < 0.001'
+
+                            trials_80 = trials & \
+                                'ABS(trial_stim_prob_left - 0.2) < 0.001'
+
+                            trials_20 = trials & \
+                                'ABS(trial_stim_prob_left - 0.8) < 0.001'
+
+                            if not (len(trials_80) and len(trials_20)):
+                                key['training_status'] = 'trained_1b'
+                                return
+
+                            # also compute the median reaction time
+                            medRT = compute_reaction_time(trials)
+
+                            # psych_unbiased = utils.compute_psych_pars(trials_unbiased)
+                            psych_80 = utils.compute_psych_pars(trials_80)
+                            psych_20 = utils.compute_psych_pars(trials_20)
+                            # psych_50 = utils.compute_psych_pars(trials_50)
+
+                            # repeat the criteria for training_1b
+                            # add on criteria for lapses and bias shift in the biased blocks
+                            criterion = psych_80['lapse_low'] < 0.1 and \
+                                psych_80['lapse_high'] < 0.1 and \
+                                psych_20['lapse_low'] < 0.1 and \
+                                psych_20['lapse_high'] < 0.1 and \
+                                psych_20['bias'] - psych_80['bias'] > 5 and \
+                                medRT.loc[medRT['signed_contrast'] == 0, 'rt'].iloc[0] < 2
+
+                            if criterion:
+                                # were all 3 sessions done on an ephys rig already?
+                                key['training_status'] = 'ready4recording'
+                                self.insert1(key)
+                                return
+
+        # ========================================================= #
+        # is the animal doing biasedChoiceWorld
+        # ========================================================= #
+
+        # if the previous status was 'ready4ephysrig', keep
+        if len(status) and np.any(status == 'ready4ephysrig'):
+            key['training_status'] = 'ready4ephysrig'
             self.insert1(key)
             return
 
-        # if the current session is not a biased session
-        key['training_status'] = 'training in progress'
+        # if the protocol for the current session is a biased session,
+        # set the status to be "trained" and check up the criteria for
+        # "read for ephys"
+        task_protocol = (acquisition.Session & key).fetch1('task_protocol')
+        if task_protocol and 'biased' in task_protocol:
 
-        # if has reached 'trained' before, mark the current session 'trained as well'
-        if len(status) and np.any(status == 'trained'):
-            key['training_status'] = 'trained'
+            # Criteria for "ready4recording" or "ready4ephysrig" status
+            sessions = (behavior.TrialSet & subject_key &
+                        (acquisition.Session & 'task_protocol LIKE "%biased%"') &
+                        'session_start_time <= "{}"'.format(
+                            key['session_start_time'].strftime(
+                                '%Y-%m-%d %H:%M:%S')
+                            )).fetch('KEY')
+
+            # if there are more than 40 sessions of biasedChoiceWorld, give up on this mouse
+            if len(sessions) >= 40:
+                key['training_status'] = 'unbiasable'
+
+            # if not more than 3 biased sessions, see what's up
+            if len(sessions) >= 3:
+
+                sessions_rel = sessions[-3:]
+                n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
+                performance_easy = (PsychResults & sessions_rel).fetch(
+                    'performance_easy')
+
+                # criterion: 3 sessions with >400 trials, and >90% correct on high contrasts
+                if np.all(n_trials > 400) and np.all(performance_easy > 0.9):
+
+                    trials = behavior.TrialSet.Trial & sessions_rel
+                    prob_lefts = (dj.U('trial_stim_prob_left') & trials).fetch(
+                        'trial_stim_prob_left')
+
+                    # if no 0.5 of prob_left, keep trained
+                    if not np.all(abs(prob_lefts - 0.5) > 0.001):
+
+                        # # compute psychometric functions for each of 3 conditions
+                        # trials_50 = trials & \
+                        #     'ABS(trial_stim_prob_left - 0.5) < 0.001'
+
+                        trials_80 = trials & \
+                            'ABS(trial_stim_prob_left - 0.2) < 0.001'
+
+                        trials_20 = trials & \
+                            'ABS(trial_stim_prob_left - 0.8) < 0.001'
+
+                        if not (len(trials_80) and len(trials_20)):
+                            key['training_status'] = 'trained_1b'
+                            return
+
+                        # also compute the median reaction time
+                        medRT = compute_reaction_time(trials)
+
+                        # psych_unbiased = utils.compute_psych_pars(trials_unbiased)
+                        psych_80 = utils.compute_psych_pars(trials_80)
+                        psych_20 = utils.compute_psych_pars(trials_20)
+                        # psych_50 = utils.compute_psych_pars(trials_50)
+
+                        # repeat the criteria for training_1b
+                        # add on criteria for lapses and bias shift in the biased blocks
+                        criterion = psych_80['lapse_low'] < 0.1 and \
+                            psych_80['lapse_high'] < 0.1 and \
+                            psych_20['lapse_low'] < 0.1 and \
+                            psych_20['lapse_high'] < 0.1 and \
+                            psych_20['bias'] - psych_80['bias'] > 5 and \
+                            medRT.loc[medRT['signed_contrast'] == 0, 'rt'].iloc[0] < 2
+
+                        if criterion:
+                            key['training_status'] = 'ready4ephysrig'
+                            self.insert1(key)
+                            return
+
+        # ========================================================= #
+        # is the animal doing trainingChoiceWorld?
+        # 1B training
+        # ========================================================= #
+
+        # if has reached 'trained_1b' before, mark the current session 'trained_1b' as well
+        if len(status) and np.any(status == 'trained_1b'):
+            key['training_status'] = 'trained_1b'
             self.insert1(key)
             return
 
@@ -452,78 +589,102 @@ class SessionTrainingStatus(dj.Computed):
                     'session_start_time <= "{}"'.format(
                         key['session_start_time'].strftime('%Y-%m-%d %H:%M:%S')
                         )).fetch('KEY')
-        if len(sessions) < 3:
+
+        if len(sessions) >= 3:
+
+            # training in progress if any of the last three sessions have
+            # < 400 trials or performance of easy trials < 0.8
+            sessions_rel = sessions[-3:]
+            n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
+            performance_easy = (PsychResults & sessions_rel).fetch(
+                'performance_easy')
+
+            if np.all(n_trials > 400) and np.all(performance_easy > 0.9):
+                # training in progress if the current session does not
+                # have low contrasts
+                contrasts = abs(
+                    (PsychResults & key).fetch1('signed_contrasts'))
+                if 0 in contrasts and \
+                   np.sum((contrasts < 0.065) & (contrasts > 0.001)):
+                    # compute psych results of last three sessions
+                    trials = behavior.TrialSet.Trial & sessions_rel
+                    psych = utils.compute_psych_pars(trials)
+
+                    # also compute the median reaction time
+                    medRT = compute_reaction_time(trials)
+
+                    # cum_perform_easy = utils.compute_performance_easy(trials)
+                    criterion = abs(psych['bias']) < 10 and \
+                        psych['threshold'] < 20 and \
+                        psych['lapse_low'] < 0.1 and \
+                        psych['lapse_high'] < 0.1 and \
+                        medRT.loc[medRT['signed_contrast'] == 0, 'rt'].iloc[0] < 2
+
+                    if criterion:
+                        key['training_status'] = 'trained_1b'
+                        self.insert1(key)
+                        return
+
+        # ========================================================= #
+        # is the animal still doing trainingChoiceWorld?
+        # 1A training
+        # ========================================================= #
+
+        # if has reached 'trained_1a' before, mark the current session 'trained_1a' as well
+        if len(status) and np.any(status == 'trained_1a'):
+            key['training_status'] = 'trained_1a'
             self.insert1(key)
             return
 
-        # training in progress if any of the last three sessions have
-        # < 200 trials or performance of easy trials < 0.8
-        sessions_rel = sessions[-3:]
-        n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
-        performance_easy = (PsychResults & sessions_rel).fetch(
-            'performance_easy')
+        # training in progress if the animals was trained in < 3 sessions
+        sessions = (behavior.TrialSet & subject_key &
+                    'session_start_time <= "{}"'.format(
+                        key['session_start_time'].strftime('%Y-%m-%d %H:%M:%S')
+                        )).fetch('KEY')
+        if len(sessions) >= 3:
 
-        if np.all(n_trials > 200) and np.all(performance_easy > 0.8):
-            # training in progress if the current session does not
-            # have low contrasts
-            contrasts = abs(
-                (PsychResults & key).fetch1('signed_contrasts'))
-            if 0 in contrasts and \
-               np.sum((contrasts < 0.065) & (contrasts > 0.001)):
-                # compute psych results of last three sessions
-                trials = behavior.TrialSet.Trial & sessions_rel
-                psych = utils.compute_psych_pars(trials)
-                cum_perform_easy = utils.compute_performance_easy(trials)
+            # training in progress if any of the last three sessions have
+            # < 400 trials or performance of easy trials < 0.8
+            sessions_rel = sessions[-3:]
+            n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
+            performance_easy = (PsychResults & sessions_rel).fetch(
+                'performance_easy')
 
-                criterion = abs(psych['bias']) < 16 and \
-                    psych['threshold'] < 19 and \
-                    psych['lapse_low'] < 0.2 and \
-                    psych['lapse_high'] < 0.2
+            if np.all(n_trials > 200) and np.all(performance_easy > 0.8):
+                # training in progress if the current session does not
+                # have low contrasts
+                contrasts = abs(
+                    (PsychResults & key).fetch1('signed_contrasts'))
+                if 0 in contrasts and \
+                   np.sum((contrasts < 0.065) & (contrasts > 0.001)):
+                    # compute psych results of last three sessions
+                    trials = behavior.TrialSet.Trial & sessions_rel
+                    psych = utils.compute_psych_pars(trials)
+                    # cum_perform_easy = utils.compute_performance_easy(trials)
 
-                if criterion:
-                    key['training_status'] = 'trained'
-                    self.insert1(key)
-                    # insert computed results into the part table
-                    n_trials, n_correct_trials = \
-                        (behavior.TrialSet & key).fetch(
-                            'n_trials', 'n_correct_trials')
-                    cum_psych_results.update({
-                        'cum_performance': np.divide(
-                            np.sum(n_correct_trials),
-                            np.sum(n_trials)),
-                        'cum_performance_easy': cum_perform_easy,
-                        'cum_signed_contrasts': psych['signed_contrasts'],
-                        'cum_n_trials_stim': psych['n_trials_stim'],
-                        'cum_n_trials_stim_right': psych[
-                            'n_trials_stim_right'],
-                        'cum_prob_choose_right': psych['prob_choose_right'],
-                        'cum_bias': psych['bias'],
-                        'cum_threshold': psych['threshold'],
-                        'cum_lapse_low': psych['lapse_low'],
-                        'cum_lapse_high': psych['lapse_high']
-                    })
-                    self.CumulativePsychResults.insert1(cum_psych_results)
-                    return
+                    criterion = abs(psych['bias']) < 16 and \
+                        psych['threshold'] < 19 and \
+                        psych['lapse_low'] < 0.2 and \
+                        psych['lapse_high'] < 0.2
 
-        # check whether the subject has been trained over 40 days.
+                    if criterion:
+                        key['training_status'] = 'trained_1a'
+                        self.insert1(key)
+                        return
+
+        # ========================================================= #
+        # did the animal not get any criterion assigned?
+        # ========================================================= #
+
+        # check whether the subject has been trained over 40 days
         if len(sessions) >= 40:
-            key['training_status'] = 'over40days'
+            key['training_status'] = 'untrainable'
+            self.insert1(key)
+            return
 
+        # ========================================================= #
+        # assume a base key of 'in_training' for all mice
+        # ========================================================= #
+
+        key['training_status'] = 'in_training'
         self.insert1(key)
-
-    class CumulativePsychResults(dj.Part):
-        definition = """
-        # cumulative psych results from the last three sessions
-        -> master
-        ---
-        cum_performance:            float   # percentage correct in this session
-        cum_performance_easy=null:  float   # percentage correct on easy trials 0.5 and 1
-        cum_signed_contrasts:       blob    # contrasts used in this session, negative when on the left
-        cum_n_trials_stim:          blob    # number of trials for each contrast
-        cum_n_trials_stim_right:    blob    # number of reporting "right" trials for each contrast
-        cum_prob_choose_right:      blob    # probability of choosing right, same size as contrasts
-        cum_threshold:              float
-        cum_bias:                   float
-        cum_lapse_low:              float
-        cum_lapse_high:             float
-        """

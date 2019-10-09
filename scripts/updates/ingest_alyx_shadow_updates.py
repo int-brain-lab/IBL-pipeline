@@ -34,20 +34,20 @@ subject.Death.populate(suppress_errors=True)
 subject.GenotypeTest.populate(suppress_errors=True)
 subject.Zygosity.populate(suppress_errors=True)
 
-# action tables
-action.ProcedureType.populate(suppress_errors=True)
-action.Weighing.populate(suppress_errors=True)
-action.WaterType.populate(suppress_errors=True)
-action.WaterAdministration.populate(suppress_errors=True)
-action.WaterRestriction.populate(suppress_errors=True)
-action.Surgery.populate(suppress_errors=True)
-action.OtherAction.populate(suppress_errors=True)
+# # action tables
+# action.ProcedureType.populate(suppress_errors=True)
+# action.Weighing.populate(suppress_errors=True)
+# action.WaterType.populate(suppress_errors=True)
+# action.WaterAdministration.populate(suppress_errors=True)
+# action.WaterRestriction.populate(suppress_errors=True)
+# action.Surgery.populate(suppress_errors=True)
+# action.OtherAction.populate(suppress_errors=True)
 
-# acquisition tables
-acquisition.Session.populate(suppress_errors=True)
+# # acquisition tables
+# acquisition.Session.populate(suppress_errors=True)
 
-# data tables
-data.DataFormat.populate(suppress_errors=True)
-data.DataRepositoryType.populate(suppress_errors=True)
-data.DataRepository.populate(suppress_errors=True)
-data.DataSetType.populate(suppress_errors=True)
+# # data tables
+# data.DataFormat.populate(suppress_errors=True)
+# data.DataRepositoryType.populate(suppress_errors=True)
+# data.DataRepository.populate(suppress_errors=True)
+# data.DataSetType.populate(suppress_errors=True)

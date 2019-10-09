@@ -57,7 +57,7 @@ class WaterAdministration(dj.Manual):
     adlib:                      boolean
     -> WaterType
     -> [nullable] reference.LabMember.proj(administration_user="user_name")
-    wateradiministration_ts=CURRENT_TIMESTAMP:   timestamp
+    wateradministration_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -82,7 +82,7 @@ class WaterRestrictionUser(dj.Manual):
     definition = """
     -> WaterRestriction
     -> reference.LabMember
-    waterrestrictionuser=CURRENT_TIMESTAMP:   timestamp
+    waterrestrictionuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -91,7 +91,7 @@ class WaterRestrictionProcedure(dj.Manual):
     definition = """
     -> WaterRestriction
     -> ProcedureType
-    waterrestrictionprocedure=CURRENT_TIMESTAMP:   timestamp
+    waterrestrictionprocedure_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 

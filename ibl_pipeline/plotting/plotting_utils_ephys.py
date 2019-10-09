@@ -15,6 +15,9 @@ from plotly import tools
 import statsmodels.stats.proportion as smp
 import scipy.signal as signal
 import os
+import boto3
+import io
+import ibl_pipeline
 
 
 def get_sort_and_marker(align_event, sorting_var):
@@ -189,7 +192,8 @@ def create_psth_plot(trials, align_event,
     return encoded_string, y_lim
 
 
-def compute_psth(trials, trial_type, align_event, nbins, window_size, x_lim=[-1, 1]):
+def compute_psth(trials, trial_type, align_event, nbins,
+                 window_size, x_lim=[-1, 1], as_dict=True):
 
     if trial_type == 'left':
         color = 'green'
@@ -226,8 +230,10 @@ def compute_psth(trials, trial_type, align_event, nbins, window_size, x_lim=[-1,
             color=color),
         name='{} trials'.format(trial_type)
     )
-
-    return data
+    if as_dict:
+        return data
+    else:
+        return list(time_bins), list(psth)
 
 
 def get_spike_times(trials, sorting_var, align_event,
@@ -283,7 +289,8 @@ def create_raster_plot_combined(trials, align_event,
                                 sorting_var='trial_id',
                                 x_lim=[-10, 10],
                                 show_plot=False,
-                                fig_dir=None):
+                                fig_dir=None,
+                                store_type=None):
 
     sort_by, mark, label = get_sort_and_marker(
         align_event, sorting_var
@@ -361,15 +368,38 @@ def create_raster_plot_combined(trials, align_event,
 
     # save the figure with `pad_inches=0` to remove
     # any padding in the image
+
     if fig_dir:
-        if not os.path.exists(os.path.dirname(fig_dir)):
-            try:
-                os.makedirs(os.path.dirname(fig_dir))
-            except OSError as exc:  # Guard against race condition
-                if exc.errno != errno.EEXIST:
-                    raise
-        fig.savefig(fig_dir, pad_inches=0)
-        return [0, y_lim], label
+        if store_type == 'filepath':
+            if not os.path.exists(os.path.dirname(fig_dir)):
+                try:
+                    os.makedirs(os.path.dirname(fig_dir))
+                except OSError as exc:  # Guard against race condition
+                    if exc.errno != errno.EEXIST:
+                        raise
+            fig.savefig(fig_dir, pad_inches=0)
+            return [0, y_lim], label
+
+        elif store_type == 's3':
+            access, secret = (ibl_pipeline.S3Access & 's3_id=1').fetch1(
+                'access_key', 'secret_key')
+
+            s3 = boto3.resource(
+                's3',
+                aws_access_key_id=access,
+                aws_secret_access_key=secret)
+            BUCKET_NAME = "ibl-dj-external"
+            bucket = s3.Bucket(BUCKET_NAME)
+
+            # upload to s3
+            img_data = io.BytesIO()
+            fig.savefig(img_data, format='png')
+            img_data.seek(0)
+            bucket.put_object(Body=img_data,
+                              ContentType='image/png',
+                              Key=fig_dir)
+            return [0, y_lim], label
+
     else:
         import tempfile
         temp = tempfile.NamedTemporaryFile(suffix=".png")

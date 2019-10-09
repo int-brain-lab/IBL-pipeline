@@ -62,11 +62,11 @@ class SessionReactionTimeTrialNumber(dj.Computed):
 
     key_source = behavior_ingest.TrialSet & \
         (behavior_ingest.CompleteTrialSession &
-            'stim_on_times_status="Complete"')
+            'stim_on_times_status in ("Complete", "Partial")')
 
     def make(self, key):
         # get all trial of the session
-        trials = behavior_ingest.TrialSet.Trial & key
+        trials = behavior_ingest.TrialSet.Trial & key & 'trial_stim_on_time is not NULL'
         fig = putils.create_rt_trialnum_plot(trials)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
@@ -119,7 +119,7 @@ class DateReactionTimeTrialNumber(dj.Computed):
     def make(self, key):
         trial_sets = (behavior_ingest.TrialSet &
                       (behavior_ingest.CompleteTrialSession &
-                       'stim_on_times_status="Complete"')).proj(
+                       'stim_on_times_status in ("Complete", "Partial")')).proj(
                 session_date='DATE(session_start_time)')
         trials = behavior_ingest.TrialSet.Trial & \
             (behavior_ingest.TrialSet * trial_sets & key)
@@ -141,6 +141,40 @@ class LatestDate(dj.Manual):
     ---
     latest_date: date
     """
+
+
+@schema
+class WaterTypeColor(dj.Computed):
+    definition = """
+    -> action.WaterType
+    ---
+    water_type_color:  varchar(32)
+    """
+
+    def make(self, key):
+
+        original_water_types = ['Citric Acid Water 2%', 'Hydrogel',
+                                'Hydrogel 5% Citric Acid',
+                                'Water', 'Water 1% Citric Acid',
+                                'Water 10% Sucrose',
+                                'Water 15% Sucrose', 'Water 2% Citric Acid']
+        original_colors = ['red', 'orange', 'blue', 'rgba(55, 128, 191, 0.7)',
+                           'rgba(200, 128, 191, 0.7)',
+                           'purple', 'rgba(50, 171, 96, 0.9)', 'red']
+
+        mapping = {
+            watertype: color
+            for watertype, color in zip(original_water_types, original_colors)}
+
+        if key['watertype_name'] in original_water_types:
+            water_type_color = dict(
+                **key, water_type_color=mapping[key['watertype_name']])
+        else:
+            water_type_color = dict(
+                **key, water_type_color='rgba({}, {}, {}, 0.7)'.format(
+                    np.random.randint(255), np.random.randint(255), np.random.randint(255)))
+
+        self.insert1(water_type_color)
 
 
 @schema
@@ -569,7 +603,7 @@ class CumulativeSummary(dj.Computed):
             data = [dict(
                 x=[t.strftime('%Y-%m-%d')
                    for t in contrast_map.columns.tolist()],
-                y=list(range(len(contrast_map.index.tolist()))),
+                y=list(range(len(contrast_map.index.tolist())))[::-1],
                 z=contrast_map.values.tolist(),
                 zmax=1,
                 zmin=0,
@@ -622,12 +656,8 @@ class CumulativeSummary(dj.Computed):
             self.ContrastHeatmap.insert1(con_hm)
 
         # plot for water weight
-        water_type_names = action.WaterType.fetch('watertype_name')
-
-        water_type_colors = ['red', 'orange', 'blue',
-                             'rgba(55, 128, 191, 0.7)',
-                             'purple', 'rgba(50, 171, 96, 0.9)',
-                             'red']
+        water_type_names, water_type_colors = WaterTypeColor.fetch(
+            'watertype_name', 'water_type_color')
         water_type_map = dict()
 
         for watertype, color in zip(water_type_names, water_type_colors):
@@ -903,8 +933,53 @@ class DailyLabSummary(dj.Computed):
         for entry in summary:
             subj = subject.Subject & entry
             protocol = entry['task_protocol'].partition('ChoiseWorld')[0]
-            subject_summary = key.copy()
-            subject_summary.update(
+
+            # --- check for data availability ---
+
+            # last session_start_time in table acquisition.Session
+            if not len(acquisition.Session & subj):
+                data_update_status = 'No behavioral data collected'
+            else:
+                # get the latest session query
+                last_session = subj.aggr(
+                    acquisition.Session,
+                    session_start_time='max(session_start_time)')
+
+                last_session_date = last_session.proj(
+                    session_date='date(session_start_time)')
+
+                last_date = last_session_date.fetch1(
+                    'session_date').strftime('%Y-%m-%d')
+
+                # existence of CompleteTrialSet tuple for latest session
+                if not len(behavior_ingest.CompleteTrialSession & last_session):
+                    data_update_status = """
+                    Data in the last session on {} were not uploaded
+                    or partially uploaded to FlatIron.
+                    """.format(last_date)
+                elif not len(behavior_ingest.TrialSet & last_session):
+                    data_update_status = """
+                    Ingest error in TrialSet for data on {}.
+                    """.format(last_date)
+                elif not len(behavior.BehavioralSummaryByDate & last_session_date):
+                    data_update_status = """
+                    Ingest error in BehavioralSummaryByDate for
+                    data on {}
+                    """.format(last_date)
+                elif not len(CumulativeSummary & last_session.proj(latest_session='session_date')):
+                    data_update_status = """
+                    Error in creating cumulative plots for data on {}
+                    """.format(last_date)
+                else:
+                    data_update_status = """
+                    Data up to date
+                    """.format(last_date)
+
+                # existence of plotting tuples
+                CumulativeSummary & last_session.proj(latest_session='')
+
+            subject_summary = dict(
+                **key,
                 subject_uuid=entry['subject_uuid'],
                 subject_nickname=entry['subject_nickname'],
                 latest_session_ingested=entry['session_start_time'],
@@ -913,7 +988,8 @@ class DailyLabSummary(dj.Computed):
                 latest_training_status=entry['training_status'],
                 n_sessions_current_protocol=len(
                     ingested_sessions & subj &
-                    'task_protocol LIKE "{}%"'.format(protocol))
+                    'task_protocol LIKE "{}%"'.format(protocol)),
+                data_update_status=data_update_status
             )
             self.SubjectSummary.insert1(subject_summary)
 
@@ -928,4 +1004,5 @@ class DailyLabSummary(dj.Computed):
         latest_task_protocol:        varchar(128)
         latest_training_status:      varchar(64)
         n_sessions_current_protocol: int
+        data_update_status:          varchar(255)
         """

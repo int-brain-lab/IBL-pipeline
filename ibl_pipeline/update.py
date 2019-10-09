@@ -11,7 +11,7 @@ class UpdateRecord(dj.Manual):
     definition = """
     table:              varchar(64)
     attribute:          varchar(64)
-    pk_hash:            varchar(32)                 # hash of the primary key
+    pk_hash:            uuid                # hash of the primary key
     original_ts:        timestamp
     update_ts:          timestamp
     ---
@@ -31,7 +31,7 @@ class UpdateRecord(dj.Manual):
 class DeletionRecord(dj.Manual):
     definition = """
     table:              varchar(64)
-    pk_hash:            varchar(32)                 # hash of the primary key
+    pk_hash:            uuid                 # hash of the primary key
     original_ts:        timestamp
     ---
     pk_dict:            longblob

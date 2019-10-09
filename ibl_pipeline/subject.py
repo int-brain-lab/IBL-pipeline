@@ -132,6 +132,16 @@ class Subject(dj.Manual):
 
 
 @schema
+class SubjectCullMethod(dj.Manual):
+    definition = """
+    -> Subject
+    ---
+    cull_method:    varchar(255)
+    cull_method_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+
+@schema
 class BreedingPair(dj.Manual):
     # <class 'subjects.models.BreedingPair'>
     definition = """
