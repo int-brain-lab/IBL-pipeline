@@ -121,8 +121,8 @@ def plot_trialcounts_sessionlength(mouse, lab, ax, xlims):
     # GET THE NUMBER OF TRIALS PER DAY
     n_trials = pd.DataFrame((behavior.TrialSet.proj(session_date='DATE(session_start_time)') *
                              behavior.TrialSet * subject.Subject * subject.SubjectLab &
-                             'subject_nickname="%s"'%mouse &
-                             'lab_name="%s"'%lab).proj(
+                             'subject_nickname="%s"' % mouse &
+                             'lab_name="%s"' % lab).proj(
                                  'session_date', 'n_trials').fetch(as_dict=True))
 
     if not len(n_trials):
@@ -157,8 +157,8 @@ def plot_performance_rt(mouse, lab, ax, xlims):
 
     # performance on easy contrasts
     behav = pd.DataFrame((behavior_analysis.BehavioralSummaryByDate * subject.Subject *
-                          subject.SubjectLab & 'subject_nickname="%s"'%mouse &
-                          'lab_name="%s"'%lab).proj('session_date', 'performance_easy').fetch(
+                          subject.SubjectLab & 'subject_nickname="%s"' % mouse &
+                          'lab_name="%s"' % lab).proj('session_date', 'performance_easy').fetch(
                               as_dict=True, order_by='session_date'))
 
     if not len(behav):
@@ -172,8 +172,8 @@ def plot_performance_rt(mouse, lab, ax, xlims):
     # RTs on right y-axis
     righty = ax.twinx()
     rt = pd.DataFrame(((behavior_analysis.BehavioralSummaryByDate.ReactionTimeByDate *
-                        subject.Subject * subject.SubjectLab & 'subject_nickname="%s"'%mouse &
-                        'lab_name="%s"'%lab)).proj('session_date', 'median_reaction_time').fetch(
+                        subject.Subject * subject.SubjectLab & 'subject_nickname="%s"' % mouse &
+                        'lab_name="%s"' % lab)).proj('session_date', 'median_reaction_time').fetch(
                             as_dict=True, order_by='session_date'))
     sns.lineplot(x="session_date", y="median_reaction_time", marker='o', color="firebrick",
                  data=rt, ax=righty)
@@ -200,7 +200,7 @@ def plot_contrast_heatmap(mouse, lab, ax, xlims):
 
     session_date, signed_contrasts, prob_choose_right, prob_left_block = (
         behavior_analysis.BehavioralSummaryByDate.PsychResults * subject.Subject *
-        subject.SubjectLab & 'subject_nickname="%s"'%mouse & 'lab_name="%s"'%lab).proj(
+        subject.SubjectLab & 'subject_nickname="%s"' % mouse & 'lab_name="%s"' % lab).proj(
             'signed_contrasts', 'prob_choose_right', 'session_date', 'prob_left_block').fetch(
             'session_date', 'signed_contrasts', 'prob_choose_right', 'prob_left_block')
     if not len(session_date):
@@ -278,10 +278,11 @@ def plot_psychometric(df, color='black', ax=None, **kwargs):
     """
 
     if len(df['signedContrast'].unique()) > 4:
-        df2 = df.groupby(['signedContrast']).agg({'choice':'count', 'choice2':'mean'}).reset_index()
+        df2 = df.groupby(['signedContrast']).agg(
+            {'choice': 'count', 'choice2': 'mean'}).reset_index()
         df2.rename(columns={"choice2": "fraction", "choice": "ntrials"}, inplace=True)
 
-        pars, L = psy.mle_fit_psycho(df2.transpose().values, # extract the data from the df
+        pars, L = psy.mle_fit_psycho(df2.transpose().values,  # extract the data from the df
                                      P_model='erf_psycho_2gammas',
                                      parstart=np.array([df2['signedContrast'].mean(), 20., 0.05,
                                                         0.05]),
