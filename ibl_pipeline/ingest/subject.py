@@ -18,6 +18,7 @@ class Species(dj.Computed):
     ---
     binomial:           varchar(255)
     species_nickname:   varchar(255)
+    species_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.species"').proj(
         species_uuid='uuid')
@@ -39,6 +40,7 @@ class Strain(dj.Computed):
     ---
     strain_name:		        varchar(255)	# strain name
     strain_description=null:    varchar(255)	# description
+    strain_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.strain"').proj(
         strain_uuid='uuid')
@@ -63,6 +65,7 @@ class Source(dj.Computed):
     ---
     source_name:				varchar(255)	# name of source
     source_description=null:	varchar(255)	# description
+    source_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.source"').proj(
         source_uuid='uuid')
@@ -87,6 +90,7 @@ class Sequence(dj.Computed):
     sequence_name:		        varchar(255)	# informal name
     base_pairs=null:	        varchar(1024)	# base pairs
     sequence_description=null:	varchar(255)	# description
+    sequence_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.sequence"').proj(
         sequence_uuid='uuid')
@@ -119,6 +123,7 @@ class Allele(dj.Computed):
     source_identifier=null:     varchar(255)    # id inside the line provider
     source_url=null:            varchar(255)    # link to the line information
     expression_data_url=null:   varchar(255)    # link to the expression pattern from Allen institute brain atlas
+    allele_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.allele"').proj(
         allele_uuid='uuid')
@@ -140,6 +145,8 @@ class AlleleSequence(dj.Manual):
     definition = """
     allele_name:        varchar(255)    # allele name, inherited from Allele
     sequence_name:      varchar(255)    # sequence name, inherited from Sequence
+    ---
+    allelesequence_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -156,6 +163,7 @@ class Line(dj.Computed):
     target_phenotype=null:		varchar(255)	# target phenotype
     line_nickname:				varchar(255)	# auto name
     is_active:				    boolean		    # is active
+    line_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.line"').proj(
         line_uuid='uuid')
@@ -194,6 +202,8 @@ class LineAllele(dj.Manual):
     definition = """
     line_name:				varchar(255)	# name
     allele_name:			varchar(255)    # informal name
+    ---
+    lineallele_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -211,6 +221,7 @@ class Subject(dj.Computed):
     ear_mark=null:			    varchar(255)		# ear mark
     subject_source=null:        varchar(255)        # source name, inherited from Source
     subject_description=null:   varchar(1024)
+    subject_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
     key_source = subjects.proj(subject_uuid='uuid')
@@ -258,6 +269,26 @@ class Subject(dj.Computed):
 
 
 @schema
+class SubjectCullMethod(dj.Computed):
+    definition = """
+    -> Subject
+    ---
+    cull_method:       varchar(255)
+    cull_method_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+    subjects_with_cull = alyxraw.AlyxRaw.Field & subjects & \
+        'fname="cull_method"' & 'fvalue!="None"'
+    key_source = (subjects & subjects_with_cull).proj(
+        subject_uuid='uuid')
+
+    def make(self, key):
+        key_c = key.copy()
+        key['uuid'] = key['subject_uuid']
+        self.insert1(dict(
+            **key_c, cull_method=grf(key, 'cull_method')))
+
+
+@schema
 class BreedingPair(dj.Computed):
     # <class 'subjects.models.BreedingPair'>
     definition = """
@@ -271,6 +302,7 @@ class BreedingPair(dj.Computed):
     father=null:            uuid                # subject uuid of dad, inherited from subject
     mother1=null:           uuid                # subject uuid of mom, inherited from subject
     mother2=null:		    uuid                # subject uuid of mom2, if has one, inherited from subject
+    breedingpair_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.breedingpair"').proj(
         bp_uuid='uuid')
@@ -325,6 +357,7 @@ class Litter(dj.Computed):
     litter_line=null:               varchar(255)    # line of the litter
     litter_description=null:        varchar(255)	# description
     litter_birth_date=null:		    date		    # birth date
+    litter_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.litter"').proj(
         litter_uuid='uuid')
@@ -363,6 +396,7 @@ class LitterSubject(dj.Computed):
     -> Subject
     ---
     litter_name:        varchar(255)
+    littersubject_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
     subjects_with_litter = alyxraw.AlyxRaw.Field & subjects & \
@@ -384,7 +418,9 @@ class LitterSubject(dj.Computed):
 class SubjectProject(dj.Computed):
     definition = """
     -> Subject
-    project_name:           varchar(255)
+    subject_project:           varchar(255)
+    ---
+    subjectproject_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
     subjects_with_projects = alyxraw.AlyxRaw.Field & subjects & \
@@ -399,11 +435,14 @@ class SubjectProject(dj.Computed):
         proj_uuids = grf(key, 'projects', multiple_entries=True)
         for proj_uuid in proj_uuids:
             key_sp = key_s.copy()
-            key_sp['project_name'] = \
-                (reference.Project &
-                    dict(project_uuid=uuid.UUID(proj_uuid))).fetch1(
-                        'project_name')
-            self.insert1(key_sp)
+            try:
+                key_sp['subject_project'] = \
+                    (reference.Project &
+                        dict(project_uuid=uuid.UUID(proj_uuid))).fetch1(
+                            'project_name')
+                self.insert1(key_sp)
+            except:
+                print(key['subject_uuid'])
 
 
 @schema
@@ -412,6 +451,7 @@ class SubjectUser(dj.Computed):
     -> Subject
     ---
     responsible_user:       varchar(255)
+    subjectuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
     subjects_with_user = alyxraw.AlyxRaw.Field & subjects & \
@@ -437,6 +477,7 @@ class SubjectLab(dj.Computed):
     -> Subject
     ---
     lab_name:       varchar(255)
+    subjectlab_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
     def make(self, key):
@@ -456,6 +497,7 @@ class Caging(dj.Computed):
     cage_name:              varchar(255)
     ---
     caging_time=null:       datetime    # time when changed to this cage
+    caging_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = subjects.proj(subject_uuid='uuid')
 
@@ -488,6 +530,7 @@ class UserHistory(dj.Computed):
     user_name:              varchar(255)  # username
     ---
     user_change_time=null:  datetime      # time when changed to this user
+    userhistory_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
     key_source = subjects.proj(subject_uuid='uuid')
@@ -530,6 +573,7 @@ class Weaning(dj.Computed):
     -> Subject
     ---
     wean_date=null:			date			# wean date
+    weaning_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
     subjects_with_wean = alyxraw.AlyxRaw.Field & subjects & \
@@ -551,6 +595,7 @@ class Death(dj.Computed):
     -> Subject
     ---
     death_date=null:         date
+    death_ts=CURRENT_TIMESTAMP:   timestamp
     """
     subjects_with_death = alyxraw.AlyxRaw.Field & subjects & \
         'fname="death_date"' & 'fvalue!="None"'
@@ -575,6 +620,7 @@ class GenotypeTest(dj.Computed):
     subject_uuid:       uuid
     sequence_name:      varchar(255)              # inherited from Sequence
     test_result:		enum("Present", "Absent") # test result
+    genotypetest_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "subjects.genotypetest"').proj(
         genotype_test_uuid='uuid')
@@ -605,6 +651,7 @@ class Zygosity(dj.Computed):
     subject_uuid:       uuid
     allele_name:        varchar(255)            # inherited from Allele
     zygosity:           enum("Present", "Absent", "Homozygous", "Heterozygous") # zygosity
+    zygosity_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "subjects.zygosity"').proj(
         zygosity_uuid='uuid')
@@ -645,6 +692,7 @@ class Implant(dj.Computed):
     adverse_effects=null:	    varchar(2048)		# adverse effects
     actual_severity=null:       tinyint             # actual severity, inherited from Severity
     protocol_number:            tinyint
+    implant_ts=CURRENT_TIMESTAMP:   timestamp
     """
     subjects_with_implant = alyxraw.AlyxRaw.Field & subjects & \
         'fname="implant_weight"' & 'fvalue!="None"'

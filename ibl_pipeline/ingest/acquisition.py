@@ -16,14 +16,14 @@ class Session(dj.Computed):
     ---
     session_number=null:        int
     subject_uuid:               uuid
-    project_name=null:          varchar(255)
     session_start_time:         datetime
     session_end_time=null:      datetime
     session_lab=null:           varchar(255)
     session_location=null:      varchar(255)
     session_type=null:          varchar(255)
-    session_narrative=null:     varchar(1024)
+    session_narrative=null:     varchar(2048)
     task_protocol=null:         varchar(255)
+    session_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(
         session_uuid='uuid')
@@ -41,13 +41,6 @@ class Session(dj.Computed):
         session_number = grf(key, 'number')
         if session_number != 'None':
             key_session['session_number'] = session_number
-
-        proj_uuid = grf(key, 'project')
-        if proj_uuid != 'None':
-            key_session['project_name'] = \
-                (reference.Project &
-                 dict(project_uuid=uuid.UUID(proj_uuid))).fetch1(
-                    'project_name')
 
         key_session['session_start_time'] = grf(key, 'start_time')
 
@@ -84,6 +77,7 @@ class ChildSession(dj.Manual):
     session_start_time:         datetime
     ---
     parent_session_start_time:  datetime
+    childsession_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -93,6 +87,8 @@ class SessionUser(dj.Manual):
     subject_uuid:           uuid
     session_start_time:     datetime
     user_name:              varchar(255)
+    ---
+    sessionuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -102,6 +98,19 @@ class SessionProcedure(dj.Manual):
     subject_uuid:           uuid
     session_start_time:     datetime
     procedure_type_name:    varchar(255)
+    ---
+    sessionprocedure_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+
+@schema
+class SessionProject(dj.Manual):
+    definition = """
+    subject_uuid:         uuid
+    session_start_time:   datetime
+    ---
+    session_project:      varchar(255)
+    sessionproject_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -112,4 +121,5 @@ class WaterAdministrationSession(dj.Manual):
     administration_time:    datetime
     ---
     session_start_time:     datetime
+    wateradministrationsession_ts=CURRENT_TIMESTAMP:   timestamp
     """

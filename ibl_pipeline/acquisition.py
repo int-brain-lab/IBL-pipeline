@@ -1,47 +1,13 @@
 import datajoint as dj
-
 from . import subject
 from . import reference, subject, action
+import os
 
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_acquisition')
-
-'''
-To simplify from Alyx schema, dropping file repositories as core
-parts of tables and moving to per-table blobs. A facility for
-tracking data provenance could still made avaialble via a table
-linked into individual model records as a non-primary attribute.
-
-This is probably not ideal w/r/t Alyx -
-
-one idea would be to merge use external storage with example
-field def being:
-
-  aligned_movie :  external  # motion-aligned movie
-
-and also have a separate 'phase 1' data schema, which is then coupled
-with phase 2+ for higher level data products.
-
-Also note: TimeScale items missing wrt TimeSeries items, which were:
-
-- PupilTracking.xyd
-- PupilTracking.movie
-- HeadTracking.xy_theta
-- HeadTracking.movie
-
-TimeScale not yet defined
-
-# SKIPPED:
-# <class 'data.models.DataRepositoryType'>
-# <class 'data.models.DataRepository'>
-# <class 'data.models.DatasetType'>
-# <class 'data.models.Dataset'>
-# <class 'data.models.FileRecord'>
-# <class 'data.models.DataCollection'>
-# <class 'data.models.Timescale'>
-# <class 'data.models.TimeSeries'>
-# <class 'data.models.EventSeries'>
-# <class 'data.models.IntervalSeries'>
-'''
+mode = os.environ.get('MODE')
+if mode == 'update':
+    schema = dj.schema('ibl_acquisition')
+else:
+    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_acquisition')
 
 
 @schema
@@ -54,11 +20,11 @@ class Session(dj.Manual):
     session_uuid:               uuid
     session_number=null:        int     	# number
     session_end_time=null:      datetime	# end time
-    -> [nullable] reference.Project
     -> [nullable] reference.LabLocation.proj(session_lab='lab_name', session_location='location_name')
     task_protocol=null:         varchar(255)
     session_type=null:		    varchar(255)	# type
-    session_narrative=null:     varchar(1024)
+    session_narrative=null:     varchar(2048)
+    session_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -68,6 +34,7 @@ class ChildSession(dj.Manual):
     -> Session
     ---
     (parent_session_start_time) -> Session(session_start_time)
+    childsession_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -76,6 +43,8 @@ class SessionUser(dj.Manual):
     definition = """
     -> Session
     -> reference.LabMember
+    ---
+    sessionuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -84,6 +53,18 @@ class SessionProcedure(dj.Manual):
     definition = """
     -> Session
     -> action.ProcedureType
+    ---
+    sessionprocedure_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+
+@schema
+class SessionProject(dj.Manual):
+    definition = """
+    -> Session
+    ---
+    -> reference.Project.proj(session_project='project_name')
+    sessionproject_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -93,4 +74,5 @@ class WaterAdministrationSession(dj.Manual):
     -> action.WaterAdministration
     ---
     -> Session
+    wateradministrationsession_ts=CURRENT_TIMESTAMP:   timestamp
     """

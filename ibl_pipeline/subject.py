@@ -1,18 +1,13 @@
 import datajoint as dj
 from . import reference
+import os
 
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_subject')
+mode = os.environ.get('MODE')
 
-
-# Actions:
-# Refactor questions w/r/t old objs:
-#
-# - <class 'actions.models.ProcedureType'>: SKIPPED
-#   What does this do aside from provide a description?
-#   should be inclued for e.g. steps, etc?
-# - <class 'actions.models.BaseAction'>: SKIPPED
-#   Other than key info, does this provide anything other than 'narritive'?
-#   if so, needed?
+if mode == 'update':
+    schema = dj.schema('ibl_subject')
+else:
+    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_subject')
 
 
 @schema
@@ -23,6 +18,7 @@ class Species(dj.Lookup):
     ---
     species_uuid:           uuid
     species_nickname:		varchar(255)	# nick name
+    species_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -30,10 +26,11 @@ class Species(dj.Lookup):
 class Source(dj.Lookup):
     # <class 'subjects.models.Source'>
     definition = """
-    source_name:				varchar(255)	# name of source
+    source_name:				    varchar(255)	# name of source
     ---
-    source_uuid:                uuid
-    source_description=null:	varchar(255)	# description
+    source_uuid:                    uuid
+    source_description=null:	    varchar(255)	# description
+    source_ts=CURRENT_TIMESTAMP:    timestamp
     """
 
 
@@ -41,10 +38,11 @@ class Source(dj.Lookup):
 class Strain(dj.Lookup):
     # <class 'subjects.models.Strain'>
     definition = """
-    strain_name:		        varchar(255)	# strain name
+    strain_name:		            varchar(255)	# strain name
     ---
-    strain_uuid:                uuid
-    strain_description=null:    varchar(255)	# description
+    strain_uuid:                    uuid
+    strain_description=null:        varchar(255)	# description
+    strain_ts=CURRENT_TIMESTAMP:    timestamp
     """
 
 
@@ -52,11 +50,12 @@ class Strain(dj.Lookup):
 class Sequence(dj.Lookup):
     # <class 'subjects.models.Sequence'>
     definition = """
-    sequence_name:		        varchar(255)	# informal name
+    sequence_name:		            varchar(255)	# informal name
     ---
-    sequence_uuid:              uuid
-    base_pairs=null:	        varchar(1024)	# base pairs
-    sequence_description=null:	varchar(255)	# description
+    sequence_uuid:                  uuid
+    base_pairs=null:	            varchar(1024)	# base pairs
+    sequence_description=null:	    varchar(255)	# description
+    sequence_ts=CURRENT_TIMESTAMP:  timestamp
     """
 
 
@@ -64,15 +63,16 @@ class Sequence(dj.Lookup):
 class Allele(dj.Lookup):
     # <class 'subjects.models.Allele'>
     definition = """
-    allele_name:			    varchar(255)    # informal name
+    allele_name:			        varchar(255)    # informal name
     ---
-    allele_uuid:                uuid
-    standard_name=null:		    varchar(255)	# standard name
+    allele_uuid:                    uuid
+    standard_name=null:		        varchar(255)	# standard name
     -> [nullable] Source
-    allele_source=null:         varchar(255)    # source of the allele
-    source_identifier=null:     varchar(255)    # id inside the line provider
-    source_url=null:            varchar(255)    # link to the line information
-    expression_data_url=null:   varchar(255)    # link to the expression pattern from Allen institute brain atlas
+    allele_source=null:             varchar(255)    # source of the allele
+    source_identifier=null:         varchar(255)    # id inside the line provider
+    source_url=null:                varchar(255)    # link to the line information
+    expression_data_url=null:       varchar(255)    # link to the expression pattern from Allen institute brain atlas
+    allele_ts=CURRENT_TIMESTAMP:    timestamp
     """
 
 
@@ -81,6 +81,8 @@ class AlleleSequence(dj.Lookup):
     definition = """
     -> Allele
     -> Sequence
+    ---
+    allelesequence_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -88,15 +90,16 @@ class AlleleSequence(dj.Lookup):
 class Line(dj.Lookup):
     # <class 'subjects.models.Line'>
     definition = """
-    line_name:				varchar(255)	# name
+    line_name:				    varchar(255)	# name
     ---
     -> Species
     -> [nullable] Strain
-    line_uuid:              uuid
-    line_description=null:	varchar(2048)	# description
-    target_phenotype=null:	varchar(255)	# target phenotype
-    line_nickname:		    varchar(255)	# nickname
-    is_active:				boolean		    # is active
+    line_uuid:                  uuid
+    line_description=null:	    varchar(2048)	# description
+    target_phenotype=null:	    varchar(255)	# target phenotype
+    line_nickname:		        varchar(255)	# nickname
+    is_active:				    boolean		    # is active
+    line_ts=CURRENT_TIMESTAMP:  timestamp
     """
 
 
@@ -105,6 +108,8 @@ class LineAllele(dj.Lookup):
     definition = """
     -> Line
     -> Allele
+    ---
+    lineallele_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -112,16 +117,27 @@ class LineAllele(dj.Lookup):
 class Subject(dj.Manual):
     # <class 'subjects.models.Subject'>
     definition = """
-    subject_uuid:               uuid
+    subject_uuid:                   uuid
     ---
-    subject_nickname:		    varchar(255)		# nickname
-    sex:			            enum("M", "F", "U")	# sex
-    subject_birth_date=null:	date			    # birth date
-    ear_mark=null:			    varchar(255)		# ear mark
+    subject_nickname:		        varchar(255)		# nickname
+    sex:			                enum("M", "F", "U")	# sex
+    subject_birth_date=null:	    date			    # birth date
+    ear_mark=null:			        varchar(255)		# ear mark
     -> [nullable] Line.proj(subject_line="line_name")
     -> [nullable] Source.proj(subject_source='source_name')
-    protocol_number:            tinyint         	# protocol number
-    subject_description=null:   varchar(1024)
+    protocol_number:                tinyint         	# protocol number
+    subject_description=null:       varchar(1024)
+    subject_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+
+@schema
+class SubjectCullMethod(dj.Manual):
+    definition = """
+    -> Subject
+    ---
+    cull_method:    varchar(255)
+    cull_method_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -139,6 +155,7 @@ class BreedingPair(dj.Manual):
     -> [nullable] Subject.proj(father='subject_uuid')    # father
     -> [nullable] Subject.proj(mother1='subject_uuid')   # mother1
     -> [nullable] Subject.proj(mother2='subject_uuid')	 # mother2
+    breedingpair_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -154,6 +171,7 @@ class Litter(dj.Manual):
     litter_descriptive_name=null:	varchar(255)	# descriptive name
     litter_description=null:	    varchar(255)	# description
     litter_birth_date=null:			date		    # birth date
+    litter_ts=CURRENT_TIMESTAMP:    timestamp
     """
 
 
@@ -164,6 +182,7 @@ class LitterSubject(dj.Manual):
     -> Subject
     ---
     -> Litter
+    littersubject_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -171,7 +190,9 @@ class LitterSubject(dj.Manual):
 class SubjectProject(dj.Manual):
     definition = """
     -> Subject
-    -> reference.Project
+    -> reference.Project.proj(subject_project='project_name')
+    ---
+    subjectproject_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -181,6 +202,7 @@ class SubjectUser(dj.Manual):
     -> Subject
     ---
     -> reference.LabMember.proj(responsible_user='user_name')
+    subjectuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -190,6 +212,7 @@ class SubjectLab(dj.Manual):
     -> Subject
     ---
     -> reference.Lab
+    subjectlab_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -201,6 +224,7 @@ class Caging(dj.Manual):
     cage_name:              varchar(255)        # cage name
     ---
     caging_time=null:	    datetime			# cage
+    caging_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -210,7 +234,8 @@ class UserHistory(dj.Manual):
     -> Subject
     -> reference.LabMember
     ---
-    user_change_time=null:   datetime      # time when changed to this user
+    user_change_time=null:              datetime      # time when changed to this user
+    userhistory_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -220,7 +245,8 @@ class Weaning(dj.Manual):
     definition = """
     -> Subject
     ---
-    wean_date:			date			# wean date
+    wean_date:			            date			# wean date
+    weaning_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -232,9 +258,10 @@ class GenotypeTest(dj.Manual):
     definition = """
     -> Subject
     -> Sequence
-    genotype_test_uuid:		    uuid     # genotype test id
+    genotype_test_uuid:		            uuid     # genotype test id
     ---
-    test_result:		        enum("Present", "Absent")		# test result
+    test_result:		                enum("Present", "Absent")		# test result
+    genotypetest_ts=CURRENT_TIMESTAMP:  timestamp
     """
 
 
@@ -247,8 +274,9 @@ class Zygosity(dj.Manual):
     -> Subject
     -> Allele
     ---
-    zygosity_uuid:      uuid
-    zygosity:		    enum("Present", "Absent", "Homozygous", "Heterozygous")  # zygosity
+    zygosity_uuid:                  uuid
+    zygosity:		                enum("Present", "Absent", "Homozygous", "Heterozygous")  # zygosity
+    zygosity_ts=CURRENT_TIMESTAMP:  timestamp
     """
 
 
@@ -258,10 +286,11 @@ class Implant(dj.Manual):
     definition = """
     -> Subject
     ---
-    implant_weight:		    float			    # implant weight
-    protocol_number:        tinyint		        # protocol number
-    adverse_effects=null:   varchar(2048)		# adverse effects
+    implant_weight:		            float			    # implant weight
+    protocol_number:                tinyint		        # protocol number
+    adverse_effects=null:           varchar(2048)		# adverse effects
     (actual_severity)		-> [nullable] reference.Severity   # actual severity
+    implant_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -271,5 +300,6 @@ class Death(dj.Manual):
     definition = """
     -> Subject
     ---
-    death_date:                 date                    # death date
+    death_date:                  date       # death date
+    death_ts=CURRENT_TIMESTAMP:  timestamp
     """

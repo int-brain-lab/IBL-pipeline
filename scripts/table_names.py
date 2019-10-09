@@ -28,12 +28,14 @@ def init():
         'LineAllele',
         'Subject',
         'SubjectUser',
+        'SubjectProject',
         'SubjectLab',
         'BreedingPair',
         'Litter',
         'LitterSubject',
         'Weaning',
         'Death',
+        'SubjectCullMethod',
         'Caging',
         'UserHistory',
         'GenotypeTest',
@@ -63,6 +65,7 @@ def init():
         'ChildSession',
         'SessionUser',
         'SessionProcedure',
+        'SessionProject',
         'WaterAdministrationSession'
     )
 

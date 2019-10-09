@@ -19,6 +19,7 @@ class DataFormat(dj.Computed):
     matlab_loader_function=null:    varchar(255)
     python_loader_function=null:    varchar(255)
     format_description=null:        varchar(255)
+    dataformat_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="data.dataformat"').proj(
         format_uuid='uuid')
@@ -54,6 +55,7 @@ class DataRepositoryType(dj.Computed):
     (repotype_uuid) -> alyxraw.AlyxRaw
     ---
     repotype_name: varchar(255)
+    datarepositorytype_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="data.datarepositorytype"').proj(
         repotype_uuid='uuid')
@@ -78,6 +80,7 @@ class DataRepository(dj.Computed):
     globus_path:        varchar(255)
     data_url=null:      varchar(255)
     globus_is_personal: boolean
+    datarepository_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="data.datarepository"').proj(
         repo_uuid='uuid')
@@ -113,6 +116,8 @@ class ProjectRepository(dj.Manual):
     definition = """
     project_name:       varchar(255)
     repo_name:          varchar(255)
+    ---
+    projectrepository_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -125,6 +130,7 @@ class DataSetType(dj.Computed):
     dataset_type_created_by=null:   varchar(255)
     filename_pattern:               varchar(255)
     dataset_type_description=null:  varchar(1024)
+    datasettype_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="data.datasettype"').proj(
         dataset_type_uuid='uuid')
@@ -176,6 +182,7 @@ class DataSet(dj.Computed):
                    dict(session_uuid=uuid.UUID(session))):
             print('Session {} is not in the table acquisition.Session'.format(
                 session))
+            print('dataset_uuid: {}'.format(str(key['uuid'])))
             return
 
         key_ds['subject_uuid'], key_ds['session_start_time'] = \
@@ -253,6 +260,7 @@ class FileRecord(dj.Computed):
         dataset = grf(key, 'dataset')
         if not len(DataSet & dict(dataset_uuid=uuid.UUID(dataset))):
             print('Dataset {} is not in the table data.DataSet')
+            print('Record_uuid: {}'.format(str(key['uuid'])))
             return
 
         key_fr['subject_uuid'], key_fr['session_start_time'], \

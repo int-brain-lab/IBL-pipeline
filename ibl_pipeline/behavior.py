@@ -1,7 +1,7 @@
 import datajoint as dj
 import numpy as np
 import pandas as pd
-from os import path
+from os import path, environ
 import logging
 from . import reference, subject, acquisition, data
 from .ingest import get_raw_field as grf
@@ -12,7 +12,17 @@ except:
     pass
 
 logger = logging.getLogger(__name__)
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
+mode = environ.get('MODE')
+
+if mode == 'update':
+    schema = dj.schema('ibl_behavior')
+else:
+    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
+
+try:
+    one = ONE()
+except:
+    pass
 
 
 @schema
@@ -34,17 +44,17 @@ class Eye(dj.Imported):
     """
 
     key_source = acquisition.Session & (data.FileRecord & {'exists': 1} & 'dataset_name in \
-                    ("_ibl_eye.area.npy", "_ibl_eye.blink.npy", \
-                     "_ibl_eye.xyPos.npy", "_ibl_eye.timestamps.npy")')
+                    ("eye.area.npy", "eye.blink.npy", \
+                     "eye.xyPos.npy", "eye.timestamps.npy")')
 
     def make(self, key):
 
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         eye_area, eye_blink, eye_xypos, eye_timestamps = \
-            ONE().load(eID, dataset_types=['_ibl_eye.area',
-                                           '_ibl_eye.blink',
-                                           '_ibl_eye.xypos',
-                                           '_ibl_eye.timestamps'])
+            one.load(eID, dataset_types=['eye.area',
+                                         'eye.blink',
+                                         'eye.xypos',
+                                         'eye.timestamps'])
 
         eye_sample_ids = eye_timestamps[:, 0]
         eye_timestamps = eye_timestamps[:, 1]
@@ -107,11 +117,14 @@ class Wheel(dj.Imported):
 
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         wheel_position, wheel_velocity, wheel_timestamps = \
-            ONE().load(eID, dataset_types=['_ibl_wheel.position',
-                                           '_ibl_wheel.velocity',
-                                           '_ibl_wheel.timestamps'])
+            one.load(eID, dataset_types=['wheel.position',
+                                         'wheel.velocity',
+                                         'wheel.timestamps'])
 
         wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
+
+        if np.ndim(wheel_timestamps) == 2:
+            wheel_timestamps = wheel_timestamps[:, 1]
 
         key['wheel_start_time'] = wheel_timestamps[0]
         key['wheel_end_time'] = wheel_timestamps[-1]
@@ -164,8 +177,8 @@ class WheelMoveSet(dj.Imported):
 
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         wheel_moves_intervals, wheel_moves_types = \
-            ONE().load(eID, dataset_types=['_ibl_wheelMoves.intervals',
-                                           '_ibl_wheelMoves.type'])
+            one.load(eID, dataset_types=['wheelMoves.intervals',
+                                           'wheelMoves.type'])
 
         wheel_moves_types = wheel_moves_types.columns
 
@@ -228,8 +241,8 @@ class SparseNoise(dj.Imported):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         sparse_noise_positions, sparse_noise_times = \
-            ONE().load(eID, dataset_types=['_ibl_sparseNoise.positions',
-                                           '_ns_sparseNoise.times'])
+            one.load(eID, dataset_types=['sparseNoise.positions',
+                                         'sparseNoise.times'])
 
         assert len(np.unique(np.array([len(sparse_noise_positions),
                                        len(sparse_noise_times)]))) == 1, \
@@ -261,7 +274,7 @@ class ExtraRewards(dj.Imported):
         eID = (acquisition.Session & key).fetch1('session_uuid')
 
         extra_rewards_times = \
-            ONE().load(eID, dataset_types=['_ibl_extraRewards.times'])
+            one.load(eID, dataset_types=['extraRewards.times'])
 
         key['extra_rewards_times'] = extra_rewards_times
 
@@ -291,7 +304,7 @@ class SpontaneousTimeSet(dj.Imported):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         spontaneous_intervals = \
-            ONE().load(eID, dataset_types=['_ibl_spontaneous.intervals'])
+            one.load(eID, dataset_types=['spontaneous.intervals'])
 
         key['spontaneous_time_total_num'] = len(spontaneous_intervals)
         self.insert1(key)
@@ -347,9 +360,9 @@ class Lick(dj.Imported):
         eID = (acquisition.Session & key).fetch1('session_uuid')
 
         lick_times, lick_piezo_raw, lick_piezo_timestamps = \
-            ONE().load(eID, dataset_types=['_ibl_licks.times',
-                                           '_ibl_lickPiezo.raw',
-                                           '_ibl_lickPiezo.timestamps'])
+            one.load(eID, dataset_types=['licks.times',
+                                         'lickPiezo.raw',
+                                         'lickPiezo.timestamps'])
 
         lick_sample_ids = lick_piezo_timestamps[:, 0]
         lick_piezo_timestamps = lick_piezo_timestamps[:, 1]
@@ -376,10 +389,14 @@ class CompleteTrialSession(dj.Computed):
     # sessions that are complete with trial information and thus may be ingested
     -> acquisition.Session
     ---
-    stim_on_times_status: enum('Complete', 'Partial', 'Missing')
-    rep_num_status: enum('Complete', 'Missing')
-    included_status: enum('Complete', 'Missing')
-    ambient_sensor_data_status: enum('Complete', 'Missing')
+    stim_on_times_status:           enum('Complete', 'Partial', 'Missing')
+    rep_num_status:                 enum('Complete', 'Missing')
+    included_status:                enum('Complete', 'Missing')
+    ambient_sensor_data_status:     enum('Complete', 'Missing')
+    go_cue_times_status:            enum('Complete', 'Missing')
+    go_cue_trigger_times_status:    enum('Complete', 'Missing')
+    reward_volume_status:           enum('Complete', 'Missing')
+    iti_duration_status:            enum('Complete', 'Missing')
     """
 
     required_datasets = ["_ibl_trials.feedback_times.npy",
@@ -402,12 +419,12 @@ class CompleteTrialSession(dj.Computed):
                 eID = str((acquisition.Session & key).fetch1('session_uuid'))
                 lab_name = (subject.SubjectLab & key).fetch1('lab_name')
                 if lab_name == 'wittenlab':
-                    stimOn_times = np.squeeze(ONE().load(
-                            eID, dataset_types='_ibl_trials.stimOn_times',
+                    stimOn_times = np.squeeze(one.load(
+                            eID, dataset_types='trials.stimOn_times',
                             clobber=True))
                 else:
-                    stimOn_times = ONE().load(
-                        eID, dataset_types='_ibl_trials.stimOn_times')
+                    stimOn_times = one.load(
+                        eID, dataset_types='trials.stimOn_times')
 
                 if np.all(np.isnan(stimOn_times)):
                     key['stim_on_times_status'] = 'Missing'
@@ -416,12 +433,12 @@ class CompleteTrialSession(dj.Computed):
                 else:
                     key['stim_on_times_status'] = 'Complete'
 
-            if '_ibl_trials.repNum.npy' not in datasets:
+            if 'trials.repNum.npy' not in datasets:
                 key['rep_num_status'] = 'Missing'
             else:
                 key['rep_num_status'] = 'Complete'
 
-            if '_ibl_trials.included.npy' not in datasets:
+            if 'trials.included.npy' not in datasets:
                 key['included_status'] = 'Missing'
             else:
                 key['included_status'] = 'Complete'
@@ -430,6 +447,26 @@ class CompleteTrialSession(dj.Computed):
                 key['ambient_sensor_data_status'] = 'Missing'
             else:
                 key['ambient_sensor_data_status'] = 'Complete'
+
+            if 'trials.goCue_times.npy' not in datasets:
+                key['go_cue_times_status'] = 'Missing'
+            else:
+                key['go_cue_times_status'] = 'Complete'
+
+            if '_ibl_trials.goCueTrigger_times.npy' not in datasets:
+                key['go_cue_trigger_times_status'] = 'Missing'
+            else:
+                key['go_cue_trigger_times_status'] = 'Complete'
+
+            if 'trials.rewardVolume.npy' not in datasets:
+                key['reward_volume_status'] = 'Missing'
+            else:
+                key['reward_volume_status'] = 'Complete'
+
+            if 'trials.itiDuration.npy' not in datasets:
+                key['iti_duration_status'] = 'Missing'
+            else:
+                key['iti_duration_status'] = 'Complete'
 
             self.insert1(key)
 
@@ -447,48 +484,70 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    key_source = acquisition.Session & CompleteTrialSession
+    if not environ.get('MODE') == 'test':
+        key_source = acquisition.Session & CompleteTrialSession
 
     def make(self, key):
+
         trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         trials_feedback_times, trials_feedback_types, trials_intervals, \
             trials_response_choice, trials_response_times, \
             trials_contrast_left, trials_contrast_right, trials_p_left = \
-            ONE().load(eID, dataset_types=['_ibl_trials.feedback_times',
-                                           '_ibl_trials.feedbackType',
-                                           '_ibl_trials.intervals',
-                                           '_ibl_trials.choice',
-                                           '_ibl_trials.response_times',
-                                           '_ibl_trials.contrastLeft',
-                                           '_ibl_trials.contrastRight',
-                                           '_ibl_trials.probabilityLeft'])
+            one.load(eID, dataset_types=['trials.feedback_times',
+                                         'trials.feedbackType',
+                                         'trials.intervals',
+                                         'trials.choice',
+                                         'trials.response_times',
+                                         'trials.contrastLeft',
+                                         'trials.contrastRight',
+                                         'trials.probabilityLeft'])
 
-        stim_on_times_status, rep_num_status, included_status = \
+        stim_on_times_status, rep_num_status, included_status, \
+            go_cue_times_status, go_cue_trigger_times_status, \
+            reward_volume_status, iti_duration_status = \
             (CompleteTrialSession & key).fetch1(
-                'stim_on_times_status', 'rep_num_status', 'included_status')
+                'stim_on_times_status', 'rep_num_status', 'included_status',
+                'go_cue_times_status', 'go_cue_trigger_times_status',
+                'reward_volume_status', 'iti_duration_status')
 
         lab_name = (subject.SubjectLab & key).fetch1('lab_name')
         if stim_on_times_status != 'Missing':
             if lab_name == 'wittenlab':
-                trials_visual_stim_times = np.squeeze(ONE().load(
-                    eID, dataset_types='_ibl_trials.stimOn_times',
+                trials_visual_stim_times = np.squeeze(one.load(
+                    eID, dataset_types='trials.stimOn_times',
                     clobber=True))
             else:
-                trials_visual_stim_times = ONE().load(
-                    eID, dataset_types='_ibl_trials.stimOn_times')
+                trials_visual_stim_times = one.load(
+                    eID, dataset_types='trials.stimOn_times')
 
             if len(trials_visual_stim_times) == 1:
                 trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
 
         if rep_num_status != 'Missing':
-            trials_rep_num = np.squeeze(ONE().load(
-                eID, dataset_types='_ibl_trials.repNum'))
+            trials_rep_num = np.squeeze(one.load(
+                eID, dataset_types='trials.repNum'))
 
         if included_status != 'Missing':
-            trials_included = np.squeeze(ONE().load(
-                eID, dataset_types='_ibl_trials.included'))
+            trials_included = np.squeeze(one.load(
+                eID, dataset_types='trials.included'))
+
+        if go_cue_times_status != 'Missing':
+            trials_go_cue_times = np.squeeze(one.load(
+                eID, dataset_types='trials.goCue_times'))
+
+        if go_cue_trigger_times_status != 'Missing':
+            trials_go_cue_trigger_times = np.squeeze(one.load(
+                eID, dataset_types='trials.goCueTrigger_times'))
+
+        if reward_volume_status != 'Missing':
+            trials_reward_volume = np.squeeze(one.load(
+                eID, dataset_types='trials.rewardVolume'))
+
+        if iti_duration_status != 'Missing':
+            trials_iti_duration = np.squeeze(one.load(
+                eID, dataset_types='trials.itiDuration'))
 
         assert len(np.unique(np.array([len(trials_feedback_times),
                                        len(trials_feedback_types),
@@ -526,7 +585,9 @@ class TrialSet(dj.Imported):
 
         self.insert1(key)
 
+        trials = []
         for idx_trial in range(len(trials_response_choice)):
+            trial = trial_key.copy()
 
             if np.isnan(trials_contrast_left[idx_trial]):
                 trial_stim_contrast_left = 0
@@ -547,40 +608,64 @@ class TrialSet(dj.Imported):
             else:
                 raise ValueError('Invalid reponse choice.')
 
-            trial_key['trial_id'] = idx_trial + 1
-            trial_key['trial_start_time'] = trials_intervals[idx_trial, 0]
-            trial_key['trial_end_time'] = trials_intervals[idx_trial, 1]
-            trial_key['trial_response_time'] = float(
+            trial['trial_id'] = idx_trial + 1
+            trial['trial_start_time'] = trials_intervals[idx_trial, 0]
+
+            if np.any(np.isnan([trials_intervals[idx_trial, 1],
+                                trials_response_choice[idx_trial],
+                                trials_p_left[idx_trial]])):
+                continue
+
+            trial['trial_end_time'] = trials_intervals[idx_trial, 1]
+            trial['trial_response_time'] = float(
                 trials_response_times[idx_trial])
-            trial_key['trial_response_choice'] = trial_response_choice
+            trial['trial_response_choice'] = trial_response_choice
 
             if stim_on_times_status != 'Missing':
-                trial_key['trial_stim_on_time'] = trials_visual_stim_times[
+                trial['trial_stim_on_time'] = trials_visual_stim_times[
                     idx_trial]
 
-            trial_key['trial_stim_contrast_left'] = float(
+            trial['trial_stim_contrast_left'] = float(
                 trial_stim_contrast_left)
-            trial_key['trial_stim_contrast_right'] = float(
+            trial['trial_stim_contrast_right'] = float(
                 trial_stim_contrast_right)
-            trial_key['trial_feedback_time'] = float(
+            trial['trial_feedback_time'] = float(
                 trials_feedback_times[idx_trial])
-            trial_key['trial_feedback_type'] = int(
+            trial['trial_feedback_type'] = int(
                 trials_feedback_types[idx_trial])
 
             if rep_num_status != 'Missing':
-                trial_key['trial_rep_num'] = int(trials_rep_num[idx_trial])
+                trial['trial_rep_num'] = int(trials_rep_num[idx_trial])
 
-            trial_key['trial_stim_prob_left'] = float(trials_p_left[idx_trial])
+            trial['trial_stim_prob_left'] = float(trials_p_left[idx_trial])
 
             if included_status != 'Missing':
-                trial_key['trial_included'] = bool(trials_included[idx_trial])
+                trial['trial_included'] = bool(trials_included[idx_trial])
 
-            self.Trial().insert1(trial_key)
+            if go_cue_times_status != 'Missing':
+                trial['trial_go_cue_time'] = float(
+                    trials_go_cue_times[idx_trial])
+
+            if go_cue_trigger_times_status != 'Missing':
+                trial['trial_go_cue_trigger_time'] = float(
+                    trials_go_cue_trigger_times[idx_trial])
+
+            if reward_volume_status != 'Missing':
+                trial['trial_reward_volume'] = float(
+                    trials_reward_volume[idx_trial])
+
+            if iti_duration_status != 'Missing':
+                trial['trial_iti_duration'] = float(
+                    trials_iti_duration[idx_trial])
+
+            trials.append(trial)
+
+        self.Trial.insert(trials)
 
         logger.info('Populated a TrialSet tuple, \
             all Trial tuples and Excluded Trial tuples for \
             subject {subject_uuid} in session started at \
-            {session_start_time}'.format(**key))
+            {session_start_time}'.format(**trial_key))
 
     class Trial(dj.Part):
         # all times are in absolute seconds, rather than relative to trial onset
@@ -588,17 +673,21 @@ class TrialSet(dj.Imported):
         -> master
         trial_id:               int           # trial identification number
         ---
-        trial_start_time:           double         # beginning of quiescent period time (seconds)
-        trial_end_time:             double         # end of iti (seconds)
-        trial_response_time:        double         # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
+        trial_start_time:           double        # beginning of quiescent period time (seconds)
+        trial_end_time:             double        # end of iti (seconds)
+        trial_response_time=null:   double        # Time of "response" in choiceworld (seconds). This is when one of the three possible choices is registered in software, will not be the same as when the mouse's movement to generate that response begins.
         trial_response_choice:      enum("CCW", "CW", "No Go")       # which choice was made in choiceworld
-        trial_stim_on_time=null:    double         # Time of stimulus in choiceworld (seconds)
+        trial_stim_on_time=null:    double        # Time of stimulus in choiceworld (seconds)
         trial_stim_contrast_left:   float	      # contrast of the stimulus on the left
         trial_stim_contrast_right:  float         # contrast of the stimulus on the right
-        trial_feedback_time:        double         # Time of feedback delivery (reward or not) in choiceworld
-        trial_feedback_type:        tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
+        trial_feedback_time=null:   double        # Time of feedback delivery (reward or not) in choiceworld
+        trial_feedback_type=null:   tinyint       # whether feedback is positive or negative in choiceworld (-1 for negative, +1 for positive)
         trial_rep_num=null:         int     	  # the repetition number of the trial, i.e. how many trials have been repeated on this side (counting from 1)
+        trial_go_cue_time=null:     float
+        trial_go_cue_trigger_time=null:  float
         trial_stim_prob_left:       float         # probability of the stimulus being present on left
+        trial_reward_volume=null:   float         # reward volume of each trial
+        trial_iti_duration=null:    float         # inter-trial interval
         trial_included=null:        bool          # whether the trial should be included
         """
 
@@ -607,6 +696,33 @@ class TrialSet(dj.Imported):
         -> master
         -> TrialSet.Trial
         """
+
+
+@schema
+class Settings(dj.Imported):
+    definition = """
+    -> acquisition.Session
+    ---
+    pybpod_board:    varchar(64)   # bpod machine that generated the session
+    """
+
+    def make(self, key):
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
+        try:
+            setting = one.load(eID, dataset_types='_iblrig_taskSettings.raw')
+        except:
+            return
+
+        if setting is None:
+            return
+        elif not len(setting):
+            return
+        elif setting[0] is None:
+            return
+        elif setting[0]['PYBPOD_BOARD'] is None:
+            return
+        key['pybpod_board'] = setting[0]['PYBPOD_BOARD']
+        self.insert1(key)
 
 
 @schema
@@ -623,7 +739,7 @@ class AmbientSensorData(dj.Imported):
     def make(self, key):
         trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        asd = ONE().load(eID, dataset_types='_iblrig_ambientSensorData.raw')
+        asd = one.load(eID, dataset_types='_iblrig_ambientSensorData.raw')
 
         if not len(TrialSet.Trial & key) == len(asd[0]):
             print('Size of ambient sensor data does not match the trial number')
@@ -649,8 +765,8 @@ class PassiveTrialSet(dj.Imported):
 
     key_source = acquisition.Session & (data.FileRecord & {'exists': 1} &
                                         'dataset_name in \
-                                        ("_ibl_passiveVisual.contrastLeft.npy", \
-                                        "_ibl_passiveVisual.contrastRight.npy", \
+                                        ("passiveTrials.contrastLeft.npy", \
+                                        "passiveTrials.contrastRight.npy", \
                                         "_ibl_lickPiezo.timestamps.npy")')
 
     def make(self, key):
@@ -659,9 +775,9 @@ class PassiveTrialSet(dj.Imported):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         passive_visual_stim_contrast_left, passive_visual_stim_contrast_right = \
-            ONE().load(eID, dataset_types=['_ibl_passiveVisual.contrastLeft',
-                                           '_ibl_passiveVisual.contrastRight',
-                                           '_ibl_passiveVisual.times'])
+            one.load(eID, dataset_types=['passiveTrials.contrastLeft',
+                                         'passiveTrials.contrastRight',
+                                         'passiveTrials.times'])
 
         assert len(np.unique(np.array([len(passive_visual_stim_contrast_left),
                                        len(passive_visual_stim_contrast_right),
@@ -724,7 +840,7 @@ class PassiveRecordings(dj.Imported):
     """
 
     key_source = acquisition.Session & (data.FileRecord & 'repo_name LIKE "flatiron_%"' & {'exists': 1} & 'dataset_name in \
-                    ("_ibl_passiveBeeps.times.npy", "_ibl_passiveValveClick.times.npy", "_ibl_passiveWhiteNoise.times.npy")')
+        ("passiveBeeps.times.npy", "passiveValveClicks.times.npy", "passiveWhiteNoise.times.npy")')
 
     def make(self, key):
 
@@ -732,8 +848,8 @@ class PassiveRecordings(dj.Imported):
 
         key['passive_beep_times'], key['passive_valve_click_times'], \
             key['passive_white_noise_times'] = \
-            ONE().load(eID, dataset_types=['_ibl_passiveBeeps.times',
-                                           '_ibl_passiveValveClick.times',
-                                           '_ibl_passiveWhiteNoise.times'])
+            one.load(eID, dataset_types=['passiveBeeps.times',
+                                         'passiveValveClicks.times',
+                                         'passiveWhiteNoise.times'])
 
         self.insert1(key)

@@ -18,17 +18,20 @@ for key in keys:
     key_p = dict()
     key_p['project_name'] = (reference.Project & key).fetch1('project_name')
 
-    user_uuids = grf(key, 'user_uuids', multiple_entries=True,
+    user_uuids = grf(key, 'users', multiple_entries=True,
                      model='subjects.project')
 
-    for user_uuid in user_uuids:
-        key_pl = key_p.copy()
-        key_pl['user_name'] = \
-            (reference.LabMember &
-                dict(user_uuid=uuid.UUID(user_uuid))).fetch1(
-                    'user_name')
+    if len(user_uuids):
+        for user_uuid in user_uuids:
+            if user_uuid == 'None':
+                continue
+            key_pl = key_p.copy()
+            key_pl['user_name'] = \
+                (reference.LabMember &
+                    dict(user_uuid=uuid.UUID(user_uuid))).fetch1(
+                        'user_name')
 
-        reference.ProjectLabMember.insert1(key_pl, skip_duplicates=True)
+            reference.ProjectLabMember.insert1(key_pl, skip_duplicates=True)
 
 # subject.AlleleSequence
 print('Ingesting subject.AlleleSequence...')
@@ -174,7 +177,7 @@ for key in keys:
     key['uuid'] = key['surgery_uuid']
     if not len(action.Surgery & key):
         print('Surgery {} not in the table action.Surgery'.format(
-            key['suggery_uuid']))
+            key['surgery_uuid']))
         continue
 
     key_s = dict()
@@ -233,9 +236,9 @@ for key in keys:
     key['uuid'] = key['other_action_uuid']
     key['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
 
-    if not len(action.Surgery & key):
-        print('Surgery {} not in the table action.Surgery'.format(
-            key['suggery_uuid']))
+    if not len(action.OtherAction & key):
+        print('OtherAction {} not in the table action.OtherAction'.format(
+            key['other_action_uuid']))
         continue
 
     key_o = dict()
@@ -344,6 +347,35 @@ for key in keys:
              dict(procedure_type_uuid=uuid.UUID(procedure))).fetch1(
                  'procedure_type_name')
         acquisition.SessionProcedure.insert1(key_sp, skip_duplicates=True)
+
+# acquisition.SessionProject
+print('Ingesting acquisition.SessionProject...')
+sessions = alyxraw.AlyxRaw & 'model="actions.session"'
+sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
+    'fname="project"' & 'fvalue!="None"'
+keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
+    session_uuid='uuid')
+
+for key in keys:
+    key['uuid'] = key['session_uuid']
+    if not len(acquisition.Session & key):
+        print('Session {} is not in the table acquisition.Session'.format(
+            key['session_uuid']))
+        continue
+    key_s = dict()
+    key_s['subject_uuid'], key_s['session_start_time'] = \
+        (acquisition.Session & key).fetch1(
+            'subject_uuid', 'session_start_time')
+
+    project = grf(key, 'project')
+
+    key_sp = key_s.copy()
+    key_sp['session_project'] = \
+        (reference.Project &
+         dict(project_uuid=uuid.UUID(project))).fetch1(
+        'project_name')
+
+    acquisition.SessionProject.insert1(key_sp, skip_duplicates=True)
 
 
 # acquisition.WaterAdminstrationSession

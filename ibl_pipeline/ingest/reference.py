@@ -21,6 +21,7 @@ class Lab(dj.Computed):
     time_zone:              varchar(255)
     reference_weight_pct:   float
     zscore_weight_pct:      float
+    lab_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "misc.lab"').proj(lab_uuid='uuid')
 
@@ -54,6 +55,7 @@ class LabMember(dj.Computed):
     is_staff:		        boolean		    # staff status
     is_superuser:	        boolean		    # superuser status
     is_stock_manager:       boolean         # stock manager status
+    labmember_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "misc.labmember"').proj(
         user_uuid='uuid')
@@ -104,6 +106,7 @@ class LabMembership(dj.Computed):
     role=null:              varchar(255)
     mem_start_date=null:    date
     mem_end_date=null:      date
+    labmembership_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="misc.labmembership"').proj(
         lab_membership_uuid='uuid')
@@ -143,6 +146,7 @@ class LabLocation(dj.Computed):
     ---
     lab_name:           varchar(64)
     location_name:      varchar(255)    # name of the location
+    lablocation_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "misc.lablocation"').proj(
         location_uuid='uuid')
@@ -169,6 +173,7 @@ class Project(dj.Computed):
     ---
     project_name:                varchar(255)
     project_description=null:    varchar(1024)
+    project_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.project"').proj(
         project_uuid='uuid')
@@ -187,4 +192,5 @@ class ProjectLabMember(dj.Manual):
     definition = """
     project_name:   varchar(255)
     user_name:      varchar(255)
+    projectlabmember_ts=CURRENT_TIMESTAMP:   timestamp
     """

@@ -1,7 +1,13 @@
 import datajoint as dj
 from . import reference, acquisition
+import os
 
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_data')
+mode = os.environ.get('MODE')
+
+if mode == 'update':
+    schema = dj.schema('ibl_data')
+else:
+    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_data')
 
 
 @schema
@@ -14,6 +20,7 @@ class DataFormat(dj.Lookup):
     matlab_loader_function=null:    varchar(255)
     python_loader_function=null:    varchar(255)
     format_description=null:        varchar(255)
+    dataformat_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -23,6 +30,7 @@ class DataRepositoryType(dj.Lookup):
     repotype_name:  varchar(255)
     ---
     repotype_uuid:  uuid
+    datarepositorytype_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -39,6 +47,7 @@ class DataRepository(dj.Lookup):
     globus_path:        varchar(255)
     data_url=null:      varchar(255)
     globus_is_personal: boolean
+    datarepository_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -47,6 +56,7 @@ class ProjectRepository(dj.Manual):
     definition = """
     -> reference.Project
     -> DataRepository
+    projectrepository=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -59,6 +69,7 @@ class DataSetType(dj.Lookup):
     -> [nullable] reference.LabMember.proj(dataset_type_created_by='user_name')
     filename_pattern:               varchar(255)
     dataset_type_description=null:  varchar(1024)
+    datasettype_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 

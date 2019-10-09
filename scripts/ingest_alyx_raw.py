@@ -6,6 +6,7 @@ import datajoint as dj
 import json
 import logging
 import math
+import collections
 import os.path as path
 from ibl_pipeline.ingest import alyxraw, InsertBuffer
 import sys
@@ -50,23 +51,24 @@ for key in keys:
         key_field = dict(key_field, fname=field_name)
 
         if field_name == 'json' and field_value is not None:
-            key_field['value_idx'] = 0
-            key_field['fvalue'] = json.dumps(field_value)
-            ib_part.insert1(key_field)
+            if len(field_value) > 40000:
+                continue
+            else:
+                key_field['value_idx'] = 0
+                key_field['fvalue'] = json.dumps(field_value)
+                ib_part.insert1(key_field)
 
-        elif field_value == [] or field_value == '' or \
-                (type(field_value) == float and math.isnan(field_value)):
+        elif field_value is None or field_value == '' or field_value == [] or \
+                (isinstance(field_value, float) and math.isnan(field_value)):
             key_field['value_idx'] = 0
             key_field['fvalue'] = 'None'
             ib_part.insert1(key_field)
 
         elif type(field_value) is list and \
                 (type(field_value[0]) is dict or type(field_value[0]) is str):
-            for value_idx, value in enumerate(field_value):
-                key_field['value_idx'] = value_idx
-                key_field['fvalue'] = str(value)
-                ib_part.insert1(key_field)
-
+            ib_part.insert(dict(key_field, value_idx=value_idx,
+                           fvalue=str(value))
+                           for value_idx, value in enumerate(field_value))
         else:
             key_field['value_idx'] = 0
             key_field['fvalue'] = str(field_value)
