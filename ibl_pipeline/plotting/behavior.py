@@ -603,7 +603,7 @@ class CumulativeSummary(dj.Computed):
             data = [dict(
                 x=[t.strftime('%Y-%m-%d')
                    for t in contrast_map.columns.tolist()],
-                y=list(range(len(contrast_map.index.tolist()))),
+                y=list(range(len(contrast_map.index.tolist())))[:, :, -1],
                 z=contrast_map.values.tolist(),
                 zmax=1,
                 zmin=0,
