@@ -1,6 +1,7 @@
 
 import datajoint as dj
-from ibl_pipeline import action, subject
+from ibl_pipeline import  reference, action, subject
+from ibl_pipeline import reference as reference_ingest
 from ibl_pipeline.ingest import action as action_ingest
 from ibl_pipeline.ingest import subject as subject_ingest
 
