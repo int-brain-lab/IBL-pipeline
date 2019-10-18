@@ -4,6 +4,10 @@ import uuid
 from . import alyxraw
 from . import get_raw_field as grf
 
+import os
+
+if os.environ.get('MODE') == 'public':
+    from .. import public
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_ingest_reference')
@@ -41,6 +45,7 @@ class Lab(dj.Computed):
 class LabMember(dj.Computed):
     # <class 'misc.models.OrderedUser'>
     # <class 'django.contrib.auth.models.User'>
+    # For public database, first name, last name, email, password was dropped.
     definition = """
     (user_uuid) -> alyxraw.AlyxRaw
     ---
@@ -63,21 +68,28 @@ class LabMember(dj.Computed):
     def make(self, key):
         key_lab_member = key.copy()
         key['uuid'] = key['user_uuid']
-        key_lab_member['user_name'] = grf(key, 'username')
-        key_lab_member['password'] = grf(key, 'password')
-        key_lab_member['email'] = grf(key, 'email')
+
+        # check the current mode, if public, omit some fields
+        user_name = grf(key, 'username')
+        if os.environ.get('MODE') != 'public':
+            key_lab_member['user_name'] = user_name
+            key_lab_member['password'] = grf(key, 'password')
+            key_lab_member['email'] = grf(key, 'email')
+            first_name = grf(key, 'first_name')
+            if first_name != 'None':
+                key_lab_member['first_name'] = first_name
+
+            last_name = grf(key, 'last_name')
+            if last_name != 'None':
+                key_lab_member['last_name'] = last_name
+        else:
+            key_lab_member['user_name'] = (public.UserMap &
+                                           {'user_name': user_name}).fetch1(
+                                               'pseudo_name')
 
         last_login = grf(key, 'last_login')
         if last_login != 'None':
             key_lab_member['last_login'] = last_login
-
-        first_name = grf(key, 'first_name')
-        if first_name != 'None':
-            key_lab_member['first_name'] = first_name
-
-        last_name = grf(key, 'last_name')
-        if last_name != 'None':
-            key_lab_member['last_name'] = last_name
 
         key_lab_member['date_joined'] = grf(key, 'date_joined')
 

@@ -10,6 +10,15 @@ schema = dj.schema('ibl_public')
 
 
 @schema
+class UserMap(dj.Lookup):
+    definition = """
+    # a lookup table between the real user name and the pseudo_name
+    user_name:      varchar(64)
+    ---
+    pseudo_name:    varchar(64)
+    """
+
+@schema
 class PublicSubject(dj.Manual):
     definition = """
     lab_name            : varchar(32)
