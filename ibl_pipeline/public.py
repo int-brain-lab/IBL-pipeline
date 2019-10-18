@@ -7,6 +7,7 @@ from uuid import UUID
 from ibl_pipeline.ingest import alyxraw
 
 schema = dj.schema('ibl_public')
+dj.config['safemode'] = False
 
 
 @schema
@@ -17,6 +18,7 @@ class UserMap(dj.Lookup):
     ---
     pseudo_name:    varchar(64)
     """
+
 
 @schema
 class PublicSubject(dj.Manual):
@@ -45,6 +47,8 @@ class PublicSubjectUuid(dj.Computed):
 
         self.insert1(dict(**key, subject_uuid=subject.fetch1('uuid')))
 
+
+PublicSubject.delete()
 
 subject_lists = pd.read_csv('/data/list_of_subjects.csv')
 
