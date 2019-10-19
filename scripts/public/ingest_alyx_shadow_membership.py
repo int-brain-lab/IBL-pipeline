@@ -2,17 +2,6 @@
 This script inserts membership tuples into the membership shadow tables, \
 which cannot be inserted with auto-population.
 '''
-import datajoint as dj
-import json
-import uuid
-from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data
-from ibl_pipeline.ingest import get_raw_field as grf
-from ibl_pipeline import public
-
-
-subject_uuids = public.PublicSubjectUuid.fetch('subject_uuid')
-subjects = [dict(fname='subject', fvalue=str(uuid))
-            for uuid in subject_uuids]
 
 # reference.ProjectLabMember
 print('Ingesting reference.ProjectLabMember...')
@@ -75,13 +64,12 @@ for key in keys:
                     dict(allele_uuid=uuid.UUID(allele))).fetch1('allele_name')
             subject.LineAllele.insert1(key_la, skip_duplicates=True)
 
-
 # action.SurgeryUser
 print('Ingesting action.SurgeryUser...')
 surgeries = alyxraw.AlyxRaw & 'model = "actions.surgery"'
 surgeries_with_users = alyxraw.AlyxRaw.Field & surgeries & \
     'fname="users"' & 'fvalue!="None"'
-keys = (surgeries & surgeries_with_users & restr_subjects).proj(
+keys = (surgeries & surgeries_with_users).proj(
     surgery_uuid='uuid')
 
 for key in keys:
@@ -112,7 +100,7 @@ surgeries = alyxraw.AlyxRaw & 'model = "actions.surgery"'
 surgeries_with_procedures = alyxraw.AlyxRaw.Field & surgeries & \
     'fname="procedures"' & 'fvalue!="None"'
 
-keys = (surgeries & surgeries_with_procedures & restr_subjects).proj(
+keys = (surgeries & surgeries_with_procedures).proj(
     surgery_uuid='uuid')
 
 for key in keys:
@@ -120,7 +108,7 @@ for key in keys:
     key['uuid'] = key['surgery_uuid']
     if not len(action.Surgery & key):
         print('Surgery {} not in the table action.Surgery'.format(
-            key['suggery_uuid']))
+            key['surgery_uuid']))
         continue
 
     key_s = dict()
@@ -140,31 +128,9 @@ for key in keys:
 
 # acquisition.ChildSession
 print('Ingesting acquisition.ChildSession...')
-
-# get session restrictor
-sessions_list = []
-for subj_uuid, subj in zip(subject_uuids, subjects):
-
-    session_start, session_end = (
-        public.PublicSubject &
-        (public.PublicSubjectUuid & {'subject_uuid': subj_uuid})).fetch1(
-        'session_start_date', 'session_end_date')
-    session_start = session_start.strftime('%Y-%m-%d')
-    session_end = session_end.strftime('%Y-%m-%d')
-    session_uuids = (alyxraw.AlyxRaw &
-                     {'model': 'actions.session'} &
-                     (alyxraw.AlyxRaw.Field & subj) &
-                     (alyxraw.AlyxRaw.Field &
-                      'fname="start_time"' &
-                      'fvalue between "{}" and "{}"'.format(
-                        session_start, session_end))).fetch(
-                            'uuid')
-    sessions_list += [dict(uuid=uuid) for uuid in session_uuids]
-
-sessions = alyxraw.AlyxRaw & 'model="actions.session"' & sessions_list
+sessions = alyxraw.AlyxRaw & 'model="actions.session"'
 sessions_with_parents = alyxraw.AlyxRaw.Field & sessions & \
     'fname="parent_session"' & 'fvalue!="None"'
-
 keys = (alyxraw.AlyxRaw & sessions_with_parents).proj(
     session_uuid='uuid')
 for key in keys:
@@ -193,7 +159,8 @@ for key in keys:
 
 # acquisition.SessionUser
 print('Ingesting acquisition.SessionUser...')
-sessions_with_users = alyxraw.AlyxRaw.Field & sessions_list & \
+sessions = alyxraw.AlyxRaw & 'model="actions.session"'
+sessions_with_users = alyxraw.AlyxRaw.Field & sessions & \
     'fname="users"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & sessions_with_users).proj(
     session_uuid='uuid')
@@ -224,7 +191,8 @@ for key in keys:
 
 # acquisition.SessionProcedure
 print('Ingesting acquisition.SessionProcedure...')
-sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions_list & \
+sessions = alyxraw.AlyxRaw & 'model="actions.session"'
+sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
     'fname="procedures"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
     session_uuid='uuid')
@@ -250,10 +218,10 @@ for key in keys:
                  'procedure_type_name')
         acquisition.SessionProcedure.insert1(key_sp, skip_duplicates=True)
 
-
 # acquisition.SessionProject
 print('Ingesting acquisition.SessionProject...')
-sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions_list & \
+sessions = alyxraw.AlyxRaw & 'model="actions.session"'
+sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
     'fname="project"' & 'fvalue!="None"'
 keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
     session_uuid='uuid')
@@ -278,3 +246,25 @@ for key in keys:
         'project_name')
 
     acquisition.SessionProject.insert1(key_sp, skip_duplicates=True)
+
+
+# data.ProjectRepository
+print('Ingesting data.ProjectRespository...')
+projects = alyxraw.AlyxRaw & 'model="subjects.project"'
+projects_with_repos = alyxraw.AlyxRaw.Field & projects & \
+    'fname="repositories"' & 'fvalue!="None"'
+keys = (alyxraw.AlyxRaw & projects_with_repos).proj(project_uuid='uuid')
+for key in keys:
+    key_p = dict()
+    key_p['project_name'] = (reference.Project & key).fetch1('project_name')
+    key['uuid'] = key['project_uuid']
+
+    repos = grf(key, 'repositories', multiple_entries=True)
+
+    for repo in repos:
+        key_pr = key_p.copy()
+        key_pr['repo_name'] = \
+            (data.DataRepository &
+                dict(repo_uuid=uuid.UUID(repo))).fetch1(
+                    'repo_name')
+        data.ProjectRepository.insert1(key_pr, skip_duplicates=True)
