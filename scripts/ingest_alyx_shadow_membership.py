@@ -2,6 +2,7 @@
 This script inserts membership tuples into the membership shadow tables, \
 which cannot be inserted with auto-population.
 '''
+
 import datajoint as dj
 import json
 import uuid
