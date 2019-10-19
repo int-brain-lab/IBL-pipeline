@@ -53,7 +53,7 @@ def get_uuids(model_name, uuid_name, subject_uuids):
                 if model_name == 'actions.session':
                     sessions += [dict(uuid=uuid) for uuid in session_uuids]
                 else:
-                    sessions += [dict(fvalue=uuid) for uuid in session_uuids]
+                    sessions += [dict(fvalue=str(uuid)) for uuid in session_uuids]
 
             if model_name == 'actions.session':
                 uuids = (
