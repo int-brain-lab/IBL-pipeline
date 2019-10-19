@@ -13,12 +13,14 @@ kargs = dict(suppress_errors=True, display_progress=True)
 # reference tables
 print('-------- Populating reference shadow tables ------------')
 reference.Lab.populate(**kargs)
+reference.LabMember.populate(**kargs)
 reference.LabMembership.populate(**kargs)
 reference.LabLocation.populate(**kargs)
 reference.Project.populate(**kargs)
 
 # subject tables
 print('-------- Populating subject shadow tables ------------')
+subject.Species.populate(**kargs)
 subject.Source.populate(**kargs)
 subject.Strain.populate(**kargs)
 subject.Sequence.populate(**kargs)
@@ -36,30 +38,16 @@ subject.SubjectProject.populate(subj_res, **kargs)
 subject.SubjectUser.populate(subj_res, **kargs)
 subject.SubjectLab.populate(subj_res, **kargs)
 subject.SubjectCullMethod.populate(subj_res, **kargs)
-subject.Caging.populate(**kargs)
+subject.Caging.populate(subj_res, **kargs)
 # subject.UserHistory.populate(**kargs)
 subject.Weaning.populate(subj_res, **kargs)
 subject.Death.populate(subj_res, **kargs)
-subject.GenotypeTest.populate(**kargs)
-subject.Zygosity.populate(**kargs)
+subject.GenotypeTest.populate(subj_res, **kargs)
+subject.Zygosity.populate(subj_res, **kargs)
 
 # action tables
 print('-------- Populating action shadow tables -----------')
 action.ProcedureType.populate(**kargs)
-action.Weighing.populate(
-    utils.get_uuids('actions.weighing', 'weigh_uuid', subject_uuids),
-    **kargs)
-action.WaterType.populate(**kargs)
-print('-------- Populating water administration entries -----------')
-action.WaterAdministration.populate(
-    utils.get_uuids('actions.wateradministration',
-                    'wateradmin_uuid', subject_uuids),
-    **kargs)
-print('-------- Populating water restriction entries -----------')
-action.WaterRestriction.populate(
-    utils.get_uuids('actions.waterrestriction',
-                    'restriction_uuid', subject_uuids),
-    **kargs)
 action.Surgery.populate(
     utils.get_uuids('actions.surgery', 'surgery_uuid', subject_uuids),
     **kargs)
