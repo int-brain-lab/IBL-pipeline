@@ -70,6 +70,4 @@ data.DataSet.populate(
     utils.get_uuids('data.dataset', 'dataset_uuid', subject_uuids),
     **kargs)
 print('-------- Populating file record entries ----------')
-data.FileRecord.populate(
-    utils.get_uuids('data.filerecord', 'record_uuid', subject_uuids),
-    **kargs)
+data.FileRecord.populate(**kargs)
