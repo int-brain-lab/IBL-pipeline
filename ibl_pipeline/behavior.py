@@ -4,7 +4,6 @@ import pandas as pd
 from os import path, environ
 import logging
 from . import reference, subject, acquisition, data
-from .ingest import get_raw_field as grf
 try:
     from oneibl.one import ONE
 except:
@@ -570,15 +569,11 @@ class TrialSet(dj.Imported):
         key_session['uuid'] = (acquisition.Session & key).fetch1(
             'session_uuid')
 
-        n_correct_trials = grf(key_session, 'n_correct_trials')
-        if n_correct_trials != 'None':
-            key['n_correct_trials'] = n_correct_trials
-        else:
-            key['n_correct_trials'] = \
-                sum((np.squeeze(trials_response_choice) == 1) &
-                    (np.squeeze(trials_contrast_left) > 0)) \
-                + sum((np.squeeze(trials_response_choice) == -1) &
-                      (np.squeeze(trials_contrast_right) > 0))
+        key['n_correct_trials'] = \
+            sum((np.squeeze(trials_response_choice) == 1) &
+                (np.squeeze(trials_contrast_left) > 0)) \
+            + sum((np.squeeze(trials_response_choice) == -1) &
+                  (np.squeeze(trials_contrast_right) > 0))
 
         key['trials_start_time'] = trials_intervals[0, 0]
         key['trials_end_time'] = trials_intervals[-1, 1]
