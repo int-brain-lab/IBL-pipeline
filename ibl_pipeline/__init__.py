@@ -10,7 +10,7 @@ elif os.environ.get('MODE') == 'update':
 
 if os.environ.get('MODE') == 'test':
     schema = dj.schema('test_ibl_storage')
-elif os.environ.get('MODE') != public:
+elif os.environ.get('MODE') != 'public':
     schema = dj.schema('ibl_storage')
 
     @schema
