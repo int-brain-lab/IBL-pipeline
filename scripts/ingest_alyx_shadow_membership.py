@@ -3,6 +3,12 @@ This script inserts membership tuples into the membership shadow tables, \
 which cannot be inserted with auto-population.
 '''
 
+import datajoint as dj
+import json
+import uuid
+from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data
+from ibl_pipeline.ingest import get_raw_field as grf
+
 # reference.ProjectLabMember
 print('Ingesting reference.ProjectLabMember...')
 projects = alyxraw.AlyxRaw & 'model="subjects.project"'
