@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
         elif '-' in subject['Sessions']:
             text = re.search('(\d+)/(\d+)/(\d+).* (\d+)/(\d+)/(\d+)',
-                            '22/05/2019- 15/07/2019 (includes a break)')
+                             subject['Sessions'])
             year1, month1, date1, year2, month2, date2 = \
                 text.group(3), text.group(2), text.group(1), \
                 text.group(6), text.group(5), text.group(4)
@@ -95,7 +95,7 @@ if __name__ == "__main__":
         else:
             subj.update(session_start_date=datetime.date(2018, 6, 1),
                         session_end_date=datetime.datetime.now().date())
-        subjs.append(subj)
+        subjs.append(dict(**subj))
 
     PublicSubject.insert(subjs, skip_duplicates=True)
     PublicSubjectUuid.populate(display_progress=True)
