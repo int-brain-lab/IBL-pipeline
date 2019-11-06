@@ -712,9 +712,10 @@ class SessionDelay(dj.Imported):
         first_trial_duration = trial_end - trial_start
         elapsed_time = data[0][0]['elapsed_time'].split(':')
 
-        key['session_delay_in_secs'] = float(elapsed_time[1])*60 + float(elapsed_time[2]) - first_trial_duration
-        key['session_delay_in_mins'] = key['session_delay_in_secs']/60
-        self.insert1(key)
+        if elapsed_time:
+            key['session_delay_in_secs'] = float(elapsed_time[1])*60 + float(elapsed_time[2]) - first_trial_duration
+            key['session_delay_in_mins'] = key['session_delay_in_secs']/60
+            self.insert1(key)
 
 
 @schema
