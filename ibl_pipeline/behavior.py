@@ -729,10 +729,10 @@ class SessionDelay(dj.Imported):
                 self.insert1(key)
             else:
                 key['error_type'] = 'raw task data not available'
-                self.insert1(key)
+                SessionDelayAvailability.insert1(key, allow_direct_insert=True)
         else:
             key['error_type'] = 'elapsed time not available'
-            self.insert1(key)
+            SessionDelayAvailability.insert1(key, allow_direct_insert=True)
 
 
 @schema
