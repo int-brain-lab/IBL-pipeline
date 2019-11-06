@@ -702,6 +702,8 @@ class SessionDelay(dj.Imported):
     session_delay_in_mins:      float       # session delay in minutes
     """
 
+    key_source = acquisition.Session & TrialSet
+
     def make(self, key):
         eID = (acquisition.Session & key).fetch1('session_uuid')
         data = one.load(eID, dataset_types=['_iblrig_taskData.raw'])
