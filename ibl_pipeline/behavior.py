@@ -703,7 +703,7 @@ class SessionDelay(dj.Imported):
     """
 
     def make(self, key):
-        eID = (aquisition.Session & key).fetch1('session_uuid')
+        eID = (acquisition.Session & key).fetch1('session_uuid')
         data = one.load(eID, dataset_types=['_iblrig_taskData.raw'])
         trial_start, trial_end = (behavior.TrialSet.Trial & key & 'trial_id=1').fetch1(
             'trial_start_time', 'trial_end_time')
