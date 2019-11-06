@@ -694,6 +694,15 @@ class TrialSet(dj.Imported):
 
 
 @schema
+class SessionDelayAvailability(dj.Imported):
+    definition = """
+    -> acquisition.Session
+    ---
+    error_type:    enum("elapsed time not available", "raw task data not available")
+    """
+
+
+@schema
 class SessionDelay(dj.Imported):
     definition = """
     -> acquisition.Session
@@ -702,7 +711,7 @@ class SessionDelay(dj.Imported):
     session_delay_in_mins:      float       # session delay in minutes
     """
 
-    key_source = acquisition.Session & TrialSet
+    key_source = acquisition.Session & TrialSet - SessionDelayAvailability()
 
     def make(self, key):
         eID = (acquisition.Session & key).fetch1('session_uuid')
@@ -711,10 +720,18 @@ class SessionDelay(dj.Imported):
             'trial_start_time', 'trial_end_time')
         first_trial_duration = trial_end - trial_start
 
-        if data:
-            elapsed_time = data[0][0]['elapsed_time'].split(':')
-            key['session_delay_in_secs'] = float(elapsed_time[1])*60 + float(elapsed_time[2]) - first_trial_duration
-            key['session_delay_in_mins'] = key['session_delay_in_secs']/60
+        if data[0]:
+            if 'elapsed_time' in data[0][0].keys():
+                elapsed_time = data[0][0]['elapsed_time'].split(':')
+                key['session_delay_in_secs'] = float(elapsed_time[1])*60 + \
+                    float(elapsed_time[2]) - first_trial_duration
+                key['session_delay_in_mins'] = key['session_delay_in_secs']/60
+                self.insert1(key)
+            else:
+                key['error_type'] = 'raw task data not available'
+                self.insert1(key)
+        else:
+            key['error_type'] = 'elapsed time not available'
             self.insert1(key)
 
 
