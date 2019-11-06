@@ -694,6 +694,28 @@ class TrialSet(dj.Imported):
 
 
 @schema
+class SessionDelay(dj.Imported):
+    definition = """
+    -> acquisition.Session
+    ---
+    session_delay_in_secs:      float       # session delay in seconds
+    session_delay_in_mins:      float       # session delay in minutes
+    """
+
+    def make(self, key):
+        eID = (aquisition.Session & key).fetch1('session_uuid')
+        data = one.load(eID, dataset_types=['_iblrig_taskData.raw'])
+        trial_start, trial_end = (behavior.TrialSet.Trial & key & 'trial_id=1').fetch1(
+            'trial_start_time', 'trial_end_time')
+        first_trial_duration = trial_end - trial_start
+        elapsed_time = data[0][0]['elapsed_time'].split(':')
+
+        key['session_delay_in_secs'] = elapsed_time[1]*60 + elapsed_time[2] - first_trial_duration
+        key['session_delay_in_mins'] = key['session_delay_in_secs']/60
+        self.insert1(key)
+
+
+@schema
 class Settings(dj.Imported):
     definition = """
     -> acquisition.Session
