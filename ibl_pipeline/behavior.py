@@ -2,6 +2,7 @@ import datajoint as dj
 import numpy as np
 import pandas as pd
 from os import path, environ
+import datetime
 import logging
 from . import reference, subject, acquisition, data
 try:
@@ -711,7 +712,11 @@ class SessionDelay(dj.Imported):
     session_delay_in_mins:      float       # session delay in minutes
     """
 
-    key_source = acquisition.Session & TrialSet - SessionDelayAvailability()
+    # only check missing data within 5 days
+    date = datetime.datetime.today() - datetime.timedelta(days=5)
+    key_source = TrialSet() - \
+        SessionDelayAvailability() & 'session_start_time < "{}"'.format(
+            date.strftime('%Y-%m-%d'))
 
     def make(self, key):
         eID = (acquisition.Session & key).fetch1('session_uuid')
@@ -752,7 +757,11 @@ class Settings(dj.Imported):
     pybpod_board:    varchar(64)   # bpod machine that generated the session
     """
 
-    key_source = TrialSet() - SettingsAvailability()
+    # only check missing data within 5 days
+    date = datetime.datetime.today() - datetime.timedelta(days=5)
+    key_source = TrialSet() - \
+        SettingsAvailability() & 'session_start_time < "{}"'.format(
+            date.strftime('%Y-%m-%d'))
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
