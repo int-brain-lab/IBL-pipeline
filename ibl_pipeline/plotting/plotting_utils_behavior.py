@@ -101,13 +101,23 @@ def get_date_range(subj):
     mondays = [day.strftime('%Y-%m-%d')
                for day in date_array if day.weekday() == 0]
 
+    # check whether the animal is already 7 months
+    dob = subj.fetch1('subject_birth_date')
+    if dob:
+        seven_months_date = dob + datetime.timedelta(days=210)
+        if seven_months_date > last_date:
+            seven_months_date = None
+    else:
+        seven_months_date = None
+
     return dict(
         first_date=first_date,
         last_date=last_date,
         first_date_str=first_date_str,
         last_date_str=last_date_str,
         date_array=date_array,
-        mondays=mondays)
+        mondays=mondays,
+        seven_months_date=seven_months_date)
 
 
 def get_status(subj):
@@ -121,8 +131,11 @@ def get_status(subj):
     first_ready4ephysrig = subj.aggr(
         behavior.SessionTrainingStatus & 'training_status = "ready4ephysrig"',
         first_session='DATE(min(session_start_time))')
+    first_ready4delay = subj.aggr(
+        behavior.SessionTrainingStatus & 'training_status = "ready4delay"',
+        first_session='DATE(min(session_start_time))')
     first_ready4recording = subj.aggr(
-        behavior.SessionTrainingStatus & 'training_status = "ready4ephysrecording"',
+        behavior.SessionTrainingStatus & 'training_status = "ready4recording"',
         first_session='DATE(min(session_start_time))')
 
     result = dict()
@@ -149,6 +162,14 @@ def get_status(subj):
                       first_ready4ephysrig_date=first_ready4ephysrig_date)
     else:
         result.update(is_ready4ephysrig=False)
+
+    if len(first_ready4delay):
+        first_ready4delay_date = first_ready4delay.fetch1(
+            'first_session').strftime('%Y-%m-%d')
+        result.update(is_ready4delay=True,
+                      first_ready4delay_date=first_ready4delay_date)
+    else:
+        result.update(is_ready4delay=False)
 
     if len(first_ready4recording):
         first_ready4recording_date = first_ready4recording.fetch1(
@@ -485,6 +506,22 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
             )
         )
 
+    if status['is_ready4delay']:
+        data.append(
+           go.Scatter(
+               x=[status['first_ready4delay_date'],
+                  status['first_ready4delay_date']],
+               y=yrange,
+               mode="lines",
+               marker=dict(color='rgba(117, 117, 117, 1)'),
+               name='first day got ready4delay',
+               xaxis=xaxis,
+               yaxis=yaxis,
+               showlegend=show_legend_external,
+               hoverinfo='x'
+            )
+        )
+
     if status['is_ready4recording']:
         data.append(
            go.Scatter(
@@ -494,6 +531,22 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                mode="lines",
                marker=dict(color='rgba(20, 255, 91, 1)'),
                name='first day got ready4recording',
+               xaxis=xaxis,
+               yaxis=yaxis,
+               showlegend=show_legend_external,
+               hoverinfo='x'
+            )
+        )
+
+    if status['is_over_seven_months']:
+        data.append(
+           go.Scatter(
+               x=[status['seven_months_date'],
+                  status['seven_months_date']],
+               y=yrange,
+               mode="lines",
+               marker=dict(color='rgba(0, 0, 0, 1)'),
+               name='mouse became seven months',
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,

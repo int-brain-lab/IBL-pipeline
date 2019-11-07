@@ -198,6 +198,12 @@ class CumulativeSummary(dj.Computed):
         # get date range and mondays
         d = putils.get_date_range(subj)
 
+        if d['seven_months_date']:
+            status['is_over_seven_months'] = True
+            status['seven_months_date'] = d['seven_months_date']
+        else:
+            status['is_over_seven_months'] = False
+
         # plot for trial counts and session duration
         if behavior_ingest.TrialSet & key:
             trial_cnts = key.copy()
