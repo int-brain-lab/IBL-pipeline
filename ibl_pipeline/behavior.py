@@ -736,6 +736,15 @@ class SessionDelay(dj.Imported):
 
 
 @schema
+class SettingsAvailability(dj.Imported):
+    definition = """
+    -> acquisition.Session
+    ---
+    error_type:     varchar(128)   # error message
+    """
+
+
+@schema
 class Settings(dj.Imported):
     definition = """
     -> acquisition.Session
@@ -743,20 +752,32 @@ class Settings(dj.Imported):
     pybpod_board:    varchar(64)   # bpod machine that generated the session
     """
 
+    key_source = TrialSet() - SettingsAvailability()
+
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         try:
             setting = one.load(eID, dataset_types='_iblrig_taskSettings.raw')
         except:
+            key['error_type'] = 'settings not available'
+            SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
 
         if setting is None:
+            key['error_type'] = 'settings not available'
+            SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
         elif not len(setting):
+            key['error_type'] = 'settings not available'
+            SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
         elif setting[0] is None:
+            key['error_type'] = 'settings not available'
+            SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
         elif setting[0]['PYBPOD_BOARD'] is None:
+            key['error_type'] = 'settings not available'
+            SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
         key['pybpod_board'] = setting[0]['PYBPOD_BOARD']
         self.insert1(key)
