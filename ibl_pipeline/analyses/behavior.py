@@ -382,6 +382,7 @@ class TrainingStatus(dj.Lookup):
                     'in_training',
                     'trained_1a',
                     'trained_1b',
+                    'ready4delay',
                     'ready4ephysrig',
                     'ready4recording'])
 
@@ -415,30 +416,32 @@ class SessionTrainingStatus(dj.Computed):
             self.insert1(key)
             return
 
-        # if the protocol for the current session is a biased session,
-        # set the status to be "trained" and check up the criteria for
-        # "read for ephys"
+        # check whether the session is "ready4recording"
         task_protocol = (acquisition.Session & key).fetch1('task_protocol')
-        if task_protocol and 'biased' in task_protocol:
+
+        if task_protocol and ('ephys' in task_protocol) or ('biased' in task_protocol):
 
             # Criteria for "ready4recording"
             sessions = (behavior.TrialSet & subject_key &
-                        (acquisition.Session & 'task_protocol LIKE "%biased%"') &
+                        (acquisition.Session & 'task_protocol LIKE "%biased%" or task_protocol LIKE "%ephys%"') &
                         'session_start_time <= "{}"'.format(
                             key['session_start_time'].strftime(
                                 '%Y-%m-%d %H:%M:%S')
                             )).fetch('KEY')
 
-            # if more than 3 biased sessions, see what's up
+            # if more than 3 biased or ephys sessions, see what's up
             if len(sessions) >= 3:
 
                 sessions_rel = sessions[-3:]
 
-                # were these last 3 sessions done on an ephys rig?
+                # were these last 3 sessions done on an ephys rig and one of them is delayed ephys protocol?
                 bpod_board = (behavior.Settings & sessions_rel).fetch('pybpod_board')
                 ephys_board = [True for i in list(bpod_board) if 'ephys' in i]
 
-                if len(ephys_board) == 3:
+                task_protocols = (acquisition.Session & sessions_rel).fetch('task_protocol')
+                delays = (behavior.SessionDelay & sessions_rel).fetch('session_delay_in_mins')
+
+                if len(ephys_board) == 3 and np.any(np.logical_and('ephys' in task_protocols, delays > 15)):
 
                     n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
                     performance_easy = (PsychResults & sessions_rel).fetch(
@@ -491,6 +494,25 @@ class SessionTrainingStatus(dj.Computed):
                                 self.insert1(key)
                                 return
 
+        # if the previous status was 'ready4delay', keep
+        if len(status) and np.any(status=='ready4delay'):
+            key['training_status'] = 'ready4delay'
+            self.insert1(key)
+            return
+
+        # if not, check for criterion of 'ready4delay'
+        if len(status) and np.any(status=='ready4ephysrig'):
+            # if the current session is performed on ephys rig, run the biased protocol
+            bpod_board = (behavior.Settings & key).fetch1('pybpod_board')
+            if 'biased' in task_protocol and 'ephys' in bpod_board:
+                n_trials = (behavior.TrialSet & key).fetch1('n_trials')
+                performance_easy = (PsychResults & key).fetch1(
+                    'performance_easy')
+                if n_trials > 400 and performance_easy > 0.9:
+                    key['training_status'] = 'ready4delay'
+                    self.insert1(key)
+                    return
+
         # ========================================================= #
         # is the animal doing biasedChoiceWorld
         # ========================================================= #
@@ -503,11 +525,11 @@ class SessionTrainingStatus(dj.Computed):
 
         # if the protocol for the current session is a biased session,
         # set the status to be "trained" and check up the criteria for
-        # "read for ephys"
+        # "ready4ephysrig"
         task_protocol = (acquisition.Session & key).fetch1('task_protocol')
         if task_protocol and 'biased' in task_protocol:
 
-            # Criteria for "ready4recording" or "ready4ephysrig" status
+            # Criteria for "ready4ephysrig" status
             sessions = (behavior.TrialSet & subject_key &
                         (acquisition.Session & 'task_protocol LIKE "%biased%"') &
                         'session_start_time <= "{}"'.format(
