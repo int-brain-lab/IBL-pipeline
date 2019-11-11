@@ -715,8 +715,8 @@ class SessionDelay(dj.Imported):
     # only check missing data within 5 days
     date = datetime.datetime.today() - datetime.timedelta(days=5)
     key_source = TrialSet() - \
-        SessionDelayAvailability() & 'session_start_time < "{}"'.format(
-            date.strftime('%Y-%m-%d'))
+        (SessionDelayAvailability() & 'session_start_time < "{}"'.format(
+            date.strftime('%Y-%m-%d')))
 
     def make(self, key):
         eID = (acquisition.Session & key).fetch1('session_uuid')
@@ -760,8 +760,8 @@ class Settings(dj.Imported):
     # only check missing data within 5 days
     date = datetime.datetime.today() - datetime.timedelta(days=5)
     key_source = TrialSet() - \
-        SettingsAvailability() & 'session_start_time < "{}"'.format(
-            date.strftime('%Y-%m-%d'))
+        (SettingsAvailability() & 'session_start_time < "{}"'.format(
+            date.strftime('%Y-%m-%d')))
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
