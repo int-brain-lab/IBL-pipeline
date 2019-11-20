@@ -427,7 +427,7 @@ def create_rt_trialnum_plot(trials):
             rt='trial_response_time-trial_stim_on_time')
         rt += trials_rt_stim_on.fetch(as_dict=True)
 
-    rt_trials = pd.DataFrame(tr)
+    rt_trials = pd.DataFrame(rt)
     rt_trials.index = rt_trials.index + 1
     rt_rolled = rt_trials['rt'].rolling(window=10).median()
     rt_rolled = rt_rolled.where((pd.notnull(rt_rolled)), None)
