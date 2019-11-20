@@ -14,4 +14,5 @@ print('Testing ReactionTime...')
 behavior_analyses.ReactionTime.populate(subj, display_progress=True)
 
 print('Testing ReactionTimeContrastBlock...')
-behavior_analyses.ReactionTimeContrastBlock(subj, display_progress=True)
+behavior_analyses.ReactionTimeContrastBlock.populate(
+    subj, display_progress=True)
