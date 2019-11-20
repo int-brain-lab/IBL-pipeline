@@ -402,9 +402,32 @@ def create_rt_contrast_plot(sessions):
 
 
 def create_rt_trialnum_plot(trials):
-    rt_trials = trials.proj(
-        rt='trial_response_time-trial_stim_on_time').fetch(as_dict=True)
-    rt_trials = pd.DataFrame(rt_trials)
+
+    # check whether:
+    # 1. There were trials where stim_on_time is not available,
+    #    but go_cue_trigger_time is;
+    # 2. There were any trials where stim_on_time is available.
+    trials_go_cue_only = trials & \
+        'trial_stim_on_time is NULL and trial_go_cue_trigger_time is not NULL'
+    trials_stim_on = trials & \
+        'trial_stim_on_time is not NULL'
+
+    rt = []
+    if len(trials_go_cue_only):
+        trials_rt_go_cue_only = trials_go_cue_only.proj(
+            signed_contrast='trial_stim_contrast_left- \
+                trial_stim_contrast_right',
+            rt='trial_response_time-trial_go_cue_trigger_time')
+        rt += trials_rt_go_cue_only.fetch(as_dict=True)
+
+    if len(trials_stim_on):
+        trials_rt_stim_on = trials.proj(
+            signed_contrast='trial_stim_contrast_left- \
+                             trial_stim_contrast_right',
+            rt='trial_response_time-trial_stim_on_time')
+        rt += trials_rt_stim_on.fetch(as_dict=True)
+
+    rt_trials = pd.DataFrame(tr)
     rt_trials.index = rt_trials.index + 1
     rt_rolled = rt_trials['rt'].rolling(window=10).median()
     rt_rolled = rt_rolled.where((pd.notnull(rt_rolled)), None)

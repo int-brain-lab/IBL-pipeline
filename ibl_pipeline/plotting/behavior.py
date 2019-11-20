@@ -62,11 +62,15 @@ class SessionReactionTimeTrialNumber(dj.Computed):
 
     key_source = behavior_ingest.TrialSet & \
         (behavior_ingest.CompleteTrialSession &
-            'stim_on_times_status in ("Complete", "Partial")')
+            'stim_on_times_status in ("Complete", "Partial") or \
+             go_cue_trigger_times_status in ("Complete", "Partial")')
 
     def make(self, key):
         # get all trial of the session
-        trials = behavior_ingest.TrialSet.Trial & key & 'trial_stim_on_time is not NULL'
+        trials = behavior_ingest.TrialSet.Trial & key & \
+            'trial_stim_on_time is not NULL or \
+             trial_go_cue_trigger_time is not NULL'
+
         fig = putils.create_rt_trialnum_plot(trials)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
