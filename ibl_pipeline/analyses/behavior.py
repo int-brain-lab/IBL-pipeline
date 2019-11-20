@@ -10,12 +10,19 @@ schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_analyses_behavior')
 
 
-def compute_reaction_time(trials):
+def compute_reaction_time(trials, stim_on_type='stim on'):
+
     # median reaction time
-    trials_rt = trials.proj(
+    if stim_on_type == 'stim on':
+        trials_rt = trials.proj(
             signed_contrast='trial_stim_contrast_left- \
-                             trial_stim_contrast_right',
+                            trial_stim_contrast_right',
             rt='trial_response_time-trial_stim_on_time')
+    else:
+        trials_rt = trials.proj(
+            signed_contrast='trial_stim_contrast_left- \
+                            trial_stim_contrast_right',
+            rt='trial_response_time-trial_go_cue_trigger_time')
 
     rt = trials_rt.fetch(as_dict=True)
     rt = pd.DataFrame(rt)
@@ -128,10 +135,11 @@ class ReactionTime(dj.Computed):
     """
     key_source = PsychResults & \
         (behavior.CompleteTrialSession &
-         'stim_on_times_status in ("Complete", "Partial")')
+         'stim_on_times_status in ("Complete", "Partial") or go_cue_trigger_time_status in ("Complete", "Partial")')
 
     def make(self, key):
-        trials = behavior.TrialSet.Trial & key & 'trial_stim_on_time is not NULL'
+        trials = behavior.TrialSet.Trial & key & \
+            'trial_stim_on_time is not NULL or trial_go_cue_trigger_time is not NULL'
         key['reaction_time'] = utils.compute_reaction_time(trials)
         self.insert1(key)
 
@@ -155,7 +163,8 @@ class ReactionTimeContrastBlock(dj.Computed):
         task_protocol = (acquisition.Session & key).fetch1(
             'task_protocol')
 
-        trials = behavior.TrialSet.Trial & key & 'trial_stim_on_time is not NULL'
+        trials = behavior.TrialSet.Trial & key & \
+            'trial_stim_on_time is not NULL or trial_go_cue_trigger_time is not NULL'
 
         if task_protocol and ('biased' in task_protocol):
             prob_lefts = dj.U('trial_stim_prob_left') & trials
@@ -240,21 +249,44 @@ class BehavioralSummaryByDate(dj.Computed):
              {'subject_uuid': key['subject_uuid']}) &
             'session_date<="{}"'.format(
                 key['session_date'].strftime('%Y-%m-%d')))
-        master_entry['training_week'] = np.floor(master_entry['training_day'] / 5)
+        master_entry['training_week'] = np.floor(
+            master_entry['training_day'] / 5)
 
         self.insert1(master_entry)
 
-        complete = (behavior.CompleteTrialSession & trial_sets_keys).fetch(
-            'stim_on_times_status'
-        )
+        complete_stim_on, complete_go_cue_trigger = (
+            behavior.CompleteTrialSession & trial_sets_keys).fetch(
+            'stim_on_times_status', 'go_cue_trigger_time_status')
+        rt_available = \
+            np.any([c in ['Complete', 'Partial'] for c in complete_stim_on]) or \
+            np.any([c in ['Complete', 'Partial'] for c in complete_go_cue_trigger])
 
         # compute reaction time for all trials
-        if np.any([c in ['Complete', 'Partial'] for c in complete]):
-            trials_with_stim_on_time = trials & 'trial_stim_on_time is not NULL'
+        if rt_available:
+            trials_for_rt = trials & \
+                'trial_stim_on_time is not NULL or trial_go_cue_trigger is not NULL'
 
-            if len(trials_with_stim_on_time):
-                rts = trials_with_stim_on_time.proj(
-                    rt='trial_response_time-trial_stim_on_time').fetch('rt')
+            trials_go_cue_only = trials & \
+                'trial_stim_on_time is NULL and trial_go_cue_trigger_time is not NULL'
+            trials_stim_on = trials & \
+                'trial_stim_on is not NULL'
+
+            rt = []
+            if len(trials_go_cue_only):
+                trials_rt_go_cue_only = trials_go_cue_only.proj(
+                    signed_contrast='trial_stim_contrast_left- \
+                        trial_stim_contrast_right',
+                    rt='trial_response_time-trial_go_cue_trigger_time')
+                rt.append(trials_rt_go_cue_only.fetch('rt'))
+
+            if len(trials_stim_on):
+                trials_rt_stim_on = trials.proj(
+                    signed_contrast='trial_stim_contrast_left- \
+                                    trial_stim_contrast_right',
+                    rt='trial_response_time-trial_stim_on_time')
+                rt.append(trials_rt_stim_on.fetch('rt'))
+
+            if len(rt):
                 rt_overall['median_reaction_time'] = np.median(rts)
                 self.ReactionTimeByDate.insert1(rt_overall)
 
@@ -309,8 +341,11 @@ class BehavioralSummaryByDate(dj.Computed):
 
                 self.PsychResults.insert1(psych_results)
                 # compute reaction time
-                if np.any([c in ['Complete', 'Partial'] for c in complete]):
-                    trials_sub = trials_sub & 'trial_stim_on_time is not NULL'
+                if rt_available:
+
+                    trials_sub = trials_sub & \
+                        'trial_stim_on_time is not NULL or trial_go_cue_trigger_time is not NULL'
+
                     if abs(p_left - 0.8) < 0.001:
                         rt['prob_left_block'] = 2
                     elif abs(p_left - 0.2) < 0.001:
@@ -331,8 +366,10 @@ class BehavioralSummaryByDate(dj.Computed):
             self.PsychResults.insert1(psych_results)
 
             # compute reaction time
-            if np.any([c in ['Complete', 'Partial'] for c in complete]):
-                trials = trials & 'trial_stim_on_time is not NULL'
+            if rt_available:
+                trials = trials & \
+                    'trial_stim_on_time is not NULL or trial_go_cue_trigger_time is not NULL'
+
                 rt['prob_left_block'] = 0
                 rt['reaction_time_contrast'], rt['reaction_time_ci_low'], \
                     rt['reaction_time_ci_high'] = utils.compute_reaction_time(

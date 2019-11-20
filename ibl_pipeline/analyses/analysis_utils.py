@@ -80,13 +80,37 @@ def compute_performance_easy(trials):
 
 
 def compute_reaction_time(trials, compute_ci=False):
-    # median reaction time
-    trials_rt = trials.proj(
-            signed_contrast='trial_stim_contrast_left- \
-                             trial_stim_contrast_right',
-            rt='trial_response_time-trial_stim_on_time')
 
-    rt = trials_rt.fetch(as_dict=True)
+    if not len(trials):
+        if compute_ci:
+            return np.nan, np.nan, np.nan
+        else:
+            return np.nan
+
+    # check whether:
+    # 1. There were trials where stim_on_time is not available,
+    #    but go_cue_trigger_time is;
+    # 2. There were any trials where stim_on_time is available.
+    trials_go_cue_only = trials & \
+        'trial_stim_on_time is NULL and trial_go_cue_trigger_time is not NULL'
+    trials_stim_on = trials & \
+        'trial_stim_on is not NULL'
+
+    rt = []
+    if len(trials_go_cue_only):
+        trials_rt_go_cue_only = trials_go_cue_only.proj(
+            signed_contrast='trial_stim_contrast_left- \
+                trial_stim_contrast_right',
+            rt='trial_response_time-trial_go_cue_trigger_time')
+        rt.append(trials_rt_go_cue_only.fetch(as_dict=True))
+
+    if len(trials_stim_on):
+        trials_rt_stim_on = trials.proj(
+            signed_contrast='trial_stim_contrast_left- \
+                            trial_stim_contrast_right',
+            rt='trial_response_time-trial_stim_on_time')
+        rt.append(trials_rt_stim_on.fetch(as_dict=True))
+
     rt = pd.DataFrame(rt)
     rt = rt[['signed_contrast', 'rt']]
     grouped_rt = rt['rt'].groupby(rt['signed_contrast'])
