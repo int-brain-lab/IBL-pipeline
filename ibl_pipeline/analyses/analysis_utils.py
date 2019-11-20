@@ -94,7 +94,7 @@ def compute_reaction_time(trials, compute_ci=False):
     trials_go_cue_only = trials & \
         'trial_stim_on_time is NULL and trial_go_cue_trigger_time is not NULL'
     trials_stim_on = trials & \
-        'trial_stim_on is not NULL'
+        'trial_stim_on_time is not NULL'
 
     rt = []
     if len(trials_go_cue_only):
