@@ -135,7 +135,7 @@ class ReactionTime(dj.Computed):
     """
     key_source = PsychResults & \
         (behavior.CompleteTrialSession &
-         'stim_on_times_status in ("Complete", "Partial") or go_cue_trigger_time_status in ("Complete", "Partial")')
+         'stim_on_times_status in ("Complete", "Partial") or go_cue_trigger_times_status in ("Complete", "Partial")')
 
     def make(self, key):
         trials = behavior.TrialSet.Trial & key & \
@@ -256,7 +256,7 @@ class BehavioralSummaryByDate(dj.Computed):
 
         complete_stim_on, complete_go_cue_trigger = (
             behavior.CompleteTrialSession & trial_sets_keys).fetch(
-            'stim_on_times_status', 'go_cue_trigger_time_status')
+            'stim_on_times_status', 'go_cue_trigger_times_status')
         rt_available = \
             np.any([c in ['Complete', 'Partial'] for c in complete_stim_on]) or \
             np.any([c in ['Complete', 'Partial'] for c in complete_go_cue_trigger])
