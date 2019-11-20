@@ -279,17 +279,17 @@ class BehavioralSummaryByDate(dj.Computed):
                     signed_contrast='trial_stim_contrast_left- \
                         trial_stim_contrast_right',
                     rt='trial_response_time-trial_go_cue_trigger_time')
-                rt += trials_rt_go_cue_only.fetch('rt')
+                rt += list(trials_rt_go_cue_only.fetch('rt'))
 
             if len(trials_stim_on):
                 trials_rt_stim_on = trials.proj(
                     signed_contrast='trial_stim_contrast_left- \
                                     trial_stim_contrast_right',
                     rt='trial_response_time-trial_stim_on_time')
-                rt += trials_rt_stim_on.fetch('rt')
+                rt += list(trials_rt_stim_on.fetch('rt'))
 
             if len(rt):
-                rt_overall['median_reaction_time'] = np.median(rts)
+                rt_overall['median_reaction_time'] = np.median(rt)
                 self.ReactionTimeByDate.insert1(rt_overall)
 
         # compute psych results for all trials
