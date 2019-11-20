@@ -31,6 +31,8 @@ behavior_analyses.BehavioralSummaryByDate.populate(
 print('Testing plotting for BehavioralSummaryByDate...')
 behavior_plotting.CumulativeSummary.populate(
     subj, display_progress=True)
+behavior_plotting.DatePsychCurve.populate(
+    subj, display_progress=True)
 behavior_plotting.DateReactionTimeContrast.populate(
     subj, display_progress=True)
 behavior_plotting.DateReactionTimeTrialNumber.populate(
