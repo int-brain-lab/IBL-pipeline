@@ -135,7 +135,8 @@ class ReactionTime(dj.Computed):
     """
     key_source = PsychResults & \
         (behavior.CompleteTrialSession &
-         'stim_on_times_status in ("Complete", "Partial") or go_cue_trigger_times_status in ("Complete", "Partial")')
+         'stim_on_times_status in ("Complete", "Partial") or \
+          go_cue_trigger_times_status in ("Complete", "Partial")')
 
     def make(self, key):
         trials = behavior.TrialSet.Trial & key & \
@@ -157,7 +158,8 @@ class ReactionTimeContrastBlock(dj.Computed):
 
     key_source = behavior.TrialSet & \
         (behavior.CompleteTrialSession &
-         'stim_on_times_status in ("Complete", "Partial")')
+         'stim_on_times_status in ("Complete", "Partial") or \
+          go_cue_trigger_times_status in ("Complete", "Partial")')
 
     def make(self, key):
         task_protocol = (acquisition.Session & key).fetch1(
