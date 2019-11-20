@@ -273,23 +273,23 @@ class BehavioralSummaryByDate(dj.Computed):
             trials_stim_on = trials & \
                 'trial_stim_on_time is not NULL'
 
-            rt = []
+            rts = []
             if len(trials_go_cue_only):
                 trials_rt_go_cue_only = trials_go_cue_only.proj(
                     signed_contrast='trial_stim_contrast_left- \
                         trial_stim_contrast_right',
                     rt='trial_response_time-trial_go_cue_trigger_time')
-                rt += list(trials_rt_go_cue_only.fetch('rt'))
+                rts += list(trials_rt_go_cue_only.fetch('rt'))
 
             if len(trials_stim_on):
                 trials_rt_stim_on = trials.proj(
                     signed_contrast='trial_stim_contrast_left- \
                                     trial_stim_contrast_right',
                     rt='trial_response_time-trial_stim_on_time')
-                rt += list(trials_rt_stim_on.fetch('rt'))
+                rts += list(trials_rt_stim_on.fetch('rt'))
 
-            if len(rt):
-                rt_overall['median_reaction_time'] = np.median(rt)
+            if len(rts):
+                rt_overall['median_reaction_time'] = np.median(rts)
                 self.ReactionTimeByDate.insert1(rt_overall)
 
         # compute psych results for all trials
