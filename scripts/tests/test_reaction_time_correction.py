@@ -17,9 +17,21 @@ behavior_analyses.ReactionTime.populate(subj, display_progress=True)
 print('Testing ReactionTimeContrastBlock...')
 behavior_analyses.ReactionTimeContrastBlock.populate(
     subj, display_progress=True)
-print('Testing plotting functions for \
-    SessionReactionTimeContrast and SessionReactionTimeTrialNumber')
+
+print('Testing plotting functions for SessionReactionTimeContrast and SessionReactionTimeTrialNumber...')
 behavior_plotting.SessionReactionTimeContrast.populate(
     subj, display_progress=True)
 behavior_plotting.SessionReactionTimeTrialNumber.populate(
+    subj, display_progress=True)
+
+print('Testing BehaviorSummaryByDate....')
+behavior_analyses.BehavioralSummaryByDate.populate(
+    subj, display_progress=True)
+
+print('Testing plotting for BehavioralSummaryByDate...')
+behavior_plotting.CumulativeSummary.populate(
+    subj, display_progress=True)
+behavior_plotting.DateReactionTimeContrast.populate(
+    subj, display_progress=True)
+behavior_plotting.DateReactionTimeTrialNumber.populate(
     subj, display_progress=True)
