@@ -21,3 +21,5 @@ print('Testing plotting functions for \
     SessionReactionTimeContrast and SessionReactionTimeTrialNumber')
 behavior_plotting.SessionReactionTimeContrast.populate(
     subj, display_progress=True)
+behavior_plotting.SessionReactionTimeTrialNumber.populate(
+    subj, display_progress=True)
