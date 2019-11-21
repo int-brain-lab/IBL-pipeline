@@ -81,16 +81,33 @@ class ProbeInsertion(dj.Imported):
 
 @schema
 class ChannelGroup(dj.Imported):
-    defintion = """
+    definition = """
     -> ProbeInsertion
     ---
     channel_raw_inds:             blob  # Array of integers saying which index in the raw recording file (of its home probe) that the channel corresponds to (counting from zero).
     channel_local_coordinates:    blob  # Location of each channel relative to probe coordinate system (µm): x (first) dimension is on the width of the shank; (y) is the depth where 0 is the deepest site, and positive above this.
     """
 
-    key_source = ProbeInsertion \
+    key_source = acquisition.Session & ProbeInsertion \
         & (data.FileRecord & 'dataset_name="channels.rawInd.npy"') \
         & (data.FileRecord & 'dataset_name="channels.localCoordinates.npy"')
+
+    def make(self, key):
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
+
+        channels_rawInd = one.load(
+            eID, dataset_types=['channels.rawInd'])
+        channels_local_coordinates = one.load(
+            eID, dataset_types=['channels.localCoordinates'])
+
+        probe_ids = (ProbeInsertion & key).fetch('probe_idx')
+
+        self.insert(
+            [dict(**key,
+                  probe_idx=probe_idx,
+                  channel_raw_inds=channels_rawInd[probe_idx],
+                  channel_local_coordinates=channels_local_coordinates[probe_idx])
+                for probe_idx in probe_ids])
 
 
 @schema
