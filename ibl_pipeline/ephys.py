@@ -44,6 +44,10 @@ class Probe(dj.Lookup):
         """
 
 
+probe = Probe.fetch1('KEY')
+Probe.Channel.insert([dict(**probe, channel_id=ichannel+1)
+                      for ichannel in range(960)],
+                     skip_duplicates=True)
 
 
 @schema
@@ -106,7 +110,7 @@ class ProbeInsertionLocation(dj.Imported):
 class ChannelBrainLocation(dj.Imported):
     definition = """
     -> ProbeInsertion
-    -> ChannelGroup.Channel
+    -> Probe.Channel
     -> reference.Atlas
     histology_revision: varchar(64)
     ---
@@ -137,7 +141,7 @@ class Cluster(dj.Imported):
     cluster_revision:               varchar(64)
     cluster_id:                     int
     ---
-    -> ChannelGroup.Channel
+    cluster_channel:                int             # which channel this cluster is from
     cluster_spike_times:            blob@ephys      # spike times of a particular cluster (seconds)
     cluster_spike_depth:            blob@ephys      # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
     cluster_spike_amps:             blob@ephys      # Amplitude of each spike (µV)
@@ -301,7 +305,7 @@ class LFP(dj.Imported):
     class Channel(dj.Part):
         definition = """
         -> master
-        -> ChannelGroup.Channel
+        -> Probe.Channel
         ---
         lfp: blob@ephys           # recorded lfp on this channel
         """
