@@ -2,7 +2,7 @@
 This script tests the modification on using go_cue_trigger_time
 for RT computation with stim_on_time is not available
 
-Shan Shen, Dec, 2019
+Shan Shen, 2019-11-20
 '''
 
 from ibl_pipeline import subject, acquisition, behavior
