@@ -84,9 +84,13 @@ class ChannelGroup(dj.Imported):
     defintion = """
     -> ProbeInsertion
     ---
-    channel_raw_ids:
-    channel_local_coordinates:
+    channel_raw_inds:             blob  # Array of integers saying which index in the raw recording file (of its home probe) that the channel corresponds to (counting from zero).
+    channel_local_coordinates:    blob  # Location of each channel relative to probe coordinate system (µm): x (first) dimension is on the width of the shank; (y) is the depth where 0 is the deepest site, and positive above this.
     """
+
+    key_source = ProbeInsertion \
+        & (data.FileRecord & 'dataset_name="channels.rawInd.npy"') \
+        & (data.FileRecord & 'dataset_name="channels.localCoordinates.npy"')
 
 
 @schema

@@ -8,3 +8,6 @@ from ibl_pipeline import subject, acquisition, behavior, ephys
 
 print('Testing ingestion of ProbeInsertion...')
 ephys.ProbeInsertion.populate(display_progress=True)
+
+print('Testing ingestion of ChannelGroup...')
+ephys.ChannelGroup.populate(display_progress=True)
