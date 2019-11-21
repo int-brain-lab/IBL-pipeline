@@ -927,10 +927,10 @@ class DailyLabSummary(dj.Computed):
         subjects = subjects_alive * subject.SubjectLab & key
 
         last_sessions = subjects.aggr(
-            ingested_sessions,
-            'subject_nickname', session_start_time='max(session_start_time)') \
-            * acquisition.Session \
-            * behavior.SessionTrainingStatus
+            ingested_sessions * behavior.SessionTrainingStatus,
+            'subject_nickname', session_start_time='max(session_start_time)')
+        last_sessions = last_sessions * acquisition.Session * \
+            behavior.SessionTrainingStatus
 
         filerecord = data.FileRecord & subjects & 'relative_path LIKE "%alf%"'
         last_filerecord = subjects.aggr(
