@@ -29,6 +29,8 @@ class Probe(dj.Lookup):
     ---
     channel_counts: smallint            # number of channels in the probe
     """
+    contents = [dict(probe_model_name='Neuropixel 3a',
+                     channel_counts=960)]
 
     class Channel(dj.Part):
         definition = """
@@ -40,6 +42,8 @@ class Probe(dj.Lookup):
         channel_y_pos=null:  float       # y position relative to the tip of the probe (um), the depth where 0 is the deepest site, and positive above this.
         channel_shank=null:  enum(1, 2)  # shank of the channel, 1 or 2
         """
+
+
 
 
 @schema
