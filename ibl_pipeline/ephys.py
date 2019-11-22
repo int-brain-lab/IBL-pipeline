@@ -191,7 +191,7 @@ class Cluster(dj.Imported):
     cluster_spike_amps:             blob@ephys      # Amplitude of each spike (µV)
     cluster_spike_templates=null:   blob@ephys      # Template ID of each spike (i.e. output of automatic spike sorting prior to manual curation)
     cluster_spike_samples=null:     blob@ephys       # Time of spikes, measured in units of samples in their own electrophysiology binary file.
-    cluster_amp:                    float           # Mean amplitude of each cluster (µV)
+    cluster_amp=null:               float           # Mean amplitude of each cluster (µV)
     cluster_metics=null:            blob            # Quality control metrics at the cluster level
     cluster_waveform=null:          blob@ephys      # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered) nClustersxnSamplesxnChannels
     cluster_template_waveform=null: blob@ephys      # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
