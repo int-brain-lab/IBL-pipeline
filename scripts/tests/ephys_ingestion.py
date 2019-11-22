@@ -10,4 +10,8 @@ print('Testing ingestion of ProbeInsertion...')
 ephys.ProbeInsertion.populate(display_progress=True)
 
 print('Testing ingestion of ChannelGroup...')
-ephys.ChannelGroup.populate(display_progress=True)
+ephys.ChannelGroup.populate(display_progress=True, suppress_errors=True)
+
+
+print('Testing ingestion of Cluster...')
+ephys.Cluster.populate(display_progress=True)

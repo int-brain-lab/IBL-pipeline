@@ -98,7 +98,7 @@ class ChannelGroup(dj.Imported):
         channels_rawInd = one.load(
             eID, dataset_types=['channels.rawInd'])
         channels_local_coordinates = one.load(
-            eID, dataset_types=['channels.localCoordinates'])
+            eID, dataset_typess=['channels.localCoordinates'])
 
         probe_ids = (ProbeInsertion & key).fetch('probe_idx')
 
@@ -155,6 +155,37 @@ class Template(dj.Imported):
     """
 
 
+idx_mapping_clusters = {
+    # amps, channels, depths, peakToTrough
+    'f354dc45-caef-4e3e-bd42-2c19a5425114': [[0, 2], [1, 0], [0, 1], [0, 1]],
+    '1d364d2b-e02b-4b5d-869c-11c1a0c8cafc': [[1, 2], [0, 2], [1, 2], [0, 2]],
+    '4330cd7d-a513-4385-86ea-ca1a6cc04e1d': [[0, 1], [1, 0], [0, 1], [1, 0]],
+    '8c2e6449-57f0-4632-9f18-66e6ca90c522': [[0, 1], [0, 1], [0, 1], [0, 1]],
+    'f6f947b8-c123-4e27-8933-f624a8c3e8cc': [[0, 1], [0, 1], [0, 1], [1, 0]],
+    '713cf757-688f-4fc1-a2f6-2f997c9915c0': [[0, 1], [0, 1], [0, 1], [0, 1]],
+    '63b83ddf-b7ea-40db-b1e2-93c2a769b6e5': [[0, 1], [0, 1], [1, 0], [0, 1]]
+}
+
+[1, 2], [1, 0], [2, 1], [2, 0]
+[1, 2], [0, 1], [2, 0], [0, 2]
+[1, 0], [1, 0], [1, 0], [1, 0]
+[0, 1], [1, 0], [1, 0], [0, 1]
+[0, 1], [0, 1], [0, 1], [0, 1]
+[0, 1], [0, 1], [1, 0], [0, 1]
+[0, 1], [0, 1], [0, 1], [0, 1]
+
+idx_mapping_spikes = {
+    # amps, clusters, depths, times
+    'f354dc45-caef-4e3e-bd42-2c19a5425114': [[1, 2], [1, 0], [2, 1], [2, 0]],
+    '1d364d2b-e02b-4b5d-869c-11c1a0c8cafc': [[1, 2], [0, 1], [2, 0], [0, 2]],
+    '4330cd7d-a513-4385-86ea-ca1a6cc04e1d': [[1, 0], [1, 0], [1, 0], [1, 0]],
+    '8c2e6449-57f0-4632-9f18-66e6ca90c522': [[0, 1], [1, 0], [1, 0], [0, 1]],
+    'f6f947b8-c123-4e27-8933-f624a8c3e8cc': [[0, 1], [0, 1], [0, 1], [0, 1]],
+    '713cf757-688f-4fc1-a2f6-2f997c9915c0': [[0, 1], [0, 1], [1, 0], [0, 1]],
+    '63b83ddf-b7ea-40db-b1e2-93c2a769b6e5': [[0, 1], [0, 1], [0, 1], [0, 1]]
+}
+
+
 @schema
 class Cluster(dj.Imported):
     definition = """
@@ -164,7 +195,7 @@ class Cluster(dj.Imported):
     ---
     cluster_channel:                int             # which channel this cluster is from
     cluster_spike_times:            blob@ephys      # spike times of a particular cluster (seconds)
-    cluster_spike_depth:            blob@ephys      # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
+    cluster_spike_depths:           blob@ephys      # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
     cluster_spike_amps:             blob@ephys      # Amplitude of each spike (µV)
     cluster_spike_templates=null:   blob@ephys      # Template ID of each spike (i.e. output of automatic spike sorting prior to manual curation)
     cluster_spike_samples=null:     blob@ephys       # Time of spikes, measured in units of samples in their own electrophysiology binary file.
@@ -177,59 +208,71 @@ class Cluster(dj.Imported):
     cluster_phy_annotation=null:    tinyint         # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
     cluster_phy_id=null:            int             # Original cluster in
     """
-    key_source = ProbeInsertion()
+    key_source = acquisition.Session & ProbeInsertion
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
-        clusters_amps_all = one.load(eID, dataset_types=['cluster.amps'])
-        clusters_amps = clusters_amps_all[key['probe_idx']]
+        clusters_datasets = ['clusters.amps',
+                             'clusters.channels',
+                             'clusters.depths',
+                             'clusters.peakToTrough']
 
-        clusters_depths_all = one.load(eID, dataset_types=['clusters.depths'])
-        clusters_depths = clusters_depths_all[key['probe_idx']]
+        clusters_data = [
+            one.load(eID, dataset_types=[dataset])
+            for dataset in clusters_datasets
+        ]
 
-        clusters_channels = one.load(eID, dataset_types=['clusters.channels'])
+        spikes_datasets = ['spikes.amps',
+                           'spikes.clusters',
+                           'spikes.depths',
+                           'spikes.times']
 
-        clusters_amps = np.squeeze(clusters_amps)
-        clusters_depths = np.squeeze(clusters_depths)
-        clusters_peak_channels = np.squeeze(clusters_peak_channels)
-        clusters_waveform_duration = np.squeeze(clusters_waveform_duration)
-
-        spikes_amps, \
-            spikes_clusters, \
-            spikes_depths, \
-            spikes_times = \
-            one.load(
-                eID,
-                dataset_types=[
-                    'spikes.amps',
-                    'spikes.clusters',
-                    'spikes.depths',
-                    'spikes.times'
-                ])
-        spikes_amps = np.squeeze(spikes_amps)
-        spikes_clusters = np.squeeze(spikes_clusters)
-        spikes_depths = np.squeeze(spikes_depths)
-        spikes_times = np.squeeze(spikes_times)
-
-        key['cluster_revision'] = 0
+        spikes_data = [
+            one.load(eID, dataset_types=[dataset])
+            for dataset in spikes_datasets
+        ]
 
         clusters = []
-        for icluster, cluster_depth in enumerate(clusters_depths):
-            idx = spikes_clusters == icluster
-            cluster_amps = list(clusters_amps['Amplitude'])
-            clusters.append(
-                dict(**key,
-                     cluster_id=icluster,
-                     cluster_amp=cluster_amps[icluster],
-                     cluster_depth=cluster_depth,
-                     cluster_waveform_duration=clusters_waveform_duration[icluster],
-                     cluster_spike_times=spikes_times[idx],
-                     cluster_spike_depth=spikes_depths[idx],
-                     cluster_spike_amps=spikes_amps[idx],
-                     channel_group_id=0,
-                     probe_model_name='Neuropixels phase 3a',
-                     channel_id=clusters_peak_channels[icluster]))
+        for probe_idx in [0, 1]:
+
+            clusters_data_probe = []
+
+            for idata, data in enumerate(clusters_data):
+                idx = idx_mapping_clusters[eID][idata][probe_idx]
+                clusters_data_probe.append(data[idx])
+
+            clusters_amps = clusters_data_probe[0]
+            clusters_channels = clusters_data_probe[1]
+            clusters_depths = clusters_data_probe[2]
+            clusters_peak_to_trough = clusters_data_probe[3]
+
+            spikes_data_probes = []
+
+            for idata, data in enumerate(spikes_data_probes):
+                idx = idx_mapping_spikes[eID][idata][probe_idx]
+                spikes_data_probe.append(data[idx])
+
+            spikes_amps = spikes_data_probes[0]
+            spikes_clusters = spikes_data_probes[1]
+            spikes_depths = spikes_data_probes[2]
+            spikes_times = spikes_data_probes[3]
+
+            for icluster, cluster_depth in enumerate(clusters_depths):
+                idx = spikes_clusters == icluster
+                cluster_amps = clusters_amps[icluster]
+                clusters.append(dict(
+                    **key,
+                    probe_idx=probe_idx,
+                    cluster_id=icluster,
+                    cluster_amp=clusters_amps[icluster],
+                    cluster_depth=cluster_depth,
+                    cluster_channel=clusters_channels[icluster],
+                    cluster_peak_to_trough=clusters_peak_to_trough[icluster],
+                    cluster_spike_times=spikes_times[idx],
+                    cluster_spike_depths=spikes_depths[idx],
+                    cluster_spike_amps=spikes_amps[idx]
+                ))
 
         self.insert(clusters)
 
