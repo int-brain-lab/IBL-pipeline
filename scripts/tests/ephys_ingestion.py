@@ -14,4 +14,4 @@ ephys.ChannelGroup.populate(display_progress=True, suppress_errors=True)
 
 
 print('Testing ingestion of Cluster...')
-ephys.Cluster.populate(display_progress=True)
+ephys.Cluster.populate(display_progress=True, suppress_errors=True)
