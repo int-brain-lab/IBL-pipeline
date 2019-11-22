@@ -182,7 +182,7 @@ idx_mapping_spikes = {
 class Cluster(dj.Imported):
     definition = """
     -> ProbeInsertion
-    cluster_revision:               varchar(64)
+    cluster_revision='0':           varchar(64)
     cluster_id:                     int
     ---
     cluster_channel:                int             # which channel this cluster is from
@@ -256,7 +256,6 @@ class Cluster(dj.Imported):
                 clusters.append(dict(
                     **key,
                     probe_idx=probe_idx,
-                    cluster_version=0,
                     cluster_id=icluster,
                     cluster_amp=clusters_amps[icluster],
                     cluster_depth=cluster_depth,
