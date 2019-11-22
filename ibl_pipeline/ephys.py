@@ -256,6 +256,7 @@ class Cluster(dj.Imported):
                 clusters.append(dict(
                     **key,
                     probe_idx=probe_idx,
+                    cluster_version=0,
                     cluster_id=icluster,
                     cluster_amp=clusters_amps[icluster],
                     cluster_depth=cluster_depth,
