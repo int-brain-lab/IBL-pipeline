@@ -98,7 +98,7 @@ class ChannelGroup(dj.Imported):
         channels_rawInd = one.load(
             eID, dataset_types=['channels.rawInd'])
         channels_local_coordinates = one.load(
-            eID, dataset_typess=['channels.localCoordinates'])
+            eID, dataset_types=['channels.localCoordinates'])
 
         probe_ids = (ProbeInsertion & key).fetch('probe_idx')
 
