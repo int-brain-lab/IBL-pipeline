@@ -239,16 +239,16 @@ class Cluster(dj.Imported):
             clusters_depths = clusters_data_probe[2]
             clusters_peak_to_trough = clusters_data_probe[3]
 
-            spikes_data_probes = []
+            spikes_data_probe = []
 
             for idata, data in enumerate(spikes_data):
                 idx = idx_mapping_spikes[eID][idata][probe_idx]
                 spikes_data_probe.append(data[idx])
 
-            spikes_amps = spikes_data_probes[0]
-            spikes_clusters = spikes_data_probes[1]
-            spikes_depths = spikes_data_probes[2]
-            spikes_times = spikes_data_probes[3]
+            spikes_amps = spikes_data_probe[0]
+            spikes_clusters = spikes_data_probe[1]
+            spikes_depths = spikes_data_probe[2]
+            spikes_times = spikes_data_probe[3]
 
             for icluster, cluster_depth in enumerate(clusters_depths):
                 idx = spikes_clusters == icluster
