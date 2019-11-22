@@ -343,7 +343,7 @@ class TrialSpikes(dj.Computed):
                     trial_spk['event'] = event
                     trial_spks.append(trial_spk)
 
-        self.insert(trial_spks)
+        self.insert(trial_spks, skip_duplicates=True)
 
 
 @schema
