@@ -19,7 +19,7 @@ from ibl_pipeline.plotting import ephys as ephys_plotting
 # ephys.Cluster.populate(display_progress=True, suppress_errors=True)
 
 print('Testing ingestion of plotting raster...')
-ephys_plotting.RasterLinkOnly.populate(
+ephys_plotting.RasterLinkS3.populate(
     display_progress=True, suppress_errors=True)
 
 print('Testing ingestion of plotting psth')
