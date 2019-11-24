@@ -326,7 +326,7 @@ def create_raster_plot_combined(trials, align_event,
                     for i, spike_time in enumerate(spk_times_right)]
         id_right = np.hstack(id_right)
     else:
-        id_right = [max(id_right)]
+        id_right = [max(id_left)]
 
     fig = plt.figure(dpi=150, frameon=False, figsize=[10, 5])
     ax = plt.Axes(fig, [0., 0., 1., 1.])
