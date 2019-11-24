@@ -350,6 +350,7 @@ class RasterLinkOnly(dj.Computed):
     mark_label=null:         varchar(32)
     -> RasterLayoutTemplate
     """
+    key_source = ephys.Cluster & ephys.TrialSpikes
 
     def make(self, key):
         cluster = ephys.Cluster & key
@@ -530,7 +531,7 @@ class Psth(dj.Computed):
     ---
     plotting_data:       blob@plotting
     """
-    key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"')
+    key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"') & ephys.TrialSpikes
 
     def make(self, key):
         cluster = ephys.Cluster & key
