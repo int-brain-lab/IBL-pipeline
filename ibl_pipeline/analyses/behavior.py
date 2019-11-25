@@ -480,7 +480,7 @@ class SessionTrainingStatus(dj.Computed):
                 task_protocols = (acquisition.Session & sessions_rel).fetch('task_protocol')
                 delays = (behavior.SessionDelay & sessions_rel).fetch('session_delay_in_mins')
 
-                if len(ephys_board) == 3 and np.any(np.logical_and('ephys' in task_protocols, delays > 15)):
+                if len(ephys_board) == 3 and np.any(delays > 15):
 
                     n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
                     performance_easy = (PsychResults & sessions_rel).fetch(

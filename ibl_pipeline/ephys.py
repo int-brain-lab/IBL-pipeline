@@ -187,7 +187,6 @@ class Cluster(dj.Imported):
                              'clusters.depths',
                              'clusters.peakToTrough']
 
-
         clusters_data = [
             one.load(eID, dataset_types=[dataset])
             for dataset in clusters_datasets
