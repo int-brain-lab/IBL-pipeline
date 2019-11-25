@@ -155,29 +155,6 @@ class Template(dj.Imported):
     """
 
 
-idx_mapping_clusters = {
-    # amps, channels, depths, peakToTrough
-    'f354dc45-caef-4e3e-bd42-2c19a5425114': [[0, 2], [1, 0], [0, 1], [0, 1]],
-    '1d364d2b-e02b-4b5d-869c-11c1a0c8cafc': [[1, 2], [0, 2], [1, 2], [0, 2]],
-    '4330cd7d-a513-4385-86ea-ca1a6cc04e1d': [[0, 1], [1, 0], [0, 1], [1, 0]],
-    '8c2e6449-57f0-4632-9f18-66e6ca90c522': [[0, 1], [0, 1], [0, 1], [0, 1]],
-    'f6f947b8-c123-4e27-8933-f624a8c3e8cc': [[0, 1], [0, 1], [0, 1], [1, 0]],
-    '713cf757-688f-4fc1-a2f6-2f997c9915c0': [[0, 1], [0, 1], [0, 1], [0, 1]],
-    '63b83ddf-b7ea-40db-b1e2-93c2a769b6e5': [[0, 1], [0, 1], [1, 0], [0, 1]]
-}
-
-idx_mapping_spikes = {
-    # amps, clusters, depths, times
-    'f354dc45-caef-4e3e-bd42-2c19a5425114': [[1, 0], [0, 1], [1, 0], [1, 0]],
-    '1d364d2b-e02b-4b5d-869c-11c1a0c8cafc': [[1, 0], [1, 0], [0, 1], [1, 0]],
-    '4330cd7d-a513-4385-86ea-ca1a6cc04e1d': [[1, 0], [1, 0], [1, 0], [1, 0]],
-    '8c2e6449-57f0-4632-9f18-66e6ca90c522': [[0, 1], [1, 0], [1, 0], [0, 1]],
-    'f6f947b8-c123-4e27-8933-f624a8c3e8cc': [[0, 1], [0, 1], [0, 1], [0, 1]],
-    '713cf757-688f-4fc1-a2f6-2f997c9915c0': [[0, 1], [0, 1], [1, 0], [0, 1]],
-    '63b83ddf-b7ea-40db-b1e2-93c2a769b6e5': [[0, 1], [0, 1], [0, 1], [0, 1]]
-}
-
-
 @schema
 class Cluster(dj.Imported):
     definition = """
@@ -210,6 +187,7 @@ class Cluster(dj.Imported):
                              'clusters.depths',
                              'clusters.peakToTrough']
 
+
         clusters_data = [
             one.load(eID, dataset_types=[dataset])
             for dataset in clusters_datasets
@@ -225,13 +203,34 @@ class Cluster(dj.Imported):
             for dataset in spikes_datasets
         ]
 
+        cluster_lengths = [
+            [len(subdata) for subdata in data]
+            for data in clusters_data]
+        spikes_lengths = [
+            [len(subdata) for subdata in data]
+            for data in spikes_data]
+
+        # spikes_data[1] is spikes.clusters, match the spikes
+        # with clusters by this dataset.
+        max_cluster = [max(data)+1 for data in spikes_data[1]]
+
+        standard_order_cluster = cluster_lengths[0]
+        idx_cluster = [
+            [cluster_length.index(x) for x in standard_order_cluster]
+            for cluster_length in cluster_lengths]
+
+        standard_order_spikes = [spikes_lengths[1][idx]
+                                 for idx in idx_cluster_spikes]
+        idx_spikes = [[spikes_length.index(x) for x in standard_order_spikes]
+                      for spikes_length in spikes_lengths]
+
         clusters = []
         for probe_idx in [0, 1]:
 
             clusters_data_probe = []
 
             for idata, data in enumerate(clusters_data):
-                idx = idx_mapping_clusters[eID][idata][probe_idx]
+                idx = idx_clusters[idata][probe_idx]
                 clusters_data_probe.append(data[idx])
 
             clusters_amps = clusters_data_probe[0]
@@ -242,7 +241,7 @@ class Cluster(dj.Imported):
             spikes_data_probe = []
 
             for idata, data in enumerate(spikes_data):
-                idx = idx_mapping_spikes[eID][idata][probe_idx]
+                idx = idx_spikes[idata][probe_idx]
                 spikes_data_probe.append(data[idx])
 
             spikes_amps = spikes_data_probe[0]
