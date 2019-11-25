@@ -681,7 +681,7 @@ class PsthDataVarchar(dj.Computed):
     -> PsthTemplate
     """
     key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"') & \
-        behavior.TrialSet
+        behavior.TrialSet & ephys.TrialSpikes
 
     def make(self, key):
         cluster = ephys.Cluster & key
