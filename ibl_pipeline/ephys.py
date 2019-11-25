@@ -219,6 +219,8 @@ class Cluster(dj.Imported):
             [cluster_length.index(x) for x in standard_order_cluster]
             for cluster_length in cluster_lengths]
 
+        idx_cluster_spikes = [max_cluster.index(x)
+                              for x in standard_order_cluster]
         standard_order_spikes = [spikes_lengths[1][idx]
                                  for idx in idx_cluster_spikes]
         idx_spikes = [[spikes_length.index(x) for x in standard_order_spikes]
