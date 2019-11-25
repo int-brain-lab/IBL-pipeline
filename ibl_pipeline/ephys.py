@@ -215,7 +215,7 @@ class Cluster(dj.Imported):
         max_cluster = [max(data)+1 for data in spikes_data[1]]
 
         standard_order_cluster = cluster_lengths[0]
-        idx_cluster = [
+        idx_clusters = [
             [cluster_length.index(x) for x in standard_order_cluster]
             for cluster_length in cluster_lengths]
 
