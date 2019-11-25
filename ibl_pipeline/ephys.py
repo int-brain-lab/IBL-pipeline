@@ -168,8 +168,8 @@ idx_mapping_clusters = {
 
 idx_mapping_spikes = {
     # amps, clusters, depths, times
-    'f354dc45-caef-4e3e-bd42-2c19a5425114': [[1, 2], [1, 0], [2, 1], [2, 0]],
-    '1d364d2b-e02b-4b5d-869c-11c1a0c8cafc': [[1, 2], [0, 1], [2, 0], [0, 2]],
+    'f354dc45-caef-4e3e-bd42-2c19a5425114': [[1, 0], [0, 1], [1, 0], [1, 0]],
+    '1d364d2b-e02b-4b5d-869c-11c1a0c8cafc': [[1, 0], [1, 0], [0, 1], [1, 0]],
     '4330cd7d-a513-4385-86ea-ca1a6cc04e1d': [[1, 0], [1, 0], [1, 0], [1, 0]],
     '8c2e6449-57f0-4632-9f18-66e6ca90c522': [[0, 1], [1, 0], [1, 0], [0, 1]],
     'f6f947b8-c123-4e27-8933-f624a8c3e8cc': [[0, 1], [0, 1], [0, 1], [0, 1]],
@@ -243,7 +243,6 @@ class Cluster(dj.Imported):
 
             for idata, data in enumerate(spikes_data):
                 idx = idx_mapping_spikes[eID][idata][probe_idx]
-                print(idata, probe_idx, idx)
                 spikes_data_probe.append(data[idx])
 
             spikes_amps = spikes_data_probe[0]
