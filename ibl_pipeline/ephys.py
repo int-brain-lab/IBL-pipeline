@@ -243,6 +243,7 @@ class Cluster(dj.Imported):
 
             for idata, data in enumerate(spikes_data):
                 idx = idx_mapping_spikes[eID][idata][probe_idx]
+                print(idata, probe_idx, idx)
                 spikes_data_probe.append(data[idx])
 
             spikes_amps = spikes_data_probe[0]
