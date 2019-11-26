@@ -15,13 +15,13 @@ from ibl_pipeline.plotting import ephys as ephys_plotting
 # ephys.ChannelGroup.populate(display_progress=True, suppress_errors=True)
 
 
-# print('Testing ingestion of Cluster...')
-# ephys.Cluster.populate(display_progress=True, suppress_errors=True)
+print('Testing ingestion of Cluster...')
+ephys.Cluster.populate(display_progress=True, suppress_errors=True)
 
-print('Testing ingestion of plotting raster...')
-ephys_plotting.RasterLinkS3.populate(
-    display_progress=True, suppress_errors=True)
+# print('Testing ingestion of plotting raster...')
+# ephys_plotting.RasterLinkS3.populate(
+#     display_progress=True, suppress_errors=True)
 
 print('Testing ingestion of plotting psth')
-ephys_plotting.PsthData.populate(
+ephys_plotting.PsthDataVarchar.populate(
     display_progress=True, suppress_errors=True)
