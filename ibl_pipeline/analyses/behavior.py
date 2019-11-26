@@ -279,14 +279,15 @@ class BehavioralSummaryByDate(dj.Computed):
                     signed_contrast='trial_stim_contrast_left- \
                         trial_stim_contrast_right',
                     rt='trial_response_time-trial_go_cue_trigger_time')
-                rts += list(trials_rt_go_cue_only.fetch('rt'))
+                rts += list(
+                    (trials_rt_go_cue_only & 'rt is not NULL').fetch('rt'))
 
             if len(trials_stim_on):
                 trials_rt_stim_on = trials.proj(
                     signed_contrast='trial_stim_contrast_left- \
                                     trial_stim_contrast_right',
                     rt='trial_response_time-trial_stim_on_time')
-                rts += list(trials_rt_stim_on.fetch('rt'))
+                rts += list(trials_rt_stim_on & 'rt is not NULL'.fetch('rt'))
 
             if len(rts):
                 rt_overall['median_reaction_time'] = np.median(rts)
@@ -473,7 +474,7 @@ class SessionTrainingStatus(dj.Computed):
 
                 sessions_rel = sessions[-3:]
 
-                # were these last 3 sessions done on an ephys rig and one of them is delayed ephys protocol?
+                # were these last 3 sessions done on an ephys rig?
                 bpod_board = (behavior.Settings & sessions_rel).fetch('pybpod_board')
                 ephys_board = [True for i in list(bpod_board) if 'ephys' in i]
 
