@@ -458,7 +458,7 @@ class SessionTrainingStatus(dj.Computed):
         # check whether the session is "ready4recording"
         task_protocol = (acquisition.Session & key).fetch1('task_protocol')
 
-        if task_protocol and ('ephys' in task_protocol) or ('biased' in task_protocol):
+        if task_protocol and (('ephys' in task_protocol) or ('biased' in task_protocol)):
 
             # Criteria for "ready4recording"
             sessions = (behavior.TrialSet & subject_key &
