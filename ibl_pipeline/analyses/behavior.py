@@ -287,7 +287,7 @@ class BehavioralSummaryByDate(dj.Computed):
                     signed_contrast='trial_stim_contrast_left- \
                                     trial_stim_contrast_right',
                     rt='trial_response_time-trial_stim_on_time')
-                rts += list(trials_rt_stim_on & 'rt is not NULL'.fetch('rt'))
+                rts += list((trials_rt_stim_on & 'rt is not NULL').fetch('rt'))
 
             if len(rts):
                 rt_overall['median_reaction_time'] = np.median(rts)
