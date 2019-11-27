@@ -290,9 +290,12 @@ class PsthDataVarchar(dj.Computed):
             trial_signed_contrast='trial_stim_contrast_right - trial_stim_contrast_left'
         ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"' & key
 
+        x_lim = [-1, 1]
         if not len(trials_all):
             self.insert1(dict(
-                **key, psth_x_lim=[-1, 1], psth_template_idx=0))
+                **key,
+                psth_x_lim=','.join('{:0.2f}'.format(x) for x in x_lim),
+                psth_template_idx=0))
             return
 
         trials_left = trials_all & 'trial_response_choice="CW"' \
@@ -303,7 +306,6 @@ class PsthDataVarchar(dj.Computed):
             trials_right.proj() - trials_left.proj()
 
         align_event = (ephys.Event & key).fetch1('event')
-        x_lim = [-1, 1]
 
         entry = dict(**key)
         if len(trials_left):
@@ -327,6 +329,10 @@ class PsthDataVarchar(dj.Computed):
             entry.update(
                 psth_incorrect=','.join('{:0.5f}'.format(x)
                                         for x in psth_incorrect))
+
+        psth_time, psth_all = putils.compute_psth(
+            trials_all, 'all', align_event,
+            1000, 10, x_lim, as_dict=False)
 
         entry.update(
             psth_x_lim=','.join('{:0.2f}'.format(x) for x in x_lim),
