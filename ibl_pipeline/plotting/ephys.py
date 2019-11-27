@@ -731,6 +731,7 @@ class PsthDataVarchar(dj.Computed):
             1000, 10, x_lim, as_dict=False)
 
         entry.update(
+            psth_x_lim=','.join('{:0.2f}'.format(x) for x in x_lim),
             psth_all=','.join('{:0.5f}'.format(x) for x in psth_all),
             psth_time=','.join('{:0.5f}'.format(x) for x in psth_time),
             psth_template_idx=0)
