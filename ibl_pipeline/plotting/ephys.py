@@ -138,7 +138,7 @@ class RasterLinkS3(dj.Computed):
     -> ephys.Cluster
     -> ValidAlignSort
     ---
-    plotting_data_link:      varchar(255)
+    plotting_data_link=null: varchar(255)
     plot_ylim:               blob
     mark_label=null:         varchar(32)
     -> RasterLayoutTemplate
@@ -160,6 +160,7 @@ class RasterLinkS3(dj.Computed):
             ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
 
         if not len(trials):
+            self.insert1(dict(**key, plot_ylim=[0, 3]))
             return
         align_event = (ephys.Event & key).fetch1('event')
         sorting_var = (Sorting & key).fetch1('sort_by')
