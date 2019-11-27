@@ -160,8 +160,14 @@ class RasterLinkS3(dj.Computed):
             ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
 
         if not len(trials):
-            self.insert1(dict(**key, plot_ylim=[0, 3]))
+            if key['sort_by'] == 'trial_id':
+                key['template_idx'] = 0
+            else:
+                key['template_idx'] = 1
+            self.insert1(dict(
+                **key, plot_ylim=[0, 3]))
             return
+
         align_event = (ephys.Event & key).fetch1('event')
         sorting_var = (Sorting & key).fetch1('sort_by')
 
