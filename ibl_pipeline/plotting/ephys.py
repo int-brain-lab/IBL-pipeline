@@ -60,8 +60,7 @@ class Raster(dj.Computed):
     -> ephys.Cluster
     -> ValidAlignSort
     ---
-    raster_data:      blob@plotting
-    raster_layout:    blob@plotting
+    plotting_data:      blob@plotting
     """
     key_source = ephys.Cluster * ValidAlignSort & behavior.TrialSet & ephys.TrialSpikes
 
@@ -153,8 +152,9 @@ class Raster(dj.Computed):
         else:
             data = [axis, legend_left, legend_right, legend_incorrect]
 
-        key['raster_data'] = data
-        key['raster_layout'] = layout
+        fig = go.Figure(data=data, layout=layout)
+        key['plotting_data'] = fig.to_plotly_json()
+
         self.insert1(key)
 
 
@@ -303,8 +303,7 @@ class Psth(dj.Computed):
     -> ephys.Cluster
     -> ephys.Event
     ---
-    psth_data:       blob@plotting
-    psth_layout:     blob@plotting
+    plotting_data:     blob@plotting
     """
     key_source = ephys.Cluster * ValidAlignSort & behavior.TrialSet & ephys.TrialSpikes
 
@@ -375,8 +374,9 @@ class Psth(dj.Computed):
             ),
         )
 
-        key['psth_data'] = data
-        key['psth_layout'] = layout
+        fig = go.Figure(data=data, layout=layout)
+        key['plotting_data'] = fig.to_plotly_json()
+
         self.insert1(key)
 
 
