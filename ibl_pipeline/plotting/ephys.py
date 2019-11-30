@@ -55,6 +55,110 @@ class TrialCondition(dj.Lookup):
 
 
 @schema
+class Raster(dj.Computed):
+    definition = """
+    -> ephys.Cluster
+    -> ValidAlignSort
+    ---
+    raster_data:      blob@plotting
+    raster_layout:    blob@plotting
+    """
+    key_source = ephys.Cluster * ValidAlignSort & behavior.TrialSet & ephys.TrialSpikes
+
+    def make(self, key):
+        cluster = ephys.Cluster & key
+        trials = \
+            (behavior.TrialSet.Trial * ephys.TrialSpikes & cluster).proj(
+                'trial_start_time', 'trial_stim_on_time',
+                'trial_response_time',
+                'trial_feedback_time',
+                'trial_response_choice',
+                'trial_spike_times',
+                trial_duration='trial_end_time-trial_start_time',
+                trial_signed_contrast="""trial_stim_contrast_right -
+                                         trial_stim_contrast_left"""
+            ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
+
+        if not len(trials):
+            return
+        align_event = (ephys.Event & key).fetch1('event')
+        sorting_var = (Sorting & key).fetch1('sort_by')
+        x_lim = [-1, 1]
+        encoded_string, y_lim, label = putils.create_raster_plot_combined(
+            trials, align_event, sorting_var)
+
+        axis = go.Scatter(
+            x=x_lim,
+            y=y_lim,
+            mode='markers',
+            marker=dict(opacity=0),
+            showlegend=False
+        )
+
+        legend_left = putils.get_legend('left', 'spike')
+        legend_right = putils.get_legend('right', 'spike')
+        legend_incorrect = putils.get_legend('incorrect', 'spike')
+
+        if sorting_var != 'trial_id':
+            legend_mark_left = putils.get_legend('left', label)
+            legend_mark_right = putils.get_legend('right', label)
+            legend_mark_incorrect = putils.get_legend('incorrect', label)
+
+        layout = go.Layout(
+            images=[dict(
+                source='data:image/png;base64, ' + encoded_string.decode(),
+                sizex=x_lim[1] - x_lim[0],
+                sizey=y_lim[1] - y_lim[0],
+                x=x_lim[0],
+                y=y_lim[1],
+                xref='x',
+                yref='y',
+                sizing='stretch',
+                layer='below'
+                )],
+            width=580,
+            height=370,
+            margin=go.layout.Margin(
+                l=50,
+                r=30,
+                b=40,
+                t=80,
+                pad=0
+            ),
+            title=dict(
+                text='Raster, aligned to {}'.format(align_event),
+                x=0.21,
+                y=0.87
+            ),
+            xaxis=dict(
+                title='Time (sec)',
+                range=x_lim,
+                showgrid=False
+            ),
+            yaxis=dict(
+                title='Trial idx',
+                range=y_lim,
+                showgrid=False
+            ),
+        #     template=dict(
+        #         layout=dict(
+        #             plot_bgcolor="#fff"
+        #         )
+        #     )
+        )
+
+        if sorting_var != 'trial_id':
+            data = [axis, legend_left, legend_right, legend_incorrect,
+                    legend_mark_left, legend_mark_right, legend_mark_incorrect]
+        else:
+            data = [axis, legend_left, legend_right, legend_incorrect]
+
+        key['raster_data'] = data
+        key['raster_layout'] = layout
+        self.insert1(key)
+
+
+@schema
 class RasterLayoutTemplate(dj.Lookup):
     definition = """
     template_idx:   int
@@ -190,6 +294,89 @@ class RasterLinkS3(dj.Computed):
         else:
             key['template_idx'] = 1
 
+        self.insert1(key)
+
+
+@schema
+class Psth(dj.Computed):
+    definition = """
+    -> ephys.Cluster
+    -> ephys.Event
+    ---
+    psth_data:       blob@plotting
+    psth_layout:     blob@plotting
+    """
+    key_source = ephys.Cluster * ValidAlignSort & behavior.TrialSet & ephys.TrialSpikes
+
+    def make(self, key):
+        cluster = ephys.Cluster & key
+        trials_all = (behavior.TrialSet.Trial * ephys.TrialSpikes & cluster).proj(
+            'trial_start_time', 'trial_stim_on_time',
+            'trial_response_time', 'trial_feedback_time',
+            'trial_response_choice', 'trial_spike_times',
+            trial_duration='trial_end_time-trial_start_time',
+            trial_signed_contrast='trial_stim_contrast_right - trial_stim_contrast_left'
+        ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"' & key
+
+        trials_left = trials_all & 'trial_response_choice="CW"' \
+            & 'trial_signed_contrast < 0'
+        trials_right = trials_all & 'trial_response_choice="CCW"' \
+            & 'trial_signed_contrast > 0'
+        trials_incorrect = trials_all - \
+            trials_right.proj() - trials_left.proj()
+
+        align_event = (ephys.Event & key).fetch1('event')
+        x_lim = [-1, 1]
+        data = []
+        if len(trials_left):
+            data.append(
+                putils.compute_psth(
+                    trials_left, 'left', align_event, 1000, 10, x_lim)
+            )
+        if len(trials_right):
+            data.append(
+                putils.compute_psth(
+                    trials_right, 'right', align_event, 1000, 10, x_lim)
+            )
+        if len(trials_incorrect):
+            data.append(
+                putils.compute_psth(
+                    trials_incorrect, 'incorrect', align_event, 1000, 10, x_lim)
+            )
+
+        data.append(
+            putils.compute_psth(
+                trials_all, 'all', align_event, 1000, 10, x_lim)
+        )
+
+        layout = go.Layout(
+            width=580,
+            height=370,
+            margin=go.layout.Margin(
+                l=50,
+                r=30,
+                b=40,
+                t=80,
+                pad=0
+            ),
+            title=dict(
+                text='PSTH, aligned to {} time'.format(align_event),
+                x=0.2,
+                y=0.87
+            ),
+            xaxis=dict(
+                title='Time (sec)',
+                range=x_lim,
+                showgrid=False
+            ),
+            yaxis=dict(
+                title='Firing rate (spks/sec)',
+                showgrid=False
+            ),
+        )
+
+        key['psth_data'] = data
+        key['psth_layout'] = layout
         self.insert1(key)
 
 
