@@ -305,7 +305,9 @@ class Psth(dj.Computed):
     ---
     plotting_data:     blob@plotting
     """
-    key_source = ephys.Cluster * ValidAlignSort & behavior.TrialSet & ephys.TrialSpikes
+
+    key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"') & \
+        behavior.TrialSet & ephys.TrialSpikes
 
     def make(self, key):
         cluster = ephys.Cluster & key
