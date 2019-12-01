@@ -287,7 +287,7 @@ def get_spike_times_trials(trials, sorting_var, align_event,
 
 def create_raster_plot_combined(trials, align_event,
                                 sorting_var='trial_id',
-                                x_lim=[-10, 10],
+                                x_lim=[-1, 1],
                                 show_plot=False,
                                 fig_dir=None,
                                 store_type=None):

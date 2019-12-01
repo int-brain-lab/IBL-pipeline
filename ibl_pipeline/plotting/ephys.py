@@ -261,7 +261,7 @@ class RasterLinkS3(dj.Computed):
                 trial_duration='trial_end_time-trial_start_time',
                 trial_signed_contrast="""trial_stim_contrast_right -
                                          trial_stim_contrast_left"""
-            ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
+            ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"' & key
 
         if not len(trials):
             if key['sort_by'] == 'trial_id':
@@ -350,10 +350,10 @@ class Psth(dj.Computed):
                 trials_all, 'all', align_event, 1000, 10, x_lim)
         )
 
-        layout = go.Layout(
+        layout = dict(
             width=580,
             height=370,
-            margin=go.layout.Margin(
+            margin=dict(
                 l=50,
                 r=30,
                 b=40,
@@ -477,14 +477,13 @@ class PsthDataVarchar(dj.Computed):
         behavior.TrialSet & ephys.TrialSpikes
 
     def make(self, key):
-        cluster = ephys.Cluster & key
-        trials_all = (behavior.TrialSet.Trial * ephys.TrialSpikes & cluster).proj(
+        trials_all = (behavior.TrialSet.Trial * ephys.TrialSpikes & key).proj(
             'trial_start_time', 'trial_stim_on_time',
             'trial_response_time', 'trial_feedback_time',
             'trial_response_choice', 'trial_spike_times',
             trial_duration='trial_end_time-trial_start_time',
             trial_signed_contrast='trial_stim_contrast_right - trial_stim_contrast_left'
-        ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"' & key
+        ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
 
         x_lim = [-1, 1]
         if not len(trials_all):
