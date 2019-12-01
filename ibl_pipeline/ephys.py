@@ -336,7 +336,7 @@ class TrialSpikes(dj.Computed):
                             spike_times[f] - stim_on
                     elif event == 'response':
                         trial_spk['trial_spike_times'] = \
-                            spike_times[f] - (response + trial_start)
+                            spike_times[f] - response
                     elif event == 'feedback':
                         trial_spk['trial_spike_times'] = \
                             spike_times[f] - feedback
