@@ -297,7 +297,7 @@ class TrialSpikes(dj.Computed):
     -> behavior.TrialSet.Trial
     -> Event
     ---
-    trial_spike_times=null:   blob     # spike time for each trial, aligned to different event times
+    trial_spike_times=null:   longblob     # spike time for each trial, aligned to different event times
     """
     key_source = behavior.TrialSet * Cluster
 
@@ -317,23 +317,23 @@ class TrialSpikes(dj.Computed):
             f = np.logical_and(spike_times < trial['trial_end_time'],
                                spike_times > trial['trial_start_time'])
 
-            if not np.any(f):
-                continue
-
             events = (Event & 'event!="go cue"').fetch('event')
             for event in events:
-                if event == 'stim on':
-                    trial_spk['trial_spike_times'] = \
-                        spike_times[f] - trial['trial_stim_on_time']
-                elif event == 'response':
-                    trial_spk['trial_spike_times'] = \
-                        spike_times[f] - trial['trial_response_time']
-                elif event == 'feedback':
-                    if trial['trial_feedback_time']:
+                if not np.any(f):
+                    trial_spk['trial_spike_times'] = []
+                else:
+                    if event == 'stim on':
                         trial_spk['trial_spike_times'] = \
-                            spike_times[f] - trial['trial_feedback_time']
-                    else:
-                        continue
+                            spike_times[f] - trial['trial_stim_on_time']
+                    elif event == 'response':
+                        trial_spk['trial_spike_times'] = \
+                            spike_times[f] - trial['trial_response_time']
+                    elif event == 'feedback':
+                        if trial['trial_feedback_time']:
+                            trial_spk['trial_spike_times'] = \
+                                spike_times[f] - trial['trial_feedback_time']
+                        else:
+                            continue
                 trial_spk['event'] = event
                 trial_spks.append(trial_spk.copy())
 
