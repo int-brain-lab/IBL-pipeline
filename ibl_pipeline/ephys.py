@@ -2,6 +2,7 @@ import datajoint as dj
 import numpy as np
 from os import path, environ
 from . import acquisition, reference, behavior, data
+from tqdm import tqdm
 import numpy as np
 try:
     from oneibl.one import ONE
