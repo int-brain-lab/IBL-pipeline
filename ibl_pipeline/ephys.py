@@ -304,7 +304,7 @@ class TrialSpikes(dj.Computed):
     def make(self, key):
         trials = behavior.TrialSet.Trial & key
         trial_spks = []
-        cluster = Cluster & key
+        cluster = Cluster() & key
         spike_times = cluster.fetch1('cluster_spike_times')
 
         for trial, itrial in zip(trials.fetch(as_dict=True), trials.fetch('KEY')):
