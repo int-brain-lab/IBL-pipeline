@@ -22,14 +22,32 @@ import ibl_pipeline
 
 def get_sort_and_marker(align_event, sorting_var):
 
+    '''
+    Based on align_event and sorting variables, get the expression for query.
+
+    Parameters
+    -----------
+    align_event: the event name that trials need to align to
+    sorting_var: the variable to sort with for the raster plot
+
+    Returns
+    --------
+    sorting_query: sorting variable used in the query,
+                   e.g. 'trial_response_time - trial_stim_on_time'
+    mark: marking variable used in the query.
+          e.g. for sorting with 'response - stim on'
+          If aligned to stim on time, mark response_time - stim_on_time (positive)
+          If alighed to response time, mark stim_on_time - response_time (negative)
+    label: label of the marker event, e.g. if aligned to stim on, mark response
+    '''
+
     if sorting_var == 'response - stim on':
-        sort_by = 'trial_response_time + trial_start_time - trial_stim_on_time'
+        sorting_query = 'trial_response_time - trial_stim_on_time'
         if align_event == 'stim on':
-            mark = sort_by
+            mark = sorting_query
             label = 'response'
         elif align_event == 'response':
-            mark = """trial_stim_on_time -
-                      trial_response_time - trial_start_time"""
+            mark = 'trial_stim_on_time - trial_response_time'
             label = 'stim on'
         else:
             raise NameError(
@@ -39,9 +57,9 @@ def get_sort_and_marker(align_event, sorting_var):
                 """
             )
     elif sorting_var == 'feedback - stim on':
-        sort_by = 'trial_feedback_time - trial_stim_on_time'
+        sorting_query = 'trial_feedback_time - trial_stim_on_time'
         if align_event == 'stim on':
-            mark = sort_by
+            mark = sorting_query
             label = 'feedback'
         elif align_event == 'feedback':
             mark = 'trial_stim_on_time - trial_feedback_time'
@@ -54,14 +72,12 @@ def get_sort_and_marker(align_event, sorting_var):
                 """
             )
     elif sorting_var == 'feedback - response':
-        sort_by = """trial_feedback_time -
-                     trial_response_time - trial_start_time"""
+        sorting_query = 'trial_feedback_time - trial_response_time'
         if align_event == 'response':
-            mark = sort_by
+            mark = sorting_query
             label = 'feedback'
         elif align_event == 'feedback':
-            mark = """trial_response_time + trial_start_time -
-                      trial_feedback_time"""
+            mark = 'trial_response_time - trial_feedback_time'
             label = 'response'
         else:
             raise NameError(
@@ -71,7 +87,7 @@ def get_sort_and_marker(align_event, sorting_var):
                 """
             )
     elif sorting_var == 'trial_id':
-        sort_by = 'trial_id'
+        sorting_query = 'trial_id'
         mark = None
         label = None
     else:
@@ -82,26 +98,26 @@ def get_sort_and_marker(align_event, sorting_var):
              "response - stim on", \n
              "feedback - stim on", \n
              "feedback - response"]'""")
-    return sort_by, mark, label
+    return sorting_query, mark, label
 
 
 def create_raster_plot(trials, align_event,
                        sorting_var='trial_id', x_lim=[-1, 1],
                        show_plot=False):
 
-    sort_by, mark, label = get_sort_and_marker(
+    sorting_query, mark, label = get_sort_and_marker(
         align_event, sorting_var)
 
     if sorting_var != 'trial_id':
         trials = (trials & 'event="{}"'.format(align_event)).proj(
-            'trial_id', 'trial_spike_times', sort_by=sort_by, mark=mark)
+            'trial_id', 'trial_spike_times', sorting_query=sorting_query, mark=mark)
         spk_times, marking_points = trials.fetch(
-            'trial_spike_times', 'mark', order_by='sort_by')
+            'trial_spike_times', 'mark', order_by='sorting_query')
     else:
         trials = (trials & 'event="{}"'.format(align_event)).proj(
-            'trial_id', 'trial_spike_times', sort_by=sort_by)
+            'trial_id', 'trial_spike_times', sorting_query=sorting_query)
         spk_times = trials.fetch(
-            'trial_spike_times', order_by='sort_by')
+            'trial_spike_times', order_by='sorting_query')
 
     spk_times_all = np.hstack(spk_times)
     id_all = [[i] * len(spike_time) for i, spike_time in enumerate(spk_times)]
@@ -237,26 +253,63 @@ def compute_psth(trials, trial_type, align_event, nbins,
 
 
 def get_spike_times(trials, sorting_var, align_event,
-                    sort_by=None,
+                    sorting_query=None,
                     mark=None):
+    '''
+    get spike times as a vector and values of marking points
+
+    Parameters:
+    -----------
+    trials: query of behavior.TrialSet.Trial * ephys.TrialSpikes,
+            for suitable conditions
+    sorting_var: the variable to sort with for the raster plot
+    align_event: the event name that the spike times aligns to
+    sorting_query: sorting variable used in the query,
+                   e.g. 'trial_response_time - trial_stim_on_time'
+    mark: marking variable used in the query.
+          e.g. for sorting with 'response - stim on'
+          If aligned to stim on time, mark response_time - stim_on_time (positive)
+          If alighed to response time, mark stim_on_time - response_time (negative)
+
+    Returns:
+    -----------
+    spk_times: trial spike times as an array of spike times per trial,
+               including the trials without spikes.
+    marking_points: values of marking points,
+                    e.g. normalized reponse time for sorting
+                    'reponse_time - stim_on_time'
+    '''
+
     if sorting_var != 'trial_id':
         trials = (trials & 'event="{}"'.format(align_event)).proj(
-            'trial_id', 'trial_spike_times', sort_by=sort_by, mark=mark)
+            'trial_id', 'trial_spike_times',
+            sorting_query=sorting_query, mark=mark)
         spk_times, marking_points = trials.fetch(
-            'trial_spike_times', 'mark', order_by='sort_by')
+            'trial_spike_times', 'mark', order_by='sorting_query')
     else:
-        trials = (trials & 'event="{}"'.format(align_event)).proj(
-            'trial_id', 'trial_spike_times', sort_by=sort_by)
-        spk_times = trials.fetch(
-            'trial_spike_times', order_by='sort_by')
+        trials = (trials & 'event="{}"'.format(align_event)).fetch(
+            'trial_spike_times', order_by='trial_id')
         marking_points = None
 
     return spk_times, marking_points
 
 
 def get_spike_times_trials(trials, sorting_var, align_event,
-                           sort_by=None,
+                           sorting_query=None,
                            mark=None):
+    '''
+    return spike times of different groups of
+    trials, right, left, and incorrect
+
+    Parameters:
+    -----------
+    trials: query of behavior.TrialSet.Trial * ephys.TrialSpikes,
+            for suitable conditions
+    sorting_var: the variable to sort with for the raster plot
+    align_event: the event name that the spike times aligns to
+    sorting_query: sorting variable used in the query,
+                   e.g. 'trial_response_time - trial_stim_on_time'
+    '''
 
     trials_left = trials & 'trial_response_choice="CW"' & \
         'trial_signed_contrast < 0'
@@ -268,7 +321,7 @@ def get_spike_times_trials(trials, sorting_var, align_event,
     kargs = dict(
         sorting_var=sorting_var,
         align_event=align_event,
-        sort_by=sort_by,
+        sorting_query=sorting_query,
         mark=mark
     )
 
@@ -292,64 +345,68 @@ def create_raster_plot_combined(trials, align_event,
                                 fig_dir=None,
                                 store_type=None):
 
-    sort_by, mark, label = get_sort_and_marker(
-        align_event, sorting_var
-    )
-
-    spk_times_left, marking_points_left, \
-        spk_times_right, marking_points_right, \
-        spk_times_incorrect, marking_points_incorrect = \
-        get_spike_times_trials(
-            trials, sorting_var, align_event, sort_by, mark)
-
-    id_gap = len(trials) * 0.02
-
-    if len(spk_times_incorrect):
-        spk_times_all_incorrect = np.hstack(spk_times_incorrect)
-        id_incorrect = [[i] * len(spike_time)
-                        for i, spike_time in enumerate(spk_times_incorrect)]
-        id_incorrect = np.hstack(id_incorrect)
-    else:
-        id_incorrect = [0]
-
-    if len(spk_times_left):
-        spk_times_all_left = np.hstack(spk_times_left)
-        id_left = [[i + max(id_incorrect) + id_gap] * len(spike_time)
-                   for i, spike_time in enumerate(spk_times_left)]
-        id_left = np.hstack(id_left)
-    else:
-        id_left = [max(id_incorrect)]
-
-    if len(spk_times_right):
-        spk_times_all_right = np.hstack(spk_times_right)
-        id_right = [[i + max(id_left) + id_gap] * len(spike_time)
-                    for i, spike_time in enumerate(spk_times_right)]
-        id_right = np.hstack(id_right)
-    else:
-        id_right = [max(id_left)]
+    sorting_query, mark, label = get_sort_and_marker(
+        align_event, sorting_var)
 
     fig = plt.figure(dpi=150, frameon=False, figsize=[10, 5])
     ax = plt.Axes(fig, [0., 0., 1., 1.])
-    if len(spk_times_left):
-        ax.plot(spk_times_all_left, id_left, 'g.',
-                alpha=0.5, markeredgewidth=0, label='left trials')
-    if len(spk_times_right):
-        ax.plot(spk_times_all_right, id_right, 'b.',
-                alpha=0.5, markeredgewidth=0, label='right trials')
-    if len(spk_times_incorrect):
-        ax.plot(spk_times_all_incorrect, id_incorrect, 'r.',
-                alpha=0.5, markeredgewidth=0, label='incorrect trials')
 
-    if sorting_var != 'trial_id':
-        if len(spk_times_incorrect):
-            ax.plot(marking_points_incorrect,
-                    range(len(spk_times_incorrect)), 'r', label=label)
-        if len(spk_times_left):
-            ax.plot(marking_points_left,
-                    np.add(range(len(spk_times_left)), max(id_incorrect) + id_gap), 'g')
-        if len(spk_times_right):
-            ax.plot(marking_points_right,
-                    np.add(range(len(spk_times_right)), max(id_left) + id_gap), 'b')
+    if len(trials):
+        if sorting_var == 'trial_id':
+            spk_times, trial_ids = (trials & 'event="{}"'.format(align_event)).fetch(
+                'trial_spike_time', 'trial_id', order_by='trial_id')
+            spk_trial_ids = np.hstack(
+                [[trial_id] * len(spk_time)
+                    for trial_id, spk_time in zip(trial_ids, spk_times)])
+            ax.plot(spk_times, spk_trial_ids, 'k.', alpha=0.5,
+                    markeredgewidth=0)
+        else:
+            spk_times_left, marking_points_left, \
+                spk_times_right, marking_points_right, \
+                spk_times_incorrect, marking_points_incorrect = \
+                get_spike_times_trials(
+                    trials, sorting_var, align_event, sorting_query, mark)
+
+            id_gap = len(trials) * 0.02
+
+            if len(spk_times_incorrect):
+                spk_times_all_incorrect = np.hstack(spk_times_incorrect)
+                id_incorrect = [[i] * len(spike_time)
+                                for i, spike_time in
+                                enumerate(spk_times_incorrect)]
+                id_incorrect = np.hstack(id_incorrect)
+                ax.plot(spk_times_all_incorrect, id_incorrect, 'r.',
+                        alpha=0.5, markeredgewidth=0, label='incorrect trials')
+                ax.plot(marking_points_incorrect,
+                        range(len(spk_times_incorrect)), 'r', label=label)
+            else:
+                id_incorrect = [0]
+
+            if len(spk_times_left):
+                spk_times_all_left = np.hstack(spk_times_left)
+                id_left = [[i + max(id_incorrect) + id_gap] * len(spike_time)
+                           for i, spike_time in
+                           enumerate(spk_times_left)]
+                id_left = np.hstack(id_left)
+                ax.plot(spk_times_all_left, id_left, 'g.',
+                        alpha=0.5, markeredgewidth=0, label='left trials')
+                ax.plot(marking_points_left,
+                        np.add(range(len(spk_times_left)), max(id_incorrect) + id_gap), 'g')
+            else:
+                id_left = [max(id_incorrect)]
+
+            if len(spk_times_right):
+                spk_times_all_right = np.hstack(spk_times_right)
+                id_right = [[i + max(id_left) + id_gap] * len(spike_time)
+                            for i, spike_time in enumerate(spk_times_right)]
+                id_right = np.hstack(id_right)
+
+                ax.plot(spk_times_all_right, id_right, 'b.',
+                        alpha=0.5, markeredgewidth=0, label='right trials')
+                ax.plot(marking_points_right,
+                        np.add(range(len(spk_times_right)), max(id_left) + id_gap), 'b')
+            else:
+                id_right = [max(id_left)]
 
     ax.set_axis_off()
     fig.add_axes(ax)
