@@ -297,7 +297,7 @@ class TrialSpikes(dj.Computed):
     -> behavior.TrialSet.Trial
     -> Event
     ---
-    trial_spike_times=null:   blob@ephys     # spike time for each trial, aligned to different event times
+    trial_spike_times=null:   blob     # spike time for each trial, aligned to different event times
     """
     key_source = behavior.TrialSet & Cluster()
 
