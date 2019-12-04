@@ -310,9 +310,9 @@ class TrialSpikes(dj.Computed):
         for trial, itrial in zip(trials.fetch(as_dict=True), trials.fetch('KEY')):
             trial_spk = dict(
                 **itrial,
-                cluster_id=cluster['cluster_id'],
-                cluster_revision=cluster['cluster_revision'],
-                probe_idx=cluster['probe_idx']
+                cluster_id=key['cluster_id'],
+                cluster_revision=key['cluster_revision'],
+                probe_idx=key['probe_idx']
             )
             f = np.logical_and(spike_times < trial['trial_end_time'],
                                spike_times > trial['trial_start_time'])
