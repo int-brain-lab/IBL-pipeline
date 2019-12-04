@@ -382,6 +382,9 @@ def create_raster_plot_combined(trials, align_event,
             else:
                 id_incorrect = [0]
 
+            if not len(id_incorrect):
+                id_incorrect = [0]
+
             if len(spk_times_left):
                 spk_times_all_left = np.hstack(spk_times_left)
                 id_left = [[i + max(id_incorrect) + id_gap] * len(spike_time)
