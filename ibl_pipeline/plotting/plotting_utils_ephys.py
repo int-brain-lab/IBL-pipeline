@@ -398,6 +398,9 @@ def create_raster_plot_combined(trials, align_event,
             else:
                 id_left = [max(id_incorrect)]
 
+            if not len(id_left):
+                id_left = [max(id_incorrect)]
+
             if len(spk_times_right):
                 spk_times_all_right = np.hstack(spk_times_right)
                 id_right = [[i + max(id_left) + id_gap] * len(spike_time)
@@ -409,6 +412,9 @@ def create_raster_plot_combined(trials, align_event,
                 ax.plot(marking_points_right,
                         np.add(range(len(spk_times_right)), max(id_left) + id_gap), 'b')
             else:
+                id_right = [max(id_left)]
+
+            if not len(id_right):
                 id_right = [max(id_left)]
 
     ax.set_axis_off()
