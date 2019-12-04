@@ -299,42 +299,40 @@ class TrialSpikes(dj.Computed):
     ---
     trial_spike_times=null:   blob     # spike time for each trial, aligned to different event times
     """
-    key_source = behavior.TrialSet & Cluster()
+    key_source = behavior.TrialSet * Cluster
 
     def make(self, key):
         trials = behavior.TrialSet.Trial & key
-        clusters = Cluster & key
         trial_spks = []
-        for icluster in tqdm(clusters.fetch('KEY')):
-            cluster = clusters & icluster
-            spike_times = cluster.fetch1('cluster_spike_times')
+        cluster = Cluster & key
+        spike_times = cluster.fetch1('cluster_spike_times')
 
-            for trial, itrial in zip(trials.fetch(as_dict=True), trials.fetch('KEY')):
-                trial_spk = dict(
-                    **itrial,
-                    cluster_id=icluster['cluster_id'],
-                    cluster_revision=icluster['cluster_revision'],
-                    probe_idx=icluster['probe_idx']
-                )
-                f = np.logical_and(spike_times < trial['trial_end_time'],
-                                   spike_times > trial['trial_start_time'])
+        for trial, itrial in zip(trials.fetch(as_dict=True), trials.fetch('KEY')):
+            trial_spk = dict(
+                **itrial,
+                cluster_id=cluster['cluster_id'],
+                cluster_revision=cluster['cluster_revision'],
+                probe_idx=cluster['probe_idx']
+            )
+            f = np.logical_and(spike_times < trial['trial_end_time'],
+                               spike_times > trial['trial_start_time'])
 
-                if not np.any(f):
-                    continue
+            if not np.any(f):
+                continue
 
-                events = (Event & 'event!="go cue"').fetch('event')
-                for event in events:
-                    if event == 'stim on':
-                        trial_spk['trial_spike_times'] = \
-                            spike_times[f] - trial['trial_stim_on_time']
-                    elif event == 'response':
-                        trial_spk['trial_spike_times'] = \
-                            spike_times[f] - trial['trial_response_time']
-                    elif event == 'feedback':
-                        trial_spk['trial_spike_times'] = \
-                            spike_times[f] - trial['trial_feedback_time']
-                    trial_spk['event'] = event
-                    trial_spks.append(trial_spk.copy())
+            events = (Event & 'event!="go cue"').fetch('event')
+            for event in events:
+                if event == 'stim on':
+                    trial_spk['trial_spike_times'] = \
+                        spike_times[f] - trial['trial_stim_on_time']
+                elif event == 'response':
+                    trial_spk['trial_spike_times'] = \
+                        spike_times[f] - trial['trial_response_time']
+                elif event == 'feedback':
+                    trial_spk['trial_spike_times'] = \
+                        spike_times[f] - trial['trial_feedback_time']
+                trial_spk['event'] = event
+                trial_spks.append(trial_spk.copy())
 
         self.insert(trial_spks)
 
