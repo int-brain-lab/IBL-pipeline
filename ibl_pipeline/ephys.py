@@ -329,8 +329,11 @@ class TrialSpikes(dj.Computed):
                     trial_spk['trial_spike_times'] = \
                         spike_times[f] - trial['trial_response_time']
                 elif event == 'feedback':
-                    trial_spk['trial_spike_times'] = \
-                        spike_times[f] - trial['trial_feedback_time']
+                    if trial['trial_feedback_time']:
+                        trial_spk['trial_spike_times'] = \
+                            spike_times[f] - trial['trial_feedback_time']
+                    else:
+                        continue
                 trial_spk['event'] = event
                 trial_spks.append(trial_spk.copy())
 
