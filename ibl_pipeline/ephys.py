@@ -307,7 +307,7 @@ class TrialSpikes(dj.Computed):
         cluster = Cluster() & key
         spike_times = cluster.fetch1('cluster_spike_times')
 
-        for trial, itrial in zip(trials.fetch(as_dict=True), trials.fetch('KEY')):
+        for trial, itrial in tqdm(zip(trials.fetch(as_dict=True), trials.fetch('KEY'))):
             trial_spk = dict(
                 **itrial,
                 cluster_id=key['cluster_id'],
