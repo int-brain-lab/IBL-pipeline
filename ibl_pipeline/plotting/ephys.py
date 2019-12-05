@@ -331,24 +331,17 @@ class Psth(dj.Computed):
         data = []
         if len(trials_left):
             data.append(
-                putils.compute_psth(
-                    trials_left, 'left', align_event, 1000, 10, x_lim)
-            )
+                putils.compute_psth(trials_left, 'left', align_event))
         if len(trials_right):
             data.append(
-                putils.compute_psth(
-                    trials_right, 'right', align_event, 1000, 10, x_lim)
-            )
+                putils.compute_psth(trials_right, 'right', align_event))
         if len(trials_incorrect):
             data.append(
-                putils.compute_psth(
-                    trials_incorrect, 'incorrect', align_event, 1000, 10, x_lim)
-            )
+                putils.compute_psth(trials_incorrect, 'incorrect', align_event))
 
         data.append(
             putils.compute_psth(
-                trials_all, 'all', align_event, 1000, 10, x_lim)
-        )
+                trials_all, 'all', align_event))
 
         layout = dict(
             width=580,

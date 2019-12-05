@@ -208,8 +208,8 @@ def create_psth_plot(trials, align_event,
     return encoded_string, y_lim
 
 
-def compute_psth(trials, trial_type, align_event, nbins,
-                 window_size, x_lim=[-1, 1], as_dict=True):
+def compute_psth(trials, trial_type, align_event, bin_size=0.025,
+                 smoothing=0.025, x_lim=[-1, 1], as_dict=True):
 
     if trial_type == 'left':
         color = 'green'
@@ -222,20 +222,25 @@ def compute_psth(trials, trial_type, align_event, nbins,
     else:
         raise NameError('Invalid type name')
 
+    n_offset = 5 * int(np.ceil(smoothing / bin_size))  # get rid of boundary effects for smoothing
+    n_bins_pre = int(np.ceil(np.negative(x_lim[0]) / bin_size)) + n_offset
+    n_bins_post = int(np.ceil(x_lim[1] / bin_size)) + n_offset
+    n_bins = n_bins_pre + n_bins_post
+
     spk_times = trials.fetch('trial_spike_times')
-    mean_counts = np.divide(
-        np.histogram(np.hstack(spk_times),
-                     range=x_lim,
-                     bins=nbins)[0],
-        len(spk_times))
+    hist = np.histogram(np.hstack(spk_times),
+                        range=x_lim,
+                        bins=n_bins)
 
-    time_bins = np.linspace(x_lim[0], x_lim[1], num=nbins)
+    mean_fr = np.divide(hist[0], len(spk_times)*bin_size)
+    time_bins = hist[1]
+    # build gaussian kernel
+    if smoothing > 0:
+        w = n_bins - 1 if n_bins % 2 == 0 else n_bins
+        window = signal.gaussian(w, std=smoothing / bin_size)
+        window /= np.sum(window)
 
-    # convolve with a box-car filter
-    dt = np.mean(np.diff(time_bins))
-    psth = np.divide(
-        signal.convolve(mean_counts, signal.boxcar(window_size), mode='same'),
-        window_size*dt)
+    psth = signal.convolve(mean_fr, window, mode='same', method='auto')
 
     data = go.Scatter(
         x=list(time_bins),
