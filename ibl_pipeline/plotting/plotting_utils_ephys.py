@@ -359,7 +359,7 @@ def create_raster_plot_combined(trials, align_event,
     if len(trials):
         if sorting_var == 'trial_id':
             spk_times, trial_ids = (trials & 'event="{}"'.format(align_event)).fetch(
-                'trial_spike_time', 'trial_id', order_by='trial_id')
+                'trial_spike_times', 'trial_id', order_by='trial_id')
             spk_trial_ids = np.hstack(
                 [[trial_id] * len(spk_time)
                     for trial_id, spk_time in zip(trial_ids, spk_times)])
