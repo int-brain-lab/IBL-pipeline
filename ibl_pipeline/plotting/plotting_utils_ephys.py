@@ -431,7 +431,10 @@ def create_raster_plot_combined(trials, align_event,
 
     # set the limits
     ax.set_xlim(x_lim[0], x_lim[1])
-    y_lim = max(id_right) * 1.02
+    if sorting_var == 'trial_id':
+        y_lim = max(spk_trial_ids) * 1.02
+    else:
+        y_lim = max(id_right) * 1.02
     ax.set_ylim(-2, y_lim)
 
     if not show_plot:
