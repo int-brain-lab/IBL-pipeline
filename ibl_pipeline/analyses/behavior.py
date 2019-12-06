@@ -168,7 +168,7 @@ class ReactionTimeContrastBlock(dj.Computed):
         trials = behavior.TrialSet.Trial & key & \
             'trial_stim_on_time is not NULL or trial_go_cue_trigger_time is not NULL'
 
-        if task_protocol and ('biased' in task_protocol):
+        if task_protocol and ('biased' in task_protocol or 'ephys' in task_protocol):
             prob_lefts = dj.U('trial_stim_prob_left') & trials
 
             for prob_left in prob_lefts:
@@ -299,7 +299,7 @@ class BehavioralSummaryByDate(dj.Computed):
             'task_protocol')
         task_protocols = [protocol for protocol in task_protocols if protocol]
 
-        if any('biased' in task_protocol
+        if any('biased' in task_protocol or 'ephys' in task_protocol
                for task_protocol in task_protocols):
             trials_biased = trials & (acquisition.Session &
                                       trial_sets_keys &
