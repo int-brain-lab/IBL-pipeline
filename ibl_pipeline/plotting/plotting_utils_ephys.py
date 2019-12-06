@@ -363,7 +363,7 @@ def create_raster_plot_combined(trials, align_event,
             spk_trial_ids = np.hstack(
                 [[trial_id] * len(spk_time)
                     for trial_id, spk_time in zip(trial_ids, spk_times)])
-            ax.plot(spk_times, spk_trial_ids, 'k.', alpha=0.5,
+            ax.plot(np.hstack(spk_times), spk_trial_ids, 'k.', alpha=0.5,
                     markeredgewidth=0)
         else:
             spk_times_left, marking_points_left, \
