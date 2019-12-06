@@ -95,7 +95,7 @@ class PsychResultsBlock(dj.Computed):
 
         trials = behavior.TrialSet.Trial & key
 
-        if task_protocol and ('biased' in task_protocol):
+        if task_protocol and ('biased' in task_protocol or 'ephys' in task_protocol):
             prob_lefts = dj.U('trial_stim_prob_left') & trials
 
             for prob_left in prob_lefts:
