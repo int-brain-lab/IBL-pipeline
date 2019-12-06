@@ -303,7 +303,7 @@ class BehavioralSummaryByDate(dj.Computed):
                for task_protocol in task_protocols):
             trials_biased = trials & (acquisition.Session &
                                       trial_sets_keys &
-                                      'task_protocol LIKE "%biased%"')
+                                      'task_protocol like "%biased%" or task_protocl like "%ephys%"')
             prob_lefts = dj.U('trial_stim_prob_left') & trials_biased
 
             for prob_left in prob_lefts:
