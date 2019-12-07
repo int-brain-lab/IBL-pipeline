@@ -118,9 +118,11 @@ def compute_reaction_time(trials, compute_ci=False):
 
     if compute_ci:
         ci_rt = grouped_rt.apply(
-            lambda x: bootstrap.ci(x, scipy.median, alpha=0.32))
-        ci_low = np.array([x[0] for x in ci_rt])
-        ci_high = np.array([x[1] for x in ci_rt])
+            lambda x: bootstrap.ci(x, scipy.nanmedian, alpha=0.32))
+        ci_low = np.array(
+            [x[0] for x in ci_rt if not np.isnan(x[0]) else None])
+        ci_high = np.array(
+            [x[1] for x in ci_rt if not np.isnan(x[1]) else None])
         return median_rt.values, ci_low, ci_high
     else:
         return median_rt.values
