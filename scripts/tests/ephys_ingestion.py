@@ -6,53 +6,61 @@ Shan Shen, 2019-11-20
 
 from ibl_pipeline import subject, acquisition, behavior, ephys
 from ibl_pipeline.plotting import ephys as ephys_plotting
-
+import logging
 import time
+
+logging.basicConfig(
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler("ephys_ingestion.log"),
+        logging.StreamHandler()])
+
+logger = logging.getLogger(__name__)
 
 kargs = dict(display_progress=True, suppress_errors=True)
 
 start_time = time.time()
 
-print('Testing ingestion of ProbeInsertion...')
+logger.info('Testing ingestion of ProbeInsertion...')
 ephys.ProbeInsertion.populate(display_progress=True, limit=1)
 
 probe_insertion_time = time.time()
-print('Ingestion time of ProbeInsertion {}'.format(
+logger.info('Ingestion time of ProbeInsertion {}'.format(
     probe_insertion_time-start_time))
 
-print('Testing ingestion of ChannelGroup...')
+logger.info('Testing ingestion of ChannelGroup...')
 ephys.ChannelGroup.populate(**kargs)
 channel_group_time = time.time()
-print('Ingestion time of ChannelGroup {}'.format(
+logger.info('Ingestion time of ChannelGroup {}'.format(
     channel_group_time-probe_insertion_time))
 
-print('Testing ingestion of Cluster...')
+logger.info('Testing ingestion of Cluster...')
 ephys.Cluster.populate(**kargs)
 cluster_time = time.time()
-print('Ingestion time of Cluster {}'.format(
+logger.info('Ingestion time of Cluster {}'.format(
     cluster_time-channel_group_time))
 
-print('Testing ingestion of TrialSpikes...')
+logger.info('Testing ingestion of TrialSpikes...')
 ephys.TrialSpikes.populate(**kargs)
 trial_spikes_time = time.time()
-print('Ingestion time of TrialSpikes {}'.format(
+logger.info('Ingestion time of TrialSpikes {}'.format(
     trial_spikes_time-channel_group_time))
 
-print('Testing ingestion of plotting raster...')
+logger.info('Testing ingestion of plotting raster...')
 ephys_plotting.RasterLinkS3.populate(
     **kargs)
 raster_plotting_time = time.time()
-print('Ingestion time of RasterLinkS3 {}'.format(
+logger.info('Ingestion time of RasterLinkS3 {}'.format(
     raster_plotting_time-trial_spikes_time))
 
-print('Testing ingestion of plotting psth...')
+logger.info('Testing ingestion of plotting psth...')
 ephys_plotting.PsthDataVarchar.populate(
     **kargs)
 psth_plotting_time = time.time()
-print('Ingestion time of TrialSpikes {}'.format(
+logger.info('Ingestion time of TrialSpikes {}'.format(
     psth_plotting_time-raster_plotting_time))
 
 end_time = time.time()
-print('Total ingestion time {}'.format(
+logger.info('Total ingestion time {}'.format(
     end_time-start_time
 ))
