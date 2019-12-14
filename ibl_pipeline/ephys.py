@@ -205,7 +205,7 @@ class Cluster(dj.Imported):
 
         cluster_lengths = [
             [len(subdata) for subdata in data]
-            for data in clusters_data if data else None]
+            if data else None for data in clusters_data]
         spikes_lengths = [
             [len(subdata) for subdata in data]
             for data in spikes_data]
@@ -217,7 +217,7 @@ class Cluster(dj.Imported):
         standard_order_cluster = cluster_lengths[0]
         idx_clusters = [
             [cluster_length.index(x) for x in standard_order_cluster]
-            for cluster_length in cluster_lengths if cluster_length else None]
+            if cluster_length else None for cluster_length in cluster_lengths]
 
         idx_cluster_spikes = [max_cluster.index(x)
                               for x in standard_order_cluster]
