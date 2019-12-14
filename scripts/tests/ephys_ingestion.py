@@ -33,7 +33,7 @@ print('Ingestion time of Cluster {}'.format(
     cluster_time-channel_group_time))
 
 print('Testing ingestion of TrialSpikes...')
-ephys.TrialSpikes.populate(d**kargs)
+ephys.TrialSpikes.populate(**kargs)
 trial_spikes_time = time.time()
 print('Ingestion time of TrialSpikes {}'.format(
     trial_spikes_time-channel_group_time))
