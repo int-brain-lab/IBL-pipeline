@@ -205,7 +205,7 @@ class Cluster(dj.Imported):
 
         cluster_lengths = [
             [len(subdata) for subdata in data]
-            if data[0] else None for data in clusters_data]
+            if np.any(data) else None for data in clusters_data]
         spikes_lengths = [
             [len(subdata) for subdata in data]
             for data in spikes_data]
