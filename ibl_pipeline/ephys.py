@@ -230,13 +230,12 @@ class Cluster(dj.Imported):
         for probe_idx in [0, 1]:
 
             clusters_data_probe = []
-
             for idata, data in enumerate(clusters_data):
                 if idx_clusters[idata]:
                     idx = idx_clusters[idata][probe_idx]
                     clusters_data_probe.append(data[idx])
                 else:
-                    cluster_data_probe.append(None)
+                    clusters_data_probe.append(None)
 
             clusters_amps = clusters_data_probe[0]
             clusters_channels = clusters_data_probe[1]
