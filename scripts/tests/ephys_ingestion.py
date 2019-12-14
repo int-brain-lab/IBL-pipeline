@@ -9,7 +9,7 @@ from ibl_pipeline.plotting import ephys as ephys_plotting
 
 import time
 
-kargs = dict(d**kargs)
+kargs = dict(display_progress=True, suppress_errors=True)
 
 start_time = time.time()
 
