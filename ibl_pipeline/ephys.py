@@ -205,7 +205,7 @@ class Cluster(dj.Imported):
 
         cluster_lengths = [
             [len(subdata) for subdata in data]
-            for data in clusters_data]
+            for data in clusters_data if data else None]
         spikes_lengths = [
             [len(subdata) for subdata in data]
             for data in spikes_data]
@@ -217,7 +217,7 @@ class Cluster(dj.Imported):
         standard_order_cluster = cluster_lengths[0]
         idx_clusters = [
             [cluster_length.index(x) for x in standard_order_cluster]
-            for cluster_length in cluster_lengths]
+            for cluster_length in cluster_lengths if cluster_length else None]
 
         idx_cluster_spikes = [max_cluster.index(x)
                               for x in standard_order_cluster]
@@ -232,12 +232,16 @@ class Cluster(dj.Imported):
             clusters_data_probe = []
 
             for idata, data in enumerate(clusters_data):
-                idx = idx_clusters[idata][probe_idx]
-                clusters_data_probe.append(data[idx])
+                if idx_clusters[idata]:
+                    idx = idx_clusters[idata][probe_idx]
+                    clusters_data_probe.append(data[idx])
+                else:
+                    cluster_data_probe.append(None)
 
             clusters_amps = clusters_data_probe[0]
             clusters_channels = clusters_data_probe[1]
             clusters_depths = clusters_data_probe[2]
+
             clusters_peak_to_trough = clusters_data_probe[3]
 
             spikes_data_probe = []
@@ -254,18 +258,20 @@ class Cluster(dj.Imported):
             for icluster, cluster_depth in enumerate(clusters_depths):
                 idx = spikes_clusters == icluster
                 cluster_amps = clusters_amps[icluster]
-                clusters.append(dict(
+                cluster = dict(
                     **key,
                     probe_idx=probe_idx,
                     cluster_id=icluster,
                     cluster_amp=clusters_amps[icluster],
                     cluster_depth=cluster_depth,
                     cluster_channel=clusters_channels[icluster],
-                    cluster_peak_to_trough=clusters_peak_to_trough[icluster],
                     cluster_spike_times=spikes_times[idx],
                     cluster_spike_depths=spikes_depths[idx],
-                    cluster_spike_amps=spikes_amps[idx]
-                ))
+                    cluster_spike_amps=spikes_amps[idx])
+                if cluster_peak_to_trough:
+                    cluster.update(
+                        cluster_peak_to_trough=clusters_peak_to_trough[icluster])
+                clusters.append(cluster)
 
         self.insert(clusters)
 
