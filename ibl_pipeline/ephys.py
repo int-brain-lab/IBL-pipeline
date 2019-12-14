@@ -267,7 +267,7 @@ class Cluster(dj.Imported):
                     cluster_spike_times=spikes_times[idx],
                     cluster_spike_depths=spikes_depths[idx],
                     cluster_spike_amps=spikes_amps[idx])
-                if cluster_peak_to_trough:
+                if clusters_peak_to_trough:
                     cluster.update(
                         cluster_peak_to_trough=clusters_peak_to_trough[icluster])
                 clusters.append(cluster)
