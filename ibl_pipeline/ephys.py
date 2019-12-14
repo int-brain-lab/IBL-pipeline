@@ -231,7 +231,9 @@ class Cluster(dj.Imported):
 
             clusters_data_probe = []
             for idata, data in enumerate(clusters_data):
+                print(idata)
                 if idx_clusters[idata]:
+                    print(idx_clusters)
                     idx = idx_clusters[idata][probe_idx]
                     clusters_data_probe.append(data[idx])
                 else:
