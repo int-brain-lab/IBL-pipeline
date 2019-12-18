@@ -250,8 +250,8 @@ class BehavioralSummaryByDate(dj.Computed):
             (acquisition.Session.proj(
                 'task_protocol',
                 session_date='date(session_start_time)') &
-             {'subject_uuid': key['subject_uuid']}) &
-             'task_protocol not like "%habituation%"' &
+             {'subject_uuid': key['subject_uuid']} &
+             'task_protocol not like "%habituation%"') &
             'session_date<="{}"'.format(
                 key['session_date'].strftime('%Y-%m-%d')))
         master_entry['training_week'] = np.floor(
