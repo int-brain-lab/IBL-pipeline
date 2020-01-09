@@ -60,9 +60,9 @@ class CompleteClusterSession(dj.Computed):
     required_datasets = [
         'clusters.amps',
         'clusters.channels',
-        'cluster.depths',
-        'cluster.metrics',
-        'clusters.peadToTrough',
+        'clusters.depths',
+        'clusters.metrics',
+        'clusters.peakToTrough',
         'clusters.uuids',
         'clusters.waveforms',
         'clusters.waveformsChannels',
@@ -96,7 +96,7 @@ class CompleteClusterSession(dj.Computed):
                         skip_duplicates=True)
 
 
-@schema
+@schemaa
 class EphysMissingDataLog(dj.Manual):
     definition = """
     # Keep record of the missing data
