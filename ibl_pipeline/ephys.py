@@ -129,7 +129,7 @@ class ProbeInsertion(dj.Imported):
         for p in probes['description']:
             # ingest probe model, serial to be inserted after dropping tables
             probe = dict(
-                probe_model=p['model'], channel_counts=960)
+                probe_model_name=p['model'], channel_counts=960)
             Probe.insert1(probe, skip_duplicates=True)
 
             # ingest probe insertion
