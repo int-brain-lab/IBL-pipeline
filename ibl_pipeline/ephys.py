@@ -96,7 +96,7 @@ class CompleteClusterSession(dj.Computed):
                         skip_duplicates=True)
 
 
-@schemaa
+@schema
 class EphysMissingDataLog(dj.Manual):
     definition = """
     # Keep record of the missing data
