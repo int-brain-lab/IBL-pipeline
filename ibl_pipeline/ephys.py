@@ -92,7 +92,8 @@ class CompleteClusterSession(dj.Computed):
                 if req_ds not in datasets:
                     EphysMissingDataLog.insert1(
                         dict(**key,
-                             missing_data=req_ds))
+                             missing_data=req_ds),
+                        skip_duplicates=True)
 
 
 @schema
@@ -100,8 +101,8 @@ class EphysMissingDataLog(dj.Manual):
     definition = """
     # Keep record of the missing data
     -> acquisition.Session
-    ---
     missing_data: varchar(255)
+    ---
     missing_data_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
