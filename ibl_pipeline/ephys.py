@@ -4,6 +4,8 @@ from os import path, environ
 from . import acquisition, reference, behavior, data
 from tqdm import tqdm
 import numpy as np
+import re
+
 try:
     from oneibl.one import ONE
     one = ONE()
@@ -118,14 +120,21 @@ class ProbeInsertion(dj.Imported):
     key_source = CompleteClusterSession
 
     def make(self, key):
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        clusters_probes = one.load(
-            eID, dataset_types=['clusters.probes'])
-        probe_ids = np.unique(clusters_probes)
-        probe = Probe.fetch1('KEY')
-        for idx in probe_ids:
+        eid = (acquisition.Session & key).fetch1('session_uuid')
+        dtypes = ['probes.description']
+        files = one.load(eid, dataset_types=dtypes, download_only=True)
+        ses_path = alf.io.get_session_path(files[0])
+        probes = alf.io.load_object(ses_path.joinpath('alf'), 'probes')
+        for p in probes['description']:
+            # ingest probe model, serial to be inserted after dropping tables
+            probe = dict(
+                probe_model=p['model'], channel_counts=960)
+            Probe.insert1(probe, skip_duplicates=True)
+
+            # ingest probe insertion
+            idx = int(re.search('probe0([0-3])', p['label']).group(1))
             key.update(probe_idx=idx,
-                       probe_model_name=probe['probe_model_name'])
+                       probe_model_name=p['model'])
             self.insert1(key)
 
 
