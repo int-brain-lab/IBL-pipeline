@@ -121,7 +121,7 @@ class ProbeInsertion(dj.Imported):
     key_source = CompleteClusterSession
 
     def make(self, key):
-        eid = (acquisition.Session & key).fetch1('session_uuid')
+        eid = str((acquisition.Session & key).fetch1('session_uuid'))
         dtypes = ['probes.description']
         files = one.load(eid, dataset_types=dtypes, download_only=True)
         ses_path = alf.io.get_session_path(files[0])
