@@ -54,6 +54,8 @@ class CompleteClusterSession(dj.Computed):
     definition = """
     # sessions that are complete with ephys datasets
     -> acquisition.Session
+    ---
+    complete_cluster_session=CURRENT_TIMESTAMP  :  timestamp
     """
     required_datasets = [
         'clusters.amps',
@@ -100,7 +102,7 @@ class EphysMissingDataLog(dj.Manual):
     -> acquisition.Session
     ---
     missing_data: varchar(255)
-    missing_data_ts:   CURRENT_TIMESTAMP
+    missing_data_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
