@@ -114,7 +114,7 @@ class ProbeInsertion(dj.Imported):
     ---
     -> Probe
     """
-    key_source = CompleteEphysSession
+    key_source = CompleteClusterSession
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
