@@ -6,8 +6,9 @@ from tqdm import tqdm
 import numpy as np
 try:
     from oneibl.one import ONE
+    one = ONE()
 except:
-    pass
+    print('ONE not set up')
 
 mode = environ.get('MODE')
 
@@ -16,10 +17,7 @@ if mode == 'update':
 else:
     schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
 
-try:
-    one = ONE()
-except:
-    pass
+dj.config['safemode'] = False
 
 
 @schema
@@ -52,21 +50,69 @@ Probe.Channel.insert([dict(**probe, channel_id=ichannel+1)
 
 
 @schema
+class CompleteClusterSession(dj.Computed):
+    definition = """
+    # sessions that are complete with ephys datasets
+    -> acquisition.Session
+    """
+    required_datasets = [
+        'clusters.amps',
+        'clusters.channels',
+        'cluster.depths',
+        'cluster.metrics',
+        'clusters.peadToTrough',
+        'clusters.uuids',
+        'clusters.waveforms',
+        'clusters.waveformsChannels',
+        'spikes.amps',
+        'spikes.clusters',
+        'spikes.depths',
+        'spikes.samples',
+        'spikes.templates',
+        'spikes.times'
+    ]
+    key_source = data.FileRecord & \
+        'task_protocol like "%ephysChoiceWorld%"' \
+        & (data.FileRecord & 'dataset_name="spikes.times.npy"') \
+        & (data.FileRecord & 'dataset_name="spikes.clusters.npy"') \
+        & (data.FileRecord & 'dataset_name="probes.description.json"')
+
+    def make(self, key):
+        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
+                    {'exists': 1}).fetch('dataset_name')
+        is_complete = bool(np.all([req_ds in datasets
+                                   for req_ds in self.required_datasets]))
+        if is_complete:
+            self.insert1(key)
+            (EphysMissingDataLog & key).delete()
+        else:
+            for req_ds in self.required_datasets:
+                if req_ds not in datasets:
+                    EphysMissingDataLog.insert1(
+                        dict(**key,
+                             missing_data=req_ds))
+
+
+@schema
+class EphysMissingDataLog(dj.Manual):
+    definition = """
+    # Keep record of the missing data
+    -> acquisition.Session
+    ---
+    missing_data: varchar(255)
+    missing_data_ts:   CURRENT_TIMESTAMP
+    """
+
+
+@schema
 class ProbeInsertion(dj.Imported):
     definition = """
     -> acquisition.Session
-    probe_idx:    int    # probe insertion number
+    probe_idx:    int    # probe insertion number (0 corresponds to probe00, 1 corresponds to probe01)
     ---
     -> Probe
     """
-    key_source = acquisition.Session & behavior.TrialSet & \
-        'task_protocol like "%ephysChoiceWorld%"' \
-        & (data.FileRecord & 'dataset_name="clusters.probes.npy"') \
-        & (data.FileRecord & 'dataset_name="clusters.channels.npy"') \
-        & (data.FileRecord & 'dataset_name="clusters.depths.npy"') \
-        & (data.FileRecord & 'dataset_name="clusters.amps.npy"') \
-        & (data.FileRecord & 'dataset_name="spikes.times.npy"') \
-        & (data.FileRecord & 'dataset_name="spikes.clusters.npy"')
+    key_source = CompleteEphysSession
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
@@ -128,6 +174,7 @@ class ProbeInsertionLocation(dj.Imported):
     """
 
 
+# needs to be further adjusted by adding channels.mlapdvIntended
 @schema
 class ChannelBrainLocation(dj.Imported):
     definition = """
@@ -141,7 +188,7 @@ class ChannelBrainLocation(dj.Imported):
     channel_ap:         float           # anterior posterior CCF coordinate (um)
     channel_dv:         float           # dorsal ventral CCF coordinate (um)
     channel_lr:         float           # left right CCF coordinate (um)
-    -> reference.BrainLocationAcronym   # acronym of the brain location
+    -> reference.BrainLocationAcronym.proj(channel_brain_location='acronym')   # acronym of the brain location
     channel_raw_row:        smallint    # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
     """
 
@@ -170,7 +217,7 @@ class Cluster(dj.Imported):
     cluster_spike_templates=null:   blob@ephys      # Template ID of each spike (i.e. output of automatic spike sorting prior to manual curation)
     cluster_spike_samples=null:     blob@ephys       # Time of spikes, measured in units of samples in their own electrophysiology binary file.
     cluster_amp=null:               float           # Mean amplitude of each cluster (µV)
-    cluster_metics=null:            blob            # Quality control metrics at the cluster level
+    cluster_metrics=null:           blob            # Quality control metrics at the cluster level
     cluster_waveform=null:          blob@ephys      # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered) nClustersxnSamplesxnChannels
     cluster_template_waveform=null: blob@ephys      # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
     cluster_depth=null:             float           # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
@@ -285,7 +332,7 @@ class ClusterBrainLocation(dj.Imported):
     -> reference.BrainLocationAcronym    # acronym of the brain location
     cluster_ml_position:      float      # Estimated 3d location of the cell relative to bregma - mediolateral
     cluster_ap_position:      float      # anterior-posterior
-    cluster_df_position:      float      # dorsoventral
+    cluster_dv_position:      float      # dorsoventral
     """
 
 
