@@ -58,20 +58,20 @@ class CompleteClusterSession(dj.Computed):
     complete_cluster_session=CURRENT_TIMESTAMP  :  timestamp
     """
     required_datasets = [
-        'clusters.amps',
-        'clusters.channels',
-        'clusters.depths',
-        'clusters.metrics',
-        'clusters.peakToTrough',
-        'clusters.uuids',
-        'clusters.waveforms',
-        'clusters.waveformsChannels',
-        'spikes.amps',
-        'spikes.clusters',
-        'spikes.depths',
-        'spikes.samples',
-        'spikes.templates',
-        'spikes.times'
+        'clusters.amps.npy',
+        'clusters.channels.npy',
+        'clusters.depths.npy',
+        'clusters.metrics.csv',
+        'clusters.peakToTrough.npy',
+        'clusters.uuids.csv',
+        'clusters.waveforms.npy',
+        'clusters.waveformsChannels.npy',
+        'spikes.amps.npy',
+        'spikes.clusters.npy',
+        'spikes.depths.npy',
+        'spikes.samples.npy',
+        'spikes.templates.npy',
+        'spikes.times.npy'
     ]
     key_source = acquisition.Session & \
         'task_protocol like "%ephysChoiceWorld%"' \
