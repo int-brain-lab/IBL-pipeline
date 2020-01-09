@@ -5,6 +5,7 @@ from . import acquisition, reference, behavior, data
 from tqdm import tqdm
 import numpy as np
 import re
+import alf.io
 
 try:
     from oneibl.one import ONE
