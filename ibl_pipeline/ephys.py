@@ -73,7 +73,7 @@ class CompleteClusterSession(dj.Computed):
         'spikes.templates',
         'spikes.times'
     ]
-    key_source = data.FileRecord & \
+    key_source = acquisition.Session & \
         'task_protocol like "%ephysChoiceWorld%"' \
         & (data.FileRecord & 'dataset_name="spikes.times.npy"') \
         & (data.FileRecord & 'dataset_name="spikes.clusters.npy"') \
