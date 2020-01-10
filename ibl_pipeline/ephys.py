@@ -34,16 +34,16 @@ class Probe(dj.Lookup):
     channel_counts:         smallint            # number of channels in the probe
     """
 
-    # class Channel(dj.Part):
-    #     definition = """
-    #     # positional information about every channel on this probe
-    #     -> master
-    #     channel_id:     smallint         # id of a channel on the probe
-    #     ---
-    #     channel_x_pos=null:  float       # x position relative to the tip of the probe um), on the width of the shank
-    #     channel_y_pos=null:  float       # y position relative to the tip of the probe (um), the depth where 0 is the deepest site, and positive above this
-    #     channel_shank=null:  enum(1, 2)  # shank of the channel, 1 or 2
-    #     """
+    class Channel(dj.Part):
+        definition = """
+        # positional information about every channel on this probe
+        -> master
+        channel_id:     smallint         # id of a channel on the probe
+        ---
+        channel_x_pos=null:  float       # x position relative to the tip of the probe in um, on the width of the shank
+        channel_y_pos=null:  float       # y position relative to the tip of the probe in um, the depth where 0 is the deepest site, and positive above this
+        channel_shank=null:  enum(1, 2)  # shank of the channel, 1 or 2
+        """
 
 
 @schema
