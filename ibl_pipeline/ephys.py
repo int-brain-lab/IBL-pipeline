@@ -280,9 +280,6 @@ class Cluster(dj.Imported):
         spikes = alf.io.load_object(
             ses_path.joinpath('alf', probe_name), 'spikes')
 
-        cluster_entries = []
-        cluster_metric_entries = []
-
         for icluster, cluster_uuid in tqdm(enumerate(clusters.uuids['uuids'])):
 
             idx = spikes.clusters == icluster
@@ -302,7 +299,8 @@ class Cluster(dj.Imported):
                 cluster_spikes_templates=spikes.templates[idx],
                 cluster_spikes_samples=spikes.samples[idx])
 
-            cluster_entries.append(cluster)
+            self.insert1(cluster)
+
             metrics = clusters.metrics
             cluster_metric_entry = dict(
                 **key,
@@ -320,12 +318,9 @@ class Cluster(dj.Imported):
 
             if not np.isnan(metrics.isi_viol[icluster]):
                 cluster_metric_entry.update(
-                    isi_viol=metrics.isi_viol[icluster],
-                )
-            cluster_metric_entries.append(cluster_metric_entry)
+                    isi_viol=metrics.isi_viol[icluster])
 
-        self.insert(cluster_entries)
-        self.ClusterMetrics.insert(cluster_metric_entries)
+            self.ClusterMetrics.insert1(cluster_metric_entry)
 
     class ClusterMetrics(dj.Part):
         definition = """
