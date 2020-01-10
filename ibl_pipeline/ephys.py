@@ -29,7 +29,7 @@ class Probe(dj.Lookup):
     definition = """
     # Description of a particular model of probe
     probe_model_name:       varchar(128)        # String naming probe model, from probe.description
-    probe_serial_number:    int                 # serial number of a probe
+    probe_serial_number:    varchar(64)         # serial number of a probe
     ---
     channel_counts:         smallint            # number of channels in the probe
     """
@@ -124,7 +124,7 @@ class ProbeInsertion(dj.Imported):
             # ingest probe information, including probe model and serial
             probe = dict(
                 probe_model_name=p['model'],
-                probe_serial_number=p['serial'],
+                probe_serial_number=str(p['serial']),
                 channel_counts=960)
             Probe.insert1(probe, skip_duplicates=True)
 
@@ -132,7 +132,7 @@ class ProbeInsertion(dj.Imported):
             idx = int(re.search('probe0([0-3])', p['label']).group(1))
             key.update(probe_idx=idx,
                        probe_model_name=p['model'],
-                       probe_serial_number=p['serial'])
+                       probe_serial_number=str(p['serial']))
             self.insert1(key)
 
 
