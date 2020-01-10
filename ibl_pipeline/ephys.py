@@ -145,17 +145,32 @@ class ChannelGroup(dj.Imported):
     channel_local_coordinates:    blob  # Location of each channel relative to probe coordinate system (µm): x (first) dimension is on the width of the shank; (y) is the depth where 0 is the deepest site, and positive above this
     """
 
-    key_source = acquisition.Session & ProbeInsertion \
+    key_source = ProbeInsertion \
         & (data.FileRecord & 'dataset_name="channels.rawInd.npy"') \
         & (data.FileRecord & 'dataset_name="channels.localCoordinates.npy"')
 
     def make(self, key):
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
+        dtypes = [
+            'clusters.amps',
+            'clusters.channels',
+            'clusters.depths',
+            'clusters.metrics',
+            'clusters.peakToTrough',
+            'clusters.uuids',
+            'clusters.waveforms',
+            'clusters.waveformsChannels',
+            'spikes.amps',
+            'spikes.clusters',
+            'spikes.depths',
+            'spikes.samples',
+            'spikes.templates',
+            'spikes.times'
+        ]
 
-        channels_rawInd = one.load(
-            eID, dataset_types=['channels.rawInd'])
-        channels_local_coordinates = one.load(
-            eID, dataset_types=['channels.localCoordinates'])
+        files = one.load(eID, dataset_types=dtypes, download_only=True)
+        ses_path = alf.io.get_session_path(files[0])
+
+        probe_name = 'probe0' + str(key['probe_idx'])
 
         probe_ids = (ProbeInsertion & key).fetch('probe_idx')
 
@@ -268,7 +283,7 @@ class Cluster(dj.Imported):
         cluster_entries = []
         cluster_metric_entries = []
 
-        for icluster, cluster_uuid in enumerate(clusters.uuids['uuids']):
+        for icluster, cluster_uuid in tqdm(enumerate(clusters.uuids['uuids'])):
 
             idx = spikes.clusters == icluster
             cluster = dict(
