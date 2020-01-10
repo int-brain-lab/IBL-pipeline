@@ -4,6 +4,7 @@ from os import path, environ
 from . import acquisition, reference, behavior, data
 from tqdm import tqdm
 import numpy as np
+from uuid import UUID
 import re
 import alf.io
 
@@ -28,11 +29,10 @@ class Probe(dj.Lookup):
     definition = """
     # Description of a particular model of probe.
     probe_model_name: varchar(128)      # String naming probe model, from probe.description
+    probe_serial_number: int            # serial number of a probe
     ---
     channel_counts: smallint            # number of channels in the probe
     """
-    contents = [dict(probe_model_name='Neuropixel 3a',
-                     channel_counts=960)]
 
     class Channel(dj.Part):
         definition = """
@@ -44,12 +44,6 @@ class Probe(dj.Lookup):
         channel_y_pos=null:  float       # y position relative to the tip of the probe (um), the depth where 0 is the deepest site, and positive above this.
         channel_shank=null:  enum(1, 2)  # shank of the channel, 1 or 2
         """
-
-
-probe = Probe.fetch1('KEY')
-Probe.Channel.insert([dict(**probe, channel_id=ichannel+1)
-                      for ichannel in range(960)],
-                     skip_duplicates=True)
 
 
 @schema
@@ -64,7 +58,7 @@ class CompleteClusterSession(dj.Computed):
         'clusters.amps.npy',
         'clusters.channels.npy',
         'clusters.depths.npy',
-        'clusters.metrics.csv',
+        'metrics.csv',
         'clusters.peakToTrough.npy',
         'clusters.uuids.csv',
         'clusters.waveforms.npy',
@@ -121,15 +115,15 @@ class ProbeInsertion(dj.Imported):
     key_source = CompleteClusterSession
 
     def make(self, key):
-        eid = str((acquisition.Session & key).fetch1('session_uuid'))
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
         dtypes = ['probes.description']
-        files = one.load(eid, dataset_types=dtypes, download_only=True)
+        files = one.load(eID, dataset_types=dtypes, download_only=True)
         ses_path = alf.io.get_session_path(files[0])
         probes = alf.io.load_object(ses_path.joinpath('alf'), 'probes')
         for p in probes['description']:
-            # ingest probe model, serial to be inserted after dropping tables
+            # ingest probe information, including probe model and serial
             probe = dict(
-                probe_model_name=p['model'], channel_counts=960)
+                probe_model_name=p['model'], p['serial'], channel_counts=960)
             Probe.insert1(probe, skip_duplicates=True)
 
             # ingest probe insertion
@@ -220,121 +214,111 @@ class Template(dj.Imported):
 class Cluster(dj.Imported):
     definition = """
     -> ProbeInsertion
-    cluster_revision='0':           varchar(64)
-    cluster_id:                     int
+    cluster_revision='0':            varchar(64)
+    cluster_id:                      int
     ---
-    cluster_channel:                int             # which channel this cluster is from
-    cluster_spike_times:            blob@ephys      # spike times of a particular cluster (seconds)
-    cluster_spike_depths:           blob@ephys      # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
-    cluster_spike_amps:             blob@ephys      # Amplitude of each spike (µV)
-    cluster_spike_templates=null:   blob@ephys      # Template ID of each spike (i.e. output of automatic spike sorting prior to manual curation)
-    cluster_spike_samples=null:     blob@ephys       # Time of spikes, measured in units of samples in their own electrophysiology binary file.
-    cluster_amp=null:               float           # Mean amplitude of each cluster (µV)
-    cluster_metrics=null:           blob            # Quality control metrics at the cluster level
-    cluster_waveform=null:          blob@ephys      # Mean unfiltered waveform of spikes in this cluster (but for neuropixels data will have been hardware filtered) nClustersxnSamplesxnChannels
-    cluster_template_waveform=null: blob@ephys      # Waveform that was used to detect those spikes in Kilosort, in whitened space (or the most representative such waveform if multiple templates were merged)
-    cluster_depth=null:             float           # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
-    cluster_peak_to_trough=null:    blob@ephys      # trough to peak time (ms)
-    cluster_phy_annotation=null:    tinyint         # 0 = noise, 1 = MUA, 2 = Good, 3 = Unsorted, other number indicates manual quality score (from 4 to 100)
-    cluster_phy_id=null:            int             # Original cluster in
+    cluster_uuid:                    uuid            # uuid of this cluster
+    cluster_channel:                 int             # which channel this cluster is from
+    cluster_amp=null:                float           # Mean amplitude of each cluster (µV)
+    cluster_waveforms=null:          blob@ephys      # Waveform from spike sorting templates (stored as a sparse array, only for a subset of channels closest to the peak channel)
+    cluster_waveforms_channels=null: blob@ephys      # Index of channels that are stored for each cluster waveform. Sorted by increasing distance from the maximum amplitude channel.
+    cluster_depth=null:              float           # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
+    cluster_peak_to_trough=null:     blob@ephys      # trough to peak time (ms)
+    cluster_spikes_times:            blob@ephys      # spike times of a particular cluster (seconds)
+    cluster_spikes_depths:           blob@ephys      # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
+    cluster_spikes_amps:             blob@ephys      # Amplitude of each spike (µV)
+    cluster_spikes_templates=null:   blob@ephys      # Template ID of each spike (i.e. output of automatic spike sorting prior to manual curation)
+    cluster_spikes_samples=null:     blob@ephys      # Time of spikes, measured in units of samples in their own electrophysiology binary file.
     """
-    key_source = acquisition.Session & ProbeInsertion
+    key_source = ProbeInsertion
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
-        clusters_datasets = ['clusters.amps',
-                             'clusters.channels',
-                             'clusters.depths',
-                             'clusters.peakToTrough']
-
-        clusters_data = [
-            one.load(eID, dataset_types=[dataset])
-            for dataset in clusters_datasets
+        dtypes = [
+            'clusters.amps',
+            'clusters.channels',
+            'clusters.depths',
+            'metrics',
+            'clusters.peakToTrough',
+            'clusters.uuids',
+            'clusters.waveforms',
+            'clusters.waveformsChannels',
+            'spikes.amps',
+            'spikes.clusters',
+            'spikes.depths',
+            'spikes.samples',
+            'spikes.templates',
+            'spikes.times'
         ]
 
-        spikes_datasets = ['spikes.amps',
-                           'spikes.clusters',
-                           'spikes.depths',
-                           'spikes.times']
+        files = one.load(eID, dataset_types=dtypes, download_only=True)
+        ses_path = alf.io.get_session_path(files[0])
 
-        spikes_data = [
-            one.load(eID, dataset_types=[dataset])
-            for dataset in spikes_datasets
-        ]
+        probe_name = 'probe0' + str(probe_idx)
 
-        cluster_lengths = [
-            [len(subdata) for subdata in data]
-            if np.any(data) else None for data in clusters_data]
-        spikes_lengths = [
-            [len(subdata) for subdata in data]
-            for data in spikes_data]
+        clusters = alf.io.load_object(
+            ses_path.joinpath('alf', probe_name), 'clusters')
+        spikes = alf.io.load_object(
+            ses_path.joinpath('alf', probe_name), 'spikes')
 
-        # spikes_data[1] is spikes.clusters, match the spikes
-        # with clusters by this dataset.
-        max_cluster = [max(data)+1 for data in spikes_data[1]]
+        cluster_entries = []
+        cluster_metric_entries = []
 
-        standard_order_cluster = cluster_lengths[0]
-        idx_clusters = [
-            [cluster_length.index(x) for x in standard_order_cluster]
-            if cluster_length else None for cluster_length in cluster_lengths]
+        for icluster, cluster_uuid in enumerate(clusters.uuids['uuids']):
 
-        idx_cluster_spikes = [max_cluster.index(x)
-                              for x in standard_order_cluster]
-        standard_order_spikes = [spikes_lengths[1][idx]
-                                 for idx in idx_cluster_spikes]
-        idx_spikes = [[spikes_length.index(x) for x in standard_order_spikes]
-                      for spikes_length in spikes_lengths]
+            idx = spikes.clusters == icluster
+            cluster = dict(
+                **key,
+                cluster_id=icluster,
+                cluster_uuid=cluster_uuid,
+                cluster_channel=clusters.channels[icluster],
+                cluster_amp=clusters.amps[icluster],
+                cluster_waveforms=clusters.waveforms[icluster],
+                cluster_waveforms_channels=clusters.waveformsChannels[icluster],
+                cluster_depth=clusters.depths[icluster],
+                cluster_peak_to_trough=clusters.peakToTrough[icluster],
+                cluster_spikes_times=spikes.times[idx],
+                cluster_spikes_depths=spikes.depths[idx],
+                cluster_spikes_amps=spikes.amps[idx],
+                cluster_spikes_templates=spikes.templates[idx],
+                cluster_spikes_samples=spikes.samples[idx])
 
-        clusters = []
-        for probe_idx in [0, 1]:
-
-            clusters_data_probe = []
-            for idata, data in enumerate(clusters_data):
-                print(idata)
-                if idx_clusters[idata]:
-                    print(idx_clusters)
-                    idx = idx_clusters[idata][probe_idx]
-                    clusters_data_probe.append(data[idx])
-                else:
-                    clusters_data_probe.append(None)
-
-            clusters_amps = clusters_data_probe[0]
-            clusters_channels = clusters_data_probe[1]
-            clusters_depths = clusters_data_probe[2]
-
-            clusters_peak_to_trough = clusters_data_probe[3]
-
-            spikes_data_probe = []
-
-            for idata, data in enumerate(spikes_data):
-                idx = idx_spikes[idata][probe_idx]
-                spikes_data_probe.append(data[idx])
-
-            spikes_amps = spikes_data_probe[0]
-            spikes_clusters = spikes_data_probe[1]
-            spikes_depths = spikes_data_probe[2]
-            spikes_times = spikes_data_probe[3]
-
-            for icluster, cluster_depth in enumerate(clusters_depths):
-                idx = spikes_clusters == icluster
-                cluster_amps = clusters_amps[icluster]
-                cluster = dict(
+            cluster_entries.append(cluster)
+            metrics = cluster.metrics
+            cluster_metric_entries.append(
+                dict(
                     **key,
-                    probe_idx=probe_idx,
                     cluster_id=icluster,
-                    cluster_amp=clusters_amps[icluster],
-                    cluster_depth=cluster_depth,
-                    cluster_channel=clusters_channels[icluster],
-                    cluster_spike_times=spikes_times[idx],
-                    cluster_spike_depths=spikes_depths[idx],
-                    cluster_spike_amps=spikes_amps[idx])
-                if clusters_peak_to_trough:
-                    cluster.update(
-                        cluster_peak_to_trough=clusters_peak_to_trough[icluster])
-                clusters.append(cluster)
+                    num_spikes=metrics.num_spikes[icluster],
+                    firing_rate=metrics.firing_rate[icluster],
+                    presence_ratio=metrics.presence_ratio[icluster],
+                    presence_ratio_std=metrics.presence_ratio_std[icluster],
+                    isi_viol=metrics.isi_viol[icluster],
+                    amplitude_cutoff=metrics.amplitude_cutoff[icluster],
+                    amplitude_std=metrics.amplitude_std[icluster],
+                    epoch_name=metrics.epoch_name[icluster],
+                    ks2_contamination_pct=metrics.ks2_contamination_pct[icluster],
+                    ks2_label=metrics.ks2_label[icluster]))
 
-        self.insert(clusters)
+        self.insert(cluster_entries)
+        self.ClusterMetric.insert(cluster_metric_entries)
+
+    class ClusterMetric(dj.Part):
+        definition = """
+        -> master
+        ---
+        num_spikes:             int    # total spike number
+        firing_rate:            float  # firing rate of the cluster
+        presence_ratio:         float
+        presence_ratio_std:     float
+        isi_viol:               float
+        amplitude_cutoff:       float
+        amplitude_std:          float
+        epoch_name:             tinyint
+        ks2_contamination_pct:  float
+        ks2_label:              enum('good', 'mua')
+        """
 
 
 @schema
