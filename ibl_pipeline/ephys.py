@@ -28,20 +28,20 @@ dj.config['safemode'] = False
 class Probe(dj.Lookup):
     definition = """
     # Description of a particular model of probe
-    probe_model_name: varchar(128)      # String naming probe model, from probe-description
-    probe_serial_number: int            # serial number of a probe
+    probe_model_name:       varchar(128)        # String naming probe model, from probe.description
+    probe_serial_number:    int                 # serial number of a probe
     ---
-    channel_counts: smallint            # number of channels in the probe
+    channel_counts:         smallint            # number of channels in the probe
     """
 
     class Channel(dj.Part):
         definition = """
-        # positional information about every channel on this probe.
+        # positional information about every channel on this probe
         -> master
         channel_id:     smallint         # id of a channel on the probe
         ---
         channel_x_pos=null:  float       # x position relative to the tip of the probe (um), on the width of the shank
-        channel_y_pos=null:  float       # y position relative to the tip of the probe (um), the depth where 0 is the deepest site, and positive above this.
+        channel_y_pos=null:  float       # y position relative to the tip of the probe (um), the depth where 0 is the deepest site, and positive above this
         channel_shank=null:  enum(1, 2)  # shank of the channel, 1 or 2
         """
 
@@ -141,8 +141,8 @@ class ChannelGroup(dj.Imported):
     definition = """
     -> ProbeInsertion
     ---
-    channel_raw_inds:             blob  # Array of integers saying which index in the raw recording file (of its home probe) that the channel corresponds to (counting from zero).
-    channel_local_coordinates:    blob  # Location of each channel relative to probe coordinate system (µm): x (first) dimension is on the width of the shank; (y) is the depth where 0 is the deepest site, and positive above this.
+    channel_raw_inds:             blob  # Array of integers saying which index in the raw recording file (of its home probe) that the channel corresponds to (counting from zero)
+    channel_local_coordinates:    blob  # Location of each channel relative to probe coordinate system (µm): x (first) dimension is on the width of the shank; (y) is the depth where 0 is the deepest site, and positive above this
     """
 
     key_source = acquisition.Session & ProbeInsertion \
