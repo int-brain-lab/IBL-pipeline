@@ -123,13 +123,16 @@ class ProbeInsertion(dj.Imported):
         for p in probes['description']:
             # ingest probe information, including probe model and serial
             probe = dict(
-                probe_model_name=p['model'], p['serial'], channel_counts=960)
+                probe_model_name=p['model'],
+                probe_serial_number=p['serial'],
+                channel_counts=960)
             Probe.insert1(probe, skip_duplicates=True)
 
             # ingest probe insertion
             idx = int(re.search('probe0([0-3])', p['label']).group(1))
             key.update(probe_idx=idx,
-                       probe_model_name=p['model'])
+                       probe_model_name=p['model'],
+                       probe_serial_number=p['serial'])
             self.insert1(key)
 
 
