@@ -289,26 +289,30 @@ class Cluster(dj.Imported):
 
             cluster_entries.append(cluster)
             metrics = clusters.metrics
-            cluster_metric_entries.append(
-                dict(
-                    **key,
-                    cluster_id=icluster,
-                    cluster_revision='0',
-                    num_spikes=metrics.num_spikes[icluster],
-                    firing_rate=metrics.firing_rate[icluster],
-                    presence_ratio=metrics.presence_ratio[icluster],
-                    presence_ratio_std=metrics.presence_ratio_std[icluster],
+            cluster_metric_entry = dict(
+                **key,
+                cluster_id=icluster,
+                cluster_revision='0',
+                num_spikes=metrics.num_spikes[icluster],
+                firing_rate=metrics.firing_rate[icluster],
+                presence_ratio=metrics.presence_ratio[icluster],
+                presence_ratio_std=metrics.presence_ratio_std[icluster],
+                amplitude_cutoff=metrics.amplitude_cutoff[icluster],
+                amplitude_std=metrics.amplitude_std[icluster],
+                epoch_name=metrics.epoch_name[icluster],
+                ks2_contamination_pct=metrics.ks2_contamination_pct[icluster],
+                ks2_label=metrics.ks2_label[icluster])
+
+            if not np.isnan(metrics.isi_viol[icluster]):
+                cluster_metric_entry.update(
                     isi_viol=metrics.isi_viol[icluster],
-                    amplitude_cutoff=metrics.amplitude_cutoff[icluster],
-                    amplitude_std=metrics.amplitude_std[icluster],
-                    epoch_name=metrics.epoch_name[icluster],
-                    ks2_contamination_pct=metrics.ks2_contamination_pct[icluster],
-                    ks2_label=metrics.ks2_label[icluster]))
+                )
+            cluster_metric_entries.append(cluster_metric_entry)
 
         self.insert(cluster_entries)
-        self.ClusterMetric.insert(cluster_metric_entries)
+        self.ClusterMetrics.insert(cluster_metric_entries)
 
-    class ClusterMetric(dj.Part):
+    class ClusterMetrics(dj.Part):
         definition = """
         -> master
         ---
@@ -316,7 +320,7 @@ class Cluster(dj.Imported):
         firing_rate:            float  # firing rate of the cluster
         presence_ratio:         float
         presence_ratio_std:     float
-        isi_viol:               float
+        isi_viol=null:          float
         amplitude_cutoff:       float
         amplitude_std:          float
         epoch_name:             tinyint

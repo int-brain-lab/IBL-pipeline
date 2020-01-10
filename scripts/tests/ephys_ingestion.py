@@ -50,7 +50,7 @@ logger.info('Testing ingestion of TrialSpikes...')
 ephys.TrialSpikes.populate(**kargs)
 trial_spikes_time = time.time()
 logger.info('Ingestion time of TrialSpikes {}'.format(
-    trial_spikes_time-channel_group_time))
+    trial_spikes_time-cluster_time))
 
 logger.info('Testing ingestion of plotting raster...')
 ephys_plotting.RasterLinkS3.populate(
