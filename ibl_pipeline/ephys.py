@@ -34,16 +34,16 @@ class Probe(dj.Lookup):
     channel_counts:         smallint            # number of channels in the probe
     """
 
-    # class Channel(dj.Part):
-    #     definition = """
-    #     # positional information about every channel on this probe
-    #     -> master
-    #     channel_id:     smallint         # id of a channel on the probe
-    #     ---
-    #     channel_x_pos=null:  float       # x position relative to the tip of the probe in um, on the width of the shank
-    #     channel_y_pos=null:  float       # y position relative to the tip of the probe in um, the depth where 0 is the deepest site, and positive above this
-    #     channel_shank=null:  enum(1, 2)  # shank of the channel, 1 or 2
-    #     """
+    class Channel(dj.Part):
+        definition = """
+        # positional information about every channel on this probe
+        -> master
+        channel_id:     smallint         # id of a channel on the probe
+        ---
+        channel_x_pos=null:  float       # x position relative to the tip of the probe in um, on the width of the shank
+        channel_y_pos=null:  float       # y position relative to the tip of the probe in um, the depth where 0 is the deepest site, and positive above this
+        channel_shank=null:  tinyint     # shank of the channel, 1 or 2
+        """
 
 
 @schema
@@ -151,35 +151,21 @@ class ChannelGroup(dj.Imported):
 
     def make(self, key):
         dtypes = [
-            'clusters.amps',
-            'clusters.channels',
-            'clusters.depths',
-            'clusters.metrics',
-            'clusters.peakToTrough',
-            'clusters.uuids',
-            'clusters.waveforms',
-            'clusters.waveformsChannels',
-            'spikes.amps',
-            'spikes.clusters',
-            'spikes.depths',
-            'spikes.samples',
-            'spikes.templates',
-            'spikes.times'
+            'channels.rawInd',
+            'channels.localCoordinates'
         ]
 
         files = one.load(eID, dataset_types=dtypes, download_only=True)
         ses_path = alf.io.get_session_path(files[0])
 
         probe_name = 'probe0' + str(key['probe_idx'])
+        channels = alf.io.load_object(
+            ses_path.joinpath('alf', probe_name), 'channels')
 
-        probe_ids = (ProbeInsertion & key).fetch('probe_idx')
-
-        self.insert(
-            [dict(**key,
-                  probe_idx=probe_idx,
-                  channel_raw_inds=channels_rawInd[probe_idx],
-                  channel_local_coordinates=channels_local_coordinates[probe_idx])
-                for probe_idx in probe_ids])
+        self.insert1(
+            dict(**key,
+                 channel_raw_inds=channels.rawInd,
+                 channel_local_coordinates=channels.localCoordinates))
 
 
 @schema
@@ -199,23 +185,23 @@ class ProbeInsertionLocation(dj.Imported):
     """
 
 
-# # needs to be further adjusted by adding channels.mlapdvIntended
-# @schema
-# class ChannelBrainLocation(dj.Imported):
-#     definition = """
-#     -> ProbeInsertion
-#     -> Probe.Channel
-#     -> reference.Atlas
-#     histology_revision: varchar(64)
-#     ---
-#     # from channels.brainlocation
-#     version_time:       datetime
-#     channel_ap:         float           # anterior posterior CCF coordinate (um)
-#     channel_dv:         float           # dorsal ventral CCF coordinate (um)
-#     channel_lr:         float           # left right CCF coordinate (um)
-#     -> reference.BrainLocationAcronym.proj(channel_brain_location='acronym')   # acronym of the brain location
-#     channel_raw_row:        smallint    # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
-#     """
+# needs to be further adjusted by adding channels.mlapdvIntended
+@schema
+class ChannelBrainLocation(dj.Imported):
+    definition = """
+    -> ProbeInsertion
+    -> Probe.Channel
+    -> reference.Atlas
+    histology_revision: varchar(64)
+    ---
+    # from channels.brainlocation
+    version_time:       datetime
+    channel_ap:         float           # anterior posterior CCF coordinate (um)
+    channel_dv:         float           # dorsal ventral CCF coordinate (um)
+    channel_lr:         float           # left right CCF coordinate (um)
+    -> reference.BrainLocationAcronym.proj(channel_brain_location='acronym')   # acronym of the brain location
+    channel_raw_row:        smallint    # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
+    """
 
 
 @schema
@@ -409,22 +395,22 @@ class TrialSpikes(dj.Computed):
         self.insert(trial_spks)
 
 
-# @schema
-# class LFP(dj.Imported):
-#     definition = """
-#     -> ProbeInsertion
-#     ---
-#     lfp_timestamps:       blob@ephys    # Timestamps for LFP timeseries in seconds
-#     lfp_start_time:       float         # (seconds)
-#     lfp_end_time:         float         # (seconds)
-#     lfp_duration:         float         # (seconds)
-#     lfp_sampling_rate:    float         # samples per second
-#     """
+@schema
+class LFP(dj.Imported):
+    definition = """
+    -> ProbeInsertion
+    ---
+    lfp_timestamps:       blob@ephys    # Timestamps for LFP timeseries in seconds
+    lfp_start_time:       float         # (seconds)
+    lfp_end_time:         float         # (seconds)
+    lfp_duration:         float         # (seconds)
+    lfp_sampling_rate:    float         # samples per second
+    """
 
-#     class Channel(dj.Part):
-#         definition = """
-#         -> master
-#         -> Probe.Channel
-#         ---
-#         lfp: blob@ephys           # recorded lfp on this channel
-#         """
+    class Channel(dj.Part):
+        definition = """
+        -> master
+        -> Probe.Channel
+        ---
+        lfp: blob@ephys           # recorded lfp on this channel
+        """
