@@ -326,16 +326,16 @@ class Cluster(dj.Imported):
         definition = """
         -> master
         ---
-        num_spikes:             int    # total spike number
-        firing_rate:            float  # firing rate of the cluster
-        presence_ratio:         float
-        presence_ratio_std:     float
-        isi_viol=null:          float
-        amplitude_cutoff:       float
-        amplitude_std:          float
-        epoch_name:             tinyint
-        ks2_contamination_pct:  float
-        ks2_label:              enum('good', 'mua')
+        num_spikes:                 int    # total spike number
+        firing_rate:                float  # firing rate of the cluster
+        presence_ratio=null:        float
+        presence_ratio_std=null:    float
+        isi_viol=null:              float
+        amplitude_cutoff=null:      float
+        amplitude_std=null:         float
+        epoch_name:                 tinyint
+        ks2_contamination_pct:      float
+        ks2_label:                  enum('good', 'mua')
         """
 
 
