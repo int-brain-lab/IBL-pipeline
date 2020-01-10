@@ -27,7 +27,7 @@ dj.config['safemode'] = False
 @schema
 class Probe(dj.Lookup):
     definition = """
-    # Description of a particular model of probe.
+    # Description of a particular model of probe
     probe_model_name: varchar(128)      # String naming probe model, from probe-description
     probe_serial_number: int            # serial number of a probe
     ---
