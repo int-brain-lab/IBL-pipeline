@@ -288,7 +288,7 @@ class Cluster(dj.Imported):
                 cluster_spikes_samples=spikes.samples[idx])
 
             cluster_entries.append(cluster)
-            metrics = cluster.metrics
+            metrics = clusters.metrics
             cluster_metric_entries.append(
                 dict(
                     **key,
