@@ -34,16 +34,16 @@ class Probe(dj.Lookup):
     channel_counts:         smallint            # number of channels in the probe
     """
 
-    class Channel(dj.Part):
-        definition = """
-        # positional information about every channel on this probe
-        -> master
-        channel_id:     smallint         # id of a channel on the probe
-        ---
-        channel_x_pos=null:  float       # x position relative to the tip of the probe in um, on the width of the shank
-        channel_y_pos=null:  float       # y position relative to the tip of the probe in um, the depth where 0 is the deepest site, and positive above this
-        channel_shank=null:  enum(1, 2)  # shank of the channel, 1 or 2
-        """
+    # class Channel(dj.Part):
+    #     definition = """
+    #     # positional information about every channel on this probe
+    #     -> master
+    #     channel_id:     smallint         # id of a channel on the probe
+    #     ---
+    #     channel_x_pos=null:  float       # x position relative to the tip of the probe in um, on the width of the shank
+    #     channel_y_pos=null:  float       # y position relative to the tip of the probe in um, the depth where 0 is the deepest site, and positive above this
+    #     channel_shank=null:  enum(1, 2)  # shank of the channel, 1 or 2
+    #     """
 
 
 @schema
@@ -184,23 +184,23 @@ class ProbeInsertionLocation(dj.Imported):
     """
 
 
-# needs to be further adjusted by adding channels.mlapdvIntended
-@schema
-class ChannelBrainLocation(dj.Imported):
-    definition = """
-    -> ProbeInsertion
-    -> Probe.Channel
-    -> reference.Atlas
-    histology_revision: varchar(64)
-    ---
-    # from channels.brainlocation
-    version_time:       datetime
-    channel_ap:         float           # anterior posterior CCF coordinate (um)
-    channel_dv:         float           # dorsal ventral CCF coordinate (um)
-    channel_lr:         float           # left right CCF coordinate (um)
-    -> reference.BrainLocationAcronym.proj(channel_brain_location='acronym')   # acronym of the brain location
-    channel_raw_row:        smallint    # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
-    """
+# # needs to be further adjusted by adding channels.mlapdvIntended
+# @schema
+# class ChannelBrainLocation(dj.Imported):
+#     definition = """
+#     -> ProbeInsertion
+#     -> Probe.Channel
+#     -> reference.Atlas
+#     histology_revision: varchar(64)
+#     ---
+#     # from channels.brainlocation
+#     version_time:       datetime
+#     channel_ap:         float           # anterior posterior CCF coordinate (um)
+#     channel_dv:         float           # dorsal ventral CCF coordinate (um)
+#     channel_lr:         float           # left right CCF coordinate (um)
+#     -> reference.BrainLocationAcronym.proj(channel_brain_location='acronym')   # acronym of the brain location
+#     channel_raw_row:        smallint    # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
+#     """
 
 
 @schema
