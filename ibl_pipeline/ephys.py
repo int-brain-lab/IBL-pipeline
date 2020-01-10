@@ -150,6 +150,8 @@ class ChannelGroup(dj.Imported):
         & (data.FileRecord & 'dataset_name="channels.localCoordinates.npy"')
 
     def make(self, key):
+
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
         dtypes = [
             'channels.rawInd',
             'channels.localCoordinates'
