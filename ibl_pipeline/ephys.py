@@ -242,7 +242,7 @@ class Cluster(dj.Imported):
             'clusters.amps',
             'clusters.channels',
             'clusters.depths',
-            'metrics',
+            'clusters.metrics',
             'clusters.peakToTrough',
             'clusters.uuids',
             'clusters.waveforms',
