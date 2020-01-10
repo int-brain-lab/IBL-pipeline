@@ -258,7 +258,7 @@ class Cluster(dj.Imported):
         files = one.load(eID, dataset_types=dtypes, download_only=True)
         ses_path = alf.io.get_session_path(files[0])
 
-        probe_name = 'probe0' + str(probe_idx)
+        probe_name = 'probe0' + str(key['probe_idx'])
 
         clusters = alf.io.load_object(
             ses_path.joinpath('alf', probe_name), 'clusters')
