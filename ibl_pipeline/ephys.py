@@ -293,6 +293,7 @@ class Cluster(dj.Imported):
                 dict(
                     **key,
                     cluster_id=icluster,
+                    cluster_revision='0',
                     num_spikes=metrics.num_spikes[icluster],
                     firing_rate=metrics.firing_rate[icluster],
                     presence_ratio=metrics.presence_ratio[icluster],
@@ -359,7 +360,7 @@ class TrialSpikes(dj.Computed):
         trials = behavior.TrialSet.Trial & key
         trial_spks = []
         cluster = Cluster() & key
-        spike_times = cluster.fetch1('cluster_spike_times')
+        spike_times = cluster.fetch1('cluster_spikes_times')
 
         for trial, itrial in tqdm(zip(trials.fetch(as_dict=True), trials.fetch('KEY'))):
             trial_spk = dict(

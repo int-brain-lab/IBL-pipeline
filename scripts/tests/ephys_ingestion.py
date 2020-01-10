@@ -9,6 +9,12 @@ from ibl_pipeline.plotting import ephys as ephys_plotting
 import logging
 import time
 
+import datetime
+from uuid import UUID
+
+key = {'subject_uuid': UUID('18a54f60-534b-4ed5-8bda-b434079b8ab8'),
+       'session_start_time': datetime.datetime(2019, 12, 5, 16, 28, 54)}
+
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
@@ -22,23 +28,23 @@ kargs = dict(display_progress=True, suppress_errors=True)
 start_time = time.time()
 
 logger.info('Testing ingestion of ProbeInsertion...')
-ephys.ProbeInsertion.populate(display_progress=True, limit=1)
+ephys.ProbeInsertion.populate(key, display_progress=True)
 
 probe_insertion_time = time.time()
 logger.info('Ingestion time of ProbeInsertion {}'.format(
     probe_insertion_time-start_time))
 
-logger.info('Testing ingestion of ChannelGroup...')
-ephys.ChannelGroup.populate(**kargs)
-channel_group_time = time.time()
-logger.info('Ingestion time of ChannelGroup {}'.format(
-    channel_group_time-probe_insertion_time))
+# logger.info('Testing ingestion of ChannelGroup...')
+# ephys.ChannelGroup.populate(**kargs)
+# channel_group_time = time.time()
+# logger.info('Ingestion time of ChannelGroup {}'.format(
+#     channel_group_time-probe_insertion_time))
 
 logger.info('Testing ingestion of Cluster...')
 ephys.Cluster.populate(**kargs)
 cluster_time = time.time()
 logger.info('Ingestion time of Cluster {}'.format(
-    cluster_time-channel_group_time))
+    cluster_time-probe_insertion_time))
 
 logger.info('Testing ingestion of TrialSpikes...')
 ephys.TrialSpikes.populate(**kargs)
