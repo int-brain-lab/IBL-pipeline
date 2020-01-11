@@ -34,11 +34,18 @@ probe_insertion_time = time.time()
 logger.info('Ingestion time of ProbeInsertion {}'.format(
     probe_insertion_time-start_time))
 
+logger.info('Testing ingestion of ProbeTrajectory...')
+ephys.ProbeTrajectory.populate(key, display_progress=True)
+
+probe_projectory_time = time.time()
+logger.info('Ingestion time of ProbeTrajectory {}'.format(
+    probe_projectory_time-probe_insertion_time))
+
 logger.info('Testing ingestion of ChannelGroup...')
 ephys.ChannelGroup.populate(**kargs)
 channel_group_time = time.time()
 logger.info('Ingestion time of ChannelGroup {}'.format(
-    channel_group_time-probe_insertion_time))
+    channel_group_time-probe_projection_time))
 
 logger.info('Testing ingestion of Cluster...')
 ephys.Cluster.populate(**kargs)
