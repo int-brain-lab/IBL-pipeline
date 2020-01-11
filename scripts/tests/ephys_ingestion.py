@@ -21,7 +21,8 @@ logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
         logging.FileHandler("ephys_ingestion.log"),
-        logging.StreamHandler()])
+        logging.StreamHandler()],
+    level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ kargs = dict(display_progress=True, suppress_errors=True)
 start_time = time.time()
 
 logger.info('Testing ingestion of CompleteClusterSession...')
-ephys.CompleteClusterSession.populate(kargs)
+ephys.CompleteClusterSession.populate(karges)
 
 complete_cluster_time = time.time()
 logger.info('Ingestion time of ProbeInsertion {}'.format(
