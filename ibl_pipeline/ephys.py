@@ -185,8 +185,8 @@ class ProbeTrajectory(dj.Imported):
     beta:               float           # (degrees) roll angle of the probe
     """
     key_source = acquisition.Session \
-        & (data.FileRecord & 'dataset_name="probes.description.npy"') \
-        & (data.FileRecord & 'dataset_name="probes.trajectory.npy"')
+        & (data.FileRecord & 'dataset_name="probes.description.json"') \
+        & (data.FileRecord & 'dataset_name="probes.trajectory.json"')
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
