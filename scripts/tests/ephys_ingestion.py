@@ -31,7 +31,7 @@ kargs = dict(display_progress=True, suppress_errors=True)
 start_time = time.time()
 
 logger.info('Testing ingestion of CompleteClusterSession...')
-ephys.CompleteClusterSession.populate(karges)
+ephys.CompleteClusterSession.populate(kargs)
 
 complete_cluster_time = time.time()
 logger.info('Ingestion time of ProbeInsertion {}'.format(
