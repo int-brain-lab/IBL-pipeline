@@ -45,7 +45,7 @@ logger.info('Testing ingestion of ChannelGroup...')
 ephys.ChannelGroup.populate(**kargs)
 channel_group_time = time.time()
 logger.info('Ingestion time of ChannelGroup {}'.format(
-    channel_group_time-probe_projection_time))
+    channel_group_time-probe_trajectory_time))
 
 logger.info('Testing ingestion of Cluster...')
 ephys.Cluster.populate(**kargs)
