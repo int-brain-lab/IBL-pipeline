@@ -171,20 +171,36 @@ class ChannelGroup(dj.Imported):
 
 
 @schema
-class ProbeInsertionLocation(dj.Imported):
+class ProbeTrajectory(dj.Imported):
     definition = """
     # data imported from probes.trajectory
     -> ProbeInsertion
     ---
-    probe_set_raw_filename: varchar(256)      # Name of the raw data file this probe was recorded in
-    entry_point_rl:     float
-    entry_point_ap:     float
-    entry_point_dv:     float
-    tip_point_rl:       float
-    tip_point_ap:       float
-    tip_point_dv:       float
-    axial_angle:        float
+    x:                  float           # (um) medio-lateral coordinate relative to Bregma, left negative
+    y:                  float           # (um) antero-posterior coordinate relative to Bregma, back negative
+    z:                  float           # (um) dorso-ventral coordinate relative to Bregma, ventral negative
+    phi:                float           # (degrees)[-180 180] azimuth
+    theta:              float           # (degrees)[0 180] polar angle
+    depth:              float           # (um) insertion depth
+    beta:               float           # (degrees) roll angle of the probe
     """
+    key_source = acquisition.Session \
+        & (data.FileRecord & 'dataset_name="probes.description.npy"') \
+        & (data.FileRecord & 'dataset_name="probes.trajectory.npy"')
+
+    def make(self, key):
+        eID = str((acquisition.Session & key).fetch1('session_uuid'))
+        dtypes = ['probes.description', 'probes.trajectory']
+        files = one.load(eID, dataset_types=dtypes, download_only=True)
+        ses_path = alf.io.get_session_path(files[0])
+        probes = alf.io.load_object(ses_path.joinpath('alf'), 'probes')
+        for p in probes.trajectory:
+
+            # ingest probe trajectory
+            idx = int(re.search('probe0([0-3])', p['label']).group(1))
+            p.pop('label')
+            key.update(probe_idx=idx, **p)
+            self.insert1(key)
 
 
 # needs to be further adjusted by adding channels.mlapdvIntended
@@ -203,16 +219,6 @@ class ChannelBrainLocation(dj.Imported):
     channel_lr:         float           # left right CCF coordinate (um)
     -> reference.BrainLocationAcronym.proj(channel_brain_location='acronym')   # acronym of the brain location
     channel_raw_row:        smallint    # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
-    """
-
-
-@schema
-class Template(dj.Imported):
-    definition = """
-    template_id:                        int
-    ---
-    template_waveform=null:             blob@ephys      #  Waveform of automatic spike sorting templates (stored as a sparse array, only for a subset of channels with large waveforms)
-    template_waveform_channels=null:    blob@ephys      #  Channels of original recording that are stored for each template
     """
 
 
