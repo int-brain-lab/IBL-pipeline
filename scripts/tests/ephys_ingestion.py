@@ -28,14 +28,14 @@ kargs = dict(display_progress=True, suppress_errors=True)
 start_time = time.time()
 
 logger.info('Testing ingestion of ProbeInsertion...')
-ephys.ProbeInsertion.populate(key, display_progress=True)
+ephys.ProbeInsertion.populate(kargs)
 
 probe_insertion_time = time.time()
 logger.info('Ingestion time of ProbeInsertion {}'.format(
     probe_insertion_time-start_time))
 
 logger.info('Testing ingestion of ProbeTrajectory...')
-ephys.ProbeTrajectory.populate(key, display_progress=True)
+ephys.ProbeTrajectory.populate(kargs)
 
 probe_trajectory_time = time.time()
 logger.info('Ingestion time of ProbeTrajectory {}'.format(
