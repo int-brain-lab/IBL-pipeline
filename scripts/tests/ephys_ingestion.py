@@ -12,8 +12,8 @@ import time
 import datetime
 from uuid import UUID
 
-key = {'subject_uuid': UUID('18a54f60-534b-4ed5-8bda-b434079b8ab8'),
-       'session_start_time': datetime.datetime(2019, 12, 6, 18, 30, 56)}
+# key = {'subject_uuid': UUID('18a54f60-534b-4ed5-8bda-b434079b8ab8'),
+#        'session_start_time': datetime.datetime(2019, 12, 6, 18, 30, 56)
 
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
