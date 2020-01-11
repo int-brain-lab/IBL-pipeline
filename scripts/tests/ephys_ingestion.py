@@ -15,6 +15,8 @@ from uuid import UUID
 # key = {'subject_uuid': UUID('18a54f60-534b-4ed5-8bda-b434079b8ab8'),
 #        'session_start_time': datetime.datetime(2019, 12, 6, 18, 30, 56)
 
+restriction = 'session_start_time > "2019-11-30"'
+
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
@@ -27,12 +29,19 @@ kargs = dict(display_progress=True, suppress_errors=True)
 
 start_time = time.time()
 
+logger.info('Testing ingestion of CompleteClusterSession...')
+ephys.CompleteClusterSession.populate(kargs)
+
+complete_cluster_time = time.time()
+logger.info('Ingestion time of ProbeInsertion {}'.format(
+    complete_cluster_time-start_time))
+
 logger.info('Testing ingestion of ProbeInsertion...')
-ephys.ProbeInsertion.populate(kargs)
+ephys.ProbeInsertion.populate(restriction, kargs)
 
 probe_insertion_time = time.time()
 logger.info('Ingestion time of ProbeInsertion {}'.format(
-    probe_insertion_time-start_time))
+    probe_insertion_time-complete_cluster_time))
 
 logger.info('Testing ingestion of ProbeTrajectory...')
 ephys.ProbeTrajectory.populate(kargs)
