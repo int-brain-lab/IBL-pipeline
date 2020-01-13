@@ -27,37 +27,30 @@ subject.Sequence.populate(**kargs)
 subject.Allele.populate(**kargs)
 subject.Line.populate(**kargs)
 
-# select specific subjects for the public website
-subject_uuids = public.PublicSubjectUuid.fetch('subject_uuid')
-subj_res = utils.get_uuids('subjects.subject', 'subject_uuid', subject_uuids)
-subject.Subject.populate(subj_res, **kargs)
+subject.Subject.populate(**kargs)
 # subject.BreedingPair.populate(**kargs)
 # subject.Litter.populate(**kargs)
 # subject.LitterSubject.populate(**kargs)
-subject.SubjectProject.populate(subj_res, **kargs)
-subject.SubjectUser.populate(subj_res, **kargs)
-subject.SubjectLab.populate(subj_res, **kargs)
-subject.SubjectCullMethod.populate(subj_res, **kargs)
-subject.Caging.populate(subj_res, **kargs)
+subject.SubjectProject.populate(**kargs)
+subject.SubjectUser.populate(**kargs)
+subject.SubjectLab.populate(**kargs)
+subject.SubjectCullMethod.populate(**kargs)
+subject.Caging.populate(**kargs)
 # subject.UserHistory.populate(**kargs)
-subject.Weaning.populate(subj_res, **kargs)
-subject.Death.populate(subj_res, **kargs)
-subject.GenotypeTest.populate(subj_res, **kargs)
-subject.Zygosity.populate(subj_res, **kargs)
+subject.Weaning.populate(**kargs)
+subject.Death.populate(**kargs)
+subject.GenotypeTest.populate(**kargs)
+subject.Zygosity.populate(**kargs)
 
 # action tables
 print('-------- Populating action shadow tables -----------')
 action.ProcedureType.populate(**kargs)
-action.Surgery.populate(
-    utils.get_uuids('actions.surgery', 'surgery_uuid', subject_uuids),
-    **kargs)
+action.Surgery.populate(**kargs)
 
 
 # acquisition tables
 print('-------- Populating session entries -----------')
-acquisition.Session.populate(
-    utils.get_uuids('actions.session', 'session_uuid', subject_uuids),
-    **kargs)
+acquisition.Session.populate(**kargs)
 
 # data tables
 print('-------- Populating data shadow tables -----------')
@@ -66,8 +59,6 @@ data.DataRepositoryType.populate(**kargs)
 data.DataRepository.populate(**kargs)
 data.DataSetType.populate(**kargs)
 print('-------- Populating dataset entries -----------')
-data.DataSet.populate(
-    utils.get_uuids('data.dataset', 'dataset_uuid', subject_uuids),
-    **kargs)
+data.DataSet.populate(**kargs)
 print('-------- Populating file record entries ----------')
 data.FileRecord.populate(**kargs)
