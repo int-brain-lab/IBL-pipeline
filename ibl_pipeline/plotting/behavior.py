@@ -1016,4 +1016,5 @@ class DailyLabSummary(dj.Computed):
         latest_training_status:      varchar(64)
         n_sessions_current_protocol: int
         data_update_status:          varchar(255)
+        subject_summary_ts=CURRENT_TIMESTAMP:      timestamp
         """
