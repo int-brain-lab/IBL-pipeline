@@ -97,8 +97,16 @@ class InsertBuffer(object):
         qlen = len(self._queue)
         if qlen > 0 and qlen % chunksz == 0:
             try:
-                self._rel.insert(self._queue, skip_duplicates=skip_duplicates,
-                                 ignore_extra_fields=ignore_extra_fields)
+                if isinstance(object, dj.Computed) or isinstance(object, dj.Imported):
+                    self._rel.insert(
+                        self._queue, skip_duplicates=skip_duplicates,
+                        ignore_extra_fields=ignore_extra_fields,
+                        allow_direct_insert=True)
+                else
+                    self._rel.insert(
+                        self._queue, skip_duplicates=skip_duplicates,
+                        ignore_extra_fields=ignore_extra_fields)
+
                 self._queue.clear()
                 return qlen
             except dj.DataJointError as e:
