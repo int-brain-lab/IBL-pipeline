@@ -102,7 +102,7 @@ class InsertBuffer(object):
                         self._queue, skip_duplicates=skip_duplicates,
                         ignore_extra_fields=ignore_extra_fields,
                         allow_direct_insert=True)
-                else
+                else:
                     self._rel.insert(
                         self._queue, skip_duplicates=skip_duplicates,
                         ignore_extra_fields=ignore_extra_fields)
