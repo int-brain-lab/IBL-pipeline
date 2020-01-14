@@ -14,7 +14,7 @@ record_exists = alyxraw.AlyxRaw.Field & records & \
 key_source = (alyxraw.AlyxRaw & record_exists & records_flatiron).proj(
     record_uuid='uuid') - data.FileRecord
 
-file_record = InsertBuffer(data.FileRecord)
+file_record = InsertBuffer(data.FileRecord())
 
 for key in tqdm(key_source.fetch('KEY')):
     key_fr = key.copy()
@@ -41,5 +41,5 @@ for key in tqdm(key_source.fetch('KEY')):
 
     file_record.insert1(key_fr)
 
-    if file_record.flush(skip_duplicates=True, chunksz=10000):
+    if file_record.flush(skip_duplicates=True, chunksz=100):
         print('Inserted 10000 raw field tuples')
