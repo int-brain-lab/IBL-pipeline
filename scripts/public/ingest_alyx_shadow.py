@@ -8,7 +8,7 @@ from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition
 from ibl_pipeline import public
 import utils
 
-kargs = dict(suppress_errors=True, display_progress=True)
+kargs = dict(suppress_errors=True, display_progress=True, reserve_jobs=True)
 
 # reference tables
 print('-------- Populating reference shadow tables ------------')
