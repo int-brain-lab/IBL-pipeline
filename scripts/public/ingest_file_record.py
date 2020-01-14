@@ -2,6 +2,7 @@
 from ibl_pipeline.ingest import alyxraw, data, InsertBuffer
 from ibl_pipeline.ingest import get_raw_field as grf
 import uuid
+from tqdm import tqdm
 
 records = alyxraw.AlyxRaw & 'model="data.filerecord"'
 repos = (data.DataRepository & 'repo_name LIKE "flatiron%"').fetch(
@@ -15,7 +16,7 @@ key_source = (alyxraw.AlyxRaw & record_exists & records_flatiron).proj(
 
 file_record = InsertBuffer(data.FileRecord)
 
-for key in key_source.fetch('KEY'):
+for key in tqdm(key_source.fetch('KEY')):
     key_fr = key.copy()
     key['uuid'] = key['record_uuid']
     key_fr['exists'] = True
