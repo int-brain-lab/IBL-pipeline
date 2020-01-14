@@ -97,6 +97,7 @@ class InsertBuffer(object):
         qlen = len(self._queue)
         if qlen > 0 and qlen % chunksz == 0:
             try:
+                print(issubclass(object, dj.Computed))
                 if issubclass(object, dj.Computed) or issubclass(object, dj.Imported):
                     self._rel.insert(
                         self._queue, skip_duplicates=skip_duplicates,
