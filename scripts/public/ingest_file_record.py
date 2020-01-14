@@ -24,7 +24,7 @@ for key in key_source.fetch('KEY'):
     if not len(data.DataSet & dict(dataset_uuid=uuid.UUID(dataset))):
         print('Dataset {} is not in the table data.DataSet')
         print('Record_uuid: {}'.format(str(key['uuid'])))
-        return
+        continue
 
     key_fr['subject_uuid'], key_fr['session_start_time'], \
         key_fr['dataset_name'] = \
