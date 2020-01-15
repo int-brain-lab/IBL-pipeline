@@ -4,7 +4,7 @@ from ibl_pipeline.ingest import alyxraw
 users = alyxraw.AlyxRaw.Field & \
         (alyxraw.AlyxRaw & 'model="misc.labmember"') & \
         'fname="username"'
-original_users = public.UserMap.proj(fvalue='username')
+original_users = public.UserMap.proj(fvalue='user_name')
 
 new_users = []
 for iuser, user in enumerate(
