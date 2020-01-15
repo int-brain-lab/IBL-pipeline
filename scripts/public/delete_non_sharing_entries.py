@@ -2,7 +2,8 @@
 This script deletes the entries that are not shared in the public release of Jan 2020
 '''
 
-from ibl_pipeline import reference, subject, action, acquisition, data
+from ibl_pipeline import (
+    reference, subject, action, acquisition, data, public)
 
 
 # delete all subjects that are not in the list
