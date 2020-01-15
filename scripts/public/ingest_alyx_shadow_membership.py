@@ -5,8 +5,11 @@ which cannot be inserted with auto-population.
 import datajoint as dj
 import json
 import uuid
-from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data
+from ibl_pipeline.ingest import (
+    alyxraw, reference, subject, action,
+    acquisition, data, InsertBuffer)
 from ibl_pipeline.ingest import get_raw_field as grf
+from tqdm import tqdm
 
 # reference.ProjectLabMember
 print('Ingesting reference.ProjectLabMember...')
@@ -170,7 +173,9 @@ sessions_with_users = alyxraw.AlyxRaw.Field & sessions & \
 keys = (alyxraw.AlyxRaw & sessions_with_users).proj(
     session_uuid='uuid')
 
-for key in keys:
+session_user = InsertBuffer(acquisition.SessionUser)
+
+for key in tqdm(keys):
 
     key['uuid'] = key['session_uuid']
 
@@ -193,6 +198,13 @@ for key in keys:
                 'user_name')
         acquisition.SessionUser.insert1(key_su, skip_duplicates=True)
 
+        if session_user.flush(
+                skip_duplicates=True, chunksz=1000):
+            print('Inserted 1000 session user tuples')
+
+if session_user.flush(skip_duplicates=True):
+    print('Inserted all remaining session user tuples')
+
 
 # acquisition.SessionProcedure
 print('Ingesting acquisition.SessionProcedure...')
@@ -202,7 +214,9 @@ sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
 keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
     session_uuid='uuid')
 
-for key in keys:
+session_procedure = InsertBuffer(acquisition.SessionProcedure)
+
+for key in tqdm(keys):
     key['uuid'] = key['session_uuid']
     if not len(acquisition.Session & key):
         print('Session {} is not in the table acquisition.Session'.format(
@@ -221,7 +235,12 @@ for key in keys:
             (action.ProcedureType &
              dict(procedure_type_uuid=uuid.UUID(procedure))).fetch1(
                  'procedure_type_name')
-        acquisition.SessionProcedure.insert1(key_sp, skip_duplicates=True)
+        if session_procedure.flush(
+                skip_duplicates=True, chunksz=1000):
+            print('Inserted 1000 session procedure tuples')
+
+if session_procedure.flush(skip_duplicates=True):
+    print('Inserted all remaining session procedure tuples')
 
 # acquisition.SessionProject
 print('Ingesting acquisition.SessionProject...')
@@ -231,7 +250,9 @@ sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
 keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
     session_uuid='uuid')
 
-for key in keys:
+session_project = InsertBuffer(acquisition.SessionProject)
+
+for key in tqdm(keys):
     key['uuid'] = key['session_uuid']
     if not len(acquisition.Session & key):
         print('Session {} is not in the table acquisition.Session'.format(
@@ -250,7 +271,12 @@ for key in keys:
          dict(project_uuid=uuid.UUID(project))).fetch1(
         'project_name')
 
-    acquisition.SessionProject.insert1(key_sp, skip_duplicates=True)
+    if session_project.flush(
+            skip_duplicates=True, chunksz=1000):
+        print('Inserted 1000 session procedure tuples')
+
+if session_project.flush(skip_duplicates=True):
+    print('Inserted all remaining session procedure tuples')
 
 
 # data.ProjectRepository
