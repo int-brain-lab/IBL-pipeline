@@ -37,9 +37,12 @@ for key in tqdm(key_source.fetch('KEY')):
     user = grf(key, 'created_by')
 
     if user != 'None':
-        key_ds['dataset_created_by'] = \
-            (reference.LabMember & dict(user_uuid=uuid.UUID(user))).fetch1(
-                'user_name')
+        try:
+            key_ds['dataset_created_by'] = \
+                (reference.LabMember & dict(user_uuid=uuid.UUID(user))).fetch1(
+                    'user_name')
+        except:
+            print(user)
 
     format = grf(key, 'data_format')
     key_ds['format_name'] = \
