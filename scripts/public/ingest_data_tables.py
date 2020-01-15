@@ -1,5 +1,5 @@
 
-from ibl_pipeline.ingest import alyxraw, data, InsertBuffer
+from ibl_pipeline.ingest import alyxraw, data, reference, acquisition, InsertBuffer
 from ibl_pipeline.ingest import get_raw_field as grf
 import uuid
 from tqdm import tqdm
@@ -16,11 +16,11 @@ for key in tqdm(key_source.fetch('KEY')):
 
     session = grf(key, 'session')
     if not len(acquisition.Session &
-                dict(session_uuid=uuid.UUID(session))):
+               dict(session_uuid=uuid.UUID(session))):
         print('Session {} is not in the table acquisition.Session'.format(
             session))
         print('dataset_uuid: {}'.format(str(key['uuid'])))
-        return
+        continue
 
     key_ds['subject_uuid'], key_ds['session_start_time'] = \
         (acquisition.Session &
@@ -31,7 +31,7 @@ for key in tqdm(key_source.fetch('KEY')):
 
     dt = grf(key, 'dataset_type')
     key_ds['dataset_type_name'] = \
-        (DataSetType & dict(dataset_type_uuid=uuid.UUID(dt))).fetch1(
+        (data.DataSetType & dict(dataset_type_uuid=uuid.UUID(dt))).fetch1(
             'dataset_type_name')
 
     user = grf(key, 'created_by')
@@ -43,7 +43,7 @@ for key in tqdm(key_source.fetch('KEY')):
 
     format = grf(key, 'data_format')
     key_ds['format_name'] = \
-        (DataFormat & dict(format_uuid=uuid.UUID(format))).fetch1(
+        (data.DataFormat & dict(format_uuid=uuid.UUID(format))).fetch1(
             'format_name')
 
     key_ds['created_datetime'] = grf(key, 'created_datetime')
