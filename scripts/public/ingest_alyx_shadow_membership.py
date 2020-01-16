@@ -236,7 +236,7 @@ for key in tqdm(keys):
              dict(procedure_type_uuid=uuid.UUID(procedure))).fetch1(
                  'procedure_type_name')
         if session_procedure.flush(
-                skip_duplicates=True, chunksz=1000):
+                key_sp, skip_duplicates=True, chunksz=1000):
             print('Inserted 1000 session procedure tuples')
 
 if session_procedure.flush(skip_duplicates=True):
@@ -245,9 +245,9 @@ if session_procedure.flush(skip_duplicates=True):
 # acquisition.SessionProject
 print('Ingesting acquisition.SessionProject...')
 sessions = alyxraw.AlyxRaw & 'model="actions.session"'
-sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
+sessions_with_projects = alyxraw.AlyxRaw.Field & sessions & \
     'fname="project"' & 'fvalue!="None"'
-keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
+keys = (alyxraw.AlyxRaw & sessions_with_projects).proj(
     session_uuid='uuid')
 
 session_project = InsertBuffer(acquisition.SessionProject)
@@ -272,7 +272,7 @@ for key in tqdm(keys):
         'project_name')
 
     if session_project.flush(
-            skip_duplicates=True, chunksz=1000):
+            key_sp, skip_duplicates=True, chunksz=1000):
         print('Inserted 1000 session procedure tuples')
 
 if session_project.flush(skip_duplicates=True):
