@@ -9,7 +9,7 @@ from ibl_pipeline import subject
 dj.config['safemode'] = False
 
 kargs = dict(
-    suppress_errors=True, display_progress=True, reserve_jobs=True
+    suppress_errors=True, display_progress=True
 )
 
 print('------------ Populating plotting.SessionPsychCurve -----------')

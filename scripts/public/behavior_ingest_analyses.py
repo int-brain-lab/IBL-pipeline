@@ -3,8 +3,7 @@ from ibl_pipeline import subject, acquisition, data, behavior
 from ibl_pipeline.analyses import behavior as behavior_analyses
 
 kwargs = dict(display_progress=True,
-              suppress_errors=True,
-              reserve_jobs=True)
+              suppress_errors=True)
 start = time.time()
 
 print('------ Populating CompleteTrialSession ---------')
