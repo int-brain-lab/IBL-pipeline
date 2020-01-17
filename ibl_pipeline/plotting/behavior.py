@@ -11,6 +11,7 @@ import plotly.graph_objs as go
 import statsmodels.stats.proportion as smp
 import datetime
 import matplotlib.pyplot as plt
+import os
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_behavior')
@@ -197,6 +198,13 @@ class CumulativeSummary(dj.Computed):
     def make(self, key):
         self.insert1(key)
 
+        # check the environment, public or internal
+
+        if os.environ.get('MODE') == 'public':
+            public = True
+        else:
+            public = False
+
         subj = subject.Subject & key
         # get the first date when animal became "trained" and "ready for ephys"
         status = putils.get_status(subj)
@@ -265,7 +273,8 @@ class CumulativeSummary(dj.Computed):
             data = putils.create_monday_plot(data, yrange, d['mondays'])
 
             # add status plots
-            data = putils.create_status_plot(data, yrange, status)
+            data = putils.create_status_plot(
+                data, yrange, status, public=public)
 
             layout = go.Layout(
                 yaxis=dict(
@@ -355,7 +364,8 @@ class CumulativeSummary(dj.Computed):
             data = putils.create_monday_plot(data, yrange, d['mondays'])
 
             # add status plots
-            data = putils.create_status_plot(data, yrange, status)
+            data = putils.create_status_plot(
+                data, yrange, status, public=public)
 
             layout = go.Layout(
 
@@ -493,6 +503,7 @@ class CumulativeSummary(dj.Computed):
                     xaxis='x{}'.format(4-ipar),
                     yaxis='y{}'.format(4-ipar),
                     show_legend_external=show_legend
+                    public=public
                 )
 
             x_axis_range = \
@@ -611,6 +622,8 @@ class CumulativeSummary(dj.Computed):
             contrast_map = contrast_map.where(pd.notnull(contrast_map), None)
             contrasts = np.sort(contrast_df['signed_contrast'].unique())
 
+
+
             data = [dict(
                 x=[t.strftime('%Y-%m-%d')
                    for t in contrast_map.columns.tolist()],
@@ -623,9 +636,10 @@ class CumulativeSummary(dj.Computed):
                 type='heatmap',
                 colorbar=dict(
                     thickness=10,
-                    title='prob choosing right',
+                    title='Rightward Choice (%)',
                     titleside='right',
-                )
+                ),
+                colorscale='PuOr'
 
             )]
 

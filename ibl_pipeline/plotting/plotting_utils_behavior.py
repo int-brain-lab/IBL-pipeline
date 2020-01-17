@@ -479,8 +479,12 @@ def create_rt_trialnum_plot(trials):
 
 
 def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
-                       show_legend_external=True):
+                       show_legend_external=True, public=False):
 
+    if public:
+        trained_marker_name = 'first day got trained'
+    else:
+        trained_marker_name = 'first day got trained 1a'
     if status['is_trained_1a']:
         data.append(
            go.Scatter(
@@ -489,7 +493,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                y=yrange,
                mode="lines",
                marker=dict(color='rgba(195, 90, 80, 1)'),
-               name='first day got trained 1a',
+               name=trained_marker_name,
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,
@@ -497,7 +501,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
             )
         )
 
-    if status['is_trained_1b']:
+    if status['is_trained_1b'] and (not public):
         data.append(
            go.Scatter(
                x=[status['first_trained_1b_date'],
@@ -513,7 +517,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
             )
         )
 
-    if status['is_ready4ephysrig']:
+    if status['is_ready4ephysrig'] and (not public):
         data.append(
            go.Scatter(
                x=[status['first_ready4ephysrig_date'],
@@ -529,7 +533,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
             )
         )
 
-    if status['is_ready4delay']:
+    if status['is_ready4delay'] and (not public):
         data.append(
            go.Scatter(
                x=[status['first_ready4delay_date'],
@@ -545,7 +549,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
             )
         )
 
-    if status['is_ready4recording']:
+    if status['is_ready4recording'] and (not public):
         data.append(
            go.Scatter(
                x=[status['first_ready4recording_date'],
