@@ -502,7 +502,7 @@ class CumulativeSummary(dj.Computed):
                     pars_data, yranges[ipar], status,
                     xaxis='x{}'.format(4-ipar),
                     yaxis='y{}'.format(4-ipar),
-                    show_legend_external=show_legend
+                    show_legend_external=show_legend,
                     public=public
                 )
 
