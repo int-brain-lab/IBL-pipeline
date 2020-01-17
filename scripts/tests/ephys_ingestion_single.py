@@ -1,6 +1,6 @@
 
 import datajoint as dj
-from .. import behavior, ephys
+from ibl_pipeline import behavior, ephys
 from . import plotting_utils_ephys as putils
 import numpy as np
 import pandas as pd
