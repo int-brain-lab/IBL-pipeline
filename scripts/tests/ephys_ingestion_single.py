@@ -13,7 +13,8 @@ trial_spks = []
 cluster = ephys.Cluster() & key
 spike_times = cluster.fetch1('cluster_spikes_times')
 
-#
+key = {'subject_uuid': UUID('18a54f60-534b-4ed5-8bda-b434079b8ab8'),
+       'session_start_time': datetime.datetime(2019, 12, 6, 18, 30, 56)}
 # trials.fetch(as_dict=True), trials.fetch('KEY')
 # f = np.searchsorted
 
