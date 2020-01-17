@@ -9,12 +9,14 @@ import plotly.graph_objs as go
 import json
 from os import path
 
-from ibl_pipeline import behavior, ephys
-
 trials = behavior.TrialSet.Trial & key
 trial_spks = []
 cluster = ephys.Cluster() & key
 spike_times = cluster.fetch1('cluster_spikes_times')
+
+#
+# trials.fetch(as_dict=True), trials.fetch('KEY')
+# f = np.searchsorted
 
 for trial, itrial in tqdm(zip(trials.fetch(as_dict=True), trials.fetch('KEY'))):
     trial_spk = dict(
@@ -23,10 +25,16 @@ for trial, itrial in tqdm(zip(trials.fetch(as_dict=True), trials.fetch('KEY'))):
         cluster_revision=key['cluster_revision'],
         probe_idx=key['probe_idx']
     )
+
+
     f = np.logical_and(spike_times < trial['trial_end_time'],
                        spike_times > trial['trial_start_time'])
 
+    # TODO: to move outside the loop
     events = (ephys.Event & 'event!="go cue"').fetch('event')
+
+    spike_times[f]
+
     for event in events:
         if not np.any(f):
             trial_spk['trial_spike_times'] = []
