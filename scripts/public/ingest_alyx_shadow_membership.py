@@ -198,6 +198,7 @@ for key in tqdm(keys):
                 'user_name')
         acquisition.SessionUser.insert1(key_su, skip_duplicates=True)
 
+        session_user.insert1(key_su)
         if session_user.flush(
                 skip_duplicates=True, chunksz=1000):
             print('Inserted 1000 session user tuples')
@@ -235,8 +236,9 @@ for key in tqdm(keys):
             (action.ProcedureType &
              dict(procedure_type_uuid=uuid.UUID(procedure))).fetch1(
                  'procedure_type_name')
+        session_procedure.insert1(key_sp)
         if session_procedure.flush(
-                key_sp, skip_duplicates=True, chunksz=1000):
+                skip_duplicates=True, chunksz=1000):
             print('Inserted 1000 session procedure tuples')
 
 if session_procedure.flush(skip_duplicates=True):
@@ -271,8 +273,10 @@ for key in tqdm(keys):
          dict(project_uuid=uuid.UUID(project))).fetch1(
         'project_name')
 
+    session_project.insert1(key_sp)
+
     if session_project.flush(
-            key_sp, skip_duplicates=True, chunksz=1000):
+            skip_duplicates=True, chunksz=1000):
         print('Inserted 1000 session procedure tuples')
 
 if session_project.flush(skip_duplicates=True):
