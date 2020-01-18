@@ -11,6 +11,7 @@ import plotly.graph_objs as go
 import statsmodels.stats.proportion as smp
 import datetime
 import matplotlib.pyplot as plt
+import os
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_behavior')
@@ -62,11 +63,15 @@ class SessionReactionTimeTrialNumber(dj.Computed):
 
     key_source = behavior_ingest.TrialSet & \
         (behavior_ingest.CompleteTrialSession &
-            'stim_on_times_status in ("Complete", "Partial")')
+            'stim_on_times_status in ("Complete", "Partial") or \
+             go_cue_trigger_times_status in ("Complete", "Partial")')
 
     def make(self, key):
         # get all trial of the session
-        trials = behavior_ingest.TrialSet.Trial & key & 'trial_stim_on_time is not NULL'
+        trials = behavior_ingest.TrialSet.Trial & key & \
+            'trial_stim_on_time is not NULL or \
+             trial_go_cue_trigger_time is not NULL'
+
         fig = putils.create_rt_trialnum_plot(trials)
         key['plotting_data'] = fig.to_plotly_json()
         self.insert1(key)
@@ -119,7 +124,8 @@ class DateReactionTimeTrialNumber(dj.Computed):
     def make(self, key):
         trial_sets = (behavior_ingest.TrialSet &
                       (behavior_ingest.CompleteTrialSession &
-                       'stim_on_times_status in ("Complete", "Partial")')).proj(
+                       'stim_on_times_status in ("Complete", "Partial") or \
+                        go_cue_trigger_times_status in ("Complete", "Partial")')).proj(
                 session_date='DATE(session_start_time)')
         trials = behavior_ingest.TrialSet.Trial & \
             (behavior_ingest.TrialSet * trial_sets & key)
@@ -192,11 +198,24 @@ class CumulativeSummary(dj.Computed):
     def make(self, key):
         self.insert1(key)
 
+        # check the environment, public or internal
+
+        if os.environ.get('MODE') == 'public':
+            public = True
+        else:
+            public = False
+
         subj = subject.Subject & key
         # get the first date when animal became "trained" and "ready for ephys"
         status = putils.get_status(subj)
         # get date range and mondays
         d = putils.get_date_range(subj)
+
+        if d['seven_months_date']:
+            status['is_over_seven_months'] = True
+            status['seven_months_date'] = d['seven_months_date']
+        else:
+            status['is_over_seven_months'] = False
 
         # plot for trial counts and session duration
         if behavior_ingest.TrialSet & key:
@@ -254,7 +273,8 @@ class CumulativeSummary(dj.Computed):
             data = putils.create_monday_plot(data, yrange, d['mondays'])
 
             # add status plots
-            data = putils.create_status_plot(data, yrange, status)
+            data = putils.create_status_plot(
+                data, yrange, status, public=public)
 
             layout = go.Layout(
                 yaxis=dict(
@@ -344,7 +364,8 @@ class CumulativeSummary(dj.Computed):
             data = putils.create_monday_plot(data, yrange, d['mondays'])
 
             # add status plots
-            data = putils.create_status_plot(data, yrange, status)
+            data = putils.create_status_plot(
+                data, yrange, status, public=public)
 
             layout = go.Layout(
 
@@ -481,7 +502,8 @@ class CumulativeSummary(dj.Computed):
                     pars_data, yranges[ipar], status,
                     xaxis='x{}'.format(4-ipar),
                     yaxis='y{}'.format(4-ipar),
-                    show_legend_external=show_legend
+                    show_legend_external=show_legend,
+                    public=public
                 )
 
             x_axis_range = \
@@ -600,6 +622,8 @@ class CumulativeSummary(dj.Computed):
             contrast_map = contrast_map.where(pd.notnull(contrast_map), None)
             contrasts = np.sort(contrast_df['signed_contrast'].unique())
 
+
+
             data = [dict(
                 x=[t.strftime('%Y-%m-%d')
                    for t in contrast_map.columns.tolist()],
@@ -612,9 +636,10 @@ class CumulativeSummary(dj.Computed):
                 type='heatmap',
                 colorbar=dict(
                     thickness=10,
-                    title='prob choosing right',
+                    title='Rightward Choice (%)',
                     titleside='right',
-                )
+                ),
+                colorscale='PuOr'
 
             )]
 
@@ -916,10 +941,10 @@ class DailyLabSummary(dj.Computed):
         subjects = subjects_alive * subject.SubjectLab & key
 
         last_sessions = subjects.aggr(
-            ingested_sessions,
-            'subject_nickname', session_start_time='max(session_start_time)') \
-            * acquisition.Session \
-            * behavior.SessionTrainingStatus
+            ingested_sessions * behavior.SessionTrainingStatus,
+            'subject_nickname', session_start_time='max(session_start_time)')
+        last_sessions = last_sessions * acquisition.Session * \
+            behavior.SessionTrainingStatus
 
         filerecord = data.FileRecord & subjects & 'relative_path LIKE "%alf%"'
         last_filerecord = subjects.aggr(
@@ -1005,4 +1030,5 @@ class DailyLabSummary(dj.Computed):
         latest_training_status:      varchar(64)
         n_sessions_current_protocol: int
         data_update_status:          varchar(255)
+        subject_summary_ts=CURRENT_TIMESTAMP:      timestamp
         """

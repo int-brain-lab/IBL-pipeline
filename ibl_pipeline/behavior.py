@@ -2,6 +2,7 @@ import datajoint as dj
 import numpy as np
 import pandas as pd
 from os import path, environ
+import datetime
 import logging
 from . import reference, subject, acquisition, data
 try:
@@ -694,6 +695,61 @@ class TrialSet(dj.Imported):
 
 
 @schema
+class SessionDelayAvailability(dj.Imported):
+    definition = """
+    -> acquisition.Session
+    ---
+    error_type:    enum("elapsed time not available", "raw task data not available")
+    """
+
+
+@schema
+class SessionDelay(dj.Imported):
+    definition = """
+    -> acquisition.Session
+    ---
+    session_delay_in_secs:      float       # session delay in seconds
+    session_delay_in_mins:      float       # session delay in minutes
+    """
+
+    # only check missing data within 5 days
+    date = datetime.datetime.today() - datetime.timedelta(days=5)
+    key_source = TrialSet() - \
+        (SessionDelayAvailability() & 'session_start_time < "{}"'.format(
+            date.strftime('%Y-%m-%d')))
+
+    def make(self, key):
+        eID = (acquisition.Session & key).fetch1('session_uuid')
+        data = one.load(str(eID), dataset_types=['_iblrig_taskData.raw'])
+        trial_start, trial_end = (TrialSet.Trial & key & 'trial_id=1').fetch1(
+            'trial_start_time', 'trial_end_time')
+        first_trial_duration = trial_end - trial_start
+
+        if data[0]:
+            if 'elapsed_time' in data[0][0].keys():
+                elapsed_time = data[0][0]['elapsed_time'].split(':')
+                key['session_delay_in_secs'] = float(elapsed_time[1])*60 + \
+                    float(elapsed_time[2]) - first_trial_duration
+                key['session_delay_in_mins'] = key['session_delay_in_secs']/60
+                self.insert1(key)
+            else:
+                key['error_type'] = 'raw task data not available'
+                SessionDelayAvailability.insert1(key, allow_direct_insert=True)
+        else:
+            key['error_type'] = 'elapsed time not available'
+            SessionDelayAvailability.insert1(key, allow_direct_insert=True)
+
+
+@schema
+class SettingsAvailability(dj.Imported):
+    definition = """
+    -> acquisition.Session
+    ---
+    error_type:     varchar(128)   # error message
+    """
+
+
+@schema
 class Settings(dj.Imported):
     definition = """
     -> acquisition.Session
@@ -701,20 +757,36 @@ class Settings(dj.Imported):
     pybpod_board:    varchar(64)   # bpod machine that generated the session
     """
 
+    # only check missing data within 5 days
+    date = datetime.datetime.today() - datetime.timedelta(days=5)
+    key_source = TrialSet() - \
+        (SettingsAvailability() & 'session_start_time < "{}"'.format(
+            date.strftime('%Y-%m-%d')))
+
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         try:
             setting = one.load(eID, dataset_types='_iblrig_taskSettings.raw')
         except:
+            key['error_type'] = 'settings not available'
+            SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
 
         if setting is None:
+            key['error_type'] = 'settings not available'
+            SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
         elif not len(setting):
+            key['error_type'] = 'settings not available'
+            SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
         elif setting[0] is None:
+            key['error_type'] = 'settings not available'
+            SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
         elif setting[0]['PYBPOD_BOARD'] is None:
+            key['error_type'] = 'settings not available'
+            SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
         key['pybpod_board'] = setting[0]['PYBPOD_BOARD']
         self.insert1(key)

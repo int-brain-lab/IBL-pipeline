@@ -49,19 +49,27 @@ class PublicSubjectUuid(dj.Computed):
 
 
 if __name__ == "__main__":
-    PublicSubject.delete()
 
-    subject_lists = pd.read_csv('/data/list_of_subjects.csv')
+    subject_lists = pd.read_csv('/data/list_of_subjects_behavior_paper.csv')
 
     lab_mapping = {
         'Angelaki': 'angelakilab',
+        'angelakilab': 'angelakilab',
         'Witten': 'wittenlab',
+        'wittenlab': 'wittenlab',
         'Mainen': 'mainenlab',
+        'mainenlab': 'mainenlab',
         'Dan': 'danlab',
+        'danlab': 'danlab',
         'Mrsic-Flogel': 'mrsicflogellab',
+        'mrsicflogellab': 'mrsicflogellab',
         'Cortexlab': 'cortexlab',
+        'cortexlab': 'cortexlab',
         'Churchland': 'churchlandlab',
-        'Zador': 'zadorlab'
+        'churchlandlab': 'churchlandlab',
+        'Zador': 'zadorlab',
+        'zadorlab': 'zadorlab',
+        'hoferlab': 'hoferlab'
     }
     subjs = []
     for i, subject in subject_lists.dropna().iterrows():
@@ -77,12 +85,21 @@ if __name__ == "__main__":
                 year = '20' + year
             subj.update(session_start_date=datetime.date(2018, 6, 1),
                         session_end_date=datetime.date(int(year),
-                                                    int(month),
-                                                    int(date)))
+                                                       int(month),
+                                                       int(date)))
+
+        elif 'Start -' in subject['Sessions']:
+            text = re.search('(\d+)/(\d+)/(\d+)', subject['Sessions'])
+            year, month, date = text.group(3), text.group(2), text.group(1)
+            if len(year) == 2:
+                year = '20' + year1
+            subj.update(session_start_date=datetime.date(2018, 6, 1),
+                        session_end_date=datetime.date(
+                            int(year), int(month), int(date)))
 
         elif '-' in subject['Sessions']:
             text = re.search('(\d+)/(\d+)/(\d+).* (\d+)/(\d+)/(\d+)',
-                            '22/05/2019- 15/07/2019 (includes a break)')
+                             subject['Sessions'])
             year1, month1, date1, year2, month2, date2 = \
                 text.group(3), text.group(2), text.group(1), \
                 text.group(6), text.group(5), text.group(4)
@@ -90,12 +107,14 @@ if __name__ == "__main__":
                 year1 = '20' + year1
             if len(year2) == 2:
                 year2 = '20' + year2
-            subj.update(session_start_date=datetime.date(int(year1), int(month1), int(date1)),
-                        session_end_date=datetime.date(int(year2), int(month2), int(date2)))
+            subj.update(session_start_date=datetime.date(
+                            int(year1), int(month1), int(date1)),
+                        session_end_date=datetime.date(
+                            int(year2), int(month2), int(date2)))
         else:
             subj.update(session_start_date=datetime.date(2018, 6, 1),
                         session_end_date=datetime.datetime.now().date())
-        subjs.append(subj)
+        subjs.append(dict(**subj))
 
     PublicSubject.insert(subjs, skip_duplicates=True)
     PublicSubjectUuid.populate(display_progress=True)

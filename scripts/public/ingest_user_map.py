@@ -1,10 +1,18 @@
-from ibl_pipeline import public, reference
+from ibl_pipeline import public
+from ibl_pipeline.ingest import alyxraw
 
-users = []
-for iuser, user in enumerate(reference.LabMember.fetch('KEY')):
-    usermap = dict(**user,
-                   pseudo_name='user%03d' % (iuser))
+users = alyxraw.AlyxRaw.Field & \
+        (alyxraw.AlyxRaw & 'model="misc.labmember"') & \
+        'fname="username"'
+original_users = public.UserMap.proj(fvalue='user_name')
 
-    users.append(usermap)
+new_users = []
+for iuser, user in enumerate(
+        (users - original_users).fetch()):
+    usermap = dict(
+        user_name=user['fvalue'],
+        pseudo_name='user%03d' % (iuser + len(original_users)))
 
-public.UserMap.insert(users)
+    new_users.append(usermap)
+
+public.UserMap.insert(new_users)
