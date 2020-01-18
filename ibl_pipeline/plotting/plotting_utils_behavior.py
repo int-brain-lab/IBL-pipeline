@@ -101,13 +101,23 @@ def get_date_range(subj):
     mondays = [day.strftime('%Y-%m-%d')
                for day in date_array if day.weekday() == 0]
 
+    # check whether the animal is already 7 months
+    dob = subj.fetch1('subject_birth_date')
+    if dob:
+        seven_months_date = dob + datetime.timedelta(days=210)
+        if seven_months_date > last_date:
+            seven_months_date = None
+    else:
+        seven_months_date = None
+
     return dict(
         first_date=first_date,
         last_date=last_date,
         first_date_str=first_date_str,
         last_date_str=last_date_str,
         date_array=date_array,
-        mondays=mondays)
+        mondays=mondays,
+        seven_months_date=seven_months_date)
 
 
 def get_status(subj):
@@ -121,8 +131,11 @@ def get_status(subj):
     first_ready4ephysrig = subj.aggr(
         behavior.SessionTrainingStatus & 'training_status = "ready4ephysrig"',
         first_session='DATE(min(session_start_time))')
+    first_ready4delay = subj.aggr(
+        behavior.SessionTrainingStatus & 'training_status = "ready4delay"',
+        first_session='DATE(min(session_start_time))')
     first_ready4recording = subj.aggr(
-        behavior.SessionTrainingStatus & 'training_status = "ready4ephysrecording"',
+        behavior.SessionTrainingStatus & 'training_status = "ready4recording"',
         first_session='DATE(min(session_start_time))')
 
     result = dict()
@@ -149,6 +162,14 @@ def get_status(subj):
                       first_ready4ephysrig_date=first_ready4ephysrig_date)
     else:
         result.update(is_ready4ephysrig=False)
+
+    if len(first_ready4delay):
+        first_ready4delay_date = first_ready4delay.fetch1(
+            'first_session').strftime('%Y-%m-%d')
+        result.update(is_ready4delay=True,
+                      first_ready4delay_date=first_ready4delay_date)
+    else:
+        result.update(is_ready4delay=False)
 
     if len(first_ready4recording):
         first_ready4recording_date = first_ready4recording.fetch1(
@@ -381,9 +402,32 @@ def create_rt_contrast_plot(sessions):
 
 
 def create_rt_trialnum_plot(trials):
-    rt_trials = trials.proj(
-        rt='trial_response_time-trial_stim_on_time').fetch(as_dict=True)
-    rt_trials = pd.DataFrame(rt_trials)
+
+    # check whether:
+    # 1. There were trials where stim_on_time is not available,
+    #    but go_cue_trigger_time is;
+    # 2. There were any trials where stim_on_time is available.
+    trials_go_cue_only = trials & \
+        'trial_stim_on_time is NULL and trial_go_cue_trigger_time is not NULL'
+    trials_stim_on = trials & \
+        'trial_stim_on_time is not NULL'
+
+    rt = []
+    if len(trials_go_cue_only):
+        trials_rt_go_cue_only = trials_go_cue_only.proj(
+            signed_contrast='trial_stim_contrast_left- \
+                trial_stim_contrast_right',
+            rt='trial_response_time-trial_go_cue_trigger_time')
+        rt += trials_rt_go_cue_only.fetch(as_dict=True)
+
+    if len(trials_stim_on):
+        trials_rt_stim_on = trials.proj(
+            signed_contrast='trial_stim_contrast_left- \
+                             trial_stim_contrast_right',
+            rt='trial_response_time-trial_stim_on_time')
+        rt += trials_rt_stim_on.fetch(as_dict=True)
+
+    rt_trials = pd.DataFrame(rt)
     rt_trials.index = rt_trials.index + 1
     rt_rolled = rt_trials['rt'].rolling(window=10).median()
     rt_rolled = rt_rolled.where((pd.notnull(rt_rolled)), None)
@@ -435,8 +479,12 @@ def create_rt_trialnum_plot(trials):
 
 
 def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
-                       show_legend_external=True):
+                       show_legend_external=True, public=False):
 
+    if public:
+        trained_marker_name = 'first day got trained'
+    else:
+        trained_marker_name = 'first day got trained 1a'
     if status['is_trained_1a']:
         data.append(
            go.Scatter(
@@ -445,7 +493,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                y=yrange,
                mode="lines",
                marker=dict(color='rgba(195, 90, 80, 1)'),
-               name='first day got trained 1a',
+               name=trained_marker_name,
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,
@@ -453,7 +501,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
             )
         )
 
-    if status['is_trained_1b']:
+    if status['is_trained_1b'] and (not public):
         data.append(
            go.Scatter(
                x=[status['first_trained_1b_date'],
@@ -469,7 +517,7 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
             )
         )
 
-    if status['is_ready4ephysrig']:
+    if status['is_ready4ephysrig'] and (not public):
         data.append(
            go.Scatter(
                x=[status['first_ready4ephysrig_date'],
@@ -485,7 +533,23 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
             )
         )
 
-    if status['is_ready4recording']:
+    if status['is_ready4delay'] and (not public):
+        data.append(
+           go.Scatter(
+               x=[status['first_ready4delay_date'],
+                  status['first_ready4delay_date']],
+               y=yrange,
+               mode="lines",
+               marker=dict(color='rgba(117, 117, 117, 1)'),
+               name='first day got ready4delay',
+               xaxis=xaxis,
+               yaxis=yaxis,
+               showlegend=show_legend_external,
+               hoverinfo='x'
+            )
+        )
+
+    if status['is_ready4recording'] and (not public):
         data.append(
            go.Scatter(
                x=[status['first_ready4recording_date'],
@@ -494,6 +558,22 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                mode="lines",
                marker=dict(color='rgba(20, 255, 91, 1)'),
                name='first day got ready4recording',
+               xaxis=xaxis,
+               yaxis=yaxis,
+               showlegend=show_legend_external,
+               hoverinfo='x'
+            )
+        )
+
+    if status['is_over_seven_months']:
+        data.append(
+           go.Scatter(
+               x=[status['seven_months_date'],
+                  status['seven_months_date']],
+               y=yrange,
+               mode="lines",
+               marker=dict(color='rgba(0, 0, 0, 1)'),
+               name='mouse became seven months',
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,

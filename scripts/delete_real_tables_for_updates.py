@@ -1,6 +1,7 @@
 
 import datajoint as dj
-from ibl_pipeline import action, subject
+from ibl_pipeline import  reference, action, subject
+from ibl_pipeline import reference as reference_ingest
 from ibl_pipeline.ingest import action as action_ingest
 from ibl_pipeline.ingest import subject as subject_ingest
 
@@ -9,7 +10,7 @@ dj.config['safemode'] = False
 
 # delete some real tables when the shadow tables are available
 
-if len(reference_ingest.Project):
+if len(reference_ingest.Project()) and len(reference.SubjectProject()):
     reference.Project.delete()
 
 if len(subject_ingest.SubjectUser()):

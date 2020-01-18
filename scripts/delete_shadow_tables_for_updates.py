@@ -38,9 +38,10 @@ session_project.delete_quick()
 
 # delete some shadow membership tables
 print('Deleting shadow membership tables...')
+subject.Death.delete()
 action.WaterRestrictionProcedure.delete()
 action.WaterRestrictionUser.delete()
 acquisition.WaterAdministrationSession.delete()
-reference.Project.delete()
+subject.SubjectLab.delete()
 subject.SubjectProject.delete()
 acquisition.SessionProject.delete()
