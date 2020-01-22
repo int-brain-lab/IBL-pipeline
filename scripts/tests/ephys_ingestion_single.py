@@ -14,7 +14,8 @@ cluster = ephys.Cluster() & key
 spike_times = cluster.fetch1('cluster_spikes_times')
 
 key = {'subject_uuid': UUID('18a54f60-534b-4ed5-8bda-b434079b8ab8'),
-       'session_start_time': datetime.datetime(2019, 12, 6, 18, 30, 56)}
+       'session_start_time': datetime.datetime(2019, 12, 6, 18, 30, 56),
+       'cluster_id': 100}
 # trials.fetch(as_dict=True), trials.fetch('KEY')
 # f = np.searchsorted
 
@@ -25,7 +26,6 @@ for trial, itrial in tqdm(zip(trials.fetch(as_dict=True), trials.fetch('KEY'))):
         cluster_revision=key['cluster_revision'],
         probe_idx=key['probe_idx']
     )
-
 
     f = np.logical_and(spike_times < trial['trial_end_time'],
                        spike_times > trial['trial_start_time'])
