@@ -7,6 +7,8 @@ import plotly
 import plotly.graph_objs as go
 import json
 from os import path
+from uuid import UUID
+import datetime
 
 key = {'subject_uuid': UUID('18a54f60-534b-4ed5-8bda-b434079b8ab8'),
        'session_start_time': datetime.datetime(2019, 12, 6, 18, 30, 56),
