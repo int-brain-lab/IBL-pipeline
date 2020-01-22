@@ -129,7 +129,7 @@ class ProbeInsertion(dj.Imported):
             Probe.insert1(probe, skip_duplicates=True)
 
             # ingest probe insertion
-            idx = int(re.search('probe0([0-3])', p['label']).group(1))
+            idx = int(re.search('probe.0([0-3])', p['label']).group(1))
             key.update(probe_idx=idx,
                        probe_model_name=p['model'],
                        probe_serial_number=str(p['serial']))
