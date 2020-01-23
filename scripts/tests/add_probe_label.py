@@ -17,6 +17,7 @@ for key in tqdm(keys):
     probes = alf.io.load_object(ses_path.joinpath('alf'), 'probes')
     # ingest probe insertion
     for p in probes['description']:
+        print(p['label'])
         idx = int(re.search('probe.0([0-3])', p['label']).group(1))
         if idx == key['probe_idx']:
             dj.Table._update(
