@@ -31,14 +31,14 @@ kargs = dict(display_progress=True, suppress_errors=True)
 start_time = time.time()
 
 logger.debug('Testing ingestion of CompleteClusterSession...')
-ephys.CompleteClusterSession.populate(key & restriction, **kargs)
+ephys.CompleteClusterSession.populate(key, **kargs)
 
 complete_cluster_time = time.time()
 logger.debug('Ingestion time of ProbeInsertion {}'.format(
     complete_cluster_time-start_time))
 
 logger.debug('Testing ingestion of ProbeInsertion...')
-ephys.ProbeInsertion.populate(key & restriction, **kargs)
+ephys.ProbeInsertion.populate(key, **kargs)
 
 probe_insertion_time = time.time()
 logger.debug('Ingestion time of ProbeInsertion {}'.format(
