@@ -245,6 +245,8 @@ class Cluster(dj.Imported):
     key_source = ProbeInsertion
 
     def make(self, key):
+
+        print(key)
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         dtypes = [
