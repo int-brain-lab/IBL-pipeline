@@ -10,7 +10,7 @@ dj.config['safemode'] = False
 
 # delete some real tables when the shadow tables are available
 
-if len(reference_ingest.Project()) and len(subject_ingest.SubjectProject):
+if len(reference_ingest.Project()) and len(subject_ingest.SubjectProject()):
     reference.Project.delete()
 
 if len(subject_ingest.SubjectUser()):
