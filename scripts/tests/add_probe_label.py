@@ -1,5 +1,7 @@
 from ibl_pipeline import ephys, acquisition
 import datajoint as dj
+from onelib.one import ONE
+one = ONE()
 
 keys = ephys.ProbeInsertion.fetch('KEY')
 
