@@ -46,7 +46,7 @@ for itrial, trial_key in tqdm(enumerate(trial_keys)):
     trial_spike_time = spike_times[spike_ids == itrial]
 
     for event in events:
-        if not np.any(f):
+        if not len(trial_spike_time):
             trial_spk['trial_spike_times'] = []
         else:
             if event == 'stim on':
