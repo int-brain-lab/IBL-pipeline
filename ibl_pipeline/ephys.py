@@ -110,6 +110,7 @@ class ProbeInsertion(dj.Imported):
     -> acquisition.Session
     probe_idx:    int    # probe insertion number (0 corresponds to probe00, 1 corresponds to probe01)
     ---
+    probe_label=null: varchar(32)  # probe label
     -> Probe
     """
     key_source = CompleteClusterSession
@@ -132,6 +133,7 @@ class ProbeInsertion(dj.Imported):
             idx = int(re.search('probe.0([0-3])', p['label']).group(1))
             key.update(probe_idx=idx,
                        probe_model_name=p['model'],
+                       probe_label=p['label'],
                        probe_serial_number=str(p['serial']))
             self.insert1(key)
 
@@ -309,12 +311,14 @@ class Cluster(dj.Imported):
                 amplitude_cutoff=metrics.amplitude_cutoff[icluster],
                 amplitude_std=metrics.amplitude_std[icluster],
                 epoch_name=metrics.epoch_name[icluster],
-                ks2_contamination_pct=metrics.ks2_contamination_pct[icluster],
                 ks2_label=metrics.ks2_label[icluster])
 
             if not np.isnan(metrics.isi_viol[icluster]):
                 cluster_metric_entry.update(
                     isi_viol=metrics.isi_viol[icluster])
+            if not np.isinf(metrics.ks2_contamination_pct[icluster]):
+                cluster_metric_entry.update(
+                    ks2_contamination_pct=metrics.ks2_contamination_pct[icluster])
 
             self.ClusterMetrics.insert1(cluster_metric_entry)
 
@@ -330,7 +334,7 @@ class Cluster(dj.Imported):
         amplitude_cutoff=null:      float
         amplitude_std=null:         float
         epoch_name:                 tinyint
-        ks2_contamination_pct:      float
+        ks2_contamination_pct=null: float
         ks2_label:                  enum('good', 'mua')
         """
 
