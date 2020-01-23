@@ -18,7 +18,7 @@ for key in tqdm(keys):
     # ingest probe insertion
     for p in probes['description']:
         print(p['label'])
-        idx = int(re.search('probe.0([0-3])', p['label']).group(1))
+        idx = int(re.search('probe.?0([0-3])', p['label']).group(1))
         if idx == key['probe_idx']:
             dj.Table._update(
                 ephys.ProbeInsertion & key, 'probe_label', p['label'])

@@ -130,7 +130,7 @@ class ProbeInsertion(dj.Imported):
             Probe.insert1(probe, skip_duplicates=True)
 
             # ingest probe insertion
-            idx = int(re.search('probe.0([0-3])', p['label']).group(1))
+            idx = int(re.search('probe.?0([0-3])', p['label']).group(1))
             key.update(probe_idx=idx,
                        probe_model_name=p['model'],
                        probe_label=p['label'],
@@ -162,7 +162,7 @@ class ChannelGroup(dj.Imported):
         files = one.load(eID, dataset_types=dtypes, download_only=True)
         ses_path = alf.io.get_session_path(files[0])
 
-        probe_name = 'probe0' + str(key['probe_idx'])
+        probe_name = (ProbeInsertion & key).fetch1('probe_label')
         channels = alf.io.load_object(
             ses_path.joinpath('alf', probe_name), 'channels')
 
@@ -199,7 +199,7 @@ class ProbeTrajectory(dj.Imported):
         for p in probes.trajectory:
 
             # ingest probe trajectory
-            idx = int(re.search('probe0([0-3])', p['label']).group(1))
+            idx = int(re.search('probe.?0([0-3])', p['label']).group(1))
             p.pop('label')
             key.update(probe_idx=idx, **p)
             self.insert1(key)
@@ -271,7 +271,7 @@ class Cluster(dj.Imported):
         files = one.load(eID, dataset_types=dtypes, download_only=True)
         ses_path = alf.io.get_session_path(files[0])
 
-        probe_name = 'probe0' + str(key['probe_idx'])
+        probe_name = (ProbeInsertion & key).fetch1('probe_label')
 
         clusters = alf.io.load_object(
             ses_path.joinpath('alf', probe_name), 'clusters')
