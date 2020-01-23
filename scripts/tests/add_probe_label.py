@@ -1,12 +1,16 @@
 from ibl_pipeline import ephys, acquisition
 import datajoint as dj
 from oneibl.one import ONE
+import re
+import alf.io
+from tqdm import tqdm
+
 one = ONE()
 
 keys = ephys.ProbeInsertion.fetch('KEY')
 
 dtypes = ['probes.description']
-for key in keys:
+for key in tqdm(keys):
     eID = str((acquisition.Session & key).fetch1('session_uuid'))
     files = one.load(eID, dataset_types=dtypes, download_only=True)
     ses_path = alf.io.get_session_path(files[0])
