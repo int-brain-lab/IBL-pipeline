@@ -87,16 +87,14 @@ class CompleteWheelSession(dj.Computed):
     -> acquisition.Session
     """
 
-    required_datasets = ["_ibl_wheel.position.npy",
-                         "_ibl_wheel.velocity.npy",
-                         "_ibl_wheel.timestamps.npy"]
+    flatiron = 'repo_name like "%flatiron%"'
+    key_source = acquisition.Session & \
+        (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.position.npy"') & \
+        (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.npy"') & \
+        (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.time_stamps.npy"')
 
     def make(self, key):
-        datasets = (data.FileRecord & key & {'exists': 1}).fetch(
-            'dataset_name')
-        if np.all([req_ds in datasets
-                   for req_ds in self.required_datasets]):
-            self.insert1(key)
+        self.insert1(key)
 
 
 @schema
