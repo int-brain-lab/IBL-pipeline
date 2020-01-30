@@ -92,7 +92,7 @@ class CompleteWheelSession(dj.Computed):
     flatiron = 'repo_name like "%flatiron%"'
     key_source = acquisition.Session & \
         (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.position.npy"') & \
-        (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.time_stamps.npy"')
+        (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.timestamps.npy"')
 
     def make(self, key):
         datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
