@@ -85,15 +85,24 @@ class CompleteWheelSession(dj.Computed):
     definition = """
     # sessions that are complete with wheel related information and thus may be ingested
     -> acquisition.Session
+    ---
+    wheel_velocity_status:     enum('Missing', 'Complete')
     """
 
     flatiron = 'repo_name like "%flatiron%"'
     key_source = acquisition.Session & \
         (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.position.npy"') & \
-        (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.npy"') & \
         (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.time_stamps.npy"')
 
     def make(self, key):
+        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
+                    {'exists': 1}).fetch('dataset_name')
+
+        if '_ibl_wheel.velocity.npy' in datasets:
+            key.wheel_velocity_status = 'Complete'
+        else:
+            key.wheel_velocity_status = 'Missing'
+
         self.insert1(key)
 
 
