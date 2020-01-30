@@ -99,9 +99,9 @@ class CompleteWheelSession(dj.Computed):
                     {'exists': 1}).fetch('dataset_name')
 
         if '_ibl_wheel.velocity.npy' in datasets:
-            key.wheel_velocity_status = 'Complete'
+            key['wheel_velocity_status'] = 'Complete'
         else:
-            key.wheel_velocity_status = 'Missing'
+            key['wheel_velocity_status'] = 'Missing'
 
         self.insert1(key)
 
