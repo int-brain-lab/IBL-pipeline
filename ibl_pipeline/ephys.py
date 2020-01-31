@@ -194,7 +194,7 @@ class ProbeTrajectory(dj.Imported):
     depth:              float           # (um) insertion depth
     beta:               float           # (degrees) roll angle of the probe
     """
-    key_source = acquisition.Session \
+    key_source = acquisition.Session & ProbeInsertion \
         & (data.FileRecord & 'dataset_name="probes.description.json"') \
         & (data.FileRecord & 'dataset_name="probes.trajectory.json"')
 
