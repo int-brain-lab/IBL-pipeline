@@ -52,13 +52,13 @@ class CompleteClusterSession(dj.Computed):
     # sessions that are complete with ephys datasets
     -> acquisition.Session
     ---
-    complete_cluster_session=CURRENT_TIMESTAMP  :  timestamp
+    complete_cluster_session_ts=CURRENT_TIMESTAMP  :  timestamp
     """
     required_datasets = [
         'clusters.amps.npy',
         'clusters.channels.npy',
         'clusters.depths.npy',
-        'metrics.csv',
+        'clusters.metrics.csv',
         'clusters.peakToTrough.npy',
         'clusters.uuids.csv',
         'clusters.waveforms.npy',
