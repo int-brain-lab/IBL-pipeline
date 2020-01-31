@@ -105,6 +105,14 @@ class EphysMissingDataLog(dj.Manual):
 
 
 @schema
+class ProblematicDataSet(dj.Manual):
+    definition = """
+    # Data sets that are known to be old or have a problem
+    -> acquisition.Session
+    """
+
+
+@schema
 class ProbeInsertion(dj.Imported):
     definition = """
     -> acquisition.Session
@@ -113,7 +121,7 @@ class ProbeInsertion(dj.Imported):
     probe_label=null: varchar(32)  # probe label
     -> Probe
     """
-    key_source = CompleteClusterSession
+    key_source = CompleteClusterSession - ProblematicDataSet
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
