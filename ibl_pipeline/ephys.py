@@ -393,7 +393,7 @@ class TrialSpikes(dj.Computed):
 
         # trial idx of each spike
         spike_ids = np.searchsorted(
-            np.sort(np.hstack([trial_start_times, trial_end_times])),
+            np.sort(np.hstack(np.vstack([trial_start_times, trial_end_times]).T)),
             spike_times)
 
         trial_spks = []
@@ -406,7 +406,7 @@ class TrialSpikes(dj.Computed):
                 probe_idx=key['probe_idx']
             )
 
-            trial_spike_time = spike_times[spike_ids == itrial]
+            trial_spike_time = spike_times[spike_ids == itrial*2+1]
 
             for event in events:
                 if not len(trial_spike_time):
