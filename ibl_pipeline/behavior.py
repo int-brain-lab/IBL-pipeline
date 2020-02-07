@@ -185,7 +185,7 @@ class WheelMoveSet(dj.Imported):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         wheel_moves_intervals, wheel_moves_types = \
             one.load(eID, dataset_types=['wheelMoves.intervals',
-                                           'wheelMoves.type'])
+                                         'wheelMoves.type'])
 
         wheel_moves_types = wheel_moves_types.columns
 
@@ -640,7 +640,17 @@ class TrialSet(dj.Imported):
             if rep_num_status != 'Missing':
                 trial['trial_rep_num'] = int(trials_rep_num[idx_trial])
 
-            trial['trial_stim_prob_left'] = float(trials_p_left[idx_trial])
+            # ----------------------------------------
+            # this block of code deals with random values
+            # of prob_left in current ephys data
+            p_left = trials_p_left[idx_trial]
+            if p_left > 0.51:
+                trial['trial_stim_prob_left'] = 0.8
+            elif p_left < 0.49:
+                trial['trial_stim_prob_left'] = 0.2
+            else:
+                trial['trial_stim_prob_left'] = 0.5
+            # -----------------------------------------
 
             if included_status != 'Missing':
                 trial['trial_included'] = bool(trials_included[idx_trial])
