@@ -646,7 +646,7 @@ class TrialSet(dj.Imported):
             p_left = trials_p_left[idx_trial]
 
             task_protocol = (acquisition.Session & key).fetch1('task_protocol')
-            if 'ephys' in task_protcol:
+            if 'ephys' in task_protocol:
                 if p_left > 0.51:
                     trial['trial_stim_prob_left'] = 0.8
                 elif p_left < 0.49:
