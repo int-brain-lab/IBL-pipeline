@@ -644,12 +644,17 @@ class TrialSet(dj.Imported):
             # this block of code deals with random values
             # of prob_left in current ephys data
             p_left = trials_p_left[idx_trial]
-            if p_left > 0.51:
-                trial['trial_stim_prob_left'] = 0.8
-            elif p_left < 0.49:
-                trial['trial_stim_prob_left'] = 0.2
+
+            task_protocol = (acquisition.Session & key).fetch1('task_protocol')
+            if 'ephys' in task_protcol:
+                if p_left > 0.51:
+                    trial['trial_stim_prob_left'] = 0.8
+                elif p_left < 0.49:
+                    trial['trial_stim_prob_left'] = 0.2
+                else:
+                    trial['trial_stim_prob_left'] = 0.5
             else:
-                trial['trial_stim_prob_left'] = 0.5
+                trial['trial_stim_prob_left'] = float(p_left)
             # -----------------------------------------
 
             if included_status != 'Missing':
