@@ -52,13 +52,13 @@ class CompleteClusterSession(dj.Computed):
     # sessions that are complete with ephys datasets
     -> acquisition.Session
     ---
-    complete_cluster_session=CURRENT_TIMESTAMP  :  timestamp
+    complete_cluster_session_ts=CURRENT_TIMESTAMP  :  timestamp
     """
     required_datasets = [
         'clusters.amps.npy',
         'clusters.channels.npy',
         'clusters.depths.npy',
-        'metrics.csv',
+        'clusters.metrics.csv',
         'clusters.peakToTrough.npy',
         'clusters.uuids.csv',
         'clusters.waveforms.npy',
@@ -105,14 +105,23 @@ class EphysMissingDataLog(dj.Manual):
 
 
 @schema
+class ProblematicDataSet(dj.Manual):
+    definition = """
+    # Data sets that are known to be old or have a problem
+    -> acquisition.Session
+    """
+
+
+@schema
 class ProbeInsertion(dj.Imported):
     definition = """
     -> acquisition.Session
     probe_idx:    int    # probe insertion number (0 corresponds to probe00, 1 corresponds to probe01)
     ---
+    probe_label=null: varchar(32)  # probe label
     -> Probe
     """
-    key_source = CompleteClusterSession
+    key_source = CompleteClusterSession - ProblematicDataSet
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
@@ -129,9 +138,10 @@ class ProbeInsertion(dj.Imported):
             Probe.insert1(probe, skip_duplicates=True)
 
             # ingest probe insertion
-            idx = int(re.search('probe0([0-3])', p['label']).group(1))
+            idx = int(re.search('probe.?0([0-3])', p['label']).group(1))
             key.update(probe_idx=idx,
                        probe_model_name=p['model'],
+                       probe_label=p['label'],
                        probe_serial_number=str(p['serial']))
             self.insert1(key)
 
@@ -160,7 +170,7 @@ class ChannelGroup(dj.Imported):
         files = one.load(eID, dataset_types=dtypes, download_only=True)
         ses_path = alf.io.get_session_path(files[0])
 
-        probe_name = 'probe0' + str(key['probe_idx'])
+        probe_name = (ProbeInsertion & key).fetch1('probe_label')
         channels = alf.io.load_object(
             ses_path.joinpath('alf', probe_name), 'channels')
 
@@ -184,7 +194,7 @@ class ProbeTrajectory(dj.Imported):
     depth:              float           # (um) insertion depth
     beta:               float           # (degrees) roll angle of the probe
     """
-    key_source = acquisition.Session \
+    key_source = acquisition.Session & ProbeInsertion \
         & (data.FileRecord & 'dataset_name="probes.description.json"') \
         & (data.FileRecord & 'dataset_name="probes.trajectory.json"')
 
@@ -197,7 +207,7 @@ class ProbeTrajectory(dj.Imported):
         for p in probes.trajectory:
 
             # ingest probe trajectory
-            idx = int(re.search('probe0([0-3])', p['label']).group(1))
+            idx = int(re.search('probe.?0([0-3])', p['label']).group(1))
             p.pop('label')
             key.update(probe_idx=idx, **p)
             self.insert1(key)
@@ -245,6 +255,8 @@ class Cluster(dj.Imported):
     key_source = ProbeInsertion
 
     def make(self, key):
+
+        print(key)
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         dtypes = [
@@ -267,7 +279,7 @@ class Cluster(dj.Imported):
         files = one.load(eID, dataset_types=dtypes, download_only=True)
         ses_path = alf.io.get_session_path(files[0])
 
-        probe_name = 'probe0' + str(key['probe_idx'])
+        probe_name = (ProbeInsertion & key).fetch1('probe_label')
 
         clusters = alf.io.load_object(
             ses_path.joinpath('alf', probe_name), 'clusters')
@@ -307,12 +319,14 @@ class Cluster(dj.Imported):
                 amplitude_cutoff=metrics.amplitude_cutoff[icluster],
                 amplitude_std=metrics.amplitude_std[icluster],
                 epoch_name=metrics.epoch_name[icluster],
-                ks2_contamination_pct=metrics.ks2_contamination_pct[icluster],
                 ks2_label=metrics.ks2_label[icluster])
 
             if not np.isnan(metrics.isi_viol[icluster]):
                 cluster_metric_entry.update(
                     isi_viol=metrics.isi_viol[icluster])
+            if not np.isinf(metrics.ks2_contamination_pct[icluster]):
+                cluster_metric_entry.update(
+                    ks2_contamination_pct=metrics.ks2_contamination_pct[icluster])
 
             self.ClusterMetrics.insert1(cluster_metric_entry)
 
@@ -328,7 +342,7 @@ class Cluster(dj.Imported):
         amplitude_cutoff=null:      float
         amplitude_std=null:         float
         epoch_name:                 tinyint
-        ks2_contamination_pct:      float
+        ks2_contamination_pct=null: float
         ks2_label:                  enum('good', 'mua')
         """
 
@@ -365,36 +379,49 @@ class TrialSpikes(dj.Computed):
     key_source = behavior.TrialSet * Cluster
 
     def make(self, key):
+
         trials = behavior.TrialSet.Trial & key
-        trial_spks = []
         cluster = Cluster() & key
         spike_times = cluster.fetch1('cluster_spikes_times')
+        events = (Event & 'event!="go cue"').fetch('event')
 
-        for trial, itrial in tqdm(zip(trials.fetch(as_dict=True), trials.fetch('KEY'))):
+        trial_keys, trial_start_times, trial_end_times, \
+            trial_stim_on_times, trial_response_times, trial_feedback_times = \
+            trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
+                         'trial_stim_on_time', 'trial_response_time',
+                         'trial_feedback_time')
+
+        # trial idx of each spike
+        spike_ids = np.searchsorted(
+            np.sort(np.hstack(np.vstack([trial_start_times, trial_end_times]).T)),
+            spike_times)
+
+        trial_spks = []
+        for itrial, trial_key in tqdm(enumerate(trial_keys)):
+
             trial_spk = dict(
-                **itrial,
+                **trial_key,
                 cluster_id=key['cluster_id'],
                 cluster_revision=key['cluster_revision'],
                 probe_idx=key['probe_idx']
             )
-            f = np.logical_and(spike_times < trial['trial_end_time'],
-                               spike_times > trial['trial_start_time'])
 
-            events = (Event & 'event!="go cue"').fetch('event')
+            trial_spike_time = spike_times[spike_ids == itrial*2+1]
+
             for event in events:
-                if not np.any(f):
+                if not len(trial_spike_time):
                     trial_spk['trial_spike_times'] = []
                 else:
                     if event == 'stim on':
                         trial_spk['trial_spike_times'] = \
-                            spike_times[f] - trial['trial_stim_on_time']
+                            trial_spike_time - trial_stim_on_times[itrial]
                     elif event == 'response':
                         trial_spk['trial_spike_times'] = \
-                            spike_times[f] - trial['trial_response_time']
+                            trial_spike_time - trial_response_times[itrial]
                     elif event == 'feedback':
-                        if trial['trial_feedback_time']:
+                        if trial_feedback_times[itrial]:
                             trial_spk['trial_spike_times'] = \
-                                spike_times[f] - trial['trial_feedback_time']
+                                trial_spike_time - trial_feedback_times[itrial]
                         else:
                             continue
                 trial_spk['event'] = event

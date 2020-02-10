@@ -85,18 +85,25 @@ class CompleteWheelSession(dj.Computed):
     definition = """
     # sessions that are complete with wheel related information and thus may be ingested
     -> acquisition.Session
+    ---
+    wheel_velocity_status:     enum('Missing', 'Complete')
     """
 
-    required_datasets = ["_ibl_wheel.position.npy",
-                         "_ibl_wheel.velocity.npy",
-                         "_ibl_wheel.timestamps.npy"]
+    flatiron = 'repo_name like "%flatiron%"'
+    key_source = acquisition.Session & \
+        (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.position.npy"') & \
+        (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.timestamps.npy"')
 
     def make(self, key):
-        datasets = (data.FileRecord & key & {'exists': 1}).fetch(
-            'dataset_name')
-        if np.all([req_ds in datasets
-                   for req_ds in self.required_datasets]):
-            self.insert1(key)
+        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
+                    {'exists': 1}).fetch('dataset_name')
+
+        if '_ibl_wheel.velocity.npy' in datasets:
+            key['wheel_velocity_status'] = 'Complete'
+        else:
+            key['wheel_velocity_status'] = 'Missing'
+
+        self.insert1(key)
 
 
 @schema
@@ -178,7 +185,7 @@ class WheelMoveSet(dj.Imported):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         wheel_moves_intervals, wheel_moves_types = \
             one.load(eID, dataset_types=['wheelMoves.intervals',
-                                           'wheelMoves.type'])
+                                         'wheelMoves.type'])
 
         wheel_moves_types = wheel_moves_types.columns
 
@@ -633,7 +640,22 @@ class TrialSet(dj.Imported):
             if rep_num_status != 'Missing':
                 trial['trial_rep_num'] = int(trials_rep_num[idx_trial])
 
-            trial['trial_stim_prob_left'] = float(trials_p_left[idx_trial])
+            # ----------------------------------------
+            # this block of code deals with random values
+            # of prob_left in current ephys data
+            p_left = trials_p_left[idx_trial]
+
+            task_protocol = (acquisition.Session & key).fetch1('task_protocol')
+            if 'ephys' in task_protocol:
+                if p_left > 0.51:
+                    trial['trial_stim_prob_left'] = 0.8
+                elif p_left < 0.49:
+                    trial['trial_stim_prob_left'] = 0.2
+                else:
+                    trial['trial_stim_prob_left'] = 0.5
+            else:
+                trial['trial_stim_prob_left'] = float(p_left)
+            # -----------------------------------------
 
             if included_status != 'Missing':
                 trial['trial_included'] = bool(trials_included[idx_trial])

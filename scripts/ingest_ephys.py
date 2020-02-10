@@ -12,11 +12,6 @@ import time
 import datetime
 from uuid import UUID
 
-key = {'subject_uuid': UUID('7d334e82-1270-4346-86c2-4a8b7530946d'),
-       'session_start_time': datetime.datetime(2019, 11, 25, 22, 53, 11)}
-
-restriction = 'session_start_time > "2019-11-30"'
-
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
@@ -31,14 +26,14 @@ kargs = dict(display_progress=True, suppress_errors=True)
 start_time = time.time()
 
 logger.log(30, 'Testing ingestion of CompleteClusterSession...')
-ephys.CompleteClusterSession.populate(key, **kargs)
+ephys.CompleteClusterSession.populate(**kargs)
 
 complete_cluster_time = time.time()
 logger.log(30, 'Ingestion time of ProbeInsertion {}'.format(
     complete_cluster_time-start_time))
 
 logger.log(30, 'Testing ingestion of ProbeInsertion...')
-ephys.ProbeInsertion.populate(key, **kargs)
+ephys.ProbeInsertion.populate(**kargs)
 
 probe_insertion_time = time.time()
 logger.log(30, 'Ingestion time of ProbeInsertion {}'.format(
@@ -46,20 +41,20 @@ logger.log(30, 'Ingestion time of ProbeInsertion {}'.format(
 
 
 logger.log(30, 'Testing ingestion of ProbeTrajectory...')
-ephys.ProbeTrajectory.populate(key, **kargs)
+ephys.ProbeTrajectory.populate(**kargs)
 
 probe_trajectory_time = time.time()
 logger.log(30, 'Ingestion time of ProbeTrajectory {}'.format(
     probe_trajectory_time-probe_insertion_time))
 
 logger.log(30, 'Testing ingestion of ChannelGroup...')
-ephys.ChannelGroup.populate(key, **kargs)
+ephys.ChannelGroup.populate(**kargs)
 channel_group_time = time.time()
 logger.log(30, 'Ingestion time of ChannelGroup {}'.format(
     channel_group_time-probe_trajectory_time))
 
 logger.log(30, 'Testing ingestion of Cluster...')
-ephys.Cluster.populate(key, **kargs)
+ephys.Cluster.populate(**kargs)
 cluster_time = time.time()
 logger.log(30, 'Ingestion time of Cluster {}'.format(
     cluster_time-channel_group_time))
@@ -78,8 +73,7 @@ logger.log(30, 'Ingestion time of RasterLinkS3 {}'.format(
     raster_plotting_time-trial_spikes_time))
 
 logger.log(30, 'Testing ingestion of plotting psth...')
-ephys_plotting.PsthDataVarchar.populate(
-    **kargs)
+ephys_plotting.PsthDataVarchar.populate(**kargs)
 psth_plotting_time = time.time()
 logger.log(30, 'Ingestion time of TrialSpikes {}'.format(
     psth_plotting_time-raster_plotting_time))

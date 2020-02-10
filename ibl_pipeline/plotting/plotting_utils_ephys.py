@@ -233,7 +233,8 @@ def compute_psth(trials, trial_type, align_event, bin_size=0.025,
                         bins=n_bins)
 
     mean_fr = np.divide(hist[0], len(spk_times)*bin_size)
-    time_bins = hist[1]
+    time = hist[1]
+    time_bins = (time[:-1] + time[1:])/2
     # build gaussian kernel
     if smoothing > 0:
         w = n_bins - 1 if n_bins % 2 == 0 else n_bins
@@ -486,6 +487,15 @@ def create_raster_plot_combined(trials, align_event,
             encoded_string = base64.b64encode(image_file.read())
         temp.close()
         return encoded_string, [0, y_lim], label
+
+
+# def create_raster_plot_combined_fast(trials, align_event,
+#                                      sorting_var='trial_id',
+#                                      x_lim=[-1, 1],
+#                                      show_plot=False,
+#                                      fig_dir=None,
+#                                      store_type=None)
+
 
 
 def get_legend(trials_type, legend_group):

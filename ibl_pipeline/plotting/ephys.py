@@ -498,29 +498,25 @@ class PsthDataVarchar(dj.Computed):
         entry = dict(**key)
         if len(trials_left):
             _, psth_left = putils.compute_psth(
-                trials_left, 'left', align_event,
-                1000, 10, x_lim, as_dict=False)
+                trials_left, 'left', align_event, as_dict=False)
             entry.update(
                 psth_left=','.join('{:0.5f}'.format(x) for x in psth_left))
 
         if len(trials_right):
             _, psth_right = putils.compute_psth(
-                trials_right, 'right', align_event,
-                1000, 10, x_lim, as_dict=False)
+                trials_right, 'right', align_event, as_dict=False)
             entry.update(
                 psth_right=','.join('{:0.5f}'.format(x) for x in psth_right))
 
         if len(trials_incorrect):
             _, psth_incorrect = putils.compute_psth(
-                trials_incorrect, 'incorrect', align_event,
-                1000, 10, x_lim, as_dict=False)
+                trials_incorrect, 'incorrect', align_event, as_dict=False)
             entry.update(
                 psth_incorrect=','.join('{:0.5f}'.format(x)
                                         for x in psth_incorrect))
 
         psth_time, psth_all = putils.compute_psth(
-            trials_all, 'all', align_event,
-            1000, 10, x_lim, as_dict=False)
+            trials_all, 'all', align_event, as_dict=False)
 
         entry.update(
             psth_x_lim=','.join('{:0.2f}'.format(x) for x in x_lim),
