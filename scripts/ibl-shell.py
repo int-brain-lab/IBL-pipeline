@@ -43,8 +43,8 @@ def shell(*args):
 def ingest(*args):
     # local import so db is only created created/accessed if/when ingesting
     from ibl_pipeline.ingest import (reference as ingest_reference,
-                                    subject as ingest_subject,
-                                    acquisition as ingest_acquisition)
+                                     subject as ingest_subject,
+                                     acquisition as ingest_acquisition)
     for mod in [ingest_reference, ingest_subject, ingest_acquisition]:
         pass
 

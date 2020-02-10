@@ -18,7 +18,6 @@ key = {'subject_uuid': UUID('18a54f60-534b-4ed5-8bda-b434079b8ab8'),
        'cluster_id': 100}
 
 trials = behavior.TrialSet.Trial & key
-trial_spks = []
 cluster = ephys.Cluster() & key
 spike_times = cluster.fetch1('cluster_spikes_times')
 
@@ -34,6 +33,7 @@ trial_keys, trial_start_times, trial_end_times, \
 spike_ids = np.searchsorted(
     np.sort(np.hstack([trial_start_times, trial_end_times])), spike_times)
 
+trial_spks = []
 for itrial, trial_key in tqdm(enumerate(trial_keys)):
 
     trial_spk = dict(
