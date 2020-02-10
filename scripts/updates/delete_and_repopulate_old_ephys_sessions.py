@@ -14,15 +14,15 @@ import datetime
 
 dj.config['safemode'] = False
 
-# keys = (ephys.CompleteClusterSession &
-#         (ephys_plotting.RasterLinkS3 & 'session_start_time < "2020-02-04"')).fetch(
-#             'KEY', order_by='session_start_time desc')
+keys = (ephys.CompleteClusterSession &
+        (ephys_plotting.RasterLinkS3 & 'session_start_time < "2020-02-03"')).fetch(
+            'KEY', order_by='session_start_time desc')
 
-keys = \
-    [{'subject_uuid': UUID('221b68e7-0014-46ae-b8af-308665d8b478'),
-     'session_start_time': datetime.datetime(2020, 2, 3, 13, 49, 31)},
-     {'subject_uuid': UUID('d528fe0e-ac52-4fdc-bfb9-c545e44ded66'),
-     'session_start_time': datetime.datetime(2020, 2, 3, 12, 31, 9)}]
+# keys = \
+#     [{'subject_uuid': UUID('221b68e7-0014-46ae-b8af-308665d8b478'),
+#      'session_start_time': datetime.datetime(2020, 2, 3, 13, 49, 31)},
+#      {'subject_uuid': UUID('d528fe0e-ac52-4fdc-bfb9-c545e44ded66'),
+#      'session_start_time': datetime.datetime(2020, 2, 3, 12, 31, 9)}]
 
 for key in tqdm(keys):
     print(key)
