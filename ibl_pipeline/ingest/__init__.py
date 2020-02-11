@@ -55,7 +55,10 @@ use for the ingest modules.
 import logging
 import datajoint as dj
 from . import alyxraw
+import os
 
+if os.environ.get('MODE') == 'test':
+    dj.config['database.prefix'] = 'test_'
 
 log = logging.getLogger(__name__)
 

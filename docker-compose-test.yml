@@ -1,6 +1,6 @@
 version: '3'
 services:
-  datajoint:
+  datajoint_test:
     build: .
     container_name: ibl_datajoint_test
     env_file: .env_test
