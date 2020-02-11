@@ -286,6 +286,8 @@ class Cluster(dj.Imported):
         spikes = alf.io.load_object(
             ses_path.joinpath('alf', probe_name), 'spikes')
 
+        max_spike_time = spikes.times[-1]
+
         for icluster, cluster_uuid in tqdm(enumerate(clusters.uuids['uuids'])):
 
             idx = spikes.clusters == icluster
@@ -307,13 +309,16 @@ class Cluster(dj.Imported):
 
             self.insert1(cluster)
 
+            num_spikes = len(cluster['cluster_spikes_times'])
+            firing_rate = num_spikes/max_spike_time
+
             metrics = clusters.metrics
             cluster_metric_entry = dict(
                 **key,
                 cluster_id=icluster,
                 cluster_revision='0',
-                num_spikes=metrics.num_spikes[icluster],
-                firing_rate=metrics.firing_rate[icluster],
+                num_spikes=num_spikes,
+                firing_rate=firing_rate,
                 presence_ratio=metrics.presence_ratio[icluster],
                 presence_ratio_std=metrics.presence_ratio_std[icluster],
                 amplitude_cutoff=metrics.amplitude_cutoff[icluster],

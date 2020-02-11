@@ -56,7 +56,6 @@ def init():
         'SessionUser',
         'SessionProcedure',
         'SessionProject',
-        'WaterAdministrationSession'
     )
 
     DATA_TABLES = (
