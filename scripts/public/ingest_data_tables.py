@@ -67,6 +67,8 @@ for key in tqdm(key_source.fetch('KEY')):
     if file_size != 'None':
         key_ds['file_size'] = file_size
 
+    data_set.insert1(key_ds)
+
     if data_set.flush(
             skip_duplicates=True,
             allow_direct_insert=True, chunksz=1000):
