@@ -43,6 +43,8 @@ for key in tqdm(key_source.fetch('KEY')):
                     'user_name')
         except:
             print(user)
+    else:
+        user = None
 
     format = grf(key, 'data_format')
     key_ds['format_name'] = \
@@ -75,7 +77,6 @@ for key in tqdm(key_source.fetch('KEY')):
     else:
         key_ds['file_size'] = None
 
-    print(key_ds)
     data_set.insert1(key_ds)
 
     if data_set.flush(
