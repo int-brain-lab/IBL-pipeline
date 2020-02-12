@@ -54,7 +54,8 @@ def get_uuids(model_name, uuid_name, subject_uuids):
                 else:
                     subjects = [dict(subject_uuid=subject_uuid)
                                 for subject_uuid in subject_uuids]
-                    session_uuids = (acquisition.Session & subjects).fetch('uuid')
+                    session_uuids = (acquisition.Session & subjects).fetch(
+                        'session_uuid')
 
                 if model_name == 'actions.session':
                     sessions += [dict(uuid=uuid) for uuid in session_uuids]
