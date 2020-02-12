@@ -44,7 +44,7 @@ for key in tqdm(key_source.fetch('KEY')):
         except:
             print(user)
     else:
-        user = None
+        key_ds['dataset_created_by'] = None
 
     format = grf(key, 'data_format')
     key_ds['format_name'] = \
