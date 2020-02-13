@@ -375,6 +375,34 @@ class ClusterLabel(dj.Manual):
 
 
 @schema
+class GoodClusterCriterion(dj.Lookup):
+    definition = """
+    criterion_id:               int
+    ---
+    criterion_description:      varchar(255)
+    """
+    contents = [[1, 'firing rate greater than 0.2']]
+
+
+@schema
+class GoodCluster(dj.Computed):
+    definition = """
+    -> DefaultCluster
+    -> GoodClusterCriterion
+    ---
+    is_good=0:       bool      # whether the unit is good
+    """
+    def make(self, key):
+
+        firing_rate = (DefaultCluster.Metrics & key).fetch1('firing_rate')
+        if key['criterion_id'] == 1:
+            if firing_rate > 0.2:
+                key['is_good'] = True
+
+        self.insert1(key)
+
+
+@schema
 class Cluster(dj.Imported):
     definition = """
     -> ProbeInsertion
