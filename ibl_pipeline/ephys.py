@@ -529,7 +529,7 @@ class AlignedTrialSpikes(dj.Computed):
     def make(self, key):
 
         trials = behavior.TrialSet.Trial & key
-        cluster = Cluster() & key
+        cluster = DefaultCluster() & key
         spike_times = cluster.fetch1('cluster_spikes_times')
         events = (Event & 'event in ("feedback", "stim on"').fetch('event')
 
