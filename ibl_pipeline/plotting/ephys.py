@@ -136,9 +136,13 @@ class Raster(dj.Computed):
     -> ephys.Cluster
     -> ValidAlignSort
     ---
-    plotting_data:      blob@plotting
+    plotting_data_link=null:      varchar(255)
+    plot_ylim:                    blob
+    mark_label=null:              varchar(32)
+    -> RasterLayoutTemplate
     """
-    key_source = ephys.Cluster * ValidAlignSort & behavior.TrialSet & ephys.TrialSpikes
+    key_source = ephys.DefaultCluster * ValidAlignSort & behavior.TrialSet & \
+        ephys.AlignedTrialSpikes
 
     def make(self, key):
         pass
