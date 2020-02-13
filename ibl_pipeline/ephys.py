@@ -531,7 +531,7 @@ class AlignedTrialSpikes(dj.Computed):
         trials = behavior.TrialSet.Trial & key
         cluster = DefaultCluster() & key
         spike_times = cluster.fetch1('cluster_spikes_times')
-        events = (Event & 'event in ("feedback", "stim on"').fetch('event')
+        events = (Event & 'event in ("feedback", "stim on")').fetch('event')
 
         trial_keys, trial_start_times, trial_end_times, \
             trial_stim_on_times, trial_response_times, trial_feedback_times = \
