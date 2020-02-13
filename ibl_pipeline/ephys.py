@@ -524,7 +524,7 @@ class AlignedTrialSpikes(dj.Computed):
     trial_spike_times=null:   longblob     # spike time for each trial, aligned to different event times
     trial_spikes_ts=CURRENT_TIMESTAMP:    timestamp
     """
-    key_source = behavior.TrialSet * Cluster
+    key_source = behavior.TrialSet * DefaultCluster
 
     def make(self, key):
 
