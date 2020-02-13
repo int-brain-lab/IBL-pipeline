@@ -364,7 +364,7 @@ class ClusterLabel(dj.Manual):
     definition = """
     -> DefaultCluster
     ---
-    -> ClusterMethod
+    -> ClusteringMethod
     cluster_version:            varchar(32)
     cluster_revision:           varchar(32)
     cluster_revision_date:      date
