@@ -15,7 +15,7 @@ import datetime
 dj.config['safemode'] = False
 
 keys = (ephys.CompleteClusterSession &
-        (ephys_plotting.RasterLinkS3 & 'session_start_time < "2020-01-23"')).fetch(
+        (ephys_plotting.RasterLinkS3 & 'session_start_time < "2020-01-14"')).fetch(
             'KEY', order_by='session_start_time desc')
 
 # keys = \
