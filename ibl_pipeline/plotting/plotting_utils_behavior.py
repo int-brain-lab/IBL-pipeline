@@ -206,19 +206,19 @@ def get_color(prob_left, opacity=0.3):
     cmap = sns.diverging_palette(20, 220, n=3, center="dark")
 
     if prob_left == 0.2:
-        color = cmap[0]
+        color = list(cmap[0])
         err_c = color.copy()
         err_c[3] = err_c[3]*opacity
         curve_color = 'rgba{}'.format(tuple(color))
         error_color = 'rgba{}'.format(tuple(err_c))
     elif prob_left == 0.5:
-        color = cmap[1]
+        color = list(cmap[1])
         err_c = color.copy()
         err_c[3] = err_c[3]*opacity
         curve_color = 'rgba{}'.format(tuple(color))
         error_color = 'rgba{}'.format(tuple(err_c))
     elif prob_left == 0.8:
-        color = cmap[2]
+        color = list(cmap[2])
         err_c = color.copy()
         err_c[3] = err_c[3]*opacity
         curve_color = 'rgba{}'.format(tuple(color))
