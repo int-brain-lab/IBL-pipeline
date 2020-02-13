@@ -207,24 +207,15 @@ def get_color(prob_left, opacity=0.3):
 
     if prob_left == 0.2:
         color = cmap[0]
-        err_c = color.copy()
-        err_c[3] = err_c[3]*opacity
-        curve_color = 'rgba{}'.format(tuple(color))
-        error_color = 'rgba{}'.format(tuple(err_c))
     elif prob_left == 0.5:
         color = cmap[1]
-        err_c = color.copy()
-        err_c[3] = err_c[3]*opacity
-        curve_color = 'rgba{}'.format(tuple(color))
-        error_color = 'rgba{}'.format(tuple(err_c))
     elif prob_left == 0.8:
         color = cmap[2]
-        err_c = color.copy()
-        err_c[3] = err_c[3]*opacity
-        curve_color = 'rgba{}'.format(tuple(color))
-        error_color = 'rgba{}'.format(tuple(err_c))
     else:
         return
+
+    curve_color = 'rgba{}'.format(color + tuple([1]))
+    error_color = 'rgba{}'.format(color + tuple([opacity]))
 
     return curve_color, error_color
 

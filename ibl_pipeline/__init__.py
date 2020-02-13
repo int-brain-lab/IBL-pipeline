@@ -7,7 +7,7 @@ if os.environ.get('MODE') == 'test':
 elif os.environ.get('MODE') == 'update':
     dj.config['database.prefix'] = 'update_'
 
-elif os.environ.get('MODE') != 'public':
+if os.environ.get('MODE') != 'public':
     schema = dj.schema('ibl_storage')
 
     @schema
