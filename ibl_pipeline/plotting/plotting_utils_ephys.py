@@ -10,6 +10,7 @@ import plotly.graph_objs as go
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import colorlover as cl
 import plotly
 from plotly import tools
 import statsmodels.stats.proportion as smp
@@ -86,6 +87,14 @@ def get_sort_and_marker(align_event, sorting_var):
                 {sorting_var}, {align_event}
                 """
             )
+    elif sorting_var == 'contrast':
+        sorting_query = 'trial_signed_contrast, trial_id'
+        mark = None
+        label = None
+    elif sorting_var == 'feedback type':
+        sorting_query = 'feedback type, trial_id'
+        mark = None
+        label = None
     elif sorting_var == 'trial_id':
         sorting_query = 'trial_id'
         mark = None
@@ -97,65 +106,9 @@ def get_sort_and_marker(align_event, sorting_var):
             ["trial_id", \n
              "response - stim on", \n
              "feedback - stim on", \n
-             "feedback - response"]'""")
+             "feedback - response",
+             "contrast"]'""")
     return sorting_query, mark, label
-
-
-def create_raster_plot(trials, align_event,
-                       sorting_var='trial_id', x_lim=[-1, 1],
-                       show_plot=False):
-
-    sorting_query, mark, label = get_sort_and_marker(
-        align_event, sorting_var)
-
-    if sorting_var != 'trial_id':
-        trials = (trials & 'event="{}"'.format(align_event)).proj(
-            'trial_id', 'trial_spike_times', sorting_query=sorting_query, mark=mark)
-        spk_times, marking_points = trials.fetch(
-            'trial_spike_times', 'mark', order_by='sorting_query')
-    else:
-        trials = (trials & 'event="{}"'.format(align_event)).proj(
-            'trial_id', 'trial_spike_times', sorting_query=sorting_query)
-        spk_times = trials.fetch(
-            'trial_spike_times', order_by='sorting_query')
-
-    spk_times_all = np.hstack(spk_times)
-    id_all = [[i] * len(spike_time) for i, spike_time in enumerate(spk_times)]
-    id_all = np.hstack(id_all)
-
-    fig = plt.figure(dpi=150, frameon=False, figsize=[10, 5])
-    ax = plt.Axes(fig, [0., 0., 1., 1.])
-    ax.plot(spk_times_all, id_all, 'k.', alpha=0.4, markeredgewidth=0)
-    if sorting_var != 'trial_id':
-        ax.plot(marking_points, range(len(spk_times)), 'b', label=label)
-    ax.set_axis_off()
-    fig.add_axes(ax)
-
-    # hide the axis
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-
-    # set the limits to be exactly what you want
-    ax.set_xlim(x_lim[0], x_lim[1])
-    y_lim = len(trials) * 1.15
-    ax.set_ylim(0, y_lim)
-    ax.axvline(0, linewidth=2, alpha=0.5, color='k', label=align_event)
-    ax.legend(loc=[0.01, 0.87], prop=dict(size=14))
-
-    # save the figure with `pad_inches=0` to remove
-    # any padding in the image
-    import tempfile
-    temp = tempfile.NamedTemporaryFile(suffix=".png")
-    fig.savefig(temp.name, pad_inches=0)
-
-    if not show_plot:
-        plt.close(fig)
-
-    import base64
-    with open(temp.name, "rb") as image_file:
-        encoded_string = base64.b64encode(image_file.read())
-    temp.close()
-    return encoded_string, [0, y_lim]
 
 
 def create_psth_plot(trials, align_event,
@@ -366,6 +319,47 @@ def create_raster_plot_combined(trials, align_event,
                     for trial_id, spk_time in zip(trial_ids, spk_times)])
             ax.plot(np.hstack(spk_times), spk_trial_ids, 'k.', alpha=0.5,
                     markeredgewidth=0)
+        elif sorting_var == 'contrast':
+            spk_times, trial_contrasts = (trials & 'event="{}"'.format(align_event)).fetch(
+                'trial_spike_times', 'trial_signed_contrast',
+                order_by='trial_signed_contrast, trial_id')
+            spk_trial_ids = np.hstack(
+                [[trial_id] * len(spk_time)
+                    for trial_id, spk_time in enumerate(spk_times)])
+            ax.plot(np.hstack(spk_times), spk_trial_ids, 'k.', alpha=0.5,
+                    markeredgewidth=0)
+
+            # plot different contrasts as background
+            contrasts, u_inds = np.unique(trial_contrasts, return_index=True)
+            u_inds = list(u_inds) + [len(trial_contrasts)]
+
+            tick_positions = np.add(u_inds[1:], u_inds[:-1])/2
+
+            puor = cl.scales[str(len(contrasts))]['div']['PuOr']
+            puor = np.divide(cl.to_numeric(puor), 255)
+
+            for i, ind in enumerate(u_inds[:-1]):
+                ax.fill_between([-1, 1], u_inds[i], u_inds[i+1]-1, color=puor[i], alpha=0.8)
+            fig.add_axes(ax)
+        elif sorting_var == 'feedback type':
+            spk_times, trial_fb_types = (trials & 'event="{}"'.format('stim on')).fetch(
+                'trial_spike_times', 'trial_feedback_type',
+                order_by='trial_feedback_type, trial_id')
+            spk_trial_ids = np.hstack(
+                [[trial_id] * len(spk_time)
+                    for trial_id, spk_time in enumerate(spk_times)])
+            ax.plot(np.hstack(spk_times), spk_trial_ids, 'k.', alpha=0.5,
+                    markeredgewidth=0)
+
+            # plot different feedback types as background
+            fb_types, u_inds = np.unique(trial_fb_types, return_index=True)
+            u_inds = list(u_inds) + [len(trial_fb_types)]
+
+            colors = sns.diverging_palette(10, 240, n=len(fb_types))
+
+            for i, ind in enumerate(u_inds[:-1]):
+                ax.fill_between([-1, 1], u_inds[i], u_inds[i+1]-1, color=colors[i], alpha=0.5)
+            fig.add_axes(ax)
         else:
             spk_times_left, marking_points_left, \
                 spk_times_right, marking_points_right, \
@@ -432,7 +426,7 @@ def create_raster_plot_combined(trials, align_event,
 
     # set the limits
     ax.set_xlim(x_lim[0], x_lim[1])
-    if sorting_var == 'trial_id':
+    if sorting_var in ('trial_id', 'contrast', 'feedback type'):
         if len(spk_trial_ids):
             y_lim = max(spk_trial_ids) * 1.02
         else:
@@ -456,7 +450,11 @@ def create_raster_plot_combined(trials, align_event,
                     if exc.errno != errno.EEXIST:
                         raise
             fig.savefig(fig_dir, pad_inches=0)
-            return [0, y_lim], label
+
+            if sorting_var == 'contrast':
+                return [0, y_lim], label, contrasts, tick_positions
+            else:
+                return [0, y_lim], label
 
         elif store_type == 's3':
             access, secret = (ibl_pipeline.S3Access & 's3_id=1').fetch1(
@@ -476,7 +474,11 @@ def create_raster_plot_combined(trials, align_event,
             bucket.put_object(Body=img_data,
                               ContentType='image/png',
                               Key=fig_dir)
-            return [0, y_lim], label
+
+            if sorting_var == 'contrast':
+                return [0, y_lim], label, contrasts, tick_positions
+            else:
+                return [0, y_lim], label
 
     else:
         import tempfile
@@ -486,16 +488,11 @@ def create_raster_plot_combined(trials, align_event,
         with open(temp.name, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read())
         temp.close()
-        return encoded_string, [0, y_lim], label
 
-
-# def create_raster_plot_combined_fast(trials, align_event,
-#                                      sorting_var='trial_id',
-#                                      x_lim=[-1, 1],
-#                                      show_plot=False,
-#                                      fig_dir=None,
-#                                      store_type=None)
-
+        if sorting_var == 'contrast':
+            return encoded_string, [0, y_lim], label, contrasts, tick_positions
+        else:
+            return encoded_string, [0, y_lim], label
 
 
 def get_legend(trials_type, legend_group):

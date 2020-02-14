@@ -60,13 +60,6 @@ class RasterLayoutTemplate(dj.Lookup):
     raster_data_template:   longblob
     """
 
-    axis = go.Scatter(
-        x=[-1, 1],
-        # y=y_lim,
-        mode='markers',
-        marker=dict(opacity=0),
-        showlegend=False
-    )
     legend_left = putils.get_legend('left', 'spike')
     legend_right = putils.get_legend('right', 'spike')
     legend_incorrect = putils.get_legend('incorrect', 'spike')
@@ -111,33 +104,100 @@ class RasterLayoutTemplate(dj.Lookup):
             showgrid=False
         ),
     )
-    data1 = [axis, legend_left, legend_right, legend_incorrect]
-    data2 = [axis, legend_left, legend_right, legend_incorrect,
-             legend_mark_left, legend_mark_right, legend_mark_incorrect]
 
-    template_1 = dict(
+    axis = go.Scatter(
+        x=[-1, 1],
+        # y=y_lim,
+        mode='markers',
+        marker=dict(opacity=0),
+        showlegend=False
+    )
+    axis2 = go.Scatter(
+        x=[-1, 1],
+        # y=y_lim,
+        mode='markers',
+        marker=dict(opacity=0),
+        showlegend=False,
+        yaxis='y2'
+    )
+
+    # template_0: sorting_var trial_id
+    data0 = [axis]
+    template_0 = dict(
         template_idx=0,
-        raster_data_template=go.Figure(data=data1, layout=layout).to_plotly_json()
-    )
-    template_2 = dict(
+        raster_data_template=go.Figure(
+            data=data0, layout=layout).to_plotly_json())
+
+    # template_1: sorting_var feedback - stim on etc.
+    data1 = [axis, legend_left, legend_right, legend_incorrect,
+             legend_mark_left, legend_mark_right, legend_mark_incorrect]
+    template_1 = dict(
         template_idx=1,
-        raster_data_template=go.Figure(data=data2, layout=layout).to_plotly_json()
+        raster_data_template=go.Figure(
+            data=data1, layout=layout).to_plotly_json())
+
+    # template_2: sorting_var contrast
+    data2 = [axis2]
+    fig = go.Figure(
+        data=data2, layout=layout)
+    fig.update_layout(
+        yaxis2=dict(
+            title='Contrast',
+            # range=y_lim,
+            showgrid=False,
+            overlaying='y',
+            side='right',
+            tickmode='array',
+            # tickvals=tick_pos,
+            # ticktext=contrasts
+        ))
+    template_2 = dict(
+        template_idx=2,
+        raster_data_template=fig.to_plotly_json()
     )
+
+    # template_3: sorting_var feedback type
+    incorrect = go.Scatter(
+        x=[-2, -1],
+        y=[-2, -1],
+        fill='tozeroy',
+        fillcolor='rgba(218, 59, 70, 0.5)',
+        name='Incorrect',
+        mode='none'
+    )
+    correct = go.Scatter(
+        x=[-2, -1],
+        y=[-2, -1],
+        fill='tonexty',
+        fillcolor='rgba(65, 124, 168, 0.5)',
+        name='Correct',
+        mode='none'
+    )
+
+    data3 = [axis, incorrect, correct]
+    template_3 = dict(
+        template_idx=1,
+        raster_data_template=go.Figure(
+            data=data3, layout=layout).to_plotly_json())
 
     contents = [
+        template_0,
         template_1,
-        template_2
+        template_2,
+        template_3
     ]
 
 
 @schema
 class Raster(dj.Computed):
     definition = """
-    -> ephys.Cluster
+    -> ephys.DefaultCluster
     -> ValidAlignSort
     ---
     plotting_data_link=null:      varchar(255)
     plot_ylim:                    blob
+    plot_contrasts=null:          blob          # for sorting by contrast, others null
+    plot_contrast_tick_pos=null:  blob          # y position of each contrast, for sorting by contrast, others null
     mark_label=null:              varchar(32)
     -> RasterLayoutTemplate
     """
@@ -145,7 +205,71 @@ class Raster(dj.Computed):
         ephys.AlignedTrialSpikes
 
     def make(self, key):
-        pass
+        cluster = ephys.DefaultCluster & key
+        trials = \
+            (behavior.TrialSet.Trial * ephys.AlignedTrialSpikes & cluster).proj(
+                'trial_start_time', 'trial_stim_on_time',
+                'trial_response_time',
+                'trial_feedback_time',
+                'trial_feedback_type',
+                'trial_response_choice',
+                'trial_spike_times',
+                trial_duration='trial_end_time-trial_start_time',
+                trial_signed_contrast="""trial_stim_contrast_right -
+                                         trial_stim_contrast_left"""
+            ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"' & key
+
+        if not len(trials):
+            if key['sort_by'] == 'trial_id':
+                key['template_idx'] = 0
+            elif key['sort_by'] == 'contrast':
+                key['template_idx'] = 2
+            elif key['sort_by'] == 'feeback type':
+                key['template_idx'] = 3
+            else:
+                key['template_idx'] = 1
+            self.insert1(dict(
+                **key, plot_ylim=[0, 3]))
+            return
+
+        align_event = (ephys.Event & key).fetch1('event')
+        sorting_var = (Sorting & key).fetch1('sort_by')
+
+        fig_link = path.join(
+            'raster',
+            str(key['subject_uuid']),
+            key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+            str(key['probe_idx']),
+            key['event'],
+            key['sort_by'],
+            str(key['cluster_id'])) + '.png'
+
+        if key['sort_by'] == 'contrast':
+            y_lim, label, contrasts, tick_pos = \
+                putils.create_raster_plot_combined(
+                    trials, align_event,
+                    sorting_var, fig_dir=fig_link, store_type='s3')
+            key['plot_contrasts'] = contrasts
+            key['plot_contrast_tick_pos'] = tick_pos
+        else:
+            y_lim, label = putils.create_raster_plot_combined(
+                trials, align_event,
+                sorting_var, fig_dir=fig_link, store_type='s3')
+
+        key['plotting_data_link'] = fig_link
+        key['plot_ylim'] = y_lim
+        key['mark_label'] = label
+
+        if key['sort_by'] == 'trial_id':
+            key['template_idx'] = 0
+        elif key['sort_by'] == 'contrast':
+            key['template_idx'] = 2
+        elif key['sort_by'] == 'feeback type':
+            key['template_idx'] = 3
+        else:
+            key['template_idx'] = 1
+
+        self.insert1(key)
 
 
 @schema
