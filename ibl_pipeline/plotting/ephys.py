@@ -148,8 +148,8 @@ class RasterLayoutTemplate(dj.Lookup):
             overlaying='y',
             side='right',
             tickmode='array',
-            # tickvals=tick_pos,
-            # ticktext=contrasts
+            # tickvals=tick_pos, # from Raster table
+            # ticktext=contrasts # from Raster table
         ))
     template_2 = dict(
         template_idx=2,
