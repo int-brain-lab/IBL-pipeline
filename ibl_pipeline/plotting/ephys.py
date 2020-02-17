@@ -334,84 +334,6 @@ class RasterLinkS3(dj.Computed):
 
 
 @schema
-class Psth(dj.Computed):
-    definition = """
-    -> ephys.Cluster
-    -> ephys.Event
-    ---
-    plotting_data:     blob@plotting
-    """
-
-    key_source = ephys.Cluster * (ephys.Event & 'event != "go cue"') & \
-        behavior.TrialSet & ephys.TrialSpikes
-
-    def make(self, key):
-        cluster = ephys.Cluster & key
-        trials_all = (behavior.TrialSet.Trial * ephys.TrialSpikes & cluster).proj(
-            'trial_start_time', 'trial_stim_on_time',
-            'trial_response_time', 'trial_feedback_time',
-            'trial_response_choice', 'trial_spike_times',
-            trial_duration='trial_end_time-trial_start_time',
-            trial_signed_contrast='trial_stim_contrast_right - trial_stim_contrast_left'
-        ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"' & key
-
-        trials_left = trials_all & 'trial_response_choice="CW"' \
-            & 'trial_signed_contrast < 0'
-        trials_right = trials_all & 'trial_response_choice="CCW"' \
-            & 'trial_signed_contrast > 0'
-        trials_incorrect = trials_all - \
-            trials_right.proj() - trials_left.proj()
-
-        align_event = (ephys.Event & key).fetch1('event')
-        x_lim = [-1, 1]
-        data = []
-        if len(trials_left):
-            data.append(
-                putils.compute_psth(trials_left, 'left', align_event))
-        if len(trials_right):
-            data.append(
-                putils.compute_psth(trials_right, 'right', align_event))
-        if len(trials_incorrect):
-            data.append(
-                putils.compute_psth(trials_incorrect, 'incorrect', align_event))
-
-        data.append(
-            putils.compute_psth(
-                trials_all, 'all', align_event))
-
-        layout = dict(
-            width=580,
-            height=370,
-            margin=dict(
-                l=50,
-                r=30,
-                b=40,
-                t=80,
-                pad=0
-            ),
-            title=dict(
-                text='PSTH, aligned to {} time'.format(align_event),
-                x=0.2,
-                y=0.87
-            ),
-            xaxis=dict(
-                title='Time (sec)',
-                range=x_lim,
-                showgrid=False
-            ),
-            yaxis=dict(
-                title='Firing rate (spks/sec)',
-                showgrid=False
-            ),
-        )
-
-        fig = go.Figure(data=data, layout=layout)
-        key['plotting_data'] = fig.to_plotly_json()
-
-        self.insert1(key)
-
-
-@schema
 class PsthTemplate(dj.Lookup):
     definition = """
     psth_template_idx:   int
@@ -420,44 +342,124 @@ class PsthTemplate(dj.Lookup):
     """
 
     left = go.Scatter(
-        # x=psth_time, # fetched from the table PsthData
-        # y=psth_left, # fetched from the table PsthData
+        # x=psth_time, # fetched from the table Psth
+        # y=psth_left, # fetched from the table Psth
         mode='lines',
         marker=dict(
             size=6,
             color='green'),
-        name='left trials'
+        fill='tonexty',
+        fillcolor='rgba(0, 255, 0, 0.2)',
+        name='left trials, mean +/- s.e.m.'
+    )
+    upper_left = go.Scatter(
+        # x=list(psth_time), # fetched from the table Psth
+        # y=list(psth_left_upper), # fetched from the table Psth
+        mode='lines',
+        marker=dict(color="#444"),
+        fillcolor='rgba(0, 255, 0, 0.2)',
+        line=dict(width=0),
+        fill='tonexty',
+        showlegend=False,
+    )
+    lower_left = go.Scatter(
+        # x=list(psth_time), # fetched from the table Psth
+        # y=list(psth_left_lower), # fetched from the table Psth
+        mode='lines',
+        marker=dict(color="#444"),
+        line=dict(width=0),
+        showlegend=False,
     )
     right = go.Scatter(
-        # x=psth_time, # fetched from the table PsthData
-        # y=psth_right, # fetched from the table PsthData
+        # x=psth_time, # fetched from the table Psth
+        # y=psth_right, # fetched from the table Psth
         mode='lines',
         marker=dict(
             size=6,
             color='blue'),
-        name='right trials'
+        fill='tonexty',
+        fillcolor='rgba(0, 0, 255, 0.2)',
+        name='right trials, mean +/- s.e.m.'
+    )
+    upper_right = go.Scatter(
+        # x=list(psth_time), # fetched from the table Psth
+        # y=list(psth_right_upper), # fetched from the table Psth
+        mode='lines',
+        marker=dict(color="#444"),
+        fillcolor='rgba(0, 0, 255, 0.2)',
+        line=dict(width=0),
+        fill='tonexty',
+        showlegend=False,
+    )
+    lower_right = go.Scatter(
+        # x=list(psth_time), # fetched from the table Psth
+        # y=list(psth_right_lower), # fetched from the table Psth
+        mode='lines',
+        marker=dict(color="#444"),
+        line=dict(width=0),
+        showlegend=False,
     )
     incorrect = go.Scatter(
-        # x=psth_time, # fetched from the table PsthData
-        # y=psth_incorrect, # fetched from the table PsthData
+        # x=psth_time, # fetched from the table Psth
+        # y=psth_incorrect, # fetched from the table Psth
         mode='lines',
         marker=dict(
             size=6,
             color='red'),
-        name='incorrect trials'
+        fillcolor='rgba(255, 0, 0, 0.2)',
+        fill='tonexty',
+        name='incorrect trials, mean +/- s.e.m.'
+    )
+    upper_incorrect = go.Scatter(
+        # x=list(psth_time), # fetched from the table Psth
+        # y=list(psth_incorrect_upper), # fetched from the table Psth
+        mode='lines',
+        marker=dict(color="#444"),
+        fillcolor='rgba(255, 0, 0, 0.2)',
+        line=dict(width=0),
+        fill='tonexty',
+        showlegend=False,
+    )
+    lower_incorrect = go.Scatter(
+        # x=list(psth_time), # fetched from the table Psth
+        # y=list(psth_incorrect_lower), # fetched from the table Psth
+        mode='lines',
+        marker=dict(color="#444"),
+        line=dict(width=0),
+        showlegend=False,
     )
     all = go.Scatter(
-        # x=psth_time, # fetched from the table PsthData
-        # y=psth_all, # fetched from the table PsthData
+        # x=psth_time, # fetched from the table Psth
+        # y=psth_all, # fetched from the table Psth
         mode='lines',
         marker=dict(
             size=6,
             color='black'),
-        name='all trials'
+        fill='tonexty',
+        fillcolor='rgba(0, 255, 0, 0.2)',
+        name='all trials, mean +/- s.e.m.'
+    )
+    upper_all = go.Scatter(
+        # x=list(psth_time), # fetched from the table Psth
+        # y=list(psth_all_upper), # fetched from the table Psth
+        mode='lines',
+        marker=dict(color="#444"),
+        fillcolor='rgba(0, 255, 0, 0.2)',
+        line=dict(width=0),
+        fill='tonexty',
+        showlegend=False,
+    )
+    lower_all = go.Scatter(
+        # x=list(psth_time), # fetched from the table Psth
+        # y=list(psth_all_lower), # fetched from the table Psth
+        mode='lines',
+        marker=dict(color="#444"),
+        line=dict(width=0),
+        showlegend=False,
     )
 
     layout = go.Layout(
-        width=580,
+        width=700,
         height=370,
         margin=go.layout.Margin(
             l=50,
@@ -482,10 +484,120 @@ class PsthTemplate(dj.Lookup):
         ),
     )
 
-    contents = [dict(
-        psth_template_idx=0,
-        psth_data_template=go.Figure(data=[left, right, incorrect, all],
-                                     layout=layout).to_plotly_json())]
+    contents = [
+        dict(psth_template_idx=0,
+             psth_data_template=go.Figure(
+                 data=[left, right, incorrect, all],
+                 layout=layout).to_plotly_json()),
+        dict(psth_template_idx=1,
+             psth_data_template=go.Figure(
+                 data=[lower_left, left, upper_left,
+                       lower_right, right, upper_right,
+                       lower_incorrect, incorrect, upper_incorrect,
+                       lower_all, all, upper_all],
+                 layout=layout).to_plotly_json()
+             )
+        ]
+
+
+@schema
+class Psth(dj.Computed):
+    definition = """
+    -> ephys.DefaultCluster
+    -> ephys.Event
+    ---
+    psth_x_lim:                 varchar(32)
+    psth_left=null:             varchar(1000)
+    psth_left_upper=null:       varchar(1000)
+    psth_left_lower=null:       varchar(1000)
+    psth_right=null:            varchar(1000)
+    psth_right_upper=null:      varchar(1000)
+    psth_right_lower=null:      varchar(1000)
+    psth_incorrect=null:        varchar(1000)
+    psth_incorrect_upper=null:  varchar(1000)
+    psth_incorrect_lower=null:  varchar(1000)
+    psth_all=null:              varchar(1000)
+    psth_all_upper=null:        varchar(1000)
+    psth_all_lower=null:        varchar(1000)
+    psth_time=null:             varchar(1000)
+    -> PsthTemplate
+    """
+    key_source = ephys.DefaultCluster * (ephys.Event & 'event in ("stim on", "feedback")') & \
+        behavior.TrialSet & ephys.AlignedTrialSpikes
+
+    def make(self, key):
+        trials_all = (behavior.TrialSet.Trial * ephys.AlignedTrialSpikes & key).proj(
+            'trial_start_time', 'trial_stim_on_time',
+            'trial_response_time', 'trial_feedback_time',
+            'trial_response_choice', 'trial_spike_times',
+            trial_duration='trial_end_time-trial_start_time',
+            trial_signed_contrast='trial_stim_contrast_right - trial_stim_contrast_left'
+        ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
+
+        x_lim = [-1, 1]
+        if not len(trials_all):
+            self.insert1(dict(
+                **key,
+                psth_x_lim=','.join('{:0.2f}'.format(x) for x in x_lim),
+                psth_template_idx=0))
+            return
+
+        trials_left = trials_all & 'trial_response_choice="CW"' \
+            & 'trial_signed_contrast < 0'
+        trials_right = trials_all & 'trial_response_choice="CCW"' \
+            & 'trial_signed_contrast > 0'
+        trials_incorrect = trials_all - \
+            trials_right.proj() - trials_left.proj()
+
+        align_event = (ephys.Event & key).fetch1('event')
+
+        entry = dict(**key)
+        if len(trials_left):
+            _, psth_left, psth_left_upper, psth_left_lower = \
+                putils.compute_psth_with_errorbar(
+                    trials_left, 'left', align_event, as_plotly_obj=False)
+            entry.update(
+                psth_left=','.join('{:0.5f}'.format(x) for x in psth_left),
+                psth_left_upper=','.join('{:0.5f}'.format(x) for x in psth_left_upper),
+                psth_left_lower=','.join('{:0.5f}'.format(x) for x in psth_left_lower))
+
+        if len(trials_right):
+            _, psth_right, psth_right_upper, psth_right_lower = \
+                putils.compute_psth_with_errorbar(
+                    trials_right, 'right', align_event, as_plotly_obj=False)
+            entry.update(
+                psth_right=','.join('{:0.5f}'.format(x)
+                                    for x in psth_right),
+                psth_right_upper=','.join('{:0.5f}'.format(x)
+                                          for x in psth_right_upper),
+                psth_right_lower=','.join('{:0.5f}'.format(x)
+                                          for x in psth_right_lower))
+
+        if len(trials_incorrect):
+            _, psth_incorrect, psth_incorrect_upper, psth_incorrect_lower = \
+                putils.compute_psth_with_errorbar(
+                    trials_incorrect, 'incorrect', align_event, as_plotly_obj=False)
+            entry.update(
+                psth_incorrect=','.join('{:0.5f}'.format(x)
+                                        for x in psth_incorrect),
+                psth_incorrect_upper=','.join('{:0.5f}'.format(x)
+                                              for x in psth_incorrect_upper),
+                psth_incorrect_lower=','.join('{:0.5f}'.format(x)
+                                              for x in psth_incorrect_lower))
+
+        psth_time, psth_all, psth_all_upper, psth_all_lower = \
+            putils.compute_psth_with_errorbar(
+                trials_all, 'all', align_event, as_plotly_obj=False)
+
+        entry.update(
+            psth_x_lim=','.join('{:0.2f}'.format(x) for x in x_lim),
+            psth_all=','.join('{:0.5f}'.format(x) for x in psth_all),
+            psth_all_upper=','.join('{:0.5f}'.format(x) for x in psth_all_upper),
+            psth_all_lower=','.join('{:0.5f}'.format(x) for x in psth_all_lower),
+            psth_time=','.join('{:0.5f}'.format(x) for x in psth_time),
+            psth_template_idx=1)
+
+        self.insert1(entry)
 
 
 @schema

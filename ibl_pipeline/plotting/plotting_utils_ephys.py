@@ -14,7 +14,7 @@ import colorlover as cl
 import plotly
 from plotly import tools
 import statsmodels.stats.proportion as smp
-import scipy.signal as signal
+from scipy.signal import gaussian, convolve, boxcar
 import os
 import boto3
 import io
@@ -126,7 +126,7 @@ def create_psth_plot(trials, align_event,
     # convolve with a box-car filter
     dt = np.mean(np.diff(time_bins))
     psth = np.divide(
-        signal.convolve(mean_counts, signal.boxcar(window_size), mode='same'),
+        convolve(mean_counts, boxcar(window_size), mode='same'),
         window_size*dt)
     fig = plt.figure(dpi=300, frameon=False, figsize=[10, 5])
     ax = plt.Axes(fig, [0., 0., 1., 1.])
@@ -191,10 +191,10 @@ def compute_psth(trials, trial_type, align_event, bin_size=0.025,
     # build gaussian kernel
     if smoothing > 0:
         w = n_bins - 1 if n_bins % 2 == 0 else n_bins
-        window = signal.gaussian(w, std=smoothing / bin_size)
+        window = gaussian(w, std=smoothing / bin_size)
         window /= np.sum(window)
 
-    psth = signal.convolve(mean_fr, window, mode='same', method='auto')
+    psth = convolve(mean_fr, window, mode='same', method='auto')
 
     data = go.Scatter(
         x=list(time_bins),
@@ -209,6 +209,131 @@ def compute_psth(trials, trial_type, align_event, bin_size=0.025,
         return data
     else:
         return list(time_bins), list(psth)
+
+
+def compute_psth_with_errorbar(
+    trials, trial_type, align_event, bin_size=0.025,
+    smoothing=0.025, x_lim=[-1, 1], as_plotly_obj=True):
+
+    if trial_type == 'left':
+        color = 'green'
+        err_color = 'rgba(0, 255, 0, 0.2)'
+    elif trial_type == 'right':
+        color = 'blue'
+        err_color = 'rgba(0, 0, 255, 0.2)'
+    elif trial_type == 'all':
+        color = 'black'
+        err_color = 'rgba(0, 0, 0, 0.2)'
+    elif trial_type == 'incorrect':
+        color = 'red'
+        err_color = 'rgba(255, 0, 0, 0.2)'
+    else:
+        raise NameError('Invalid type name')
+
+    # set up bins
+    n_offset = 5 * int(np.ceil(smoothing / bin_size))  # get rid of boundary effects for smoothing
+    n_bins_pre = int(np.ceil(np.negative(x_lim[0]) / bin_size)) + n_offset
+    n_bins_post = int(np.ceil(x_lim[1] / bin_size)) + n_offset
+    n_bins = n_bins_pre + n_bins_post
+
+    # this is bin edges
+    bins = np.arange(-n_bins_pre, n_bins_post + 1) * bin_size
+
+    # spikes times for all trials
+    spk_times = trials.fetch('trial_spike_times')
+
+    # trial_id for each spike, flattened
+    trial_ids_flat = np.hstack([[i_trial] * len(spk_time)
+                                for i_trial, spk_time in enumerate(spk_times)])
+    # flatten spk times
+    spk_times_flat = np.hstack(spk_times)
+
+    # filter out spike times that are not in this range
+    rel_idxs = np.bitwise_and(spk_times_flat >= bins[0],
+                              spk_times_flat <= bins[-1])
+    filtered_spike_times_flat = spk_times_flat[rel_idxs]
+    filtered_trial_ids_flat = trial_ids_flat[rel_idxs]
+
+    # ----- assign each spike into 2D bins, each trial and each time slot --------
+
+    # bin id of each spike
+    bin_id = (np.floor((filtered_spike_times_flat - np.min(bins)) / bin_size)).astype(np.int64)
+
+    # trial id of each spike
+    trial_scale, trial_id = np.unique(filtered_trial_ids_flat,
+                                      return_inverse=True)
+
+    # assign each spike a 1d index representing a combination of trial and time bin
+    bin_num, trial_num = [bins.size, trial_scale.size]
+    ind2d = np.ravel_multi_index(np.c_[trial_id, bin_id].T,
+                                 dims=[trial_num, bin_num])
+
+    # spike counts of each trial and each bin
+    spike_counts = np.bincount(ind2d,
+                               minlength=bin_num * trial_num,
+                               weights=None).reshape(trial_num, bin_num)
+
+    # get binned spikes as a 2D array n_trials x n_bins
+    binned_spikes = spike_counts[:, :-1]
+
+    # smooth with convolution
+    if smoothing > 0:
+        w = n_bins - 1 if n_bins % 2 == 0 else n_bins
+        window = gaussian(w, std=smoothing / bin_size)
+        window /= np.sum(window)
+        binned_spikes_conv = np.zeros([trial_num, bin_num-1])
+        for j in range(binned_spikes.shape[0]):
+            binned_spikes_conv[j, :] = convolve(
+                binned_spikes[j, :], window, mode='same', method='auto')
+        binned_spikes = binned_spikes_conv
+
+    mean_psth = np.mean(binned_spikes, axis=0)
+    sem_psth = np.std(binned_spikes, axis=0)/np.sqrt(trial_num)
+
+    mean_psth = mean_psth[n_offset:-n_offset]
+    sem_psth = sem_psth[n_offset:-n_offset]
+
+    upper_psth = mean_psth + sem_psth
+    lower_psth = mean_psth - sem_psth
+
+    # return the middle of each bin as the time
+    time_bins = (bins[:-1] + bins[1:]) / 2
+    time_bins = time_bins[n_offset:-n_offset]
+
+    upper_bound = psth = go.Scatter(
+        x=list(time_bins),
+        y=list(upper_psth),
+        mode='lines',
+        marker=dict(color="#444"),
+        fillcolor=err_color,
+        line=dict(width=0),
+        fill='tonexty',
+        showlegend=False,
+    )
+    psth = go.Scatter(
+        x=list(time_bins),
+        y=list(mean_psth),
+        mode='lines',
+        marker=dict(
+            size=6,
+            color=color),
+        fill='tonexty',
+        fillcolor=err_color,
+        name='{} trials, mean +/- s.e.m'.format(trial_type)
+    )
+    lower_bound = go.Scatter(
+        x=list(time_bins),
+        y=list(lower_psth),
+        mode='lines',
+        marker=dict(color="#444"),
+        line=dict(width=0),
+        showlegend=False,
+    )
+
+    if as_plotly_obj:
+        return [lower_bound, psth, upper_bound]
+    else:
+        return list(time_bins), list(mean_psth), list(mean_psth+sem_psth), list(mean_psth-sem_psth)
 
 
 def get_spike_times(trials, sorting_var, align_event,
@@ -342,7 +467,7 @@ def create_raster_plot_combined(trials, align_event,
                 ax.fill_between([-1, 1], u_inds[i], u_inds[i+1]-1, color=puor[i], alpha=0.8)
             fig.add_axes(ax)
         elif sorting_var == 'feedback type':
-            spk_times, trial_fb_types = (trials & 'event="{}"'.format('stim on')).fetch(
+            spk_times, trial_fb_types = (trials & 'event="{}"'.format('feedback')).fetch(
                 'trial_spike_times', 'trial_feedback_type',
                 order_by='trial_feedback_type, trial_id')
             spk_trial_ids = np.hstack(
