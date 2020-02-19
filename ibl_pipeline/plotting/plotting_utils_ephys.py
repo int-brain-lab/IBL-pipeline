@@ -441,7 +441,7 @@ def create_raster_plot_combined(trials, align_event,
                 'trial_spike_times', 'trial_id', order_by='trial_id')
             spk_trial_ids = np.hstack(
                 [[trial_id] * len(spk_time)
-                    for trial_id, spk_time in zip(trial_ids, spk_times)])
+                    for trial_id, spk_time in enumerate(spk_times)])
             ax.plot(np.hstack(spk_times), spk_trial_ids, 'k.', alpha=0.5,
                     markeredgewidth=0)
         elif sorting_var == 'contrast':
@@ -467,7 +467,7 @@ def create_raster_plot_combined(trials, align_event,
                 ax.fill_between([-1, 1], u_inds[i], u_inds[i+1]-1, color=puor[i], alpha=0.8)
             fig.add_axes(ax)
         elif sorting_var == 'feedback type':
-            spk_times, trial_fb_types = (trials & 'event="{}"'.format('feedback')).fetch(
+            spk_times, trial_fb_types = (trials & 'event="{}"'.format(align_event)).fetch(
                 'trial_spike_times', 'trial_feedback_type',
                 order_by='trial_feedback_type, trial_id')
             spk_trial_ids = np.hstack(
@@ -492,7 +492,7 @@ def create_raster_plot_combined(trials, align_event,
                 get_spike_times_trials(
                     trials, sorting_var, align_event, sorting_query, mark)
 
-            id_gap = len(trials) * 0.02
+            id_gap = len(trials) * 0
 
             if len(spk_times_incorrect):
                 spk_times_all_incorrect = np.hstack(spk_times_incorrect)
