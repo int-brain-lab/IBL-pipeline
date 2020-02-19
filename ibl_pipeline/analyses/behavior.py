@@ -436,9 +436,23 @@ class SessionTrainingStatus(dj.Computed):
     -> PsychResults
     ---
     -> TrainingStatus
+    good_enough_for_brainwide_map=0:     bool    # to be included in the brainwide map
     """
 
     def make(self, key):
+
+        # ========================================================= #
+        # check for "good enough for brainwide map"
+        # ========================================================= #
+
+        # trials for current session
+        n_trials_current = (behavior.TrialSet & key).fetch1('trial_num')
+
+        # performance of the current session
+        perf_current = (PsychResults & key).fetch1('performance_easy')
+
+        if n_trials > 400 and perf > 0.9:
+            key['good_enough_for_brainwide_map'] = 1
 
         subject_key = key.copy()
         subject_key.pop('session_start_time')
@@ -752,4 +766,5 @@ class SessionTrainingStatus(dj.Computed):
         # ========================================================= #
 
         key['training_status'] = 'in_training'
+
         self.insert1(key)
