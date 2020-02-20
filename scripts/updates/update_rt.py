@@ -23,6 +23,7 @@ keys, eIDs = (acquisition.Session.proj(
 
 # update response time of behavior.TrialSet.Trial
 sessions_with_small_rts = []
+unupdated_keys = []
 updated_keys = []
 
 for key, eID in tqdm(zip(keys, eIDs)):
@@ -43,7 +44,9 @@ for key, eID in tqdm(zip(keys, eIDs)):
         updated_keys.append(key)
     else:
         print('\n Still having small rt:' + str(eID))
+        unupdated_keys.append(key)
         sessions_with_small_rts.append(eID)
 
 np.save('sessions_with_small_rts.npy', sessions_with_small_rts)
 np.save('updated_keys.npy', updated_keys)
+np.save('unupdated_keys.npy', unupdated_keys)
