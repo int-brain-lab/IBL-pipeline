@@ -42,9 +42,10 @@ for key, eID in tqdm(zip(keys, eIDs)):
         sessions_with_small_rts.append(eID)
     else:
         for itrial, response_time in enumerate(trials.response_times):
-            dj.Table._update(
-                behavior.TrialSet.Trial & key & {'trial_id': itrial+1},
-                'trial_response_time', response_time)
+            if len(behavior.TrialSet.Trial & key & {'trial_id': itrial+1}) == 1:
+                dj.Table._update(
+                    behavior.TrialSet.Trial & key & {'trial_id': itrial+1},
+                    'trial_response_time', response_time)
         updated_keys.append(key)
 
 
