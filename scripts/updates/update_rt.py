@@ -37,15 +37,16 @@ for key, eID in tqdm(zip(keys, eIDs)):
         continue
 
     if np.median(trials.response_times - trials.stimOn_times) < 0.01:
+        print('\n Still having small rt:' + str(eID))
+        unupdated_keys.append(key)
+        sessions_with_small_rts.append(eID)
+    else:
         for itrial, response_time in enumerate(trials.response_times):
             dj.Table._update(
                 behavior.TrialSet.Trial & key & {'trial_id': itrial+1},
                 'trial_response_time', response_time)
         updated_keys.append(key)
-    else:
-        print('\n Still having small rt:' + str(eID))
-        unupdated_keys.append(key)
-        sessions_with_small_rts.append(eID)
+
 
 np.save('sessions_with_small_rts.npy', sessions_with_small_rts)
 np.save('updated_keys.npy', updated_keys)
