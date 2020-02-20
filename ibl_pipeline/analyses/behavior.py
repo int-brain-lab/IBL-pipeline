@@ -451,7 +451,7 @@ class SessionTrainingStatus(dj.Computed):
         # performance of the current session
         perf_current = (PsychResults & key).fetch1('performance_easy')
 
-        if n_trials > 400 and perf > 0.9:
+        if n_trials_current > 400 and perf_current > 0.9:
             key['good_enough_for_brainwide_map'] = 1
 
         subject_key = key.copy()
