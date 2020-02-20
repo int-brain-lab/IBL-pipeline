@@ -446,7 +446,7 @@ class SessionTrainingStatus(dj.Computed):
         # ========================================================= #
 
         # trials for current session
-        n_trials_current = (behavior.TrialSet & key).fetch1('trial_num')
+        n_trials_current = (behavior.TrialSet & key).fetch1('n_trials')
 
         # performance of the current session
         perf_current = (PsychResults & key).fetch1('performance_easy')
