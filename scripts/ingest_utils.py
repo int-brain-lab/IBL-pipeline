@@ -23,4 +23,4 @@ def copy_table(target_schema, src_schema, table_name, fresh=False):
                     target_table.insert1(t, skip_duplicates=True)
                 except Exception:
                     print("Error when inserting {}".format(t))
-                    traceback.print_exc()
+                    # traceback.print_exc()
