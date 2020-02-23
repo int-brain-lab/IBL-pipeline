@@ -4,6 +4,8 @@ python ingest_alyx_raw.py "$@"
 date
 python ingest_alyx_shadow.py
 date
+python ingest_data_tables.py
+date
 python ingest_alyx_shadow_membership.py
 date
 python delete_real_tables_for_updates.py
