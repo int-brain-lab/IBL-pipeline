@@ -20,6 +20,7 @@ if mode == 'update':
     schema = dj.schema('ibl_ephys')
 else:
     schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
+    schema_groupshare = dj.schema(dj.config.get('database.prefix', '') + 'group_shared_ephys')
 
 dj.config['safemode'] = False
 
@@ -359,18 +360,14 @@ class DefaultCluster(dj.Imported):
         """
 
 
-@schema
-class ClusterLabel(dj.Manual):
+@schema_groupshare
+class ClusterCuration(dj.Manual):
     definition = """
     -> DefaultCluster
+    curation_time=CURRENT_TIMESTAMP:    timestamp
     ---
-    -> ClusteringMethod
-    cluster_version:            varchar(32)
-    cluster_revision:           varchar(32)
-    cluster_revision_date:      date
-    quality_control:            bool            # has this clustering results undergone quality control
-    manual_curation:            bool            # is manual curation performed on this clustering result
-    cluster_label_ts=CURRENT_TIMESTAMP:    timestamp
+    -> reference.LabMember
+    cluster_label:              enum('Good', 'MUA', 'Noise')
     """
 
 
