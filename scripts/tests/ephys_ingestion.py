@@ -72,7 +72,7 @@ logger.log(30, 'Testing ingestion of plotting raster...')
 ephys_plotting.Raster.populate(
     **kargs)
 raster_plotting_time = time.time()
-logger.log(30, 'Ingestion time of RasterLinkS3 {}'.format(
+logger.log(30, 'Ingestion time of Raster {}'.format(
     raster_plotting_time-trial_spikes_time))
 
 logger.log(30, 'Testing ingestion of plotting psth...')
