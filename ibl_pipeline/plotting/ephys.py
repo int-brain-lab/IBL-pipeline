@@ -176,7 +176,7 @@ class RasterLayoutTemplate(dj.Lookup):
 
     data3 = [axis, incorrect, correct]
     template_3 = dict(
-        template_idx=1,
+        template_idx=3,
         raster_data_template=go.Figure(
             data=data3, layout=layout).to_plotly_json())
 
@@ -264,11 +264,10 @@ class Raster(dj.Computed):
             key['template_idx'] = 0
         elif key['sort_by'] == 'contrast':
             key['template_idx'] = 2
-        elif key['sort_by'] == 'feeback type':
+        elif key['sort_by'] == 'feedback type':
             key['template_idx'] = 3
         else:
             key['template_idx'] = 1
-
         self.insert1(key)
 
 
