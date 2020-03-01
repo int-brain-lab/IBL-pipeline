@@ -66,7 +66,7 @@ logger.log(30, 'Ingestion time of TrialSpikes {}'.format(
     trial_spikes_time-cluster_time))
 
 logger.log(30, 'Ingesting plotting psth...')
-ephys_plotting.PSTH.populate(
+ephys_plotting.Psth.populate(
     **kargs)
 psth_plotting_time = time.time()
 logger.log(30, 'Ingestion time of PSTH {}'.format(
