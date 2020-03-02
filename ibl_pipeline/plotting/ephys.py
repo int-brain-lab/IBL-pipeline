@@ -202,7 +202,12 @@ class Raster(dj.Computed):
     -> RasterLayoutTemplate
     """
     key_source = ephys.DefaultCluster * ValidAlignSort & behavior.TrialSet & \
-        ephys.AlignedTrialSpikes
+        ephys.AlignedTrialSpikes & \
+        [dict(event='stim on', sort_by='trial_id'),
+         dict(event='stim on', sort_by='contrast'),
+         dict(event='stim on', sort_by='feedback - stim on'),
+         dict(event='feedback', sort_by='trial_id'),
+         dict(event='feedback', sort_by='feedback type')]
 
     def make(self, key):
         cluster = ephys.DefaultCluster & key
