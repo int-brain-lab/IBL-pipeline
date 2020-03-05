@@ -59,6 +59,8 @@ cluster_time = time.time()
 logger.log(30, 'Ingestion time of Cluster {}'.format(
     cluster_time-channel_group_time))
 
+ephys.GoodCluster.populate(**kargs)
+
 logger.log(30, 'Ingesting TrialSpikes...')
 ephys.AlignedTrialSpikes.populate(**kargs)
 trial_spikes_time = time.time()
