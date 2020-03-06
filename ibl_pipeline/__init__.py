@@ -1,6 +1,7 @@
 import datajoint as dj
 import os
 
+dj.config['enable_python_native_blobs'] = True
 
 if os.environ.get('MODE') == 'test':
     dj.config['database.prefix'] = 'test_'
