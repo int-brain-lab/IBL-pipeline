@@ -622,8 +622,6 @@ class CumulativeSummary(dj.Computed):
             contrast_map = contrast_map.where(pd.notnull(contrast_map), None)
             contrasts = np.sort(contrast_df['signed_contrast'].unique())
 
-
-
             data = [dict(
                 x=[t.strftime('%Y-%m-%d')
                    for t in contrast_map.columns.tolist()],

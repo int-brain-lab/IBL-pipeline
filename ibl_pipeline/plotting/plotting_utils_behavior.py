@@ -137,6 +137,9 @@ def get_status(subj):
     first_ready4recording = subj.aggr(
         behavior.SessionTrainingStatus & 'training_status = "ready4recording"',
         first_session='DATE(min(session_start_time))')
+    first_good_for_brainwide_map = subj.aggr(
+        behavior.SessionTrainingStatus & 'good_enough_for_brainwide_map = 1',
+        first_session='DATE(min(session_start_time))')
 
     result = dict()
     if len(first_trained_1a):
@@ -178,6 +181,15 @@ def get_status(subj):
                       first_ready4recording_date=first_ready4recording_date)
     else:
         result.update(is_ready4recording=False)
+
+    if len(first_good_for_brainwide_map):
+        first_good_for_brainwide_map_date = first_good_for_brainwide_map.fetch1(
+            'first_session').strftime('%Y-%m-%d')
+        result.update(
+            is_good_for_brainwide_map=True,
+            first_good_for_brainwide_map_date=first_good_for_brainwide_map_date)
+    else:
+        result.update(is_good_for_brainwide_map=False)
 
     return result
 
@@ -565,6 +577,24 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                mode="lines",
                marker=dict(color='rgba(0, 0, 0, 1)'),
                name='mouse became seven months',
+               xaxis=xaxis,
+               yaxis=yaxis,
+               showlegend=show_legend_external,
+               hoverinfo='x'
+            )
+        )
+    if status['is_good_for_brainwide_map']:
+        data.append(
+           go.Scatter(
+               x=[status['first_good_for_brainwide_map_date'],
+                  status['first_good_for_brainwide_map_date']],
+               y=yrange,
+               mode="lines",
+               line=dict(
+                   width=2,
+                   color='rgba(5, 142, 255, 1)',
+                   dash='dashdot'),
+               name='good enough for brainwide map',
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,
