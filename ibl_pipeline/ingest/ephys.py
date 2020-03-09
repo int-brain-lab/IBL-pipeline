@@ -40,6 +40,9 @@ class Probe(dj.Imported):
         self.insert1(key_probe)
 
 
+probe_mapping = dict(probe_left: 1, probe_right=1)
+
+
 @schema
 class ProbeInsertion(dj.Imported):
     definition = """
@@ -56,7 +59,7 @@ class ProbeInsertion(dj.Imported):
         probe_insertion_uuid='uuid')
 
     def make(self, key):
-        key_probe_insertion = key.copy()
+        key_pi = key.copy()
         key['uuid'] = key['probe_insertion_uuid']
 
         session_uuid = grf(key, 'session')
@@ -64,23 +67,27 @@ class ProbeInsertion(dj.Imported):
             (acquisition.Session & dict(session_uuid=session_uuid)).fetch1(
                 'subject_uuid', 'session_start_time')
 
-        key_probe_insertion.update(
+        key_pi.update(
             subject_uuid=subject_uuid,
             session_start_time=session_start_time)
 
         probe_uuid = grf(key, 'model')
         if probe_uuid != 'None':
-            key_probe_insertion['probe_name'] = \
+            key_pi['probe_name'] = \
                 (Probe & dict(probe_uuid=probe_uuid)).fetch1(
                 'probe_name')
 
-        key_probe_insertion['probe_label'] = grf(key, 'name')
-        key_probe_insertion['probe_idx'] = \
-            int(re.search(
-                'probe.?0([0-3])',
-                key_probe_insertion['probe_label']).group(1))
+        key_pi['probe_label'] = grf(key, 'name')
 
-        self.insert1(key_probe_insertion)
+        if re.search('probe.?0([0-3])',
+                     key_pi['probe_label']):
+            key_pi['probe_idx'] = \
+                re.search('probe.?0([0-3])',
+                          key_pi['probe_label'])
+        else:
+            key_pi['probe_idx'] = probe_mapping[key_pi['probe_label']]
+
+        self.insert1(key_pi)
 
 
 @schema
