@@ -56,7 +56,7 @@ class ProbeInsertion(dj.Imported):
 
     def make(self, key):
         key_probe_insertion = key.copy()
-        key_probe_insertion['uuid'] = key['probe_insertion_uuid']
+        key['uuid'] = key['probe_insertion_uuid']
 
         session_uuid = grf(key, 'session')
         subject_uuid, session_start_time = \
@@ -119,7 +119,7 @@ class ProbeTrajectory(dj.Imported):
 
     def make(self, key):
         key_traj = key.copy()
-        key_traj['uuid'] = key_traj['probe_trajectory_uuid']
+        key['uuid'] = key_traj['probe_trajectory_uuid']
 
         session_uuid = grf(key, 'session')
         subject_uuid, session_start_time, probe_idx = \
