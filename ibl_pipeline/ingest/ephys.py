@@ -49,7 +49,7 @@ class ProbeInsertion(dj.Imported):
     probe_label=null:     varchar(32)  # probe_name in the alyx model experiments.probeinsertion
     subject_uuid:         uuid         # subject uuid from session
     session_start_time:   datetime     # session start time from session
-    probe_name:           varchar(32)  # probe model name, 3A, 3B
+    probe_name=null:      varchar(32)  # probe model name, 3A, 3B
     probe_insertion_ts=CURRENT_TIMESTAMP :   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="experiments.probeinsertion"').proj(
@@ -69,9 +69,10 @@ class ProbeInsertion(dj.Imported):
             session_start_time=session_start_time)
 
         probe_uuid = grf(key, 'model')
-        key_probe_insertion['probe_name'] = \
-            (Probe & dict(probe_uuid=probe_uuid)).fetch1(
-            'probe_name')
+        if probe_uuid != 'None':
+            key_probe_insertion['probe_name'] = \
+                (Probe & dict(probe_uuid=probe_uuid)).fetch1(
+                'probe_name')
 
         key_probe_insertion['probe_label'] = grf(key, 'name')
         key_probe_insertion['probe_idx'] = \
