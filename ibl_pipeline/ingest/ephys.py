@@ -1,6 +1,7 @@
 import datajoint as dj
 import json
 import uuid
+import re
 
 from . import alyxraw, reference, acquisition
 from . import get_raw_field as grf
