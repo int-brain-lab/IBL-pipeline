@@ -217,7 +217,7 @@ class CoordindateSystem(dj.Imported):
     coordinate_system_description=null: varchar(2048)
     """
     key_source = (alyxraw.AlyxRaw & 'model="experiments.coordinatesystem"').proj(
-        coordindate_system_uuid='uuid')
+        coordinate_system_uuid='uuid')
 
     def make(self, key):
         key_coord = key.copy()
