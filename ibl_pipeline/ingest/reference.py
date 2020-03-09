@@ -206,3 +206,23 @@ class ProjectLabMember(dj.Manual):
     user_name:      varchar(255)
     projectlabmember_ts=CURRENT_TIMESTAMP:   timestamp
     """
+
+
+@schema
+class CoordindateSystem(dj.Lookup):
+    definition = """
+    (coordinate_system_uuid) -> alyxraw.AlyxRaw
+    ---
+    coordinate_system_name: varchar(64)
+    coordinate_system_description=null: varchar(2048)
+    """
+    key_source = (alyxraw.AlyxRaw & 'model="experiments.coordinatesystem"').proj(
+        coordindate_system_uuid='uuid')
+
+    def make(self, key):
+        key_coord = key.copy()
+        key['uuid'] = key['coordinate_system_uuid']
+
+        key_coord['coordinate_system_name'] = grf(key, 'name')
+        key_coord['coordinate_system_description'] = grf(key, 'description')
+        self.insert1(key_proj)
