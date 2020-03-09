@@ -209,7 +209,7 @@ class ProjectLabMember(dj.Manual):
 
 
 @schema
-class CoordindateSystem(dj.Lookup):
+class CoordindateSystem(dj.Manual):
     definition = """
     (coordinate_system_uuid) -> alyxraw.AlyxRaw
     ---
