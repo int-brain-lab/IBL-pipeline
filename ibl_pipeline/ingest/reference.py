@@ -225,4 +225,4 @@ class CoordindateSystem(dj.Imported):
 
         key_coord['coordinate_system_name'] = grf(key, 'name')
         key_coord['coordinate_system_description'] = grf(key, 'description')
-        self.insert1(key_proj)
+        self.insert1(key_coord)
