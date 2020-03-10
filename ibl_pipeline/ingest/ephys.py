@@ -135,9 +135,9 @@ class ProbeTrajectory(dj.Imported):
         key_traj = key.copy()
         key['uuid'] = key_traj['probe_trajectory_uuid']
 
-        session_uuid = grf(key, 'session')
+        probe_insertion_uuid = grf(key, 'session')
         subject_uuid, session_start_time, probe_idx = \
-            (acquisition.Session & dict(session_uuid=session_uuid)).fetch1(
+            (ProbeInsertion & dict(probe_insertion_uuid=probe_insertion_uuid)).fetch1(
                 'subject_uuid', 'session_start_time', 'probe_idx')
         coord_uuid = grf(key, 'coordinate_system')
         coordinate_system_name = \
