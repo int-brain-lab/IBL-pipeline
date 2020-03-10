@@ -49,7 +49,7 @@ class ProbeInsertion(dj.Imported):
     (probe_insertion_uuid) -> alyxraw.AlyxRaw
     ---
     probe_idx:            int          # 0 for probe00, 1 for probe01
-    probe_label=null:     varchar(32)  # probe_name in the alyx model experiments.probeinsertion
+    probe_label=null:     varchar(255) # probe_name in the alyx model experiments.probeinsertion
     subject_uuid:         uuid         # subject uuid from session
     session_start_time:   datetime     # session start time from session
     probe_name=null:      varchar(32)  # probe model name, 3A, 3B
@@ -129,7 +129,7 @@ class ProbeTrajectory(dj.Imported):
     coorindate_system_name:     varchar(32)
     """
     key_source = (alyxraw.AlyxRaw & 'model="experiments.trajectoryestimate"').proj(
-        probe_insertion_uuid='uuid')
+        probe_trajectory_uuid='uuid')
 
     def make(self, key):
         key_traj = key.copy()
