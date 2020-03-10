@@ -15,7 +15,7 @@ def init():
         'LabLocation',
         'Project',
         'ProjectLabMember',
-        'CooridnateSystem'
+        'CoordinateSystem'
     )
 
     SUBJECT_TABLES = (
