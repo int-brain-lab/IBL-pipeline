@@ -124,9 +124,9 @@ class ProbeTrajectory(dj.Imported):
     depth:                      float
     theta:                      float
     phi:                        float
-    roll:                       float
+    roll=null:                  float
     insertion_data_source:      varchar(128)
-    coorindate_system_name:     varchar(32)
+    coordinate_system_name:     varchar(32)
     """
     key_source = (alyxraw.AlyxRaw & 'model="experiments.trajectoryestimate"').proj(
         probe_trajectory_uuid='uuid')
@@ -157,12 +157,14 @@ class ProbeTrajectory(dj.Imported):
             depth=grf(key, 'depth'),
             theta=grf(key, 'theta'),
             phi=grf(key, 'phi'),
-            roll=grf(key, 'roll'),
             subject_uuid=subject_uuid,
             session_start_time=session_start_time,
             probe_idx=probe_idx,
             insertion_data_source=insertion_data_source,
             coordinate_system_name=coordinate_system_name
         )
+        roll = grf(key, 'roll')
+        if roll != 'None':
+            key_traj.update(roll=roll)
 
         self.insert1(key_traj)
