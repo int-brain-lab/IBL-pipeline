@@ -139,12 +139,6 @@ class ProbeTrajectory(dj.Imported):
         subject_uuid, session_start_time, probe_idx = \
             (ProbeInsertion & dict(probe_insertion_uuid=probe_insertion_uuid)).fetch1(
                 'subject_uuid', 'session_start_time', 'probe_idx')
-        coord_uuid = grf(key, 'coordinate_system')
-        if coord_uuid != 'None':
-            coordinate_system_name = \
-                (reference.CoordindateSystem &
-                 {'coordinate_system_uuid': coord_uuid}).fetch1(
-                    'coordinate_system_name')
 
         provenance = grf(key, 'provenance')
         insertion_data_source = \
@@ -162,10 +156,17 @@ class ProbeTrajectory(dj.Imported):
             session_start_time=session_start_time,
             probe_idx=probe_idx,
             insertion_data_source=insertion_data_source,
-            coordinate_system_name=coordinate_system_name
         )
+
         roll = grf(key, 'roll')
         if roll != 'None':
             key_traj.update(roll=roll)
+
+        coord_uuid = grf(key, 'coordinate_system')
+        if coord_uuid != 'None':
+            key['coordinate_system_uuid'] = \
+                (reference.CoordindateSystem &
+                 {'coordinate_system_uuid': coord_uuid}).fetch1(
+                    'coordinate_system_name')
 
         self.insert1(key_traj)
