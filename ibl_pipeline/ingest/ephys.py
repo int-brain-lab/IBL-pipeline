@@ -40,7 +40,7 @@ class Probe(dj.Imported):
         self.insert1(key_probe)
 
 
-probe_mapping = dict(probe_left: 1, probe_right=1)
+probe_mapping = dict(probe_left=0, probe_right=1)
 
 
 @schema
