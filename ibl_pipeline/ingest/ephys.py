@@ -126,7 +126,7 @@ class ProbeTrajectory(dj.Imported):
     phi:                        float
     roll=null:                  float
     insertion_data_source:      varchar(128)
-    coordinate_system_name:     varchar(32)
+    coordinate_system_name=null:     varchar(32)
     """
     key_source = (alyxraw.AlyxRaw & 'model="experiments.trajectoryestimate"').proj(
         probe_trajectory_uuid='uuid')
@@ -140,11 +140,12 @@ class ProbeTrajectory(dj.Imported):
             (ProbeInsertion & dict(probe_insertion_uuid=probe_insertion_uuid)).fetch1(
                 'subject_uuid', 'session_start_time', 'probe_idx')
         coord_uuid = grf(key, 'coordinate_system')
-        coordinate_system_name = \
-            (reference.CoordindateSystem &
-             {'coordinate_system_uuid': coord_uuid}).fetch1(
-                 'coordinate_system_name'
-             )
+        if coordinate_system_name != 'None':
+            coordinate_system_name = \
+                (reference.CoordindateSystem &
+                 {'coordinate_system_uuid': coord_uuid}).fetch1(
+                    'coordinate_system_name')
+
         provenance = grf(key, 'provenance')
         insertion_data_source = \
             (InsertionDataSource &
