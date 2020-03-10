@@ -83,7 +83,7 @@ class ProbeInsertion(dj.Imported):
                      key_pi['probe_label']):
             key_pi['probe_idx'] = \
                 re.search('probe.?0([0-3])',
-                          key_pi['probe_label'])
+                          key_pi['probe_label']).group(1)
         else:
             key_pi['probe_idx'] = probe_mapping[key_pi['probe_label']]
 
