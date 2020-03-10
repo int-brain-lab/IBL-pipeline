@@ -140,7 +140,7 @@ class ProbeTrajectory(dj.Imported):
             (ProbeInsertion & dict(probe_insertion_uuid=probe_insertion_uuid)).fetch1(
                 'subject_uuid', 'session_start_time', 'probe_idx')
         coord_uuid = grf(key, 'coordinate_system')
-        if coordinate_system_name != 'None':
+        if coord_uuid != 'None':
             coordinate_system_name = \
                 (reference.CoordindateSystem &
                  {'coordinate_system_uuid': coord_uuid}).fetch1(
