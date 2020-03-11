@@ -116,7 +116,7 @@ class Severity(dj.Lookup):
 
 
 @schema
-class CoordindateSystem(dj.Lookup):
+class CoordinateSystem(dj.Lookup):
     definition = """
     coordinate_system_name: varchar(64)
     ---
