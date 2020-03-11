@@ -12,6 +12,7 @@ from ibl_pipeline.ingest import alyxraw, InsertBuffer
 import sys
 import uuid
 
+
 logger = logging.getLogger(__name__)
 
 dir_name = path.dirname(__file__)
@@ -51,7 +52,7 @@ for key in keys:
         key_field = dict(key_field, fname=field_name)
 
         if field_name == 'json' and field_value is not None:
-            if len(field_value) > 40000:
+            if len(field_value) > 4000:
                 continue
             else:
                 key_field['value_idx'] = 0
