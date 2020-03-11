@@ -51,8 +51,11 @@ for key in keys:
     for field_name, field_value in key['fields'].items():
         key_field = dict(key_field, fname=field_name)
 
+        if field_name == 'narrative' and len(field_value) > 1000:
+            continue
+
         if field_name == 'json' and field_value is not None:
-            if len(field_value) > 1000:
+            if len(field_value) > 4000:
                 continue
             else:
                 key_field['value_idx'] = 0
