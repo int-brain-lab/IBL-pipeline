@@ -2,6 +2,7 @@ import datajoint as dj
 import numpy as np
 from os import path, environ
 from . import acquisition, reference, behavior, data
+from .ingest import ephys as ephys_ingest
 from tqdm import tqdm
 import numpy as np
 from uuid import UUID
@@ -121,6 +122,7 @@ class ProbeInsertion(dj.Imported):
     probe_idx:    int    # probe insertion number (0 corresponds to probe00, 1 corresponds to probe01)
     ---
     probe_label=null: varchar(32)  # probe label
+    probe_insertion_uuid=null: uuid    # probe insertion uuid
     -> Probe
     probe_insertion_ts=CURRENT_TIMESTAMP  :  timestamp
     """
@@ -185,37 +187,42 @@ class ChannelGroup(dj.Imported):
 
 
 @schema
+class InsertionDataSource(dj.Lookup):
+    definition = """
+    insertion_data_source:    varchar(128)     # type of trajectory
+    ---
+    provenance:         int             # provenance code
+    """
+    contents = [
+        ('Ephys aligned histology track', 70),
+        ('Histology track', 50),
+        ('Micro-manipulator', 30),
+        ('Planned', 10),
+    ]
+
+
+@schema
 class ProbeTrajectory(dj.Imported):
     definition = """
     # data imported from probes.trajectory
     -> ProbeInsertion
+    -> InsertionDataSource
     ---
+    -> reference.CoordinateSystem
     x:                  float           # (um) medio-lateral coordinate relative to Bregma, left negative
     y:                  float           # (um) antero-posterior coordinate relative to Bregma, back negative
     z:                  float           # (um) dorso-ventral coordinate relative to Bregma, ventral negative
     phi:                float           # (degrees)[-180 180] azimuth
     theta:              float           # (degrees)[0 180] polar angle
     depth:              float           # (um) insertion depth
-    beta:               float           # (degrees) roll angle of the probe
+    roll=null:          float           # (degrees) roll angle of the probe
     probe_trajectory_ts=CURRENT_TIMESTAMP  :  timestamp
     """
-    key_source = acquisition.Session & ProbeInsertion \
-        & (data.FileRecord & 'dataset_name="probes.description.json"') \
-        & (data.FileRecord & 'dataset_name="probes.trajectory.json"')
+    key_source = ProbeInsertion
 
     def make(self, key):
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        dtypes = ['probes.description', 'probes.trajectory']
-        files = one.load(eID, dataset_types=dtypes, download_only=True)
-        ses_path = alf.io.get_session_path(files[0])
-        probes = alf.io.load_object(ses_path.joinpath('alf'), 'probes')
-        for p in probes.trajectory:
 
-            # ingest probe trajectory
-            idx = int(re.search('probe.?0([0-3])', p['label']).group(1))
-            p.pop('label')
-            key.update(probe_idx=idx, **p)
-            self.insert1(key)
+        self.insert((ephys_ingest.ProbeTrajectory & key).fetch())
 
 
 # needs to be further adjusted by adding channels.mlapdvIntended
