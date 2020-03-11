@@ -208,7 +208,7 @@ class ProbeTrajectory(dj.Imported):
     -> ProbeInsertion
     -> InsertionDataSource
     ---
-    -> reference.CoordinateSystem
+    -> [nullable] reference.CoordinateSystem
     probe_trajectory_uuid: uuid
     x:                  float           # (um) medio-lateral coordinate relative to Bregma, left negative
     y:                  float           # (um) antero-posterior coordinate relative to Bregma, back negative
