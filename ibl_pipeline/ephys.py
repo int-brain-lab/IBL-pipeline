@@ -223,8 +223,11 @@ class ProbeTrajectory(dj.Imported):
 
     def make(self, key):
 
-        self.insert((ephys_ingest.ProbeTrajectory & key).fetch())
-
+        trajs = (ephys_ingest.ProbeTrajectory & key).fetch(as_dict=True)
+        for traj in trajs:
+            if not len(traj['coordinate_system_name']):
+                traj.pop('coordinate_system_name')
+            self.insert1(traj)
 
 # needs to be further adjusted by adding channels.mlapdvIntended
 @schema
