@@ -440,7 +440,7 @@ class PsthTemplate(dj.Lookup):
             size=6,
             color='black'),
         fill='tonexty',
-        fillcolor='rgba(0, 255, 0, 0.2)',
+        fillcolor='rgba(0, 0, 0, 0.2)',
         name='all trials, mean +/- s.e.m.'
     )
     upper_all = go.Scatter(
@@ -448,7 +448,7 @@ class PsthTemplate(dj.Lookup):
         # y=list(psth_all_upper), # fetched from the table Psth
         mode='lines',
         marker=dict(color="#444"),
-        fillcolor='rgba(0, 255, 0, 0.2)',
+        fillcolor='rgba(0, 0, 0, 0.2)',
         line=dict(width=0),
         fill='tonexty',
         showlegend=False,
