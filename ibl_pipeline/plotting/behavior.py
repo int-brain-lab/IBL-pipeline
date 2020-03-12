@@ -272,6 +272,10 @@ class CumulativeSummary(dj.Computed):
             # add monday plots
             data = putils.create_monday_plot(data, yrange, d['mondays'])
 
+            if d['good_enough_dates']:
+                data = putils.create_good_enough_brainmap_plot(
+                    data, yrange, d['good_enough_dates'])
+
             # add status plots
             data = putils.create_status_plot(
                 data, yrange, status, public=public)
@@ -362,6 +366,11 @@ class CumulativeSummary(dj.Computed):
 
             # add monday plots
             data = putils.create_monday_plot(data, yrange, d['mondays'])
+
+            # add good enough for brain map plot
+            if d['good_enough_dates']:
+                data = putils.create_good_enough_brainmap_plot(
+                    data, yrange, d['good_enough_dates'])
 
             # add status plots
             data = putils.create_status_plot(
@@ -496,6 +505,14 @@ class CumulativeSummary(dj.Computed):
                     yaxis='y{}'.format(4-ipar),
                     show_legend_external=show_legend
                 )
+
+                # add good enough for brainmap plots
+                if d['good_enough_dates']:
+                    pars_data = putils.create_good_enough_brainmap_plot(
+                        pars_data, yrange, d['good_enough_dates'],
+                        xaxis='x{}'.format(4-ipar),
+                        yaxis='y{}'.format(4-ipar),
+                        show_legend_external=show_legend)
 
                 # add status plots
                 pars_data = putils.create_status_plot(
