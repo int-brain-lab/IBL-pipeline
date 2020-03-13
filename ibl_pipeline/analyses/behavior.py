@@ -5,6 +5,7 @@ from . import analysis_utils as utils
 from datetime import datetime
 import numpy as np
 import pandas as pd
+from pdb import set_trace as bp
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_analyses_behavior')
@@ -425,8 +426,8 @@ class TrainingStatus(dj.Lookup):
                     'in_training',
                     'trained_1a',
                     'trained_1b',
-                    'ready4delay',
                     'ready4ephysrig',
+                    'ready4delay',
                     'ready4recording'])
 
 
@@ -440,6 +441,9 @@ class SessionTrainingStatus(dj.Computed):
     """
 
     def make(self, key):
+
+        subject_key = key.copy()
+        subject_key.pop('session_start_time')
 
         # ========================================================= #
         # check for "good enough for brainwide map"
@@ -457,15 +461,11 @@ class SessionTrainingStatus(dj.Computed):
         if n_trials_current > 400 and perf_current > 0.9 and protocol and 'ephys' in protocol:
             key['good_enough_for_brainwide_map'] = 1
 
-        subject_key = key.copy()
-        subject_key.pop('session_start_time')
-
         previous_sessions = SessionTrainingStatus & subject_key & \
             'session_start_time < "{}"'.format(
                 key['session_start_time'].strftime('%Y-%m-%d %H:%M:%S')
             )
         status = previous_sessions.fetch('training_status')
-
         # ========================================================= #
         # is the animal ready to be recorded?
         # ========================================================= #
