@@ -252,7 +252,7 @@ class BehavioralSummaryByDate(dj.Computed):
                 session_date='date(session_start_time)') &
              {'subject_uuid': key['subject_uuid']} &
              'task_protocol not like "%habituation%" or task_protocol is null') &
-             'session_date<="{}"'.format(
+            'session_date<="{}"'.format(
                 key['session_date'].strftime('%Y-%m-%d')))
         master_entry['training_week'] = np.floor(
             master_entry['training_day'] / 5)
@@ -451,7 +451,10 @@ class SessionTrainingStatus(dj.Computed):
         # performance of the current session
         perf_current = (PsychResults & key).fetch1('performance_easy')
 
-        if n_trials_current > 400 and perf_current > 0.9:
+        # check protocol
+        protocol = (acquisition.Session & key).fetch1('task_protocol')
+
+        if n_trials_current > 400 and perf_current > 0.9 and protocol and 'ephys' in protocol:
             key['good_enough_for_brainwide_map'] = 1
 
         subject_key = key.copy()
@@ -526,6 +529,7 @@ class SessionTrainingStatus(dj.Computed):
 
                             if not (len(trials_80) and len(trials_20)):
                                 key['training_status'] = 'trained_1b'
+                                self.insert1(key)
                                 return
 
                             # also compute the median reaction time
@@ -628,6 +632,7 @@ class SessionTrainingStatus(dj.Computed):
 
                         if not (len(trials_80) and len(trials_20)):
                             key['training_status'] = 'trained_1b'
+                            self.insert1(key)
                             return
 
                         # also compute the median reaction time
