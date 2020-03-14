@@ -102,14 +102,16 @@ def get_date_range(subj):
                for day in date_array if day.weekday() == 0]
 
     # get dates for good enough for brainwide map
-    good_dates = (behavior.SessionTrainingStatus & subj &
-                  'good_enough_for_brainwide_map=1').fetch(
-                      'session_start_time')
-    if len(good_dates):
-        good_enough_dates = [day.strftime('%Y-%m-%d')
-                             for day in good_dates]
+    ephys_sessions = behavior.SessionTrainingStatus & subj & \
+        (acquisition.Session & 'task_protocol like "%ephys%"')
+
+    if len(ephys_sessions):
+        ephys_dates, good_enough = ephys_sessions.fetch(
+            'session_start_time', 'good_enough_for_brainwide_map')
+        ephys_dates = [day.strftime('%Y-%m-%d') for day in ephys_dates]
     else:
-        good_enough_dates = None
+        ephys_dates = None
+        good_enough = None
 
     # check whether the animal is already 7 months
     dob = subj.fetch1('subject_birth_date')
@@ -127,7 +129,8 @@ def get_date_range(subj):
         last_date_str=last_date_str,
         date_array=date_array,
         mondays=mondays,
-        good_enough_dates=good_enough_dates,
+        ephys_dates=ephys_dates,
+        good_enough=good_enough,
         seven_months_date=seven_months_date)
 
 
@@ -609,7 +612,8 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,
-               hoverinfo='x'
+               hoverinfo='x',
+               legendgroup='ephys_good_enough'
             )
         )
 
@@ -647,29 +651,51 @@ def create_monday_plot(data, yrange, mondays, xaxis='x1', yaxis='y1',
     return data
 
 
-def create_good_enough_brainmap_plot(data, yrange, good_enough_dates,
+def create_good_enough_brainmap_plot(data, yrange, ephys_dates,
+                                     good_enough,
                                      xaxis='x1', yaxis='y1',
                                      show_legend_external=True):
-    for i_good_date, good_date in enumerate(good_enough_dates):
-        if i_good_date == 0 and show_legend_external:
-            show_legend = True
+
+    shown_red = 0
+    shown_blue = 0
+    for i_good_date, (ephys_date, good) in \
+            enumerate(zip(ephys_dates, good_enough)):
+
+        if good:
+            color = 'rgba(5, 142, 255, 0.3)'
+            legend = 'good enough for brainwide map'
+            if shown_blue:
+                show_legend = False
+            elif show_legend_external:
+                show_legend = True
+                shown_blue = 1
+            else:
+                show_legend = False
         else:
-            show_legend = False
+            color = 'rgba(255, 18, 18, 0.2)'
+            legend = 'not good enough for brainwide map'
+            if shown_red:
+                show_legend = False
+            elif show_legend_external:
+                show_legend = True
+                shown_red = 1
+            else:
+                show_legend = False
 
         data.append(
             go.Scatter(
-                x=[good_date, good_date],
+                x=[ephys_date, ephys_date],
                 y=yrange,
                 mode="lines",
                 line=dict(
                     width=2,
-                    color='rgba(5, 142, 255, 0.3)'
+                    color=color
                 ),
-                name='good enough for brainwide map',
+                name=legend,
                 xaxis=xaxis,
                 yaxis=yaxis,
                 showlegend=show_legend,
-                legendgroup='good_enough_dates',
+                legendgroup='ephys_good_enough',
                 hoverinfo='skip'
             )
         )
