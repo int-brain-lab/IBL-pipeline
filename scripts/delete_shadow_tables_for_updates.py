@@ -23,7 +23,7 @@ print('Deleting alyxraw entries of shadow weighing and water tables...')
 print('Deleting subject fields lab, user, user_hisotry and death date...')
 subject_fields = alyxraw.AlyxRaw.Field & \
     (alyxraw.AlyxRaw & 'model="subjects.subject"') & \
-    'fname in ("projects", "lab", "death_date", "responsible_user", "json")'
+    'fname in ("projects", "birth_date", "lab", "death_date", "responsible_user", "json")'
 subject_fields.delete_quick()
 
 print('Deleting project records...')
