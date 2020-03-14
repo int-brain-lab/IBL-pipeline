@@ -272,9 +272,10 @@ class CumulativeSummary(dj.Computed):
             # add monday plots
             data = putils.create_monday_plot(data, yrange, d['mondays'])
 
-            if d['good_enough_dates']:
+            # add ephys dates and good enough markers
+            if d['ephys_dates']:
                 data = putils.create_good_enough_brainmap_plot(
-                    data, yrange, d['good_enough_dates'])
+                    data, yrange, d['ephys_dates'], d['good_enough'])
 
             # add status plots
             data = putils.create_status_plot(
@@ -368,9 +369,9 @@ class CumulativeSummary(dj.Computed):
             data = putils.create_monday_plot(data, yrange, d['mondays'])
 
             # add good enough for brain map plot
-            if d['good_enough_dates']:
+            if d['ephys_dates']:
                 data = putils.create_good_enough_brainmap_plot(
-                    data, yrange, d['good_enough_dates'])
+                    data, yrange, d['ephys_dates'], d['good_enough'])
 
             # add status plots
             data = putils.create_status_plot(
@@ -507,9 +508,10 @@ class CumulativeSummary(dj.Computed):
                 )
 
                 # add good enough for brainmap plots
-                if d['good_enough_dates']:
+                if d['ephys_dates']:
                     pars_data = putils.create_good_enough_brainmap_plot(
-                        pars_data, yrange, d['good_enough_dates'],
+                        pars_data, yranges[ipar], d['ephys_dates'],
+                        d['good_enough'],
                         xaxis='x{}'.format(4-ipar),
                         yaxis='y{}'.format(4-ipar),
                         show_legend_external=show_legend)
