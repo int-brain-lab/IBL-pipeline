@@ -777,7 +777,7 @@ class DriftMap(dj.Computed):
     def make(self, key):
 
         clusters = ephys.DefaultCluster & key
-        clusters_spk_times, clusters_spk_amps, cluster_spk_depths = \
+        clusters_spk_times, clusters_spk_amps, clusters_spk_depths = \
             clusters.fetch('cluster_spikes_times',
                            'cluster_spikes_amps',
                            'cluster_spikes_depths')
