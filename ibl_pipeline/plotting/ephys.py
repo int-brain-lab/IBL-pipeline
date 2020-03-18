@@ -799,7 +799,7 @@ class DriftMap(dj.Computed):
         key.update(
             plotting_data_link=fig_link,
             first_start=trials[0]['trial_start_time'],
-            last_end=trials[0]['trial_end_time'],
+            last_end=trials[-1]['trial_end_time'],
             driftmap_template_idx=0
         )
 
