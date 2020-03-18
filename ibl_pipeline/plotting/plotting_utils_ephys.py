@@ -677,7 +677,7 @@ def create_driftmap_session(
     fig.add_axes(ax)
     if fig_dir:
         store_fig_external(fig, store_type, fig_dir)
-        return
+        return x_lim, y_lim
     else:
         encoded_string = convert_fig_to_encoded_string(fig)
         return encoded_string, x_lim, y_lim
