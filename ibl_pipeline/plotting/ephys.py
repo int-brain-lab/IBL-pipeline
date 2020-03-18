@@ -754,8 +754,8 @@ class DriftMapTemplate(dj.Lookup):
 
     data = [axis, first_trial_mark, last_trial_mark]
     contents = [
-        dict(psth_template_idx=0,
-             psth_data_template=go.Figure(
+        dict(driftmap_template_idx=0,
+             driftmap_template=go.Figure(
                  data=data,
                  layout=layout).to_plotly_json())]
 
