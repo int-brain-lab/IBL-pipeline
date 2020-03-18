@@ -663,9 +663,9 @@ def create_driftmap_session(
     ax = plt.Axes(fig, [0., 0., 1., 1.])
     x = clusters_spk_times_flatten
     y = np.negative(clusters_spk_depths_flatten)
-    colorvec = np.zeros([len(opacity), 4])
-    colorvec[:, 3] = opacity
-    colorvec[:, 0:3] = colors
+    colorvec = np.zeros([len(opacity), 4], dtype='float16')
+    colorvec[:, 3] = opacity.astype('float16')
+    colorvec[:, 0:3] = colors.astype('float16')
     ax.scatter(x, y, color=colorvec, edgecolors='none')
     ax.set_axis_off()
     ax.get_xaxis().set_visible(False)
