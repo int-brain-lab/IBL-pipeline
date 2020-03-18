@@ -677,3 +677,130 @@ class PsthDataVarchar(dj.Computed):
             psth_template_idx=0)
 
         self.insert1(entry)
+
+
+@schema
+class DriftMapTemplate(dj.Lookup):
+    definition = """
+    driftmap_template_idx:    int
+    ---
+    driftmap_template: longblob
+    """
+    axis = go.Scatter(
+        # x=plot_xlim, # fetched from DriftMap
+        # y=plot_ylim, # fetched from DriftMap
+        mode='markers',
+        marker=dict(opacity=0),
+        showlegend=False,
+    )
+
+    first_trial_mark = go.Scatter(
+        # x=[first_start, first_start], # first_start fetched from DriftMap
+        # y=[plot_ylim[1]-20, plot_ylim[1]-80], # fetched from DriftMap
+        mode='lines',
+        line=dict(
+            color='rgba(20, 40, 255, 1)',
+            width=1.5),
+        name='Start of the first trial'
+    )
+    last_trial_mark = go.Scatter(
+        # x=[last_end, last_end], # last_end fetched from DriftMap
+        # y=[y_lim[1]-20, y_lim[1]-80], # fetched from DriftMap
+        mode='lines',
+        line=dict(
+            color='rgba(255, 20, 20, 1)',
+            width=1.5),
+        name='End of the last trial'
+    )
+
+    layout = go.Layout(
+        images=[dict(
+            source='',  # to be replaced by the s3 link
+            # sizex=plot_xlim[1] - plot_xlim[0], # fetched from Driftmap
+            # sizey=plot_ylim[1] - plot_ylim[0], # fetched from Driftmap
+            # x=x_lim[0], # fetched from Driftmap
+            # y=y_lim[1], # fetched from Driftmap
+            xref='x',
+            yref='y',
+            sizing='stretch',
+            layer='below'
+            )],
+        width=900,
+        height=900,
+        margin=go.layout.Margin(
+            l=50,
+            r=30,
+            b=40,
+            t=80,
+            pad=0
+        ),
+        title=dict(
+            text='Drift map for the entire session',
+            x=0.45,
+            y=0.95
+        ),
+        xaxis=dict(
+            title='Time (sec)',
+            # range=plot_xlim,  # fetched from DriftMap
+            showgrid=False
+        ),
+        yaxis=dict(
+            title='Negative Depth (um)',
+            # range=plot_ylim,  # fetched from DriftMap
+            showgrid=False
+        ),
+
+    )
+
+    data = [axis, first_trial_mark, last_trial_mark]
+    contents = [
+        dict(psth_template_idx=0,
+             psth_data_template=go.Figure(
+                 data=data,
+                 layout=layout).to_plotly_json())]
+
+
+@schema
+class DriftMap(dj.Computed):
+    definition = """
+    -> ephys.ProbeInsertion
+    ---
+    plotting_data_link=null:      varchar(255)
+    plot_ylim:                    blob
+    plot_xlim:                    blob
+    first_start:                  float
+    last_end:                     float
+    -> DriftMapTemplate
+    """
+    key_source = ephys.ProbeInsertion & ephys.DefaultCluster
+
+    def make(self, key):
+
+        clusters = ephys.DefaultCluster & key
+        clusters_spk_times, clusters_spk_amps, cluster_spk_depths = \
+            clusters.fetch('cluster_spikes_times',
+                           'cluster_spikes_amps',
+                           'cluster_spikes_depths')
+
+        fig_link = path.join(
+            'driftmap_session',
+            str(key['subject_uuid']),
+            key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+            str(key['probe_idx'])) + '.png'
+
+        trials = (behavior.TrialSet.Trial & key).fetch()
+
+        key['plot_xlim'], key['plot_ylim'] = \
+            putils.create_driftmap_session(
+                clusters_spk_times, clusters_spk_amps,
+                clusters_spk_depths,
+                fig_dir=fig_link, store_type='s3')
+
+        key.update(
+            plotting_data_link=fig_link,
+            first_start=trials[0]['trial_start_time'],
+            last_end=trials[0]['trial_end_time']
+            driftmap_template_idx=0
+        )
+
+        self.insert1(key)

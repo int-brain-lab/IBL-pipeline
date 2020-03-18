@@ -19,6 +19,8 @@ import os
 import boto3
 import io
 import ibl_pipeline
+import tempfile
+import base64
 
 
 def get_sort_and_marker(align_event, sorting_var):
@@ -422,6 +424,45 @@ def get_spike_times_trials(trials, sorting_var, align_event,
         marking_points_incorrect
 
 
+def store_fig_external(fig, store_type, fig_dir):
+    if store_type == 'filepath':
+        if not os.path.exists(os.path.dirname(fig_dir)):
+            try:
+                os.makedirs(os.path.dirname(fig_dir))
+            except OSError as exc:  # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
+        fig.savefig(fig_dir, pad_inches=0)
+    elif store_type == 's3':
+        access, secret = (ibl_pipeline.S3Access & 's3_id=1').fetch1(
+                'access_key', 'secret_key')
+
+        s3 = boto3.resource(
+            's3',
+            aws_access_key_id=access,
+            aws_secret_access_key=secret)
+        BUCKET_NAME = "ibl-dj-external"
+        bucket = s3.Bucket(BUCKET_NAME)
+
+        # upload to s3
+        img_data = io.BytesIO()
+        fig.savefig(img_data, format='png')
+        img_data.seek(0)
+        bucket.put_object(Body=img_data,
+                          ContentType='image/png',
+                          Key=fig_dir)
+
+
+def convert_fig_to_encoded_string(fig):
+
+    temp = tempfile.NamedTemporaryFile(suffix=".png")
+    fig.savefig(temp.name, pad_inches=0)
+    with open(temp.name, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read())
+    temp.close()
+    return encoded_string
+
+
 def create_raster_plot_combined(trials, align_event,
                                 sorting_var='trial_id',
                                 x_lim=[-1, 1],
@@ -567,57 +608,80 @@ def create_raster_plot_combined(trials, align_event,
     # any padding in the image
 
     if fig_dir:
-        if store_type == 'filepath':
-            if not os.path.exists(os.path.dirname(fig_dir)):
-                try:
-                    os.makedirs(os.path.dirname(fig_dir))
-                except OSError as exc:  # Guard against race condition
-                    if exc.errno != errno.EEXIST:
-                        raise
-            fig.savefig(fig_dir, pad_inches=0)
-
-            if sorting_var == 'contrast':
-                return [0, y_lim], label, contrasts, tick_positions
-            else:
-                return [0, y_lim], label
-
-        elif store_type == 's3':
-            access, secret = (ibl_pipeline.S3Access & 's3_id=1').fetch1(
-                'access_key', 'secret_key')
-
-            s3 = boto3.resource(
-                's3',
-                aws_access_key_id=access,
-                aws_secret_access_key=secret)
-            BUCKET_NAME = "ibl-dj-external"
-            bucket = s3.Bucket(BUCKET_NAME)
-
-            # upload to s3
-            img_data = io.BytesIO()
-            fig.savefig(img_data, format='png')
-            img_data.seek(0)
-            bucket.put_object(Body=img_data,
-                              ContentType='image/png',
-                              Key=fig_dir)
-
-            if sorting_var == 'contrast':
-                return [0, y_lim], label, contrasts, tick_positions
-            else:
-                return [0, y_lim], label
-
+        store_fig_external(fig, store_type, fig_dir)
+        if sorting_var == 'contrast':
+            return [0, y_lim], label, contrasts, tick_positions
+        else:
+            return [0, y_lim], label
     else:
-        import tempfile
-        temp = tempfile.NamedTemporaryFile(suffix=".png")
-        fig.savefig(temp.name, pad_inches=0)
-        import base64
-        with open(temp.name, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read())
-        temp.close()
-
+        encoded_string = convert_fig_to_encoded_string(fig)
         if sorting_var == 'contrast':
             return encoded_string, [0, y_lim], label, contrasts, tick_positions
         else:
             return encoded_string, [0, y_lim], label
+
+
+color_bins = sns.color_palette("hls", 500)
+new_color_bins = np.vstack(
+    np.transpose(np.reshape(color_bins, [5, 100, 3]), [1, 0, 2]))
+
+
+def create_driftmap_session(
+        clusters_spk_times,
+        clusters_spk_amps, clusters_spk_depths,
+        fig_dir=None, store_type=None):
+
+    clusters_spk_depths_flatten = np.hstack(clusters_spk_depths)
+    clusters_spk_times_flatten = np.hstack(clusters_spk_times)
+    clusters_spk_amps_flatten = np.hstack(clusters_spk_amps)
+    clusters_avg_depths = [np.mean(d) for d in clusters_spk_depths]
+    sorted_idx = np.argsort(clusters_avg_depths)
+
+    mark = 0
+    for i, (idx, depths) in enumerate(zip(sorted_idx,
+                                          clusters_spk_depths)):
+        if len(depths):
+            if (not mark):
+                colors = np.repeat(
+                    new_color_bins[np.mod(idx, 500), :][np.newaxis, ...],
+                    len(depths), axis=0)
+                mark = 1
+            else:
+                colors = np.concatenate(
+                    (colors,
+                     np.repeat(new_color_bins[np.mod(idx, 500), :][np.newaxis, ...],
+                               len(depths), axis=0)))
+
+    max_amp = np.percentile(clusters_spk_amps_flatten, 99)
+    min_amp = np.percentile(clusters_spk_amps_flatten, 10)
+    opacity = np.hstack([(np.divide(cluster_spk_amps - min_amp, max_amp - min_amp))
+                        for cluster_spk_amps in clusters_spk_amps])
+    opacity[opacity > 1] = 1
+    opacity[opacity < 0] = 0
+
+    fig = plt.Figure(dpi=50, frameon=False, figsize=[90, 90])
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    x = clusters_spk_times_flatten
+    y = np.negative(clusters_spk_depths_flatten)
+    colorvec = np.zeros([len(opacity), 4])
+    colorvec[:, 3] = opacity
+    colorvec[:, 0:3] = colors
+    ax.scatter(x, y, color=colorvec, edgecolors='none')
+    ax.set_axis_off()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    x_lim = [min(x) - 1, max(x) + 1]
+    y_lim = [min(y) - 100, 5]
+    ax.set_xlim(x_lim[0], x_lim[1])
+    ax.set_ylim(y_lim[0], y_lim[1])
+    fig.add_axes(ax)
+    if fig_dir:
+        store_fig_external(fig, store_type, fig_dir)
+        return
+    else:
+        encoded_string = convert_fig_to_encoded_string(fig)
+        return encoded_string, x_lim, y_lim
+    plt.close(fig)
 
 
 def get_legend(trials_type, legend_group):
