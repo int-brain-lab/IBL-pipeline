@@ -79,3 +79,9 @@ def init():
         'DataSet',
         'FileRecord'
     )
+
+    EPHYS_TABLES = (
+        'Probe',
+        'ProbeInsertion',
+        'ProbeTrajectory'
+    )

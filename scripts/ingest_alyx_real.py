@@ -37,3 +37,7 @@ for table in tables.ACQUISITION_TABLES:
 for table in tables.DATA_TABLES:
     print(table)
     copy_table(data, data_ingest, table)
+
+for table in tables.EPHYS_TABLES:
+    print(table)
+    copy_table(data, data_ingest, table)
