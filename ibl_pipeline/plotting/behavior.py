@@ -334,6 +334,9 @@ class CumulativeSummary(dj.Computed):
             perf_easy = session_info['performance_easy']
             perf_easy[np.isnan(perf_easy)] = None
 
+            median_rt= session_info['median_reaction_time']
+            median_rt[np.isnan(median_rt)] = None
+
             performance_easy = go.Scatter(
                 x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
                 y=perf_easy.tolist(),
@@ -352,7 +355,7 @@ class CumulativeSummary(dj.Computed):
             )
             rt = go.Scatter(
                 x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
-                y=session_info['median_reaction_time'].tolist(),
+                y=median_rt.tolist(),
                 mode='markers+lines',
                 marker=dict(
                     size=6,
