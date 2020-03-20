@@ -339,7 +339,7 @@ class CumulativeSummary(dj.Computed):
 
             performance_easy = go.Scatter(
                 x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
-                y=perf_easy.tolist(),
+                y=perf_easy,
                 mode='markers+lines',
                 marker=dict(
                     size=6,
@@ -355,7 +355,7 @@ class CumulativeSummary(dj.Computed):
             )
             rt = go.Scatter(
                 x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
-                y=median_rt.tolist(),
+                y=median_rt,
                 mode='markers+lines',
                 marker=dict(
                     size=6,
