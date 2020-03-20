@@ -331,11 +331,11 @@ class CumulativeSummary(dj.Computed):
                         'median_reaction_time').fetch(as_dict=True)
             session_info = pd.DataFrame(session_info)
             yrange = [0, 1.1]
-            perf_easy = session_info['performance_easy']
-            perf_easy[np.isnan(perf_easy)] = None
+            perf_easy = [None if np.isnan(p) else p
+                         for p in session_info['performance_easy']]
 
-            median_rt= session_info['median_reaction_time']
-            median_rt[np.isnan(median_rt)] = None
+            median_rt = [None if np.isnan(p) else p
+                         for p in session_info['median_reaction_time']]
 
             performance_easy = go.Scatter(
                 x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
