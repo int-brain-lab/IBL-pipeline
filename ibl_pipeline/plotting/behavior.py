@@ -331,9 +331,12 @@ class CumulativeSummary(dj.Computed):
                         'median_reaction_time').fetch(as_dict=True)
             session_info = pd.DataFrame(session_info)
             yrange = [0, 1.1]
+            perf_easy = session_info['performance_easy']
+            perf_easy[np.isnan(perf_easy)] = None
+
             performance_easy = go.Scatter(
                 x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
-                y=session_info['performance_easy'].tolist(),
+                y=perf_easy.tolist(),
                 mode='markers+lines',
                 marker=dict(
                     size=6,
