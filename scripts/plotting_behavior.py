@@ -33,7 +33,8 @@ latest = subject.Subject.aggr(
         behavior.LatestDate,
         checking_ts='MAX(checking_ts)') * behavior.LatestDate & \
             ['latest_date between curdate() - interval 30 day and curdate()',
-             (subject.Subject - subject.Death)]
+             (subject.Subject - subject.Death)] & \
+            (subject.Subject & 'subject_nickname not like "%human%"').proj()
 
 subj_keys = (subject.Subject & latest).fetch('KEY')
 
