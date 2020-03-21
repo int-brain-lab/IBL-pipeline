@@ -18,7 +18,7 @@ reference.LabMember.populate(**kargs)
 reference.LabMembership.populate(**kargs)
 reference.LabLocation.populate(**kargs)
 reference.Project.populate(**kargs)
-reference.CoordinateSystem(**kargs)
+reference.CoordinateSystem.populate(**kargs)
 
 # subject tables
 print('---------- Ingesting subject tables ---------')
