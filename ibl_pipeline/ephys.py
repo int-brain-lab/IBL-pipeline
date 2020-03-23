@@ -219,7 +219,7 @@ class ProbeTrajectory(dj.Imported):
     roll=null:          float           # (degrees) roll angle of the probe
     probe_trajectory_ts=CURRENT_TIMESTAMP  :  timestamp
     """
-    key_source = ProbeInsertion
+    key_source = ProbeInsertion * InsertionDataSource & ephys_ingest.ProbeTrajectory
 
     def make(self, key):
 
