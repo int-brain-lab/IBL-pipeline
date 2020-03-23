@@ -24,6 +24,12 @@ keys = [
 
 
 for key in tqdm(keys):
+    print('----------- Deleting AlignedTrialSpikes ---------')
+    clusters = (ephys.Cluster & key).fetch('KEY')
+    for cluster in clusters:
+        (ephys.AlignedTrialSpikes & cluster).delete()
+
+    print('----------- Deleting TrialSet ---------')
     (behavior.TrialSet & key).delete()
     (behavior.BehavioralSummaryByDate & key).delete()
     print('----------- Populating TrialSet ------------')
