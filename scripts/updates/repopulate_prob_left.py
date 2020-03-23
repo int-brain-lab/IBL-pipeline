@@ -11,6 +11,7 @@ from ibl_pipeline.plotting import ephys as ephys_plotting
 from uuid import UUID
 import datetime
 import datajoint as dj
+from tqdm import tqdm
 
 dj.config['safemode'] = False
 
