@@ -41,18 +41,6 @@ class ValidAlignSort(dj.Lookup):
 
 
 @schema
-class TrialCondition(dj.Lookup):
-    definition = """
-    trial_condition:  varchar(32)
-    """
-
-    contents = zip(['all trials',
-                    'correct trials',
-                    'left trials',
-                    'right trials'])
-
-
-@schema
 class RasterLayoutTemplate(dj.Lookup):
     definition = """
     template_idx:   int
@@ -273,67 +261,6 @@ class Raster(dj.Computed):
             key['template_idx'] = 3
         else:
             key['template_idx'] = 1
-        self.insert1(key)
-
-
-@schema
-class RasterLinkS3(dj.Computed):
-    definition = """
-    -> ephys.Cluster
-    -> ValidAlignSort
-    ---
-    plotting_data_link=null: varchar(255)
-    plot_ylim:               blob
-    mark_label=null:         varchar(32)
-    -> RasterLayoutTemplate
-    """
-    key_source = ephys.Cluster * ValidAlignSort & behavior.TrialSet & ephys.TrialSpikes
-
-    def make(self, key):
-        cluster = ephys.Cluster & key
-        trials = \
-            (behavior.TrialSet.Trial * ephys.TrialSpikes & cluster).proj(
-                'trial_start_time', 'trial_stim_on_time',
-                'trial_response_time',
-                'trial_feedback_time',
-                'trial_response_choice',
-                'trial_spike_times',
-                trial_duration='trial_end_time-trial_start_time',
-                trial_signed_contrast="""trial_stim_contrast_right -
-                                         trial_stim_contrast_left"""
-            ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"' & key
-
-        if not len(trials):
-            if key['sort_by'] == 'trial_id':
-                key['template_idx'] = 0
-            else:
-                key['template_idx'] = 1
-            self.insert1(dict(
-                **key, plot_ylim=[0, 3]))
-            return
-
-        align_event = (ephys.Event & key).fetch1('event')
-        sorting_var = (Sorting & key).fetch1('sort_by')
-
-        fig_link = path.join('raster',
-                             str(key['subject_uuid']),
-                             key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
-                             str(key['probe_idx']),
-                             str(key['cluster_revision']),
-                             key['event'],
-                             key['sort_by'],
-                             str(key['cluster_id'])) + '.png'
-        y_lim, label = putils.create_raster_plot_combined(
-            trials, align_event, sorting_var, fig_dir=fig_link, store_type='s3')
-        key['plotting_data_link'] = fig_link
-        key['plot_ylim'] = y_lim
-        key['mark_label'] = label
-
-        if key['sort_by'] == 'trial_id':
-            key['template_idx'] = 0
-        else:
-            key['template_idx'] = 1
-
         self.insert1(key)
 
 
@@ -604,8 +531,7 @@ class Psth(dj.Computed):
         self.insert1(entry)
 
 
-@schema
-class PsthDataVarchar(dj.Computed):
+
     definition = """
     -> ephys.Cluster
     -> ephys.Event
