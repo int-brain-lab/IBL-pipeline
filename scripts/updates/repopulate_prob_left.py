@@ -29,11 +29,30 @@ for key in tqdm(keys):
     for cluster in clusters:
         (ephys.AlignedTrialSpikes & cluster).delete()
 
-    print('----------- Deleting TrialSet ---------')
-    (behavior.TrialSet & key).delete()
-    (behavior_analyses.BehavioralSummaryByDate & key).delete()
+    print('---- Deleting TrialSet downstream plotting tables ----')
+    (behavior_plotting.DateReactionTimeTrialNumber & key).delete_quick()
+    (behavior_plotting.DateReactionTimeContrast & key).delete_quick()
+    (behavior_plotting.DateReactionTimeContrast & key).delete_quick()
+    (behavior_plotting.DatePsychCurve & key).delete_quick()
+    (behavior_plotting.SessionReactionTimeTrialNumber & key).delete_quick()
+    (behavior_plotting.SessionReactionTimeContrast & key).delete_quick()
+    (behavior_plotting.SessionPsychCurve & key).delete_quick()
+
+    print('---- Deleting TrialSet downstream analyses tables ----')
+    (behavior_analyses.PsychResults & key).delete_quick()
+    (behavior_analyses.PsychResultsBlock & key).delete_quick()
+    (behavior_analyses.ReactionTime & key).delete_quick()
+    (behavior_analyses.ReactionTimeContrastBlock & key).delete_quick()
+    (behavior_analyses.BehavioralSummaryByDate & key).delete_quick()
+
+    print('---- Deleting TrialSet main tables ----')
+    (behavior.AmbientSensorData & key).delete_quick()
+    (behavior.TrialSet & key).delete_quick()
+
     print('----------- Populating TrialSet ------------')
     behavior.TrialSet.populate(key, **kargs)
+    print('----------- Populating Ambient Sensor data------------')
+    behavior.AmbientSensorData.populate(key, **kargs)
     print('----------- Populating PsychResults ------------')
     behavior_analyses.PsychResults.populate(key, **kargs)
     print('--------- Populating PsychResultsBlock ---------')
