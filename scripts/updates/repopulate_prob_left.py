@@ -18,9 +18,10 @@ dj.config['safemode'] = False
 kargs = dict(suppress_errors=True, display_progress=True)
 
 keys = [
-    {'subject_uuid': UUID('088b6898-0a86-435e-b91f-eab829a846f6'),
-     'session_start_time': datetime.datetime(2019, 11, 21, 17, 11, 10),
-     'session_date': datetime.date(2019, 11, 21)}]
+    {'subject_uuid': UUID('18a54f60-534b-4ed5-8bda-b434079b8ab8'),
+     'session_start_time': datetime.datetime(2019, 12, 3, 15, 7, 41),
+     'session_date': datetime.date(2019, 12, 3)}
+]
 
 
 for key in tqdm(keys):
