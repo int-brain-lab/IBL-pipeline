@@ -23,6 +23,8 @@ keys = [
      'session_date': datetime.date(2019, 12, 3)}
 ]
 
+au_behavior = dj.create_virtual_module('au_behavior', 'user_anneurai_behavior')
+
 
 for key in tqdm(keys):
     print('----------- Deleting AlignedTrialSpikes ---------')
@@ -47,6 +49,7 @@ for key in tqdm(keys):
 
     print('---- Deleting TrialSet main tables ----')
     (behavior.AmbientSensorData & key).delete_quick()
+    (au_behavior.ChoiceHistory & key).delete_quick()
     (behavior.TrialSet.Trial & key).delete_quick()
     (behavior.TrialSet & key).delete_quick()
 
