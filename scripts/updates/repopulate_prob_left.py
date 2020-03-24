@@ -42,6 +42,7 @@ for key in tqdm(keys):
     (behavior_analyses.ReactionTimeContrastBlock & key).delete_quick()
     (behavior_analyses.ReactionTime & key).delete_quick()
     (behavior_analyses.BehavioralSummaryByDate & key).delete()
+    (behavior_analyses.SessionTrainingStatus & key).delete()
     (behavior_analyses.PsychResultsBlock & key).delete_quick()
     (behavior_analyses.PsychResults & key).delete_quick()
 
