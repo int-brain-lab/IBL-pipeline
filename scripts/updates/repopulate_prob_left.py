@@ -48,6 +48,7 @@ for key in tqdm(keys):
 
     print('---- Deleting TrialSet main tables ----')
     (behavior.AmbientSensorData & key).delete_quick()
+    (behavior.TrialSet.Trial & key).delete_quick()
     (behavior.TrialSet & key).delete_quick()
 
     print('----------- Populating TrialSet ------------')
