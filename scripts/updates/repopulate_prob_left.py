@@ -31,7 +31,7 @@ for key in tqdm(keys):
 
     print('----------- Deleting TrialSet ---------')
     (behavior.TrialSet & key).delete()
-    (behavior.BehavioralSummaryByDate & key).delete()
+    (behavior_analyses.BehavioralSummaryByDate & key).delete()
     print('----------- Populating TrialSet ------------')
     behavior.TrialSet.populate(key, **kargs)
     print('----------- Populating PsychResults ------------')
