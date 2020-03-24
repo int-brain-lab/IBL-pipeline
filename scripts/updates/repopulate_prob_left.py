@@ -39,11 +39,11 @@ for key in tqdm(keys):
     (behavior_plotting.SessionPsychCurve & key).delete_quick()
 
     print('---- Deleting TrialSet downstream analyses tables ----')
+    (behavior_analyses.ReactionTimeContrastBlock & key).delete_quick()
+    (behavior_analyses.ReactionTime & key).delete_quick()
+    (behavior_analyses.BehavioralSummaryByDate & key).delete_quick()
     (behavior_analyses.PsychResultsBlock & key).delete_quick()
     (behavior_analyses.PsychResults & key).delete_quick()
-    (behavior_analyses.ReactionTime & key).delete_quick()
-    (behavior_analyses.ReactionTimeContrastBlock & key).delete_quick()
-    (behavior_analyses.BehavioralSummaryByDate & key).delete_quick()
 
     print('---- Deleting TrialSet main tables ----')
     (behavior.AmbientSensorData & key).delete_quick()
