@@ -94,26 +94,26 @@ class InsertBuffer(object):
               ignore_extra_fields=False, allow_direct_insert=False, chunksz=1):
         '''
         flush the buffer
-        XXX: use kwargs?
         XXX: ignore_extra_fields na, requires .insert() support
         '''
+        kwargs = dict(skip_duplicates=skip_duplicates,
+                      ignore_extra_fields=ignore_extra_fields)
+        if allow_direct_insert:
+            kwargs.update(allow_direct_insert=True)
+
         qlen = len(self._queue)
         if qlen > 0 and qlen % chunksz == 0:
             try:
-                if allow_direct_insert:
-                    self._rel.insert(
-                        self._queue, skip_duplicates=skip_duplicates,
-                        ignore_extra_fields=ignore_extra_fields,
-                        allow_direct_insert=True)
-                else:
-                    self._rel.insert(
-                        self._queue, skip_duplicates=skip_duplicates,
-                        ignore_extra_fields=ignore_extra_fields)
-
-                self._queue.clear()
-                return qlen
+                self._rel.insert(
+                    self._queue, **kwargs)
             except dj.DataJointError as e:
-                log.error('error in flush: {}'.format(e))
-                raise
+                log.warning('error in flush: {}, trying ingestion one by one'.format(e))
+                for t in self._queue:
+                    try:
+                        self._rel.insert1(t)
+                    except dj.DataJointError as e:
+                        log.warning('error in flush: {}'.format(e))
+            self._queue.clear()
+            return qlen
         else:
             return 0
