@@ -106,13 +106,13 @@ class InsertBuffer(object):
             try:
                 self._rel.insert(
                     self._queue, **kwargs)
-            except dj.DataJointError as e:
-                log.warning('error in flush: {}, trying ingestion one by one'.format(e))
+            except Exception as e:
+                print('error in flush: {}, trying ingestion one by one'.format(e))
                 for t in self._queue:
                     try:
                         self._rel.insert1(t)
-                    except dj.DataJointError as e:
-                        log.warning('error in flush: {}'.format(e))
+                    except Exception as e:
+                        print('error in flush: {}'.format(e))
             self._queue.clear()
             return qlen
         else:
