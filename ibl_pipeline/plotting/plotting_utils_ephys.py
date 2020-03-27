@@ -629,11 +629,12 @@ new_color_bins = np.vstack(
 def prepare_spikes_data(key):
     clusters = ephys.DefaultCluster & key
     clusters_ids, clusters_spk_times, \
-        clusters_spk_amps, clusters_spk_depths = \
+        clusters_spk_amps, clusters_spk_depths, clusters_depths = \
         clusters.fetch('cluster_id',
-                        'cluster_spikes_times',
-                        'cluster_spikes_amps',
-                        'cluster_spikes_depths')
+                       'cluster_spikes_times',
+                       'cluster_spikes_amps',
+                       'cluster_spikes_depths',
+                       'cluster_depth')
 
     spikes_depths = np.hstack(clusters_spk_depths)
     spikes_times = np.hstack(clusters_spk_times)
