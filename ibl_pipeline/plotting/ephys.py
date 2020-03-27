@@ -777,7 +777,7 @@ class DriftMapPerTrial(dj.Computed):
 
             key['plot_xlim'], key['plot_ylim'] = \
                 putils.create_driftmap_plot(
-                    spikes_data, dpi=100, figsize=[18, 12]
+                    spikes_data, dpi=100, figsize=[18, 12],
                     fig_dir=fig_link, store_type='s3')
 
             trial_driftmap = dict(
