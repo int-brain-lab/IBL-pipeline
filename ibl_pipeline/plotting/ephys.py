@@ -7,6 +7,7 @@ import plotly
 import plotly.graph_objs as go
 import json
 from os import path
+from tqdm import tqdm
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_ephys')
@@ -757,7 +758,7 @@ class DriftMapPerTrial(dj.Computed):
         trials = (behavior.TrialSet.Trial & key).fetch()
 
         trials_driftmap = []
-        for trial in trials:
+        for trial in tqdm(trials):
             f = np.logical_and(
                 spikes_data['spikes_times'] < trial['trial_end_time'],
                 spikes_data['spikes_times'] > trial['trial_start_time'])
