@@ -1,6 +1,6 @@
 from ibl_pipeline.analyses import behavior
 from ibl_pipeline import behavior as behavior_ingest
-from ibl_pipeline import subject, action, acquisition
+from ibl_pipeline import subject, action, acquisition, ephys
 from ibl_pipeline.utils import psychofit as psy
 from uuid import UUID
 import numpy as np
