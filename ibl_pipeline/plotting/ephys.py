@@ -768,7 +768,7 @@ class DriftMapPerTrial(dj.Computed):
                  spikes_times=spikes_data['spikes_times'][f],
                  spikes_amps=spikes_data['spikes_amps'][f],
                  spikes_clusters=spikes_data['spikes_clusters'][f],
-                 clusters_depths=spikes_clusters['clusters_depths']
+                 clusters_depths=spikes_data['clusters_depths']
             )
             fig_link = path.join(
                 'driftmap_session',
