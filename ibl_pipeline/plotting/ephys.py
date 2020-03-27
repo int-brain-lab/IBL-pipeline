@@ -774,7 +774,7 @@ class DriftMapPerTrial(dj.Computed):
                 'driftmap_session',
                 str(key['subject_uuid']),
                 key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
-                str(key['probe_idx']), str(trial['trial_idx'])) + '.png'
+                str(key['probe_idx']), str(trial['trial_id'])) + '.png'
 
             key['plot_xlim'], key['plot_ylim'] = \
                 putils.create_driftmap_plot(
