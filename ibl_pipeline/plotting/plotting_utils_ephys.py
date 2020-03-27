@@ -626,54 +626,118 @@ new_color_bins = np.vstack(
     np.transpose(np.reshape(color_bins, [5, 100, 3]), [1, 0, 2]))
 
 
-def create_driftmap_session(
-        clusters_spk_times,
-        clusters_spk_amps, clusters_spk_depths,
-        fig_dir=None, store_type=None):
+def prepare_spikes_data(key):
+    clusters = ephys.DefaultCluster & key
+    clusters_ids, clusters_spk_times, \
+        clusters_spk_amps, clusters_spk_depths = \
+        clusters.fetch('cluster_id',
+                        'cluster_spikes_times',
+                        'cluster_spikes_amps',
+                        'cluster_spikes_depths')
 
-    clusters_spk_depths_flatten = np.hstack(clusters_spk_depths)
-    clusters_spk_times_flatten = np.hstack(clusters_spk_times)
-    clusters_spk_amps_flatten = np.hstack(clusters_spk_amps)
-    clusters_avg_depths = [np.mean(d) for d in clusters_spk_depths]
-    sorted_idx = np.argsort(clusters_avg_depths)
+    spikes_depths = np.hstack(clusters_spk_depths)
+    spikes_times = np.hstack(clusters_spk_times)
+    spikes_amps = np.hstack(clusters_spk_amps)
+    spikes_clusters = np.hstack(
+        [[cluster_id]*len(cluster_spk_depths)
+            for (cluster_id, cluster_spk_depths) in
+            zip(clusters_ids, clusters_spk_depths)])
 
-    mark = 0
-    for i, (idx, depths) in enumerate(zip(sorted_idx,
-                                          clusters_spk_depths)):
-        if len(depths):
-            if (not mark):
-                colors = np.repeat(
-                    new_color_bins[np.mod(idx, 500), :][np.newaxis, ...],
-                    len(depths), axis=0)
-                mark = 1
-            else:
-                colors = np.concatenate(
-                    (colors,
-                     np.repeat(new_color_bins[np.mod(idx, 500), :][np.newaxis, ...],
-                               len(depths), axis=0)))
+    return dict(
+        spikes_depths=spikes_depths,
+        spikes_times=spikes_times,
+        spikes_amps=spikes_amps,
+        spikes_clusters=spikes_clusters,
+        clusters_depths=clusters_depths)
 
-    max_amp = np.percentile(clusters_spk_amps_flatten, 99)
-    min_amp = np.percentile(clusters_spk_amps_flatten, 10)
-    opacity = np.hstack([(np.divide(cluster_spk_amps - min_amp, max_amp - min_amp))
-                        for cluster_spk_amps in clusters_spk_amps])
+
+def driftmap(
+        clusters_depths, spikes_times,
+        spikes_amps, spikes_depths, spikes_clusters,
+        ax=None, axesoff=False, return_lims=False):
+
+    '''
+    Plots the driftmap of a session or a trial.
+
+    The plot shows the spike times vs spike depths.
+    Each dot is a spike, whose color indicates the cluster
+    and opacity indicates the spike amplitude.
+
+    Parameters
+    -------------
+    clusters_depths: ndarray
+        depths of all clusters
+    spikes_times: ndarray
+        spike times of all clusters
+    spikes_amps: ndarray
+        amplitude of each spike
+    spikes_depths: ndarray
+        depth of each spike
+    spikes_clusters: ndarray
+        cluster idx of each spike
+    ax: axessubplot (optional)
+        The axis handle to plot the driftmap on
+        (if `None`, a new figure and axis is created)
+
+    Return
+    ---
+    ax: axessubplot
+    x_lim: list of two elements
+    y_lim: list of two elements
+
+    '''
+
+    # get the sorted idx of each depth, and create colors based on the idx
+
+    sorted_idx = np.argsort(np.argsort(clusters_depths))
+
+    colors = np.vstack(
+        [np.repeat(
+            new_color_bins[np.mod(idx, 500), :][np.newaxis, ...],
+            n_spikes, axis=0)
+            for (idx, n_spikes) in
+            zip(sorted_idx, np.unique(spikes_clusters,
+                                      return_counts=True)[1])])
+
+    max_amp = np.percentile(spikes_amps, 90)
+    min_amp = np.percentile(spikes_amps, 10)
+    opacity = np.divide(spikes_amps - min_amp, max_amp - min_amp)
     opacity[opacity > 1] = 1
     opacity[opacity < 0] = 0
 
-    fig = plt.Figure(dpi=50, frameon=False, figsize=[90, 90])
-    ax = plt.Axes(fig, [0., 0., 1., 1.])
-    x = clusters_spk_times_flatten
-    y = np.negative(clusters_spk_depths_flatten)
     colorvec = np.zeros([len(opacity), 4], dtype='float16')
     colorvec[:, 3] = opacity.astype('float16')
     colorvec[:, 0:3] = colors.astype('float16')
+
+    x = spikes_times
+    y = spikes_depths
+
+    if ax is None:
+        fig = plt.Figure(dpi=50, frameon=False, figsize=[90, 90])
+        ax = plt.Axes(fig, [0., 0., 1., 1.])
+
     ax.scatter(x, y, color=colorvec, edgecolors='none')
-    ax.set_axis_off()
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-    x_lim = [min(x) - 1, max(x) + 1]
-    y_lim = [min(y) - 100, 5]
+    x_edge = (max(x) - min(x)) * 0.05
+    x_lim = [min(x) - x_edge, max(x) + x_edge]
+    y_lim = [min(y) - 50, max(y) + 100]
     ax.set_xlim(x_lim[0], x_lim[1])
     ax.set_ylim(y_lim[0], y_lim[1])
+
+    if axesoff:
+        ax.axis('off')
+
+    if return_lims:
+        return ax, x_lim, y_lim
+    else:
+        return ax
+
+
+def create_driftmap_plot(spike_data, figsize=[90, 90], dpi=50,
+                         fig_dir=None, store_type=None):
+    fig = plt.Figure(dpi=dpi, frameon=False, figsize=figsize)
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax, x_lim, y_lim = driftmap(
+        **spike_data, ax=ax, axesoff=True, return_lims=True)
     fig.add_axes(ax)
     if fig_dir:
         store_fig_external(fig, store_type, fig_dir)

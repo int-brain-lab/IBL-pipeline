@@ -565,7 +565,7 @@ class DriftMapTemplate(dj.Lookup):
         name='End of the last trial'
     )
 
-    layout = go.Layout(
+    layout1 = go.Layout(
         images=[dict(
             source='',  # to be replaced by the s3 link
             # sizex=plot_xlim[1] - plot_xlim[0], # fetched from Driftmap
@@ -587,7 +587,7 @@ class DriftMapTemplate(dj.Lookup):
             pad=0
         ),
         title=dict(
-            text='Drift map for the entire session',
+            text='Depth raster of the entire session',
             x=0.45,
             y=0.95
         ),
@@ -597,19 +597,98 @@ class DriftMapTemplate(dj.Lookup):
             showgrid=False
         ),
         yaxis=dict(
-            title='Negative Depth (um)',
+            title='Distance from the probe tip (um)',
             # range=plot_ylim,  # fetched from DriftMap
             showgrid=False
-        ),
+        ))
 
+    trial_start_mark = go.Scatter(
+        # x=[trial_start, trial_start],  # fetched from DriftMapPerTrial
+        # y=plot_ylim,  # fetched from DriftMapPerTrial
+        mode='lines',
+        line=dict(
+            color='rgba(20, 40, 255, 0.4)',
+            width=1.5),
+        name='Trial start'
+    )
+    trial_end_mark = go.Scatter(
+        # x=[trial_end, trial_end], # fetched from DriftMapPerTrial
+        # y=plot_ylim, # fetched from DriftMapPerTrial
+        mode='lines',
+        line=dict(
+            color='rgba(255, 20, 20, 0.4)',
+            width=1.5),
+        name='Trial end'
     )
 
-    data = [axis, first_trial_mark, last_trial_mark]
+    trial_stim_on_mark = go.Scatter(
+        # x=[trial_stim_on, trial_stim_on], # fetched from DriftMapPerTrial
+        # y=plot_ylim, # fetched from DriftMapPerTrial
+        mode='lines',
+        line=dict(
+            color='rgba(200, 40, 255, 0.4)',
+            width=1.5),
+        name='Stim on')
+
+    trial_feedback_mark = go.Scatter(
+        # x=[trial_feedback, trial_feedback], # fetched from DriftMapPerTrial
+        # y=plot_ylim, # fetched from DriftMapPerTrial
+        mode='lines',
+        line=dict(
+            color='rgba(60, 255, 10, 0.4)',
+            width=1.5),
+        name='Feedback'
+    )
+
+    layout2 = go.Layout(
+        images=[dict(
+            source='',  # to be replaced by the s3 link
+            # sizex=plot_xlim[1] - plot_xlim[0], # fetched from DriftmapPerTrial
+            # sizey=plot_ylim[1] - plot_ylim[0], # fetched from DriftmapPerTrial
+            # x=x_lim[0], # fetched from DriftmapTrial
+            # y=y_lim[1], # fetched from Driftmap
+            xref='x',
+            yref='y',
+            sizing='stretch',
+            layer='below'
+            )],
+        width=720,
+        height=480,
+        margin=go.layout.Margin(
+            l=50,
+            r=30,
+            b=40,
+            t=80,
+            pad=0
+        ),
+        title=dict(
+            text='Depth raster of one trial',
+            x=0.45,
+            y=0.9
+        ),
+        xaxis=dict(
+            title='Time (sec)',
+            # range=plot_xlim,  # fetched from DriftMap
+            showgrid=False
+        ),
+        yaxis=dict(
+            title='Depth relative to the probe tip (um)',
+            # range=plot_ylim,  # fetched from DriftMap
+            showgrid=False
+        ))
+
+    data1 = [axis, first_trial_mark, last_trial_mark]
+    data2 = [axis, trial_start_mark, trial_stim_on_mark,
+             trial_feedback_mark, trial_end_mark]
     contents = [
         dict(driftmap_template_idx=0,
              driftmap_template=go.Figure(
-                 data=data,
-                 layout=layout).to_plotly_json())]
+                 data=data1,
+                 layout=layout1).to_plotly_json()),
+        dict(driftmap_template_idx=0,
+             driftmap_template=go.Figure(
+                 data=data2,
+                 layout=layout2).to_plotly_json())]
 
 
 @schema
@@ -628,11 +707,7 @@ class DriftMap(dj.Computed):
 
     def make(self, key):
 
-        clusters = ephys.DefaultCluster & key
-        clusters_spk_times, clusters_spk_amps, clusters_spk_depths = \
-            clusters.fetch('cluster_spikes_times',
-                           'cluster_spikes_amps',
-                           'cluster_spikes_depths')
+        spikes_data = putils.prepare_spikes_data(key)
 
         fig_link = path.join(
             'driftmap_session',
@@ -643,9 +718,8 @@ class DriftMap(dj.Computed):
         trials = (behavior.TrialSet.Trial & key).fetch()
 
         key['plot_xlim'], key['plot_ylim'] = \
-            putils.create_driftmap_session(
-                clusters_spk_times, clusters_spk_amps,
-                clusters_spk_depths,
+            putils.create_driftmap_plot(
+                spikes_data,
                 fig_dir=fig_link, store_type='s3')
 
         key.update(
@@ -656,3 +730,66 @@ class DriftMap(dj.Computed):
         )
 
         self.insert1(key)
+
+
+@schema
+class DriftMapPerTrial(dj.Computed):
+    definition = """
+    -> ephys.ProbeInsertion
+    -> behavior.TrialSet.Trial
+    ---
+    plotting_data_link=null:      varchar(255)
+    plot_ylim:                    blob
+    plot_xlim:                    blob
+    trial_start:                  float
+    trial_end:                    float
+    trial_stim_on:                float
+    trial_feedback:               float
+    -> DriftMapTemplate
+    """
+    key_source = ephys.ProbeInsertion & behavior.TrialSet & \
+        ephys.DefaultCluster
+
+    def make(self, key):
+
+        spikes_data = putils.prepare_spikes_data(key)
+
+        trials = (behavior.TrialSet.Trial & key).fetch()
+
+        trials_driftmap = []
+        for trial in trials:
+            f = np.logical_and(
+                spikes_data['spikes_times'] < trial['trial_end_time'],
+                spikes_data['spikes_times'] > trial['trial_start_time'])
+
+            spikes_data_trial = dict(
+                 spikes_depths=spikes_data['spikes_depths'][f],
+                 spikes_times=spikes_data['spikes_times'][f],
+                 spikes_amps=spikes_data['spikes_amps'][f],
+                 spikes_clusters=spikes_data['spikes_clusters'][f],
+                 clusters_depths=spikes_clusters['clusters_depths']
+            )
+            fig_link = path.join(
+                'driftmap_session',
+                str(key['subject_uuid']),
+                key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+                str(key['probe_idx']), str(trial['trial_idx'])) + '.png'
+
+            key['plot_xlim'], key['plot_ylim'] = \
+                putils.create_driftmap_plot(
+                    spikes_data, dpi=100, figsize=[18, 12]
+                    fig_dir=fig_link, store_type='s3')
+
+            trial_driftmap = dict(
+                **key,
+                plotting_data_link=fig_link,
+                trial_start=trial['trial_start_time'],
+                trial_end=trial['trial_end_time'],
+                trial_stim_on=trial['trial_stim_on_time'],
+                trial_feedback=trial['trial_feedback_time'],
+                trial_id=trial['trial_id']
+            )
+
+            trials_driftmap.append(trial_driftmap.copy())
+
+        self.insert(trials_driftmap)
