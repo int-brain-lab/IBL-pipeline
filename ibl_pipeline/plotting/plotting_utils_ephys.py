@@ -710,8 +710,8 @@ def driftmap(
     colorvec[:, 3] = opacity.astype('float16')
     colorvec[:, 0:3] = colors.astype('float16')
 
-    x = spikes_times
-    y = spikes_depths
+    x = spikes_times.astype('float32')
+    y = spikes_depths.astype('float32')
 
     if ax is None:
         fig = plt.Figure(dpi=50, frameon=False, figsize=[90, 90])
