@@ -533,7 +533,7 @@ class Psth(dj.Computed):
 
 
 @schema
-class DriftMapTemplate(dj.Lookup):
+class DepthRasterTemplate(dj.Lookup):
     definition = """
     driftmap_template_idx:    int
     ---
@@ -693,7 +693,7 @@ class DriftMapTemplate(dj.Lookup):
 
 
 @schema
-class DriftMap(dj.Computed):
+class DepthRaster(dj.Computed):
     definition = """
     -> ephys.ProbeInsertion
     ---
@@ -734,63 +734,129 @@ class DriftMap(dj.Computed):
 
 
 @schema
-class DriftMapPerTrial(dj.Computed):
+class TrialType(dj.Lookup):
     definition = """
+    trial_type:       varchar(32)
+    """
+    contents = zip(['Correct Left Contrast',
+                    'Correct Right Contrast',
+                    'Incorrect Left Contrast',
+                    'Incorrect Right Contrast'])
+
+
+@schema
+class DepthRasterExampleTrial(dj.Computed):
+    definition = """
+    # Depth Raster for example trials
     -> ephys.ProbeInsertion
     -> behavior.TrialSet.Trial
     ---
     plotting_data_link=null:      varchar(255)
     plot_ylim:                    blob
     plot_xlim:                    blob
+    plot_title:                   varchar(64)
     trial_start:                  float
     trial_end:                    float
     trial_stim_on:                float
     trial_feedback:               float
+    trial_contrast:               float     # signed contrast of
+    -> TrialType                  # type of trial
     -> DriftMapTemplate
     """
     key_source = ephys.ProbeInsertion & behavior.TrialSet & \
         ephys.DefaultCluster
 
+    def create_trial_raster(key, spikes_data, trial, trial_type, contrast):
+        f = np.logical_and(
+                spikes_data['spikes_times'] < trial['trial_end_time'],
+                spikes_data['spikes_times'] > trial['trial_start_time'])
+
+        spikes_data_trial = dict(
+                spikes_depths=spikes_data['spikes_depths'][f],
+                spikes_times=spikes_data['spikes_times'][f],
+                spikes_amps=spikes_data['spikes_amps'][f],
+                spikes_clusters=spikes_data['spikes_clusters'][f],
+                clusters_depths=spikes_data['clusters_depths']
+        )
+
+        fig_link = path.join(
+            'driftmap_session',
+            str(key['subject_uuid']),
+            key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+            str(key['probe_idx']), str(trial['trial_id'])) + '.png'
+
+        key['plot_xlim'], key['plot_ylim'] = \
+            putils.create_driftmap_plot(
+                spikes_data, dpi=100, figsize=[18, 12],
+                fig_dir=fig_link, store_type='s3')
+
+        trial_driftmap = dict(
+            **key,
+            plotting_data_link=fig_link,
+            trial_start=trial['trial_start_time'],
+            trial_end=trial['trial_end_time'],
+            trial_stim_on=trial['trial_stim_on_time'],
+            trial_feedback=trial['trial_feedback_time'],
+            trial_id=trial['trial_id']
+            drift_map_template_idx=1,
+            trial_type=trial_type,
+            trial_contrast=contrast
+        )
+
     def make(self, key):
 
         spikes_data = putils.prepare_spikes_data(key)
 
-        trials = (behavior.TrialSet.Trial & key).fetch()
+        # pick one example trial and generate depth raster
+        trials_all = (behavior.TrialSet.Trial & key).proj(
+            'trial_response_choice',
+            'trial_feedback_type',
+            trial_duration='trial_end_time-trial_start_time',
+            trial_signed_contrast='trial_stim_contrast_right - trial_stim_contrast_left'
+        ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
+
+        # choice of clockwise and feedback type is positive
+        trials_left_correct = trials_all & 'trial_response_choice="CW"' \
+            & 'trial_feedback_type=1'
+        trials_right_correct = trials_all & 'trial_response_choice="CCW"' \
+            & 'trial_feedback_type=1'
+        trials_left_incorrect = trials_all & 'trial_response_choice="CW"' \
+            & 'trial_feedback_type=-1'
+        trials_right_incorrect = trials_all & 'trial_response_choice="CCW"' \
+            & 'trial_feedback_type=-1'
 
         trials_driftmap = []
-        for trial in tqdm(trials):
-            f = np.logical_and(
-                spikes_data['spikes_times'] < trial['trial_end_time'],
-                spikes_data['spikes_times'] > trial['trial_start_time'])
+        for contrast in dj.U('trial_signed_contrast') & trials_all:
+            left_correct = (trials_left_correct & contrast).fetch()
+            if len(left_correct):
+                trial = np.random.choice(left_correct)
+                trial_drift_map = self.create_trial_raster(
+                    key, spikes_data, trial,
+                    'Correct Left Contrast', contrast)
+                trials_driftmap.append(trial_driftmap.copy())
 
-            spikes_data_trial = dict(
-                 spikes_depths=spikes_data['spikes_depths'][f],
-                 spikes_times=spikes_data['spikes_times'][f],
-                 spikes_amps=spikes_data['spikes_amps'][f],
-                 spikes_clusters=spikes_data['spikes_clusters'][f],
-                 clusters_depths=spikes_data['clusters_depths']
-            )
-            fig_link = path.join(
-                'driftmap_session',
-                str(key['subject_uuid']),
-                key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
-                str(key['probe_idx']), str(trial['trial_id'])) + '.png'
+            left_incorrect = (trials_left_incorrect & contrast).fetch()
+            if len(left_incorrect):
+                trial = np.random.choice(left_incorrect)
+                trial_drift_map = self.create_trial_raster(
+                    key, spikes_data, trial,
+                    'Incorrect Left Contrast', contrast)
+                trials_driftmap.append(trial_driftmap.copy())
 
-            key['plot_xlim'], key['plot_ylim'] = \
-                putils.create_driftmap_plot(
-                    spikes_data, dpi=100, figsize=[18, 12],
-                    fig_dir=fig_link, store_type='s3')
+            right_correct = (trials_right_correct & contrast).fetch()
+            if len(right_correct):
+                trial = np.random.choice(right_correct)
+                trial_drift_map = self.create_trial_raster(
+                    key, spikes_data, trial,
+                    'Correct Rgiht Contrast', contrast)
+                trials_driftmap.append(trial_driftmap.copy())
 
-            trial_driftmap = dict(
-                **key,
-                plotting_data_link=fig_link,
-                trial_start=trial['trial_start_time'],
-                trial_end=trial['trial_end_time'],
-                trial_stim_on=trial['trial_stim_on_time'],
-                trial_feedback=trial['trial_feedback_time'],
-                trial_id=trial['trial_id']
-            )
-
-            trials_driftmap.append(trial_driftmap.copy())
+            right_incorrect = (trials_right_incorrect & contrast).fetch()
+            if len(right_incorrect):
+                trial = np.random.choice(right_incorrect)
+                trial_drift_map = self.create_trial_raster(
+                    key, spikes_data, trial,
+                    'Correct Rgiht Contrast', contrast)
+                trials_driftmap.append(trial_driftmap.copy())
 
         self.insert(trials_driftmap)
