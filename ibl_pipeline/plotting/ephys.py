@@ -535,21 +535,21 @@ class Psth(dj.Computed):
 @schema
 class DepthRasterTemplate(dj.Lookup):
     definition = """
-    driftmap_template_idx:    int
+    depth_raster_template_idx:    int
     ---
-    driftmap_template: longblob
+    depth_raster_template: longblob
     """
     axis = go.Scatter(
-        # x=plot_xlim, # fetched from DriftMap
-        # y=plot_ylim, # fetched from DriftMap
+        # x=plot_xlim, # fetched from DepthRaster
+        # y=plot_ylim, # fetched from DepthRaster
         mode='markers',
         marker=dict(opacity=0),
         showlegend=False,
     )
 
     first_trial_mark = go.Scatter(
-        # x=[first_start, first_start], # first_start fetched from DriftMap
-        # y=[plot_ylim[1]-20, plot_ylim[1]-80], # fetched from DriftMap
+        # x=[first_start, first_start], # first_start fetched from DepthRaster
+        # y=[plot_ylim[1]-20, plot_ylim[1]-80], # fetched from DepthRaster
         mode='lines',
         line=dict(
             color='rgba(20, 40, 255, 1)',
@@ -557,8 +557,8 @@ class DepthRasterTemplate(dj.Lookup):
         name='Start of the first trial'
     )
     last_trial_mark = go.Scatter(
-        # x=[last_end, last_end], # last_end fetched from DriftMap
-        # y=[y_lim[1]-20, y_lim[1]-80], # fetched from DriftMap
+        # x=[last_end, last_end], # last_end fetched from DepthRaster
+        # y=[y_lim[1]-20, y_lim[1]-80], # fetched from DepthRaster
         mode='lines',
         line=dict(
             color='rgba(255, 20, 20, 1)',
@@ -594,18 +594,18 @@ class DepthRasterTemplate(dj.Lookup):
         ),
         xaxis=dict(
             title='Time (sec)',
-            # range=plot_xlim,  # fetched from DriftMap
+            # range=plot_xlim,  # fetched from DepthRaster
             showgrid=False
         ),
         yaxis=dict(
             title='Distance from the probe tip (um)',
-            # range=plot_ylim,  # fetched from DriftMap
+            # range=plot_ylim,  # fetched from DepthRaster
             showgrid=False
         ))
 
     trial_start_mark = go.Scatter(
-        # x=[trial_start, trial_start],  # fetched from DriftMapPerTrial
-        # y=plot_ylim,  # fetched from DriftMapPerTrial
+        # x=[trial_start, trial_start],  # fetched from DepthRasterPerTrial
+        # y=plot_ylim,  # fetched from DepthRasterPerTrial
         mode='lines',
         line=dict(
             color='rgba(20, 40, 255, 0.4)',
@@ -613,8 +613,8 @@ class DepthRasterTemplate(dj.Lookup):
         name='Trial start'
     )
     trial_end_mark = go.Scatter(
-        # x=[trial_end, trial_end], # fetched from DriftMapPerTrial
-        # y=plot_ylim, # fetched from DriftMapPerTrial
+        # x=[trial_end, trial_end], # fetched from DepthRasterPerTrial
+        # y=plot_ylim, # fetched from DepthRasterPerTrial
         mode='lines',
         line=dict(
             color='rgba(255, 20, 20, 0.4)',
@@ -623,8 +623,8 @@ class DepthRasterTemplate(dj.Lookup):
     )
 
     trial_stim_on_mark = go.Scatter(
-        # x=[trial_stim_on, trial_stim_on], # fetched from DriftMapPerTrial
-        # y=plot_ylim, # fetched from DriftMapPerTrial
+        # x=[trial_stim_on, trial_stim_on], # fetched from DepthRasterPerTrial
+        # y=plot_ylim, # fetched from DepthRasterPerTrial
         mode='lines',
         line=dict(
             color='rgba(200, 40, 255, 0.4)',
@@ -632,8 +632,8 @@ class DepthRasterTemplate(dj.Lookup):
         name='Stim on')
 
     trial_feedback_mark = go.Scatter(
-        # x=[trial_feedback, trial_feedback], # fetched from DriftMapPerTrial
-        # y=plot_ylim, # fetched from DriftMapPerTrial
+        # x=[trial_feedback, trial_feedback], # fetched from DepthRasterPerTrial
+        # y=plot_ylim, # fetched from DepthRasterPerTrial
         mode='lines',
         line=dict(
             color='rgba(60, 255, 10, 0.4)',
@@ -669,12 +669,12 @@ class DepthRasterTemplate(dj.Lookup):
         ),
         xaxis=dict(
             title='Time (sec)',
-            # range=plot_xlim,  # fetched from DriftMap
+            # range=plot_xlim,  # fetched from DepthRaster
             showgrid=False
         ),
         yaxis=dict(
             title='Depth relative to the probe tip (um)',
-            # range=plot_ylim,  # fetched from DriftMap
+            # range=plot_ylim,  # fetched from DepthRaster
             showgrid=False
         ))
 
@@ -682,12 +682,12 @@ class DepthRasterTemplate(dj.Lookup):
     data2 = [axis, trial_start_mark, trial_stim_on_mark,
              trial_feedback_mark, trial_end_mark]
     contents = [
-        dict(driftmap_template_idx=0,
-             driftmap_template=go.Figure(
+        dict(depth_raster_template_idx=0,
+             depth_raster_template=go.Figure(
                  data=data1,
                  layout=layout1).to_plotly_json()),
-        dict(driftmap_template_idx=0,
-             driftmap_template=go.Figure(
+        dict(depth_raster_template_idx=0,
+             depth_raster_template=go.Figure(
                  data=data2,
                  layout=layout2).to_plotly_json())]
 
@@ -702,7 +702,7 @@ class DepthRaster(dj.Computed):
     plot_xlim:                    blob
     first_start:                  float
     last_end:                     float
-    -> DriftMapTemplate
+    -> DepthRasterTemplate
     """
     key_source = ephys.ProbeInsertion & ephys.DefaultCluster
 
@@ -711,7 +711,7 @@ class DepthRaster(dj.Computed):
         spikes_data = putils.prepare_spikes_data(key)
 
         fig_link = path.join(
-            'driftmap_session',
+            'depthraster_session',
             str(key['subject_uuid']),
             key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
             str(key['probe_idx'])) + '.png'
@@ -719,7 +719,7 @@ class DepthRaster(dj.Computed):
         trials = (behavior.TrialSet.Trial & key).fetch()
 
         key['plot_xlim'], key['plot_ylim'] = \
-            putils.create_driftmap_plot(
+            putils.create_depthraster_plot(
                 spikes_data,
                 fig_dir=fig_link, store_type='s3')
 
@@ -727,7 +727,7 @@ class DepthRaster(dj.Computed):
             plotting_data_link=fig_link,
             first_start=trials[0]['trial_start_time'],
             last_end=trials[-1]['trial_end_time'],
-            driftmap_template_idx=0
+            depth_raster_template_idx=0
         )
 
         self.insert1(key)
@@ -761,7 +761,7 @@ class DepthRasterExampleTrial(dj.Computed):
     trial_feedback:               float
     trial_contrast:               float     # signed contrast of
     -> TrialType                  # type of trial
-    -> DriftMapTemplate
+    -> DepthRasterTemplate
     """
     key_source = ephys.ProbeInsertion & behavior.TrialSet & \
         ephys.DefaultCluster
@@ -780,7 +780,7 @@ class DepthRasterExampleTrial(dj.Computed):
         )
 
         fig_link = path.join(
-            'driftmap_session',
+            'depthraster_session',
             str(key['subject_uuid']),
             key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
             str(key['probe_idx']), str(trial['trial_id'])) + '.png'
@@ -790,7 +790,7 @@ class DepthRasterExampleTrial(dj.Computed):
                 spikes_data, dpi=100, figsize=[18, 12],
                 fig_dir=fig_link, store_type='s3')
 
-        trial_driftmap = dict(
+        trial_depthraster = dict(
             **key,
             plotting_data_link=fig_link,
             trial_start=trial['trial_start_time'],
@@ -825,7 +825,7 @@ class DepthRasterExampleTrial(dj.Computed):
         trials_right_incorrect = trials_all & 'trial_response_choice="CCW"' \
             & 'trial_feedback_type=-1'
 
-        trials_driftmap = []
+        trials_depthraster = []
         for contrast in dj.U('trial_signed_contrast') & trials_all:
             left_correct = (trials_left_correct & contrast).fetch()
             if len(left_correct):
@@ -833,7 +833,7 @@ class DepthRasterExampleTrial(dj.Computed):
                 trial_drift_map = self.create_trial_raster(
                     key, spikes_data, trial,
                     'Correct Left Contrast', contrast)
-                trials_driftmap.append(trial_driftmap.copy())
+                trials_depthraster.append(trial_depthraster.copy())
 
             left_incorrect = (trials_left_incorrect & contrast).fetch()
             if len(left_incorrect):
@@ -841,7 +841,7 @@ class DepthRasterExampleTrial(dj.Computed):
                 trial_drift_map = self.create_trial_raster(
                     key, spikes_data, trial,
                     'Incorrect Left Contrast', contrast)
-                trials_driftmap.append(trial_driftmap.copy())
+                trials_depthraster.append(trial_depthraster.copy())
 
             right_correct = (trials_right_correct & contrast).fetch()
             if len(right_correct):
@@ -849,7 +849,7 @@ class DepthRasterExampleTrial(dj.Computed):
                 trial_drift_map = self.create_trial_raster(
                     key, spikes_data, trial,
                     'Correct Rgiht Contrast', contrast)
-                trials_driftmap.append(trial_driftmap.copy())
+                trials_depthraster.append(trial_depthraster.copy())
 
             right_incorrect = (trials_right_incorrect & contrast).fetch()
             if len(right_incorrect):
@@ -857,6 +857,6 @@ class DepthRasterExampleTrial(dj.Computed):
                 trial_drift_map = self.create_trial_raster(
                     key, spikes_data, trial,
                     'Correct Rgiht Contrast', contrast)
-                trials_driftmap.append(trial_driftmap.copy())
+                trials_depthraster.append(trial_depthraster.copy())
 
-        self.insert(trials_driftmap)
+        self.insert(trials_depthraster)
