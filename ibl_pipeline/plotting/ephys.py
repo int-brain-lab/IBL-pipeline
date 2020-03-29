@@ -813,6 +813,7 @@ class DepthRasterExampleTrial(dj.Computed):
             'trial_response_choice',
             'trial_feedback_type',
             'trial_stim_on_time',
+            'trial_feedback_time',
             'trial_start_time',
             'trial_end_time',
             trial_duration='trial_end_time-trial_start_time',
