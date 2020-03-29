@@ -766,7 +766,8 @@ class DepthRasterExampleTrial(dj.Computed):
     key_source = ephys.ProbeInsertion & behavior.TrialSet & \
         ephys.DefaultCluster
 
-    def create_trial_raster(key, spikes_data, trial, trial_type, contrast):
+    def create_trial_raster(self, key, spikes_data, trial,
+                            trial_type, contrast):
         f = np.logical_and(
                 spikes_data['spikes_times'] < trial['trial_end_time'],
                 spikes_data['spikes_times'] > trial['trial_start_time'])
@@ -848,7 +849,7 @@ class DepthRasterExampleTrial(dj.Computed):
                 trial = np.random.choice(right_correct)
                 trial_drift_map = self.create_trial_raster(
                     key, spikes_data, trial,
-                    'Correct Rgiht Contrast', contrast)
+                    'Correct Right Contrast', contrast)
                 trials_depthraster.append(trial_depthraster.copy())
 
             right_incorrect = (trials_right_incorrect & contrast).fetch()
@@ -856,7 +857,7 @@ class DepthRasterExampleTrial(dj.Computed):
                 trial = np.random.choice(right_incorrect)
                 trial_drift_map = self.create_trial_raster(
                     key, spikes_data, trial,
-                    'Correct Rgiht Contrast', contrast)
+                    'Incorrect Right Contrast', contrast)
                 trials_depthraster.append(trial_depthraster.copy())
 
         self.insert(trials_depthraster)
