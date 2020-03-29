@@ -791,7 +791,7 @@ class DepthRasterExampleTrial(dj.Computed):
                 spikes_data, dpi=100, figsize=[18, 12],
                 fig_dir=fig_link, store_type='s3')
 
-        trial_depthraster = dict(
+        return dict(
             **key,
             plotting_data_link=fig_link,
             trial_start=trial['trial_start_time'],
