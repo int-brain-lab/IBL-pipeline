@@ -835,7 +835,7 @@ class DepthRasterExampleTrial(dj.Computed):
             left_correct = (trials_left_correct & contrast).fetch()
             if len(left_correct):
                 trial = np.random.choice(left_correct)
-                trial_drift_map = self.create_trial_raster(
+                trial_depthraster = self.create_trial_raster(
                     key, spikes_data, trial,
                     'Correct Left Contrast', contrast)
                 trials_depthraster.append(trial_depthraster.copy())
@@ -843,7 +843,7 @@ class DepthRasterExampleTrial(dj.Computed):
             left_incorrect = (trials_left_incorrect & contrast).fetch()
             if len(left_incorrect):
                 trial = np.random.choice(left_incorrect)
-                trial_drift_map = self.create_trial_raster(
+                trial_depthraster = self.create_trial_raster(
                     key, spikes_data, trial,
                     'Incorrect Left Contrast', contrast)
                 trials_depthraster.append(trial_depthraster.copy())
@@ -851,7 +851,7 @@ class DepthRasterExampleTrial(dj.Computed):
             right_correct = (trials_right_correct & contrast).fetch()
             if len(right_correct):
                 trial = np.random.choice(right_correct)
-                trial_drift_map = self.create_trial_raster(
+                trial_depthraster = self.create_trial_raster(
                     key, spikes_data, trial,
                     'Correct Right Contrast', contrast)
                 trials_depthraster.append(trial_depthraster.copy())
@@ -859,7 +859,7 @@ class DepthRasterExampleTrial(dj.Computed):
             right_incorrect = (trials_right_incorrect & contrast).fetch()
             if len(right_incorrect):
                 trial = np.random.choice(right_incorrect)
-                trial_drift_map = self.create_trial_raster(
+                trial_depthraster = self.create_trial_raster(
                     key, spikes_data, trial,
                     'Incorrect Right Contrast', contrast)
                 trials_depthraster.append(trial_depthraster.copy())
