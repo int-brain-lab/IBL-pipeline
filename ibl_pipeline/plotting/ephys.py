@@ -812,6 +812,7 @@ class DepthRasterExampleTrial(dj.Computed):
         trials_all = (behavior.TrialSet.Trial & key).proj(
             'trial_response_choice',
             'trial_feedback_type',
+            'trial_stim_on_time',
             'trial_start_time',
             'trial_end_time',
             trial_duration='trial_end_time-trial_start_time',
