@@ -797,7 +797,7 @@ class DepthRasterExampleTrial(dj.Computed):
             trial_end=trial['trial_end_time'],
             trial_stim_on=trial['trial_stim_on_time'],
             trial_feedback=trial['trial_feedback_time'],
-            trial_id=trial['trial_id']
+            trial_id=trial['trial_id'],
             drift_map_template_idx=1,
             trial_type=trial_type,
             trial_contrast=contrast
