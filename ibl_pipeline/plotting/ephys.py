@@ -719,7 +719,7 @@ class DepthRaster(dj.Computed):
         trials = (behavior.TrialSet.Trial & key).fetch()
 
         key['plot_xlim'], key['plot_ylim'] = \
-            putils.create_depthraster_plot(
+            putils.create_driftmap_plot(
                 spikes_data,
                 fig_dir=fig_link, store_type='s3')
 
