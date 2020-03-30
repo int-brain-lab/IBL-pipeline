@@ -686,7 +686,7 @@ class DepthRasterTemplate(dj.Lookup):
              depth_raster_template=go.Figure(
                  data=data1,
                  layout=layout1).to_plotly_json()),
-        dict(depth_raster_template_idx=0,
+        dict(depth_raster_template_idx=1,
              depth_raster_template=go.Figure(
                  data=data2,
                  layout=layout2).to_plotly_json())]
@@ -801,7 +801,7 @@ class DepthRasterExampleTrial(dj.Computed):
             trial_id=trial['trial_id'],
             depth_raster_template_idx=1,
             trial_type=trial_type,
-            trial_contrast=contrast
+            trial_contrast=contrast['trial_signed_contrast']
         )
 
     def make(self, key):
