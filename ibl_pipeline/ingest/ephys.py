@@ -165,7 +165,7 @@ class ProbeTrajectory(dj.Imported):
         coord_uuid = grf(key, 'coordinate_system')
         if coord_uuid != 'None':
             key['coordinate_system_uuid'] = \
-                (reference.CoordindateSystem &
+                (reference.CoordinateSystem &
                  {'coordinate_system_uuid': coord_uuid}).fetch1(
                     'coordinate_system_name')
 
