@@ -874,6 +874,6 @@ class DepthRasterExampleTrial(dj.Computed):
                 self.insert(trials_depthraster, skip_duplicates=True)
             except:
                 for trial_dr in trials_depthraster:
-                    self.insert1(trial_dr)
+                    self.insert1(trial_dr, skip_duplicates=True)
 
             trials_depthraster = []
