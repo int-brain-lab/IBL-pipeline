@@ -832,7 +832,7 @@ class DepthRasterExampleTrial(dj.Computed):
             & 'trial_feedback_type=-1'
 
         trials_depthraster = []
-        for contrast in dj.U('trial_signed_contrast') & trials_all:
+        for contrast in tqdm(dj.U('trial_signed_contrast') & trials_all):
             left_correct = (trials_left_correct & contrast).fetch()
             if len(left_correct):
                 trial = np.random.choice(left_correct)
