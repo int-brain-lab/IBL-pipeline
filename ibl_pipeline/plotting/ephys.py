@@ -631,7 +631,7 @@ class DepthRasterTemplate(dj.Lookup):
             width=1.5),
         name='Stim on')
 
-    trial_feedback_mark = go.Scatter(
+    trial_feedback_mark = go.Scatter( # if null, skip this line
         # x=[trial_feedback, trial_feedback], # fetched from DepthRasterPerTrial
         # y=plot_ylim, # fetched from DepthRasterPerTrial
         mode='lines',
@@ -758,7 +758,7 @@ class DepthRasterExampleTrial(dj.Computed):
     trial_start:                  float
     trial_end:                    float
     trial_stim_on:                float
-    trial_feedback:               float
+    trial_feedback=null:          float
     trial_contrast:               float     # signed contrast of
     -> TrialType                  # type of trial
     -> DepthRasterTemplate
@@ -791,19 +791,24 @@ class DepthRasterExampleTrial(dj.Computed):
                 spikes_data, dpi=100, figsize=[18, 12],
                 fig_dir=fig_link, store_type='s3')
 
-        return dict(
+        depth_raster = dict(
             **key,
             plotting_data_link=fig_link,
             trial_start=trial['trial_start_time'],
             trial_end=trial['trial_end_time'],
             trial_stim_on=trial['trial_stim_on_time'],
-            trial_feedback=trial['trial_feedback_time'],
             trial_id=trial['trial_id'],
             depth_raster_template_idx=1,
             trial_type=trial_type,
             trial_contrast=contrast['trial_signed_contrast'],
             plot_title='Depth Raster for a ' + trial_type + ' ' + str(contrast['trial_signed_contrast'])
         )
+
+        if not np.isnan(trial['trial_feedback_time']):
+            depth_raster.update(
+                trial_feedback=trial['trial_feedback_time']
+            )
+        return depth_raster
 
     def make(self, key):
 
