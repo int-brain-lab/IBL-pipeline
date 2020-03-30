@@ -865,4 +865,5 @@ class DepthRasterExampleTrial(dj.Computed):
                     'Incorrect Right Contrast', contrast)
                 trials_depthraster.append(trial_depthraster.copy())
 
-        self.insert(trials_depthraster)
+            self.insert(trials_depthraster, skip_duplicates=True)
+            trials_depthraster = []
