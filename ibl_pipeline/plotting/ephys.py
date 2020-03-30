@@ -644,8 +644,8 @@ class DepthRasterTemplate(dj.Lookup):
     layout2 = go.Layout(
         images=[dict(
             source='',  # to be replaced by the s3 link
-            # sizex=plot_xlim[1] - plot_xlim[0], # fetched from DriftmapPerTrial
-            # sizey=plot_ylim[1] - plot_ylim[0], # fetched from DriftmapPerTrial
+            # sizex=plot_xlim[1] - plot_xlim[0], # fetched from DepthRasterPerTrial
+            # sizey=plot_ylim[1] - plot_ylim[0], # fetched from DepthRasterPerTrial
             # x=x_lim[0], # fetched from DriftmapTrial
             # y=y_lim[1], # fetched from Driftmap
             xref='x',
@@ -663,18 +663,18 @@ class DepthRasterTemplate(dj.Lookup):
             pad=0
         ),
         title=dict(
-            text='Depth raster of one trial',
+            # text=plot_title, # fetched from DepthRasterPerTrial
             x=0.45,
             y=0.9
         ),
         xaxis=dict(
             title='Time (sec)',
-            # range=plot_xlim,  # fetched from DepthRaster
+            # range=plot_xlim,  # fetched from DepthRasterPerTrial
             showgrid=False
         ),
         yaxis=dict(
             title='Depth relative to the probe tip (um)',
-            # range=plot_ylim,  # fetched from DepthRaster
+            # range=plot_ylim,  # fetched from DepthRasterPerTrial
             showgrid=False
         ))
 
@@ -802,7 +802,7 @@ class DepthRasterExampleTrial(dj.Computed):
             depth_raster_template_idx=1,
             trial_type=trial_type,
             trial_contrast=contrast['trial_signed_contrast'],
-            plot_title=trial_type + ' ' + str(contrast['trial_signed_contrast'])
+            plot_title='Depth Raster for a ' + trial_type + ' ' + str(contrast['trial_signed_contrast'])
         )
 
     def make(self, key):
