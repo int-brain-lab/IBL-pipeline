@@ -801,7 +801,8 @@ class DepthRasterExampleTrial(dj.Computed):
             trial_id=trial['trial_id'],
             depth_raster_template_idx=1,
             trial_type=trial_type,
-            trial_contrast=contrast['trial_signed_contrast']
+            trial_contrast=contrast['trial_signed_contrast'],
+            plot_title=trial_type + ' ' + str(contrast['trial_signed_contrast'])
         )
 
     def make(self, key):
