@@ -872,7 +872,7 @@ class DepthRasterExampleTrial(dj.Computed):
 
             try:
                 self.insert(trials_depthraster, skip_duplicates=True)
-            except DataJointError:
+            except:
                 for trial_dr in trials_depthraster:
                     self.insert1(trial_dr)
 
