@@ -11,6 +11,7 @@ import os.path as path
 from ibl_pipeline.ingest import alyxraw, InsertBuffer
 import sys
 import uuid
+import re
 
 
 logger = logging.getLogger(__name__)
