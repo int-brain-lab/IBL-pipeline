@@ -625,11 +625,11 @@ class Food(dj.Computed):
     def make(self, key):
         key_food = key.copy()
         key['uuid'] = key['food_uuid']
-        key_strain['food_name'] = grf(key, 'name')
+        key_food['food_name'] = grf(key, 'name')
 
         description = grf(key, 'description')
         if description != 'None':
-            key_strain['food_description'] = description
+            key_food['food_description'] = description
 
         self.insert1(key_food)
 
