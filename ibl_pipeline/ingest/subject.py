@@ -668,7 +668,7 @@ class Enrichment(dj.Computed):
     enrichment_ts=CURRENT_TIMESTAMP:    timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.strain"').proj(
-        strain_uuid='uuid')
+        enrichment_uuid='uuid')
 
     def make(self, key):
         key_enrichment = key.copy()

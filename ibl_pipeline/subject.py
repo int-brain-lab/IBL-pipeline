@@ -123,6 +123,7 @@ class Subject(dj.Manual):
     sex:			                enum("M", "F", "U")	# sex
     subject_birth_date=null:	    date			    # birth date
     ear_mark=null:			        varchar(255)		# ear mark
+    -> [nullable] Strain.proj(subject_strain="strain_name")
     -> [nullable] Line.proj(subject_line="line_name")
     -> [nullable] Source.proj(subject_source='source_name')
     protocol_number:                tinyint         	# protocol number
