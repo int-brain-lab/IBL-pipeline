@@ -9,7 +9,7 @@ from ibl_pipeline.ingest import action as action_ingest
 from ibl_pipeline.ingest import acquisition as acquisition_ingest
 from ibl_pipeline.ingest import data as data_ingest
 from ibl_pipeline.ingest import ephys as ephys_ingest
-from ibl_pipeline import reference, subject, action, acquisition, data
+from ibl_pipeline import reference, subject, action, acquisition, data, ephys
 from ingest_utils import copy_table
 import table_names as tables
 
