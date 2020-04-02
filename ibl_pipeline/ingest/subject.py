@@ -688,9 +688,9 @@ class Housing(dj.Computed):
     (housing_uuid) -> alyxraw.AlyxRaw
     ---
     cage_name:                      varchar(255)
-    food_name:                      varchar(255)
+    food_name=null:                 varchar(255)
     cage_type_name=null:            varchar(255)
-    enrichment_name:                varchar(255)
+    enrichment_name=null:           varchar(255)
     cage_cleaning_frequency=null:   int
     light_cycle=null:               int
     housing_description='':         varchar(255)
