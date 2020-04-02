@@ -712,7 +712,7 @@ class Housing(dj.Computed):
 
         enrichment_uuid = grf(key, 'enrichment')
         if enrichment_uuid != 'None':
-            key_enrichment['enrichment_name'] = \
+            key_housing['enrichment_name'] = \
                 (Enrichment &
                  dict(enrichment_uuid=uuid.UUID(enrichment_uuid))).fetch1(
                     'enrichment_name')
