@@ -71,8 +71,8 @@ def get_raw_field(key, field, multiple_entries=False, model=None):
     else:
         query = alyxraw.AlyxRaw.Field & key & 'fname="{}"'.format(field)
 
-    return query.fetch('fvalue') \
-        if multiple_entries else query.fetch1('fvalue')
+    return query.fetch1('fvalue') \
+        if not multiple_entries and len(query) else query.fetch('fvalue')
 
 
 class InsertBuffer(object):
