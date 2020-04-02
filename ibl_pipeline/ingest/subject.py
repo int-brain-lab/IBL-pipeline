@@ -667,7 +667,7 @@ class Enrichment(dj.Computed):
     enrichment_decription='':           varchar(255)
     enrichment_ts=CURRENT_TIMESTAMP:    timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model="subjects.strain"').proj(
+    key_source = (alyxraw.AlyxRaw & 'model="misc.enrichment"').proj(
         enrichment_uuid='uuid')
 
     def make(self, key):
