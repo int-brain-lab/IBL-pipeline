@@ -86,5 +86,5 @@ def init():
     )
 
     EPHYS_TABLES = (
-        'Probe'
+        'Probe',
     )
