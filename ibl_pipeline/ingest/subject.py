@@ -729,8 +729,8 @@ class Housing(dj.Computed):
             key_housing['cage_clean_frequency'] = frequency
 
         light_cycle = grf(key, 'light_cycle')
-        if light_cycle and light_cycle != 'None':
-            key_housing['light_cycle'] = frequency
+        if light_cycle != 'None':
+            key_housing['light_cycle'] = light_cycle
 
         description = grf(key, 'description')
         if description != 'None':
