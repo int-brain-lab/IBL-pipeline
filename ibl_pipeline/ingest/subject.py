@@ -702,7 +702,7 @@ class Housing(dj.Computed):
     def make(self, key):
         key_housing = key.copy()
         key['uuid'] = key['housing_uuid']
-        key_housing['cage_name'] = grf(key, 'name')
+        key_housing['cage_name'] = grf(key, 'cage_name')
 
         food_uuid = grf(key, 'food')
         if food_uuid != 'None':
@@ -724,7 +724,7 @@ class Housing(dj.Computed):
                  dict(cage_type_uuid=uuid.UUID(cage_type_uuid))).fetch1(
                     'cage_type_name')
 
-        frequency = grf(key, 'cage_clean_frequency')
+        frequency = grf(key, 'cage_cleaning_frequency_days')
         if frequency != 'None':
             key_housing['cage_clean_frequency'] = frequency
 
@@ -758,9 +758,9 @@ class SubjectHousing(dj.Computed):
         key_subj_housing = key.copy()
         key['uuid'] = key['subject_housing_uuid']
 
-        key_subj_housing['housing_start_time'] = grf(key, 'start_time')
+        key_subj_housing['housing_start_time'] = grf(key, 'start_datetime')
 
-        end_time = grf(key, 'end_time')
+        end_time = grf(key, 'end_datetime')
         if end_time != 'None':
             key_subj_housing['housing_end_time'] = end_time
 
