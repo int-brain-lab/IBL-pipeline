@@ -664,7 +664,7 @@ class Enrichment(dj.Computed):
     (enrichment_uuid) -> alyxraw.AlyxRaw
     ---
     enrichment_name:                    varchar(255)
-    enrichment_decription='':           varchar(255)
+    enrichment_description='':           varchar(255)
     enrichment_ts=CURRENT_TIMESTAMP:    timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="misc.enrichment"').proj(
