@@ -6,7 +6,7 @@ Create global variables for table names
 def init():
 
     global REF_TABLES, SUBJECT_TABLES, ACTION_TABLES, \
-        ACQUISITION_TABLES, DATA_TABLES
+        ACQUISITION_TABLES, DATA_TABLES, EPHYS_TABLES
 
     REF_TABLES = (
         'Lab',
