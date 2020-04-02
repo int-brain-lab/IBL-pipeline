@@ -301,7 +301,7 @@ class Housing(dj.Manual):
 
 
 @schema
-class SubjectHousing(dj.Computed):
+class SubjectHousing(dj.Manual):
     definition = """
     -> Subject
     -> Housing
