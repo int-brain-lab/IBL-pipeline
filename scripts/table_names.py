@@ -41,7 +41,12 @@ def init():
         'UserHistory',
         'GenotypeTest',
         'Zygosity',
-        'Implant'
+        'Implant',
+        'Food',
+        'CageType',
+        'Enrichment',
+        'Housing',
+        'SubjectHousing'
     )
 
     ACTION_TABLES = (
