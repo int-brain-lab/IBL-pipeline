@@ -252,6 +252,68 @@ class Weaning(dj.Manual):
 
 
 @schema
+class Food(dj.Lookup):
+    definition = """
+    food_name:              varchar(255)
+    ---
+    food_uuid:              uuid
+    food_description='':    varchar(255)
+    food_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+
+@schema
+class CageType(dj.Lookup):
+    definition = """
+    cage_type_name:                     varchar(255)
+    ---
+    cage_type_uuid:                     uuid
+    cage_type_description='':           varchar(255)
+    cage_type_ts=CURRENT_TIMESTAMP:     timestamp
+    """
+
+
+@schema
+class Enrichment(dj.Lookup):
+    definition = """
+    enrichment_name:                    varchar(255)
+    ---
+    enrichment_uuid:                    uuid
+    enrichment_description='':          varchar(255)
+    enrichment_ts=CURRENT_TIMESTAMP:    timestamp
+    """
+
+
+@schema
+class Housing(dj.Manual):
+    definition = """
+    cage_name:                      varchar(255)
+    ---
+    housing_uuid:                   uuid
+    -> [nullable] Food
+    -> [nullable] CageType
+    -> [nullable] Enrichment
+    cage_cleaning_frequency=null:   int
+    light_cycle=null:               int
+    housing_description='':         varchar(255)
+    housing_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+
+@schema
+class SubjectHousing(dj.Computed):
+    definition = """
+    -> Subject
+    -> Housing
+    ---
+    subject_housing_uuid:     uuid
+    housing_start_time:       datetime
+    housing_end_time=null:    datetime
+    subject_housing_ts=CURRENT_TIMESTAMP    :  timestamp
+    """
+
+
+@schema
 class GenotypeTest(dj.Manual):
     # <class 'subjects.models.Subject'>
     # <class 'subjects.models.Zygosity'>
