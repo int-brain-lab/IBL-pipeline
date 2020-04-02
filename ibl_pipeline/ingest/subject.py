@@ -764,7 +764,7 @@ class SubjectHousing(dj.Computed):
         if end_time != 'None':
             key_subj_housing['housing_end_time'] = end_time
 
-        key_subj_housing['subject_uuid'] = grf(key, subject)
+        key_subj_housing['subject_uuid'] = grf(key, 'subject')
 
         housing = grf(key, 'housing')
         key_subj_housing['cage_name'] = \
