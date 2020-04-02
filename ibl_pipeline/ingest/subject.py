@@ -767,6 +767,8 @@ class SubjectHousing(dj.Computed):
         key_subj_housing['subject_uuid'] = grf(key, 'subject')
 
         housing = grf(key, 'housing')
+        if housing == 'None':
+            return
         key_subj_housing['cage_name'] = \
             (Housing & dict(housing_uuid=uuid.UUID(housing))).fetch1(
                 'cage_name')
