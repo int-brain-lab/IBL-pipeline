@@ -689,7 +689,7 @@ class Housing(dj.Computed):
     ---
     cage_name:                      varchar(255)
     food_name:                      varchar(255)
-    cage_type_name:                 varchar(255)
+    cage_type_name=null:            varchar(255)
     enrichment_name:                varchar(255)
     cage_cleaning_frequency=null:   int
     light_cycle=null:               int
