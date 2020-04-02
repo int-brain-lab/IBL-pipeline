@@ -215,6 +215,7 @@ class Subject(dj.Computed):
     ---
     subject_nickname:			varchar(255)		# nickname
     sex:			            enum("M", "F", "U")	# sex
+    subject_strain=null:        varchar(255)        # strain of the subject
     subject_birth_date=null:    date			    # birth date
     subject_line=null:          varchar(255)        # line of the subject
     protocol_number:	        tinyint         	# protocol number
@@ -607,6 +608,170 @@ class Death(dj.Computed):
         key['uuid'] = key['subject_uuid']
         key_death['death_date'] = grf(key, 'death_date')
         self.insert1(key_death)
+
+
+@schema
+class Food(dj.Computed):
+    definition = """
+    (food_uuid) -> alyxraw.AlyxRaw
+    ---
+    food_name:              varchar(255)
+    food_description='':    varchar(255)
+    food_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+    key_source = (alyxraw.AlyxRaw & 'model="misc.food"').proj(
+        food_uuid='uuid')
+
+    def make(self, key):
+        key_food = key.copy()
+        key['uuid'] = key['food_uuid']
+        key_strain['food_name'] = grf(key, 'name')
+
+        description = grf(key, 'description')
+        if description != 'None':
+            key_strain['food_description'] = description
+
+        self.insert1(key_food)
+
+
+@schema
+class CageType(dj.Computed):
+    definition = """
+    (cage_type_uuid) -> alyxraw.AlyxRaw
+    ---
+    cage_type_name:                     varchar(255)
+    cage_type_description='':           varchar(255)
+    cage_type_ts=CURRENT_TIMESTAMP:     timestamp
+    """
+    key_source = (alyxraw.AlyxRaw & 'model="misc.cagetype"').proj(
+        cage_type_uuid='uuid')
+
+    def make(self, key):
+        key_cage_type = key.copy()
+        key['uuid'] = key['cage_type_uuid']
+        key_cage_type['cage_type_name'] = grf(key, 'name')
+
+        description = grf(key, 'description')
+        if description != 'None':
+            key_cage_type['cage_type_description'] = description
+
+        self.insert1(key_cage_type)
+
+
+@schema
+class Enrichment(dj.Computed):
+    definition = """
+    (enrichment_uuid) -> alyxraw.AlyxRaw
+    ---
+    enrichment_name:                    varchar(255)
+    enrichment_decription:              varchar(255)
+    enrichment_ts=CURRENT_TIMESTAMP:    timestamp
+    """
+    key_source = (alyxraw.AlyxRaw & 'model="subjects.strain"').proj(
+        strain_uuid='uuid')
+
+    def make(self, key):
+        key_enrichment = key.copy()
+        key['uuid'] = key['enrichment_uuid']
+        key_enrichment['enrichment_name'] = grf(key, 'name')
+
+        description = grf(key, 'description')
+        if description != 'None':
+            key_enrichment['enrichment_description'] = description
+
+        self.insert1(key_enrichment)
+
+
+@schema
+class Housing(dj.Computed):
+    definition = """
+    (housing_uuid) -> alyxraw.AlyxRaw
+    ---
+    cage_name:                      varchar(255)
+    food_name:                      varchar(255)
+    cage_type_name:                 varchar(255)
+    enrichment_name:                varchar(255)
+    cage_cleaning_frequency=null:   int
+    light_cycle=null:               int
+    housing_description='':         varchar(255)
+    housing_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+    key_source = (alyxraw.AlyxRaw & 'model="misc.housing"').proj(
+        housing_uuid='uuid')
+
+    def make(self, key):
+        key_housing = key.copy()
+        key['uuid'] = key['housing_uuid']
+        key_housing['cage_name'] = grf(key, 'name')
+
+        food_uuid = grf(key, 'food')
+        if food_uuid != 'None':
+            key_housing['food_name'] = \
+                (Food & dict(food_uuid=uuid.UUID(food_uuid))).fetch1(
+                    'food_name')
+
+        enrichment_uuid = grf(key, 'enrichment')
+        if enrichment_uuid != 'None':
+            key_enrichment['enrichment_name'] = \
+                (Enrichment &
+                 dict(enrichment_uuid=uuid.UUID(enrichment_uuid))).fetch1(
+                    'enrichment_name')
+
+        cage_type_uuid = grf(key, 'cage_type')
+        if cage_type_uuid != 'None':
+            key_housing['cage_type_name'] = \
+                (CageType &
+                 dict(cage_type_uuid=uuid.UUID(cage_type_uuid))).fetch1(
+                    'cage_type_name')
+
+        frequency = grf(key, 'cage_clean_frequency')
+        if frequency != 'None':
+            key_housing['cage_clean_frequency'] = frequency
+
+        light_cycle = grf(key, 'light_cycle')
+        if light_cycle != 'None':
+            key_housing['light_cycle'] = frequency
+
+        description = grf(key, 'description')
+        if description != 'None':
+            key_housing['housing_description'] = description
+
+        self.insert1(key_housing)
+
+
+@schema
+class SubjectHousing(dj.Computed):
+    definition = """
+    (subject_housing_uuid) -> alyxraw.AlyxRaw
+    ---
+    housing_start_time:       datetime
+    housing_end_time=null:    datetime
+    cage_name:                varchar(255)
+    subject_uuid:             uuid
+    subject_housing_ts=CURRENT_TIMESTAMP    :  timestamp
+    """
+    key_source = (alyxraw.AlyxRaw & 'model="misc.housingsubject"').proj(
+        subject_housing_uuid='uuid')
+
+    def make(self, key):
+
+        key_subj_housing = key.copy()
+        key['uuid'] = key['subject_housing_uuid']
+
+        key_subj_housing['housing_start_time'] = grf(key, 'start_time')
+
+        end_time = grf(key, 'end_time')
+        if end_time != 'None':
+            key_subj_housing['housing_end_time'] = end_time
+
+        key_subj_housing['subject_uuid'] = grf(key, subj)
+
+        housing = grf(key, 'housing')
+        key_subj_housing['cage_name'] = \
+            (Housing & dict(housing_uuid=uuid.UUID(housing))).fetch1(
+                'cage_name')
+
+        self.insert1(key_subj_housing)
 
 
 @schema
