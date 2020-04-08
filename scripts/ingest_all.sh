@@ -12,6 +12,8 @@ python delete_real_tables_for_updates.py
 date
 python ingest_alyx_real.py
 date
+python auto_update_subject_fields.py
+date
 python ingest_behavior.py
 date
 python analyses_behavior.py
