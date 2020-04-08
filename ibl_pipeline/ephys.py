@@ -12,7 +12,7 @@ import alf.io
 try:
     from oneibl.one import ONE
     one = ONE()
-except:
+except Exception:
     print('ONE not set up')
 
 mode = environ.get('MODE')
@@ -201,22 +201,22 @@ class ProbeTrajectory(dj.Imported):
             self.insert1(traj)
 
 # needs to be further adjusted by adding channels.mlapdvIntended
-@schema
-class ChannelBrainLocation(dj.Imported):
-    definition = """
-    -> ProbeInsertion
-    -> Probe.Channel
-    -> reference.Atlas
-    histology_revision: varchar(64)
-    ---
-    # from channels.brainlocation
-    version_time:       datetime
-    channel_ap:         float           # anterior posterior CCF coordinate (um)
-    channel_dv:         float           # dorsal ventral CCF coordinate (um)
-    channel_lr:         float           # left right CCF coordinate (um)
-    -> reference.BrainLocationAcronym.proj(channel_brain_location='acronym')   # acronym of the brain location
-    channel_raw_row:        smallint    # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
-    """
+# @schema
+# class ChannelBrainLocation(dj.Imported):
+#     definition = """
+#     -> ProbeInsertion
+#     -> Probe.Channel
+#     -> reference.Atlas
+#     histology_revision: varchar(64)
+#     ---
+#     # from channels.brainlocation
+#     version_time:       datetime
+#     channel_ap:         float           # anterior posterior CCF coordinate (um)
+#     channel_dv:         float           # dorsal ventral CCF coordinate (um)
+#     channel_lr:         float           # left right CCF coordinate (um)
+#     -> reference.BrainLocationAcronym.proj(channel_brain_location='acronym')   # acronym of the brain location
+#     channel_raw_row:        smallint    # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
+#     """
 
 
 @schema
