@@ -198,7 +198,7 @@ class ProbeTrajectory(dj.Imported):
         for traj in trajs:
             if not len(traj['coordinate_system_name']):
                 traj.pop('coordinate_system_name')
-            self.insert1(traj)
+            self.insert1(traj, skip_duplicates=True)
 
 # needs to be further adjusted by adding channels.mlapdvIntended
 # @schema
