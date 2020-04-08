@@ -572,22 +572,22 @@ class AlignedTrialSpikes(dj.Computed):
         self.insert(trial_spks)
 
 
-@schema
-class LFP(dj.Imported):
-    definition = """
-    -> ProbeInsertion
-    ---
-    lfp_timestamps:       blob@ephys    # Timestamps for LFP timeseries in seconds
-    lfp_start_time:       float         # (seconds)
-    lfp_end_time:         float         # (seconds)
-    lfp_duration:         float         # (seconds)
-    lfp_sampling_rate:    float         # samples per second
-    """
+# @schema
+# class LFP(dj.Imported):
+#     definition = """
+#     -> ProbeInsertion
+#     ---
+#     lfp_timestamps:       blob@ephys    # Timestamps for LFP timeseries in seconds
+#     lfp_start_time:       float         # (seconds)
+#     lfp_end_time:         float         # (seconds)
+#     lfp_duration:         float         # (seconds)
+#     lfp_sampling_rate:    float         # samples per second
+#     """
 
-    class Channel(dj.Part):
-        definition = """
-        -> master
-        -> Probe.Channel
-        ---
-        lfp: blob@ephys           # recorded lfp on this channel
-        """
+#     class Channel(dj.Part):
+#         definition = """
+#         -> master
+#         -> Probe.Channel
+#         ---
+#         lfp: blob@ephys           # recorded lfp on this channel
+#         """
