@@ -442,7 +442,7 @@ class SubjectProject(dj.Computed):
                         dict(project_uuid=uuid.UUID(proj_uuid))).fetch1(
                             'project_name')
                 self.insert1(key_sp)
-            except:
+            except Exception:
                 print(key['subject_uuid'])
 
 
