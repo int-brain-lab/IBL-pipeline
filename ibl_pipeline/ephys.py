@@ -27,26 +27,17 @@ dj.config['safemode'] = False
 
 
 @schema
-class Probe(dj.Lookup):
+class ProbeModel(dj.Lookup):
     definition = """
     # Description of a particular model of probe
-    probe_model_name:       varchar(128)        # String naming probe model, from probe.description
-    probe_serial_number:    varchar(64)         # serial number of a probe
+    probe_name           : varchar(128)
     ---
-    channel_counts:         smallint            # number of channels in the probe
-    probe_ts=CURRENT_TIMESTAMP :   timestamp
+    probe_uuid           : uuid
+    probe_model          : varchar(32)                  # 3A, 3B
+    probe_manufacturer   : varchar(32)
+    probe_description=null : varchar(2048)
+    probe_model_ts=CURRENT_TIMESTAMP : timestamp
     """
-
-    class Channel(dj.Part):
-        definition = """
-        # positional information about every channel on this probe
-        -> master
-        channel_id:     smallint         # id of a channel on the probe
-        ---
-        channel_x_pos=null:  float       # x position relative to the tip of the probe in um, on the width of the shank
-        channel_y_pos=null:  float       # y position relative to the tip of the probe in um, the depth where 0 is the deepest site, and positive above this
-        channel_shank=null:  tinyint     # shank of the channel, 1 or 2
-        """
 
 
 @schema
@@ -119,36 +110,13 @@ class ProblematicDataSet(dj.Manual):
 class ProbeInsertion(dj.Imported):
     definition = """
     -> acquisition.Session
-    probe_idx:    int    # probe insertion number (0 corresponds to probe00, 1 corresponds to probe01)
+    probe_idx                   : int           # probe insertion number (0 corresponds to probe00, 1 corresponds to probe01)
     ---
-    probe_label=null: varchar(32)  # probe label
-    probe_insertion_uuid=null: uuid    # probe insertion uuid
-    -> Probe
+    probe_label=null            : varchar(32)   # name in alyx table experiments.probeinsertion
+    probe_insertion_uuid=null   : uuid          # probe insertion uuid
+    -> [nullable] ProbeModel
     probe_insertion_ts=CURRENT_TIMESTAMP  :  timestamp
     """
-    key_source = CompleteClusterSession - ProblematicDataSet
-
-    def make(self, key):
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        dtypes = ['probes.description']
-        files = one.load(eID, dataset_types=dtypes, download_only=True)
-        ses_path = alf.io.get_session_path(files[0])
-        probes = alf.io.load_object(ses_path.joinpath('alf'), 'probes')
-        for p in probes['description']:
-            # ingest probe information, including probe model and serial
-            probe = dict(
-                probe_model_name=p['model'],
-                probe_serial_number=str(p['serial']),
-                channel_counts=960)
-            Probe.insert1(probe, skip_duplicates=True)
-
-            # ingest probe insertion
-            idx = int(re.search('probe.?0([0-3])', p['label']).group(1))
-            key.update(probe_idx=idx,
-                       probe_model_name=p['model'],
-                       probe_label=p['label'],
-                       probe_serial_number=str(p['serial']))
-            self.insert1(key)
 
 
 @schema
@@ -279,7 +247,7 @@ class DefaultCluster(dj.Imported):
     cluster_spikes_samples=null:     blob@ephys      # Time of spikes, measured in units of samples in their own electrophysiology binary file.
     cluster_ts=CURRENT_TIMESTAMP  :  timestamp
     """
-    key_source = ProbeInsertion
+    key_source = ProbeInsertion & (CompleteClusterSession - ProblematicDataSet)
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
