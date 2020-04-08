@@ -74,7 +74,7 @@ class ProbeInsertion(dj.Imported):
         probe_uuid = grf(key, 'model')
         if probe_uuid != 'None':
             key_pi['probe_name'] = \
-                (Probe & dict(probe_uuid=probe_uuid)).fetch1(
+                (ProbeModel & dict(probe_uuid=probe_uuid)).fetch1(
                 'probe_name')
 
         key_pi['probe_label'] = grf(key, 'name')
