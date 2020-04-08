@@ -79,10 +79,10 @@ class ProbeInsertion(dj.Imported):
 
         key_pi['probe_label'] = grf(key, 'name')
 
-        if re.search('probe.?0([0-3])',
+        if re.search('[Pp]robe.?0([0-3])',
                      key_pi['probe_label']):
             key_pi['probe_idx'] = \
-                re.search('probe.?0([0-3])',
+                re.search('[Pp]robe.?0([0-3])',
                           key_pi['probe_label']).group(1)
         elif re.search('g([0-3])',
                        key_pi['probe_label']):
