@@ -11,15 +11,15 @@ schema = dj.schema(dj.config.get('database.prefix', '') +
 
 
 @schema
-class Probe(dj.Imported):
+class ProbeModel(dj.Imported):
     definition = """
     (probe_uuid) -> alyxraw.AlyxRaw
     ---
-    probe_name:                     varchar(128)        # String naming probe model, from probe.description
-    probe_model:                    varchar(32)         # 3A, 3B
-    probe_manufacturer:             varchar(32)
-    probe_description=null:             varchar(2048)
-    probe_ingest_ts=CURRENT_TIMESTAMP : timestamp
+    probe_name                          : varchar(128)        # String naming probe model, from probe.description
+    probe_model                         : varchar(32)         # 3A, 3B
+    probe_manufacturer                  : varchar(32)
+    probe_description=null              : varchar(2048)
+    probe_model_ts=CURRENT_TIMESTAMP    : timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="experiments.probemodel"').proj(
         probe_uuid='uuid')
@@ -48,11 +48,11 @@ class ProbeInsertion(dj.Imported):
     definition = """
     (probe_insertion_uuid) -> alyxraw.AlyxRaw
     ---
-    probe_idx:            int          # 0 for probe00, 1 for probe01
-    probe_label=null:     varchar(255) # probe_name in the alyx model experiments.probeinsertion
-    subject_uuid:         uuid         # subject uuid from session
-    session_start_time:   datetime     # session start time from session
-    probe_name=null:      varchar(32)  # probe model name, 3A, 3B
+    probe_idx               : int          # 0 for probe00, 1 for probe01
+    probe_label=null        : varchar(255) # probe_name in the alyx model experiments.probeinsertion
+    subject_uuid            : uuid         # subject uuid from session
+    session_start_time      : datetime     # session start time from session
+    probe_model_name=null   : varchar(32)  # probe model name, 3A, 3B
     probe_insertion_ts=CURRENT_TIMESTAMP :   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="experiments.probeinsertion"').proj(
