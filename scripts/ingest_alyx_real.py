@@ -39,6 +39,15 @@ for table in tables.DATA_TABLES:
     print(table)
     copy_table(data, data_ingest, table)
 
-for table in tables.EPHYS_TABLES:
-    print(table)
-    copy_table(ephys, ephys_ingest, table)
+
+# ephys tables
+table = 'Probe'
+print(table)
+copy_table(ephys, ephys_ingest, table)
+
+table = 'ProbeInsertion'
+print(table)
+copy_table(ephys, ephys_ingest, table, allow_direct_insert=True)
+
+# populate ProbeTrajectory
+ephys.ProbeTrajectory.populate(suppress_errors=True, display_progress=True)
