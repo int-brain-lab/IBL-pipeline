@@ -29,29 +29,14 @@ logger.log(30, 'Ingesting CompleteClusterSession...')
 ephys.CompleteClusterSession.populate(**kargs)
 
 complete_cluster_time = time.time()
-logger.log(30, 'Ingestion time of ProbeInsertion {}'.format(
+logger.log(30, 'Ingestion time of CompleteCluster {}'.format(
     complete_cluster_time-start_time))
-
-logger.log(30, 'Ingesting ProbeInsertion...')
-ephys.ProbeInsertion.populate(**kargs)
-
-probe_insertion_time = time.time()
-logger.log(30, 'Ingestion time of ProbeInsertion {}'.format(
-    probe_insertion_time-complete_cluster_time))
-
-
-logger.log(30, 'Ingesting ProbeTrajectory...')
-ephys.ProbeTrajectory.populate(**kargs)
-
-probe_trajectory_time = time.time()
-logger.log(30, 'Ingestion time of ProbeTrajectory {}'.format(
-    probe_trajectory_time-probe_insertion_time))
 
 logger.log(30, 'Ingesting ChannelGroup...')
 ephys.ChannelGroup.populate(**kargs)
 channel_group_time = time.time()
 logger.log(30, 'Ingestion time of ChannelGroup {}'.format(
-    channel_group_time-probe_trajectory_time))
+    channel_group_time-complete_cluster_time))
 
 logger.log(30, 'Ingesting Cluster...')
 ephys.DefaultCluster.populate(**kargs)
