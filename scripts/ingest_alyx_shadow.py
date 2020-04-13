@@ -68,6 +68,6 @@ data.DataSetType.populate(**kargs)
 
 # ephys tables
 print('------------ Ingesting ephys tables -----------')
-ephys.Probe.populate(**kargs)
+ephys.ProbeModel.populate(**kargs)
 ephys.ProbeInsertion.populate(**kargs)
 ephys.ProbeTrajectory.populate(**kargs)

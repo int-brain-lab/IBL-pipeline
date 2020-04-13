@@ -41,7 +41,7 @@ for table in tables.DATA_TABLES:
 
 
 # ephys tables
-table = 'Probe'
+table = 'ProbeModel'
 print(table)
 copy_table(ephys, ephys_ingest, table)
 
