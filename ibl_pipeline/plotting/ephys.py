@@ -730,11 +730,11 @@ class DepthRaster(dj.Computed):
                 fig_dir=fig_link_full, store_type='s3')
 
         putils.create_driftmap_plot(
-            spikes_data, dpi=25, fig_link=fig_link_low,
+            spikes_data, dpi=25, fig_dir=fig_link_low,
             store_type='s3')
 
         putils.create_driftmap_plot(
-            spikes_data, dpi=10, fig_link=fig_link_very_low,
+            spikes_data, dpi=10, fig_dir=fig_link_very_low,
             store_type='s3')
 
         key.update(
