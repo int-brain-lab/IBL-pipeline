@@ -742,11 +742,12 @@ def create_driftmap_plot(spike_data, figsize=[90, 90], dpi=50,
     fig.add_axes(ax)
     if fig_dir:
         store_fig_external(fig, store_type, fig_dir)
+        plt.close(fig)
         return x_lim, y_lim
     else:
         encoded_string = convert_fig_to_encoded_string(fig)
+        plt.close(fig)
         return encoded_string, x_lim, y_lim
-    plt.close(fig)
 
 
 def get_legend(trials_type, legend_group):
