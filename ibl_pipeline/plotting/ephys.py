@@ -697,11 +697,13 @@ class DepthRaster(dj.Computed):
     definition = """
     -> ephys.ProbeInsertion
     ---
-    plotting_data_link=null:      varchar(255)
-    plot_ylim:                    blob
-    plot_xlim:                    blob
-    first_start:                  float
-    last_end:                     float
+    plotting_data_link=null              : varchar(255)
+    plotting_data_link_low_res=null      : varchar(255)
+    plotting_data_link_very_low_res=null : varchar(255)
+    plot_ylim                            : blob
+    plot_xlim                            : blob
+    first_start                          : float
+    last_end                             : float
     -> DepthRasterTemplate
     """
     key_source = ephys.ProbeInsertion & ephys.DefaultCluster
@@ -710,21 +712,35 @@ class DepthRaster(dj.Computed):
 
         spikes_data = putils.prepare_spikes_data(key)
 
-        fig_link = path.join(
+        link = path.join(
             'depthraster_session',
             str(key['subject_uuid']),
             key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
-            str(key['probe_idx'])) + '.png'
+            str(key['probe_idx']))
+
+        fig_link_full = link + '.png'
+        fig_link_low = link + '_low.png'
+        fig_link_very_low = link + '_very_low.png'
 
         trials = (behavior.TrialSet.Trial & key).fetch()
 
         key['plot_xlim'], key['plot_ylim'] = \
             putils.create_driftmap_plot(
                 spikes_data,
-                fig_dir=fig_link, store_type='s3')
+                fig_dir=fig_link_full, store_type='s3')
+
+        putils.create_driftmap_plot(
+            spikes_data, dpi=25, fig_link=fig_link_low,
+            store_type='s3')
+
+        putils.create_driftmap_plot(
+            spikes_data, dpi=10, fig_link=fig_link_very_low,
+            store_type='s3')
 
         key.update(
-            plotting_data_link=fig_link,
+            plotting_data_link=fig_link_full,
+            plotting_data_link_low_res=fig_link_low,
+            plotting_data_link_very_low_res=fig_link_very_low,
             first_start=trials[0]['trial_start_time'],
             last_end=trials[-1]['trial_end_time'],
             depth_raster_template_idx=0
