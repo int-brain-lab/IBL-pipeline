@@ -4,7 +4,6 @@ from ibl_pipeline import subject, action, acquisition, ephys
 from ibl_pipeline.utils import psychofit as psy
 from uuid import UUID
 import numpy as np
-import datetime
 import datajoint as dj
 import plotly.graph_objs as go
 import matplotlib.pyplot as plt
@@ -18,9 +17,10 @@ from scipy.signal import gaussian, convolve, boxcar
 import os
 import boto3
 import io
-import ibl_pipeline
 import tempfile
 import base64
+import gc
+import datetime
 
 
 def get_sort_and_marker(align_event, sorting_var):
@@ -156,6 +156,7 @@ def create_psth_plot(trials, align_event,
     if not show_plot:
         fig.clear()
         plt.close(fig)
+        gc.collect()
 
     import base64
     with open(temp.name, "rb") as image_file:
@@ -460,6 +461,7 @@ def convert_fig_to_encoded_string(fig):
     fig.savefig(temp.name, pad_inches=0)
     fig.clear()
     plt.close(fig)
+    gc.collect()
     with open(temp.name, "rb") as image_file:
         encoded_string = base64.b64encode(image_file.read())
     temp.close()
@@ -613,6 +615,7 @@ def create_raster_plot_combined(trials, align_event,
     if fig_dir:
         store_fig_external(fig, store_type, fig_dir)
         fig.clear()
+        gc.collect()
         if sorting_var == 'contrast':
             return [0, y_lim], label, contrasts, tick_positions
         else:
@@ -748,10 +751,12 @@ def create_driftmap_plot(spike_data, figsize=[90, 90], dpi=50,
         store_fig_external(fig, store_type, fig_dir)
         fig.clear()
         plt.close(fig)
+        gc.collect()
         return x_lim, y_lim
     else:
         encoded_string = convert_fig_to_encoded_string(fig)
         plt.close(fig)
+        gc.collect()
         return encoded_string, x_lim, y_lim
 
 
