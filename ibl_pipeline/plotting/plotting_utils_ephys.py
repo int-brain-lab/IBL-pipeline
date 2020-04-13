@@ -2,6 +2,7 @@ from ibl_pipeline.analyses import behavior
 from ibl_pipeline import behavior as behavior_ingest
 from ibl_pipeline import subject, action, acquisition, ephys
 from ibl_pipeline.utils import psychofit as psy
+import ibl_pipeline
 from uuid import UUID
 import numpy as np
 import datajoint as dj
