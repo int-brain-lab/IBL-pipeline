@@ -769,15 +769,15 @@ class DepthRasterExampleTrial(dj.Computed):
     def create_trial_raster(self, key, spikes_data, trial,
                             trial_type, contrast):
         f = np.logical_and(
-                spikes_data['spikes_times'] < trial['trial_end_time'],
-                spikes_data['spikes_times'] > trial['trial_start_time'])
+            spikes_data['spikes_times'] < trial['trial_end_time'],
+            spikes_data['spikes_times'] > trial['trial_start_time'])
 
         spikes_data_trial = dict(
-                spikes_depths=spikes_data['spikes_depths'][f],
-                spikes_times=spikes_data['spikes_times'][f],
-                spikes_amps=spikes_data['spikes_amps'][f],
-                spikes_clusters=spikes_data['spikes_clusters'][f],
-                clusters_depths=spikes_data['clusters_depths']
+            spikes_depths=spikes_data['spikes_depths'][f],
+            spikes_times=spikes_data['spikes_times'][f],
+            spikes_amps=spikes_data['spikes_amps'][f],
+            spikes_clusters=spikes_data['spikes_clusters'][f],
+            clusters_depths=spikes_data['clusters_depths']
         )
 
         fig_link = path.join(
@@ -788,7 +788,7 @@ class DepthRasterExampleTrial(dj.Computed):
 
         key['plot_xlim'], key['plot_ylim'] = \
             putils.create_driftmap_plot(
-                spikes_data, dpi=100, figsize=[18, 12],
+                spikes_data_trial, dpi=100, figsize=[18, 12],
                 fig_dir=fig_link, store_type='s3')
 
         depth_raster = dict(
