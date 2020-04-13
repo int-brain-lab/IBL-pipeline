@@ -154,6 +154,7 @@ def create_psth_plot(trials, align_event,
     fig.savefig(temp.name, pad_inches=0)
 
     if not show_plot:
+        fig.clear()
         plt.close(fig)
 
     import base64
@@ -457,6 +458,8 @@ def convert_fig_to_encoded_string(fig):
 
     temp = tempfile.NamedTemporaryFile(suffix=".png")
     fig.savefig(temp.name, pad_inches=0)
+    fig.clear()
+    plt.close(fig)
     with open(temp.name, "rb") as image_file:
         encoded_string = base64.b64encode(image_file.read())
     temp.close()
@@ -609,6 +612,7 @@ def create_raster_plot_combined(trials, align_event,
 
     if fig_dir:
         store_fig_external(fig, store_type, fig_dir)
+        fig.clear()
         if sorting_var == 'contrast':
             return [0, y_lim], label, contrasts, tick_positions
         else:
@@ -742,6 +746,7 @@ def create_driftmap_plot(spike_data, figsize=[90, 90], dpi=50,
     fig.add_axes(ax)
     if fig_dir:
         store_fig_external(fig, store_type, fig_dir)
+        fig.clear()
         plt.close(fig)
         return x_lim, y_lim
     else:
