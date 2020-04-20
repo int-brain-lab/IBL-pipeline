@@ -101,3 +101,26 @@ class DepthPeth(dj.Computed):
                        depth_baseline=np.array(baseline_list),
                        time_bin_centers=peths.tscale)
             self.insert1(key)
+
+
+@schema
+class NormedDepthPeth(dj.Computed):
+    definition = """
+    -> DepthPeth
+    ---
+    normed_peth             : blob@ephys   # normalized peth, with baseline -0.3 to 0 before stim on time
+    normed_depth_ts=CURRENT_TIMESTAMP  : time
+    """
+
+    def make(self, key):
+
+        depth_peth = (DepthPeth & key).fetch1('depth_peth')
+
+        # fetch the baseline from the
+        key_temp = key.copy()
+        key_temp.update(event='stim on')
+        baseline = (DepthPeth & key).fetch1('depth_basline')
+
+        key.update(normed_peth=((depth_peth.T - baseline)/(baseline + 1)).T)
+
+        self.insert1(key)
