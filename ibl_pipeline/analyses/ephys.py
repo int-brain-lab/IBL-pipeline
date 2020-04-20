@@ -97,7 +97,7 @@ class DepthPeth(dj.Computed):
                     baseline_list.append(0)
 
             key.update(event=event,
-                       depth_peth=np.vstack(peth_list)[::-1],
+                       depth_peth=np.vstack(peth_list),
                        depth_baseline=np.array(baseline_list),
                        time_bin_centers=peths.tscale)
             self.insert1(key)
