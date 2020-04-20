@@ -1,5 +1,5 @@
 import datajoint as dj
-from .. import ephys
+from .. import behavior, ephys
 from datetime import datetime
 from tqdm import tqdm
 import brainbox as bb
