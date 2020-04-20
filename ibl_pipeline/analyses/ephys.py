@@ -119,7 +119,7 @@ class NormedDepthPeth(dj.Computed):
         # fetch the baseline from the
         key_temp = key.copy()
         key_temp.update(event='stim on')
-        baseline = (DepthPeth & key).fetch1('depth_basline')
+        baseline = (DepthPeth & key).fetch1('depth_baseline')
 
         key.update(normed_peth=((depth_peth.T - baseline)/(baseline + 1)).T)
 
