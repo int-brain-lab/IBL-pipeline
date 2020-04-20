@@ -85,6 +85,7 @@ class DepthPeth(dj.Computed):
                     spikes_ibin, spike_clusters, cluster_ids,
                     event_times, pre_time=0.3, post_time=1)
                 if len(peths.means):
+                    time = peth.tscale
                     peth = np.sum(peths.means, axis=0)
                     baseline = peth[np.logical_and(time > -0.3, time < 0)]
                     mean_bsl = np.mean(baseline)
