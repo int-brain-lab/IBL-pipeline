@@ -109,7 +109,7 @@ class NormedDepthPeth(dj.Computed):
     -> DepthPeth
     ---
     normed_peth             : blob@ephys   # normalized peth, with baseline -0.3 to 0 before stim on time
-    normed_depth_ts=CURRENT_TIMESTAMP  : time
+    normed_depth_ts=CURRENT_TIMESTAMP  : timestamp
     """
 
     def make(self, key):
