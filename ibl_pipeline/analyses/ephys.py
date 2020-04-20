@@ -1,12 +1,12 @@
 import datajoint as dj
-from .. import subject, action, acquisition, behavior, ephys
+from .. import ephys
 from datetime import datetime
 from tqdm import tqdm
 import brainbox as bb
 import numpy as np
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
-                   'ibl_analyses_behavior')
+                   'ibl_analyses_ephys')
 
 
 @schema
