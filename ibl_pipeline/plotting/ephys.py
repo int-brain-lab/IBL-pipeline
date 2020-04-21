@@ -1013,7 +1013,7 @@ class DepthPeth(dj.Computed):
 
         rb_cmap = RedBlueColorBar(min_val, max_val)
 
-        fig = PngFigure(depth_peth, dict(peth_df=peth_df),
+        fig = PngFigure(eplt.depth_peth, dict(peth_df=peth_df),
                         dict(colors=rb_cmap.as_matplotlib(),
                              as_background=True,
                              return_lims=True))
