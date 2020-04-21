@@ -1,6 +1,11 @@
 import datajoint as dj
 from .. import behavior, ephys
+from ..analyses import ephys as ephys_analyses
 from . import plotting_utils_ephys as putils
+from . import utils
+from . import ephys_plotting as eplt
+from .figure_model import PngFigure
+from .utils import RedBlueColorBar
 import numpy as np
 import pandas as pd
 import plotly
@@ -8,9 +13,19 @@ import plotly.graph_objs as go
 import json
 from os import path
 from tqdm import tqdm
+import boto3
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_ephys')
+
+# get external bucket
+store = dj.config['stores']['plotting']
+s3 = boto3.resource(
+    's3',
+    aws_access_key_id=store['access_key'],
+    aws_secret_access_key=store['secret_key'])
+
+bucket = s3.Bucket(store['bucket'])
 
 
 @schema
@@ -39,6 +54,18 @@ class ValidAlignSort(dj.Lookup):
         ['feedback', 'trial_id'],
         ['feedback', 'feedback type']
     ]
+
+
+@schema
+class GeneralTemplate(dj.Lookup):
+    definition = """
+    # This serves as an general template to start with
+    general_template_name       : int
+    ---
+    data                        : longblob
+    layout                      : longblob
+    """
+
 
 
 @schema
@@ -757,7 +784,8 @@ class TrialType(dj.Lookup):
     contents = zip(['Correct Left Contrast',
                     'Correct Right Contrast',
                     'Incorrect Left Contrast',
-                    'Incorrect Right Contrast'])
+                    'Incorrect Right Contrast',
+                    'Correct All'])
 
 
 @schema
@@ -888,8 +916,121 @@ class DepthRasterExampleTrial(dj.Computed):
 
             try:
                 self.insert(trials_depthraster, skip_duplicates=True)
-            except:
+            except Exception:
                 for trial_dr in trials_depthraster:
                     self.insert1(trial_dr, skip_duplicates=True)
 
             trials_depthraster = []
+
+
+@schema
+class DepthPethTemplate(dj.Lookup):
+    definition = """
+    depth_psth_template_idx:    int
+    ---
+    depth_psth_template: longblob
+    """
+
+    data = [
+        dict(
+            # x=[plot_xlim[0]-0.2, plot_xlim[0]-0.1],   # plot_xlim from DepthPeth
+            # y=[plot_ylim[0]-0.2], # plot_ylim from DepthPeth
+            # z=z_range,   # z_range from DepthPeth
+            type='heatmap',
+            colorbar=dict(
+                thickness=10,
+                title='(firing rate - baseline)/(baseline + 1)',
+                titleside='right'),
+            # colorscale=color_scale        # color_scale from DepthPeth
+        )]
+
+    layout = go.Layout(
+        images=[dict(source='',  # to be replaced by s3 link in Depth
+                     # sizex=plot_xlim[1] - plot_xlim[0],   # plot_xlim from DepthPeth
+                     # sizey=plot_ylim[1] - plot_ylim[0],   # plot_ylim from DepthPeth
+                     # x=plot_xlim[0],  # plot_xlim from DepthPeth
+                     # y=plot_ylim[1],  # plot_ylim from DepthPeth
+                     xref='x',
+                     yref='y',
+                     sizing='stretch',
+                     layer='below')],
+        xaxis=dict(
+            title='Time (s)',
+            showgrid=False,
+            # range=plot_xlim    # plot_xlim from DepthPeth
+            ),
+        yaxis=dict(
+            title='',
+            showgrid=False,
+            # range=plot_ylim    # plot_ylim from DepthPeth
+        ),
+        width=600,
+        height=480,
+        title=dict(
+            # text='Depth PETH, aligned to {} time'.format(event),   # event from DepthPeth
+            x=0.5,
+            y=0.85
+        ),
+        legend=dict(
+            x=1.2,
+            y=0.8,
+            orientation='v'
+        ),
+        template=dict(
+            layout=dict(
+                plot_bgcolor="white")))
+
+    contents = [
+        dict(depth_peth_template_idx=0,
+             depth_peth_template=go.Figure(
+                data=data,
+                layout=layout).to_plotly_json())]
+
+
+@schema
+class DepthPeth(dj.Computed):
+    definition = """
+    -> ephys_analyses.NormedDepthPeth
+    ---
+    plotting_data_link          : varchar(255)
+    plot_ylim                   : blob
+    plot_xlim                   : blob
+    z_range                     : blob
+    color_scale                 : longblob
+    -> DepthPethTemplate
+    """
+
+    def make(self, key):
+        normed_peth, depths, time = \
+            (ephys_analyses.DepthPeth *
+             ephys_analyses.NormedDepthPeth & key).fetch1(
+                'normed_peth', 'depth_bin_centers', 'time_bin_centers')
+
+        peth_df = pd.DataFrame(normed_peth, columns=np.round(time, decimals=2),
+                               index=depths.astype('int'))
+        min_val = np.min(normed_peth)
+        max_val = np.max(normed_peth)
+
+        rb_cmap = RedBlueColorBar(min_val, max_val)
+
+        fig = PngFigure(depth_peth, dict(peth_df=peth_df),
+                        dict(colors=rb_cmap.as_matplotlib(),
+                             as_background=True,
+                             return_lims=True))
+
+        fig_link = path.join(
+            'depthpeth_session',
+            str(key['subject_uuid']),
+            key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+            str(key['probe_idx'])) + '_' + key['event'] + '_' + key['trial_type'] + '.png'
+
+        fig.upload_to_s3(bucket, fig_link)
+
+        self.insert1(
+            dict(**key,
+                 plotting_data_link=fig_link,
+                 plot_ylim=fig.y_lim,
+                 plot_xlim=fig.x_lim,
+                 z_range=[min_val, max_val],
+                 color_scale=rb_cmap.as_plotly(),
+                 depth_peth_template_idx=0))
