@@ -147,7 +147,7 @@ def depth_peth(peth_df, ax=None, colors=None,
 
     if return_lims:
         time = peth_df.columns.to_list()
-        depth = peth_df.index.to_list()
+        depths = peth_df.index.to_list()
         time_bin = np.mean(np.diff(time))
         depth_bin = np.mean(np.diff(depths))
         x_lim = [min(time) - time_bin/2, max(time) + time_bin/2]
