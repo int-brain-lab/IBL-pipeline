@@ -926,9 +926,9 @@ class DepthRasterExampleTrial(dj.Computed):
 @schema
 class DepthPethTemplate(dj.Lookup):
     definition = """
-    depth_psth_template_idx:    int
+    depth_peth_template_idx:    int
     ---
-    depth_psth_template: longblob
+    depth_peth_template: longblob
     """
 
     data = [
@@ -939,7 +939,7 @@ class DepthPethTemplate(dj.Lookup):
             type='heatmap',
             colorbar=dict(
                 thickness=10,
-                title='(firing rate - baseline)/(baseline + 1)',
+                title='(Firing rate - baseline)/(baseline + 1)',
                 titleside='right'),
             # colorscale=color_scale        # color_scale from DepthPeth
         )]
