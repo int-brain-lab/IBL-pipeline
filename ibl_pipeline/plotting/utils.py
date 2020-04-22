@@ -22,7 +22,7 @@ class RedBlueColorBar:
             self.mode = 'WhiteRed'
         else:
             self.c0 = (-min_val)/(max_val - min_val)
-            ncolors_pos = int(ncolors*(1 - x0))
+            ncolors_pos = int(ncolors*(1 - self.c0))
             ncolors_neg = ncolors - ncolors_pos
             color_step = self.cmax/(ncolors_pos-1)
             colors_pos = [[self.cmax, i, i]
