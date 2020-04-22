@@ -156,3 +156,58 @@ def depth_peth(peth_df, ax=None, colors=None,
         return ax, x_lim, y_lim
     else:
         return ax
+
+
+def spike_amp_time(spike_times, spike_amps,
+                   ax=None, color=[0.2, 0.5, 0.8], alpha=0.1,
+                   as_background=False, return_lims=False):
+
+    '''
+    Plots spike amps versus the time
+
+    Parameters
+    -------------
+    spike_times: ndarray
+        spike times of a cluster, in s
+    spike_amps: ndarray
+        amplitude of spikes, in uV
+    ax: matplotlib.axes.Axes object (optional)
+        axis object to plot on
+    color: list or tuple with 3 elements
+        color vector of the scatters
+    as_background: boolean
+        if True, return only the heatmap without layout and colorbar
+    return_lims: boolean
+        if True, return xlim and ylim
+
+    Return
+    ------------
+    ax: matplotlib.axes.Axes object
+    x_lim: list of two elements
+        range of x axis
+    y_lim: list of two elements
+        range of y axis
+    '''
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, dpi=100, frameon=False, figsize=[6, 4])
+
+    if as_background:
+        ax.axis('off')
+    else:
+        ax.set_xlabel('Time (s)')
+        ax.set_ylabel('Spike amplitude (uV)')
+
+    ax.scatter(spike_times, spike_amps, alpha=alpha,
+               color=color, edgecolors='none')
+
+    x_lim = [0, np.max(spike_times) + 10]
+    y_lim = [0, np.max(spike_amps) + 10]
+
+    ax.set_xlim(x_lim)
+    ax.set_ylim(y_lim)
+
+    if return_lims:
+        return ax, x_lim, y_lim
+    else:
+        return ax

@@ -960,7 +960,7 @@ class DepthPethTemplate(dj.Lookup):
             # range=plot_xlim    # plot_xlim from DepthPeth
             ),
         yaxis=dict(
-            title='',
+            title='Depth from the probe tip (um)',
             showgrid=False,
             # range=plot_ylim    # plot_ylim from DepthPeth
         ),
