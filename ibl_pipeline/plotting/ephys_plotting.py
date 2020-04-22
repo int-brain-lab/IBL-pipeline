@@ -201,7 +201,7 @@ def spike_amp_time(spike_times, spike_amps,
     ax.scatter(spike_times, spike_amps, alpha=alpha,
                color=color, edgecolors='none')
 
-    if spike_times:
+    if len(spike_times):
         x_lim = [0, np.max(spike_times) + 10]
         y_lim = [0, np.max(spike_amps) + 10]
     else:
