@@ -1129,9 +1129,8 @@ class SpikeAmpTime(dj.Computed):
         fig.upload_to_s3(bucket, fig_link)
 
         self.insert1(
-            **key,
-            plotting_data_link=fig_link,
-            plot_xlim=fig.x_lim,
-            plot_ylim=fig.y_lim,
-            spike_amp_time_template=0
-        )
+            dict(**key,
+                 plotting_data_link=fig_link,
+                 plot_xlim=fig.x_lim,
+                 plot_ylim=fig.y_lim,
+                 spike_amp_time_template=0))
