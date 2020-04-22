@@ -1054,7 +1054,7 @@ class SpikeAmpTimeTemplate(dj.Lookup):
     )
 
     layout = go.Layout(
-        images=[dict(source=source,
+        images=[dict(source='', # to be replaced by url
                      #  sizex=plot_xlim[1] - plot_xlim[0],
                      #  sizey=plot_ylim[1] - plot_ylim[0],
                      #  x=plot_xlim[0],
