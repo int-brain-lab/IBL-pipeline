@@ -1106,33 +1106,43 @@ class SpikeAmpTime(dj.Computed):
     plot_xlim                   : blob
     -> SpikeAmpTimeTemplate
     """
+    key_source = ephys.ProbeInsertion & ephys.DefaultCluster
 
     def make(self, key):
 
-        spike_times, spike_amps = (ephys.DefaultCluster & key).fetch1(
-            'cluster_spikes_times', 'cluster_spikes_amps')
+        entries = []
+        keys, clusters_spike_times, clusters_spike_amps = \
+            (ephys.DefaultCluster & key).fetch(
+                'KEY', 'cluster_spikes_times', 'cluster_spikes_amps')
 
-        fig = PngFigure(eplt.spike_amp_time,
-                        data=dict(spike_times=spike_times,
-                                  spike_amps=spike_amps*1e6),
-                        ax_kwargs=dict(color=[0.2, 0.5, 0.8], alpha=0.15,
-                                       as_background=True, return_lims=True),
-                        dpi=100, figsize=[10, 8])
+        for ikey, spike_times, spike_amps in zip(keys,
+                                                 clusters_spike_amps,
+                                                 clusters_spike_amps):
+            fig = PngFigure(eplt.spike_amp_time,
+                            data=dict(spike_times=spike_times,
+                                      spike_amps=spike_amps*1e6),
+                            ax_kwargs=dict(color=[0.2, 0.5, 0.8],
+                                           alpha=0.15,
+                                           as_background=True,
+                                           return_lims=True),
+                            dpi=100, figsize=[10, 8])
 
-        fig_link = path.join(
-            'raster',
-            str(key['subject_uuid']),
-            key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
-            str(key['probe_idx']),
-            str(key['cluster_id'])) + '.png'
+            fig_link = path.join(
+                'raster',
+                str(key['subject_uuid']),
+                key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+                str(key['probe_idx']),
+                str(key['cluster_id'])) + '.png'
 
-        fig.upload_to_s3(bucket, fig_link)
+            fig.upload_to_s3(bucket, fig_link)
 
-        self.insert1(
-            dict(**key,
-                 plotting_data_link=fig_link,
-                 plot_xlim=fig.x_lim,
-                 plot_ylim=fig.y_lim,
-                 spike_amp_time_template_idx=0))
+            entries.append(
+                dict(**ikey
+                     plotting_data_link=fig_link,
+                     plot_xlim=fig.x_lim,
+                     plot_ylim=fig.y_lim,
+                     spike_amp_time_template_idx=0).copy())
 
-        fig.cleanup()
+            fig.cleanup()
+
+        self.insert(entries)
