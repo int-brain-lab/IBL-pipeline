@@ -1064,15 +1064,15 @@ class SpikeAmpTimeTemplate(dj.Lookup):
                      sizing='stretch',
                      layer='below')],
         xaxis=dict(
-            title=x_title,
+            title='Time (s)',
             showgrid=False,
             # range=plot_xlim,
             ticks='outside'),
         yaxis=dict(
-            title=dict(text=y_title, standoff=10),
+            title=dict(text='Spike amp (uV)', standoff=10),
             showgrid=False,
             # range=plot_ylim,
-            ticks='outside')
+            ticks='outside'),
 
         width=600,
         height=480,
