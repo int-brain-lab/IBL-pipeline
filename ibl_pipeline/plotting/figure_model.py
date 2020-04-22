@@ -52,11 +52,13 @@ class PngFigure(Figure):
             xaxis=dict(
                 title=x_title,
                 showgrid=False,
-                range=self.x_lim),
+                range=self.x_lim,
+                ticks='outside'),
             yaxis=dict(
-                title=y_title,
+                title=dict(text=y_title, standoff=10),
                 showgrid=False,
-                range=self.y_lim)
+                range=self.y_lim,
+                ticks='outside')
         )
 
     def cleanup(self):

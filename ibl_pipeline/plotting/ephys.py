@@ -1036,3 +1036,102 @@ class DepthPeth(dj.Computed):
                  depth_peth_template_idx=0))
 
         fig.cleanup()
+
+
+@schema
+class SpikeAmpTimeTemplate(dj.Lookup):
+    definition = """
+    spike_amp_time_template_idx     : int
+    ---
+    spike_amp_time_template         : longblob
+    """
+    axis = go.Scatter(
+        # x=plot_ylim,
+        # y=plot_ylim,
+        mode='markers',
+        marker=dict(opacity=0),
+        showlegend=False,
+    )
+
+    layout = go.Layout(
+        images=[dict(source=source,
+                     #  sizex=plot_xlim[1] - plot_xlim[0],
+                     #  sizey=plot_ylim[1] - plot_ylim[0],
+                     #  x=plot_xlim[0],
+                     #  y=plot_ylim[1],
+                     xref='x',
+                     yref='y',
+                     sizing='stretch',
+                     layer='below')],
+        xaxis=dict(
+            title=x_title,
+            showgrid=False,
+            # range=plot_xlim,
+            ticks='outside'),
+        yaxis=dict(
+            title=dict(text=y_title, standoff=10),
+            showgrid=False,
+            # range=plot_ylim,
+            ticks='outside')
+
+        width=600,
+        height=480,
+        title=dict(
+            text='Spike amp - time',
+            x=0.5,
+            y=0.85
+        ),
+        legend=dict(
+            x=1.2,
+            y=0.8,
+            orientation='v'
+        ),
+        template=dict(
+            layout=dict(plot_bgcolor="white")))
+
+    contents = [
+        dict(spike_amp_time_template_idx=0,
+             spike_amp_time_template=go.Figure(
+                data=axis,
+                layout=layout).to_plotly_json())]
+
+
+@schema
+class SpikeAmpTime(dj.Computed):
+    definition = """
+    -> ephys.DefaultCluster
+    ---
+    plotting_data_link          : varchar(255)
+    plot_ylim                   : blob
+    plot_xlim                   : blob
+    -> SpikeAmpTimeTemplate
+    """
+
+    def make(self, key):
+
+        spike_times, spike_amps = (ephys.DefaultCluster & key).fetch1(
+            'cluster_spikes_times', 'cluster_spikes_amps')
+
+        fig = PngFigure(eplt.spike_amp_time,
+                        data=dict(spike_times=spike_times,
+                                  spike_amps=spike_amps*1e6),
+                        ax_kwargs=dict(color=[0.2, 0.5, 0.8], alpha=0.15,
+                                       as_background=True, return_lims=True),
+                        dpi=100, figsize=[10, 8])
+
+        fig_link = path.join(
+            'raster',
+            str(key['subject_uuid']),
+            key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+            str(key['probe_idx']),
+            str(key['cluster_id'])) + '.png'
+
+        fig.upload_to_s3(bucket, fig_link)
+
+        self.insert1(
+            **key,
+            plotting_data_link=fig_link,
+            plot_xlim=fig.x_lim,
+            plot_ylim=fig.y_lim,
+            spike_amp_time_template=0
+        )
