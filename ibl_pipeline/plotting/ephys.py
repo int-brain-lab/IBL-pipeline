@@ -1133,4 +1133,6 @@ class SpikeAmpTime(dj.Computed):
                  plotting_data_link=fig_link,
                  plot_xlim=fig.x_lim,
                  plot_ylim=fig.y_lim,
-                 spike_amp_time_template=0))
+                 spike_amp_time_template_idx=0))
+
+        fig.cleanup()
