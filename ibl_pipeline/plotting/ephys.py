@@ -1011,7 +1011,7 @@ class DepthPeth(dj.Computed):
         min_val = np.min(normed_peth)
         max_val = np.max(normed_peth)
 
-        rb_cmap = RedBlueColorBar(min_val, max_val)
+        rb_cmap = RedBlueColorBar(max_val, min_val)
 
         fig = PngFigure(eplt.depth_peth, dict(peth_df=peth_df),
                         dict(colors=rb_cmap.as_matplotlib(),
