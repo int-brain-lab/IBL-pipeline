@@ -1115,9 +1115,9 @@ class SpikeAmpTime(dj.Computed):
             (ephys.DefaultCluster & key).fetch(
                 'KEY', 'cluster_spikes_times', 'cluster_spikes_amps')
 
-        for ikey, spike_times, spike_amps in zip(keys,
-                                                 clusters_spike_amps,
-                                                 clusters_spike_amps):
+        for ikey, spike_times, spike_amps in tqdm(zip(keys,
+                                                      clusters_spike_times,
+                                                      clusters_spike_amps)):
             fig = PngFigure(eplt.spike_amp_time,
                             data=dict(spike_times=spike_times,
                                       spike_amps=spike_amps*1e6),
@@ -1129,10 +1129,10 @@ class SpikeAmpTime(dj.Computed):
 
             fig_link = path.join(
                 'raster',
-                str(key['subject_uuid']),
-                key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
-                str(key['probe_idx']),
-                str(key['cluster_id'])) + '.png'
+                str(ikey['subject_uuid']),
+                ikey['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+                str(ikey['probe_idx']),
+                str(ikey['cluster_id'])) + '.png'
 
             fig.upload_to_s3(bucket, fig_link)
 
