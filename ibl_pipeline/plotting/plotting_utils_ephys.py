@@ -180,7 +180,8 @@ def compute_psth(trials, trial_type, align_event, bin_size=0.025,
     else:
         raise NameError('Invalid type name')
 
-    n_offset = 5 * int(np.ceil(smoothing / bin_size))  # get rid of boundary effects for smoothing
+    # get rid of boundary effects for smoothing
+    n_offset = 5 * int(np.ceil(smoothing / bin_size))
     n_bins_pre = int(np.ceil(np.negative(x_lim[0]) / bin_size)) + n_offset
     n_bins_post = int(np.ceil(x_lim[1] / bin_size)) + n_offset
     n_bins = n_bins_pre + n_bins_post
@@ -217,8 +218,8 @@ def compute_psth(trials, trial_type, align_event, bin_size=0.025,
 
 
 def compute_psth_with_errorbar(
-    trials, trial_type, align_event, bin_size=0.025,
-    smoothing=0.025, x_lim=[-1, 1], as_plotly_obj=True):
+        trials, trial_type, align_event, bin_size=0.025,
+        smoothing=0.025, x_lim=[-1, 1], as_plotly_obj=True):
 
     if trial_type == 'left':
         color = 'green'
@@ -295,8 +296,8 @@ def compute_psth_with_errorbar(
     mean_psth = np.mean(binned_spikes, axis=0)
     sem_psth = np.std(binned_spikes, axis=0)/np.sqrt(trial_num)
 
-    mean_psth = mean_psth[n_offset:-n_offset]
-    sem_psth = sem_psth[n_offset:-n_offset]
+    mean_psth = mean_psth[n_offset:-n_offset]/bin_size
+    sem_psth = sem_psth[n_offset:-n_offset]/bin_size
 
     upper_psth = mean_psth + sem_psth
     lower_psth = mean_psth - sem_psth
@@ -739,6 +740,9 @@ def driftmap(
         return ax, x_lim, y_lim
     else:
         return ax
+
+
+# class Figure
 
 
 def create_driftmap_plot(spike_data, figsize=[90, 90], dpi=50,
