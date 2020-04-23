@@ -13,6 +13,7 @@ class RedBlueColorBar:
 
         self.cmax = 255.
         self.cmin = 0.
+        self.zrange = [[min_val, max_val]]
         color_values = np.linspace(self.cmin, self.cmax, ncolors)
         if max_val <= 0:
             self.colors = [[i, i, self.cmax] for i in color_values]

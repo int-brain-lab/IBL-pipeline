@@ -1031,7 +1031,7 @@ class DepthPeth(dj.Computed):
                  plotting_data_link=fig_link,
                  plot_ylim=fig.y_lim,
                  plot_xlim=fig.x_lim,
-                 z_range=[min_val, max_val],
+                 z_range=fig.zrange,
                  color_scale=rb_cmap.as_plotly(),
                  depth_peth_template_idx=0))
 
