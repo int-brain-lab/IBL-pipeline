@@ -76,7 +76,7 @@ class DepthPeth(dj.Computed):
             peth_list = []
             baseline_list = []
 
-            for i in tqdm(np.arange(len(bin_edges))):
+            for i in tqdm(np.arange(len(bin_edges)) + 1):
                 f = spk_bin_ids == i
                 spikes_ibin = spikes_times[f]
                 spike_clusters = spikes_clusters[f]
