@@ -81,6 +81,11 @@ class DepthPeth(dj.Computed):
                 spikes_ibin = spikes_times[f]
                 spike_clusters = spikes_clusters[f]
                 cluster_ids = np.unique(spike_clusters)
+
+                if not len(spikes_ibin):
+                    peth_list.append(np.zeros_like(peths.tscale))
+                    baseline_list.append(0)
+                    continue
                 peths, binned_spikes = bb.singlecell.calculate_peths(
                     spikes_ibin, spike_clusters, cluster_ids,
                     event_times, pre_time=0.3, post_time=1)
