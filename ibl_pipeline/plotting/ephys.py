@@ -479,6 +479,7 @@ class Psth(dj.Computed):
     psth_all_upper=null:        varchar(1000)
     psth_all_lower=null:        varchar(1000)
     psth_time=null:             varchar(1000)
+    psth_ts=CURRENT_TIMESTAMP:  timestamp
     -> PsthTemplate
     """
     key_source = ephys.DefaultCluster * (ephys.Event & 'event in ("stim on", "feedback")') & \
