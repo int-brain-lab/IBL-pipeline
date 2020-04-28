@@ -440,12 +440,12 @@ class CompleteTrialSession(dj.Computed):
                 else:
                     key['stim_on_times_status'] = 'Complete'
 
-            if 'trials.repNum.npy' not in datasets:
+            if 'ibl_trials.repNum.npy' not in datasets:
                 key['rep_num_status'] = 'Missing'
             else:
                 key['rep_num_status'] = 'Complete'
 
-            if 'trials.included.npy' not in datasets:
+            if 'ibl_trials.included.npy' not in datasets:
                 key['included_status'] = 'Missing'
             else:
                 key['included_status'] = 'Complete'
@@ -455,7 +455,7 @@ class CompleteTrialSession(dj.Computed):
             else:
                 key['ambient_sensor_data_status'] = 'Complete'
 
-            if 'trials.goCue_times.npy' not in datasets:
+            if '_ibl_trials.goCue_times.npy' not in datasets:
                 key['go_cue_times_status'] = 'Missing'
             else:
                 key['go_cue_times_status'] = 'Complete'
@@ -465,12 +465,12 @@ class CompleteTrialSession(dj.Computed):
             else:
                 key['go_cue_trigger_times_status'] = 'Complete'
 
-            if 'trials.rewardVolume.npy' not in datasets:
+            if '_ibl_trials.rewardVolume.npy' not in datasets:
                 key['reward_volume_status'] = 'Missing'
             else:
                 key['reward_volume_status'] = 'Complete'
 
-            if 'trials.itiDuration.npy' not in datasets:
+            if '_ibl_trials.itiDuration.npy' not in datasets:
                 key['iti_duration_status'] = 'Missing'
             else:
                 key['iti_duration_status'] = 'Complete'
