@@ -440,7 +440,7 @@ class CompleteTrialSession(dj.Computed):
                 else:
                     key['stim_on_times_status'] = 'Complete'
 
-            if 'ibl_trials.repNum.npy' not in datasets:
+            if '_ibl_trials.repNum.npy' not in datasets:
                 key['rep_num_status'] = 'Missing'
             else:
                 key['rep_num_status'] = 'Complete'
