@@ -1216,7 +1216,7 @@ class AutoCorrelogram(dj.Computed):
     -> AutoCorrelogramTemplate
     """
 
-    def _acorr(spike_times, bin_size=None, window_size=None):
+    def _acorr(self, spike_times, bin_size=None, window_size=None):
         """Compute the auto-correlogram of a neuron.
         Parameters
         ----------
