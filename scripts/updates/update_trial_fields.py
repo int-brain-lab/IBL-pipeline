@@ -1,6 +1,6 @@
 
 import datajoint as dj
-from ibl_pipeline import behavior
+from ibl_pipeline import acquisition, behavior
 import numpy as np
 from tqdm import tqdm
 from oneibl.one import ONE
