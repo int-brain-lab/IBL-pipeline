@@ -7,7 +7,7 @@ from oneibl.one import ONE
 one = ONE()
 
 
-def update_field(key, eID, trials, alf, dj, dtype=float, status,
+def update_field(key, eID, trials, alf, dj, dtype, status,
                  message_record):
 
     data_status = (behavior.CompleteTrialSession & key).fetch1(status)
