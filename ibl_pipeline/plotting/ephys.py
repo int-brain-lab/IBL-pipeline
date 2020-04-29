@@ -1245,5 +1245,5 @@ class AutoCorrelogram(dj.Computed):
             dict(**key,
                  acg=','.join('{:d}'.format(x) for x in acg),
                  acg_time=','.join('{:0.1f}'.format(x) for x in acg_time),
-                 plot_y_lim=[0, max(acg)+10],
+                 plot_ylim=[0, max(acg)+10],
                  acg_template_idx=0))
