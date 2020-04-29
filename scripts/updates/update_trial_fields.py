@@ -1,6 +1,7 @@
 
 import datajoint as dj
 from ibl_pipeline import behavior
+import numpy as np
 from tqdm import tqdm
 from oneibl.one import ONE
 
@@ -59,3 +60,5 @@ for key in tqdm(keys):
 
     except Exception:
         problematic_keys.append(dict(**key, error='other'))
+
+np.save('problematic_keys.npy', problematic_keys)
