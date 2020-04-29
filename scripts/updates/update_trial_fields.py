@@ -23,9 +23,10 @@ def update_field(key, eID, trials, alf, dj, dtype, status,
                 dict(**key, error=alf))
         else:
             for itrial, trial_key in enumerate(trials.fetch('KEY')):
-                dj.Table._update(
-                    behavior.TrialSet.Trial & trial_key,
-                    dj, dtype(dataset[itrial]))
+                print('update to {}'.format(dtype(dataset[itrial])))
+                # dj.Table._update(
+                #     behavior.TrialSet.Trial & trial_key,
+                #     dj, dtype(dataset[itrial]))
     else:
         return
 
@@ -50,15 +51,14 @@ problematic_keys = []
 
 for key in tqdm(keys):
 
-    try:
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        trials = behavior.TrialSet.Trial & key
+    eID = str((acquisition.Session & key).fetch1('session_uuid'))
+    trials = behavior.TrialSet.Trial & key
 
-        for field in fields:
-            update_field(key, eID, trials, **field,
-                         message_record=problematic_keys)
+    for field in fields:
+        update_field(key, eID, trials, **field,
+                     message_record=problematic_keys)
 
-    except Exception:
-        problematic_keys.append(dict(**key, error='other'))
+    # except Exception:
+    #     problematic_keys.append(dict(**key, error='other'))
 
 np.save('problematic_keys.npy', problematic_keys)
