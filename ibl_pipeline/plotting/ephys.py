@@ -14,6 +14,7 @@ import json
 from os import path
 from tqdm import tqdm
 import boto3
+import brainbox as bb
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_ephys')
@@ -1147,3 +1148,102 @@ class SpikeAmpTime(dj.Computed):
             fig.cleanup()
 
         self.insert(entries)
+
+
+@schema
+class AutoCorrelogramTemplate(dj.Lookup):
+    definition = """
+    acg_template_idx    : int
+    ---
+    acg_template        : longblob
+    """
+    data = dict(
+        # x=acg_time,           # fetched from AutoCorrelogram
+        # y=acg,                # fetched from AutoCorrelogram
+        name='data',
+        type='scatter',
+        marker=dict(
+            color='blue'
+        ),
+        x0=0
+    )
+
+    layout = dict(
+        width=580,
+        height=400,
+        title=dict(
+            text='Autocorrelogram',
+            x=0.5,
+            y=0.85),
+        xaxis=dict(
+            title='Lag (ms)',
+            showgrid=False,
+            linecolor='lightgray',
+            anchor='y',
+            position=0,
+            linewidth=2,
+            zeroline=True,
+            zerolinecolor='lightgray',
+            tickcolor='lightgray',
+            ticks='outside',
+            tickwidth=2
+        ),
+
+        yaxis=dict(
+            title='Spike counts',
+            showgrid=False,
+            # range=plot_ylim    # fetched from AutoCorrelogram
+        ),
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
+
+    fig = go.Figure(data=data, layout=layout)
+    contents = [
+        dict(acg_template_idx=0,
+             acg_template=go.Figure(
+                data=data,
+                layout=layout).to_plotly_json())]
+
+
+@schema
+class AutoCorrelogram(dj.Computed):
+    definition = """
+    -> ephys.DefaultCluster
+    ---
+    acg_time            : varchar(1000)
+    acg                 : varchar(1000)
+    plot_ylim           : blob
+    -> AutoCorrelogramTemplate
+    """
+
+    def _acorr(spike_times, bin_size=None, window_size=None):
+        """Compute the auto-correlogram of a neuron.
+        Parameters
+        ----------
+        :param spike_times: Spike times in seconds.
+        :type spike_times: array-like
+        :param bin_size: Size of the bin, in seconds.
+        :type bin_size: float
+        :param window_size: Size of the window, in seconds.
+        :type window_size: float
+        Returns an `(winsize_samples,)` array with the auto-correlogram.
+        """
+        xc = bb.population.xcorr(
+            spike_times, np.zeros_like(spike_times).astype('int'),
+            bin_size=bin_size, window_size=window_size)
+        return xc[0, 0, :]
+
+    def make(self, key):
+
+        spike_times = (ephys.DefaultCluster & key).fetch1(
+            'cluster_spikes_times')
+
+        win_sz = 0.04
+        acg = self._acorr(spike_times, bin_size=0.0002, window_size=win_sz)
+        acg_time = np.linspace(-win_sz/2*1000, win_sz/2*1000, len(acg))
+        self.insert1(
+            dict(**key,
+                 acg=','.join('{:d}'.format(x) for x in acg),
+                 acg_time=','.join('{:0.1f}'.format(x) for x in acg_time),
+                 plot_y_lim=[0, max(acg)+10],
+                 acg_template_idx=0))

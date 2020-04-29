@@ -7,13 +7,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-def driftmap(
+def driftmap_color(
         clusters_depths, spikes_times,
         spikes_amps, spikes_depths, spikes_clusters,
         ax=None, axesoff=False, return_lims=False):
 
     '''
-    Plots the driftmap of a session or a trial.
+    Plots the driftmap of a session or a trial
 
     The plot shows the spike times vs spike depths.
     Each dot is a spike, whose color indicates the cluster
@@ -45,6 +45,10 @@ def driftmap(
         range of y axis
     '''
 
+    color_bins = sns.color_palette("hls", 500)
+    new_color_bins = np.vstack(
+        np.transpose(np.reshape(color_bins, [5, 100, 3]), [1, 0, 2]))
+
     # get the sorted idx of each depth, and create colors based on the idx
 
     sorted_idx = np.argsort(np.argsort(clusters_depths))
@@ -70,11 +74,17 @@ def driftmap(
     x = spikes_times.astype('float32')
     y = spikes_depths.astype('float32')
 
-    if ax is None:
-        fig = plt.Figure(dpi=50, frameon=False, figsize=[90, 90])
-        ax = plt.Axes(fig, [0., 0., 1., 1.])
+    args = dict(color=colorvec, edgecolors='none')
 
-    ax.scatter(x, y, color=colorvec, edgecolors='none')
+    if ax is None:
+        fig = plt.Figure(dpi=200, frameon=False, figsize=[10, 10])
+        ax = plt.Axes(fig, [0.1, 0.1, 0.9, 0.9])
+        ax.set_xlabel('Time (sec)')
+        ax.set_ylabel('Distance from the probe tip (um)')
+        savefig = True
+        args.update(s=0.1)
+
+    ax.scatter(x, y, **args)
     x_edge = (max(x) - min(x)) * 0.05
     x_lim = [min(x) - x_edge, max(x) + x_edge]
     y_lim = [min(y) - 50, max(y) + 100]
@@ -83,6 +93,10 @@ def driftmap(
 
     if axesoff:
         ax.axis('off')
+
+    if savefig:
+        fig.add_axes(ax)
+        fig.savefig('driftmap.png')
 
     if return_lims:
         return ax, x_lim, y_lim
