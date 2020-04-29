@@ -49,18 +49,18 @@ fields = [
 problematic_keys = []
 
 for key in tqdm(keys):
-    try:
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        trials = behavior.TrialSet.Trial & key
+    # try:
+    eID = str((acquisition.Session & key).fetch1('session_uuid'))
+    trials = behavior.TrialSet.Trial & key
 
-        for field in fields:
-            update_field(key, eID, trials, **field,
-                         message_record=problematic_keys)
+    for field in fields:
+        update_field(key, eID, trials, **field,
+                        message_record=problematic_keys)
 
-    except Exception:
-        problematic_keys.append(dict(**key, error='other'))
-        print(
-            'problem updating {}'.format(
-                ', '.join('{}: {}'.format(k, value) for k, value in key.items())))
+    # except Exception:
+    #     problematic_keys.append(dict(**key, error='other'))
+    #     print(
+    #         'problem updating {}'.format(
+    #             ', '.join('{}: {}'.format(k, value) for k, value in key.items())))
 
 np.save('problematic_keys.npy', problematic_keys)
