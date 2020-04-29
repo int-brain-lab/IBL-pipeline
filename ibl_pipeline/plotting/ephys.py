@@ -1158,7 +1158,7 @@ class AutoCorrelogramTemplate(dj.Lookup):
     acg_template        : longblob
     """
     data = dict(
-        # x=acg_time,           # fetched from AutoCorrelogram
+        # x=np.linspace(t_start, t_end, len(acg)),   # t_start, t_end, acg fetched from AutoCorrelogram
         # y=acg,                # fetched from AutoCorrelogram
         name='data',
         type='scatter',
@@ -1210,8 +1210,9 @@ class AutoCorrelogram(dj.Computed):
     definition = """
     -> ephys.DefaultCluster
     ---
-    acg_time            : varchar(1000)
-    acg                 : varchar(1000)
+    acg                 : varchar(2000)
+    t_start             : float
+    t_end               : float
     plot_ylim           : blob
     -> AutoCorrelogramTemplate
     """
@@ -1244,6 +1245,7 @@ class AutoCorrelogram(dj.Computed):
         self.insert1(
             dict(**key,
                  acg=','.join('{:d}'.format(x) for x in acg),
-                 acg_time=','.join('{:0.1f}'.format(x) for x in acg_time),
+                 t_start=-win_sz/2,
+                 t_end=win_sz/2,
                  plot_ylim=[0, max(acg)+10],
                  acg_template_idx=0))
