@@ -33,16 +33,16 @@ def update_field(key, eID, trials, alf, djattr, dtype, status,
 
 # fetch keys with reward_volume but null in table TrialSet.Trial
 
-if len(sys.argvf) < 2:
+if len(sys.argv) < 2:
     keys = (behavior.TrialSet &
             (behavior.TrialSet.Trial & 'trial_reward_volume is null') &
             (behavior.CompleteTrialSession &
-            'reward_volume_status="Complete"')).fetch('KEY')
+             'reward_volume_status="Complete"')).fetch('KEY')
 else:
     keys = (behavior.TrialSet & sys.argv[1] &
             (behavior.TrialSet.Trial & 'trial_reward_volume is null') &
             (behavior.CompleteTrialSession &
-            'reward_volume_status="Complete"')).fetch('KEY')
+             'reward_volume_status="Complete"')).fetch('KEY')
 
 fields = [
     {'alf': 'trials.repNum',             'djattr': 'trial_rep_num',             'dtype': int,   'status': 'rep_num_status'},
