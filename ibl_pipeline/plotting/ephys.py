@@ -1210,7 +1210,7 @@ class AutoCorrelogram(dj.Computed):
     definition = """
     -> ephys.DefaultCluster
     ---
-    acg                 : varchar(2000)
+    acg=''              : varchar(2000)
     t_start             : float
     t_end               : float
     plot_ylim           : blob
@@ -1240,12 +1240,16 @@ class AutoCorrelogram(dj.Computed):
             'cluster_spikes_times')
 
         win_sz = 0.04
-        acg = self._acorr(spike_times, bin_size=0.0002, window_size=win_sz)
-        acg_time = np.linspace(-win_sz/2*1000, win_sz/2*1000, len(acg))
-        self.insert1(
-            dict(**key,
-                 acg=','.join('{:d}'.format(x) for x in acg),
-                 t_start=-win_sz/2,
-                 t_end=win_sz/2,
-                 plot_ylim=[0, max(acg)+10],
-                 acg_template_idx=0))
+        entry = dict(**key,
+                     t_start=-win_sz/2,
+                     t_end=win_sz/2,
+                     plot_ylim=[0, 10],
+                     acg_template_idx=0)
+
+        if len(spike_times):
+            acg = self._acorr(spike_times, bin_size=0.0002, window_size=win_sz)
+            entry.update(
+                acg=','.join('{:d}'.format(x) for x in acg),
+                plot_ylim=[0, max(acg)+10])
+
+        self.insert1(entry)
