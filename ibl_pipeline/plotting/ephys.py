@@ -1255,7 +1255,7 @@ class AutoCorrelogram(dj.Computed):
 
 
 @schema
-class WaveFormTemplate(dj.Lookup):
+class WaveformTemplate(dj.Lookup):
     definition = """
     waveform_template_idx   : int
     ---
