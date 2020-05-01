@@ -1197,7 +1197,6 @@ class AutoCorrelogramTemplate(dj.Lookup):
         plot_bgcolor='rgba(0,0,0,0)'
     )
 
-    fig = go.Figure(data=data, layout=layout)
     contents = [
         dict(acg_template_idx=0,
              acg_template=go.Figure(
@@ -1253,3 +1252,116 @@ class AutoCorrelogram(dj.Computed):
                 plot_ylim=[0, max(acg)+10])
 
         self.insert1(entry)
+
+
+@schema
+class WaveFormTemplate(dj.Lookup):
+    definition = """
+    waveform_template_idx   : int
+    ---
+    waveform_template       :  longblob
+    """
+    axis = go.Scatter(
+        # x=plot_xlim,  # fetch from WaveForm
+        # y=plot_ylim,  # fetch from WaveForm
+        mode='markers',
+        marker=dict(opacity=0),
+        showlegend=False,
+    )
+
+    layout = go.Layout(
+        images=[dict(source=source,
+                     sizex=self.x_lim[1] - self.x_lim[0],
+                     sizey=self.y_lim[1] - self.y_lim[0],
+                     x=self.x_lim[0],
+                     y=self.y_lim[1],
+                     xref='x',
+                     yref='y',
+                     sizing='stretch',
+                     layer='below')],
+        width=580,
+        height=400,
+        title=dict(
+            text='Template waveforms',
+            x=0.55,
+            y=0.85
+        ),
+        margin=go.layout.Margin(
+            l=100,
+            r=30,
+            b=40,
+            t=80,
+            pad=0),
+        legend=dict(
+            x=1.2,
+            y=0.8,
+            orientation='v'
+        ),
+        yaxis=dict(
+            title=dict(text='Channel position y (µm)', standoff=10),
+            showgrid=False,
+            # range=plot_ylim,  # from Waveform
+            tickcolor='gray',
+            ticks='outside',
+            tickwidth=2,
+            zeroline=False
+        ),
+
+        xaxis=dict(
+            title='Channel position x (µm)',
+            showgrid=False,
+            # range=plot_xlim,  # from Waveform
+            ticks='outside',
+            tickcolor='gray',
+            tickwidth=2,
+            zeroline=False
+        ),
+        plot_bgcolor='rgba(0,0,0,0)')
+
+    contents = [
+        dict(waveform_template_idx=0,
+             waveform_template=go.Figure(
+                 data=axis, layout=layout))]
+
+
+@schema
+class Waveform(dj.Computed):
+    definition = """
+    -> ephys.DefaultCluster
+    ---
+    plotting_data_link          : varchar(255)
+    plot_ylim                   : blob
+    plot_xlim                   : blob
+    -> WaveformTemplate
+    """
+
+    def make(self, key):
+
+        waveforms, waveforms_channels = (ephys.DefaultCluster() & key &
+                                         'cluster_id=1').fetch1(
+            'cluster_waveforms', 'cluster_waveforms_channels')
+        waveforms = waveforms * 1e6
+
+        fig = PngFigure(
+            eplt.template_waveform,
+            data=dict(waveforms=waveforms, coords=coords),
+            ax_kwargs=dict(as_background=True, return_lims=True),
+            dpi=100, figsize=[5.8, 4])
+
+        fig_link = path.join(
+                'waveform',
+                str(ikey['subject_uuid']),
+                ikey['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+                str(ikey['probe_idx']),
+                str(ikey['cluster_id'])) + '.png'
+
+        fig.upload_to_s3(bucket, fig_link)
+
+        self.insert1(
+            dict(**key,
+                 plotting_data_link=fig_link,
+                 plot_xlim=fig.x_lim,
+                 plot_ylim=fig.y_lim,
+                 waveform_template_idx=0))
+
+        fig.cleanup()

@@ -229,3 +229,60 @@ def spike_amp_time(spike_times, spike_amps,
         return ax, x_lim, y_lim
     else:
         return ax
+
+
+def template_waveform(waveforms, coords,
+                      ax=None, as_background=False, return_lims=False):
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, dpi=100, frameon=False, figsize=[5.8, 4])
+
+    if as_background:
+        ax.axis('off')
+    else:
+        ax.set_xlabel('Channel position x (µm)')
+        ax.set_ylabel('Channel position y (µm)')
+
+    x_max = np.max(coords[:, 0])
+    x_min = np.min(coords[:, 0])
+
+    y_max = np.max(coords[:, 1])
+    y_min = np.min(coords[:, 1])
+
+    n_channels = np.shape(waveforms)[1]
+    time_len = np.shape(waveforms)[0]
+
+    dt = 1/30.  # in ms
+
+    x_scale = (x_max - x_min) / n_channels / 10 / dt
+    y_scale = (y_max - y_min) / n_channels * 20
+
+    time = np.arange(time_len)*dt
+
+    for wf, coord in zip(waveforms.T, coords):
+        ax.plot(time*x_scale + coord[0],
+                wf*y_scale+coord[1], color=[0.2, 0.3, 0.8])
+
+    # plot scale bar
+    x_bar = x_scale
+    y_bar = y_scale
+
+    x0 = x_min - 8
+    y0 = y_min + 25
+
+    ax.text(x0-0.2*x_bar, y0-0.2*y_bar, '1 ms', fontdict=dict(family='serif'))
+    ax.text(x0-0.6*x_bar, y0+0.2*y_bar, '100 uV', fontdict=dict(family='serif'), rotation='vertical')
+
+    ax.plot([x0, x0 + x_bar], [y0, y0], color='black')
+    ax.plot([x0, x0], [y0, y0 + y_bar], color='black')
+
+    x_lim = [x_min - 3*x_bar, x_max + 15]
+    y_lim = [y_min - 0.2*y_bar, y_max + 20]
+
+    ax.set_xlim(x_lim)
+    ax.set_ylim(y_lim)
+
+    if return_lims:
+        return ax, x_lim, y_lim
+    else:
+        return ax
