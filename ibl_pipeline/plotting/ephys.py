@@ -1337,8 +1337,7 @@ class Waveform(dj.Computed):
 
     def make(self, key):
 
-        waveforms, waveforms_channels = (ephys.DefaultCluster() & key &
-                                         'cluster_id=1').fetch1(
+        waveforms, waveforms_channels = (ephys.DefaultCluster() & key).fetch1(
             'cluster_waveforms', 'cluster_waveforms_channels')
         waveforms = waveforms * 1e6
 
