@@ -1341,6 +1341,11 @@ class Waveform(dj.Computed):
             'cluster_waveforms', 'cluster_waveforms_channels')
         waveforms = waveforms * 1e6
 
+        # get channel locations
+        channel_coords = (ephys.ChannelGroup() & key).fetch1(
+            'channel_local_coordinates')
+        coords = channel_coords[waveforms_channels]
+
         fig = PngFigure(
             eplt.template_waveform,
             data=dict(waveforms=waveforms, coords=coords),
