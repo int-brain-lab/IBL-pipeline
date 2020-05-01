@@ -1334,38 +1334,45 @@ class Waveform(dj.Computed):
     plot_xlim                   : blob
     -> WaveformTemplate
     """
+    key_source = ephys.ProbeInsertion & ephys.DefaultCluster
 
     def make(self, key):
 
-        waveforms, waveforms_channels = (ephys.DefaultCluster() & key).fetch1(
-            'cluster_waveforms', 'cluster_waveforms_channels')
+        entries = []
+        keys, clusters_waveforms, clusters_waveforms_channels = \
+            (ephys.DefaultCluster() & key).fetch1(
+                'KEY', 'cluster_waveforms', 'cluster_waveforms_channels')
         waveforms = waveforms * 1e6
 
-        # get channel locations
-        channel_coords = (ephys.ChannelGroup() & key).fetch1(
-            'channel_local_coordinates')
-        coords = channel_coords[waveforms_channels]
+        for ikey, waveforms, waveforms_channels in zip(
+                keys, clusters_waveforms, clusters_waveforms_channels):
 
-        fig = PngFigure(
-            eplt.template_waveform,
-            data=dict(waveforms=waveforms, coords=coords),
-            ax_kwargs=dict(as_background=True, return_lims=True),
-            dpi=100, figsize=[5.8, 4])
+            # get channel locations
+            channel_coords = (ephys.ChannelGroup() & ikey).fetch1(
+                'channel_local_coordinates')
+            coords = channel_coords[waveforms_channels]
 
-        fig_link = path.join(
-                'waveform',
-                str(key['subject_uuid']),
-                key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
-                str(key['probe_idx']),
-                str(key['cluster_id'])) + '.png'
+            fig = PngFigure(
+                eplt.template_waveform,
+                data=dict(waveforms=waveforms, coords=coords),
+                ax_kwargs=dict(as_background=True, return_lims=True),
+                dpi=100, figsize=[5.8, 4])
 
-        fig.upload_to_s3(bucket, fig_link)
+            fig_link = path.join(
+                    'waveform',
+                    str(ikey['subject_uuid']),
+                    ikey['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+                    str(ikey['probe_idx']),
+                    str(ikey['cluster_id'])) + '.png'
 
-        self.insert1(
-            dict(**key,
-                 plotting_data_link=fig_link,
-                 plot_xlim=fig.x_lim,
-                 plot_ylim=fig.y_lim,
-                 waveform_template_idx=0))
+            fig.upload_to_s3(bucket, fig_link)
 
-        fig.cleanup()
+            entries.append(
+                dict(**ikey,
+                     plotting_data_link=fig_link,
+                     plot_xlim=fig.x_lim,
+                     plot_ylim=fig.y_lim,
+                     waveform_template_idx=0).copy())
+            fig.cleanup()
+
+        self.insert(entries)
