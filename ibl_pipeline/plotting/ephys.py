@@ -1340,11 +1340,11 @@ class Waveform(dj.Computed):
 
         entries = []
         keys, clusters_waveforms, clusters_waveforms_channels = \
-            (ephys.DefaultCluster() & key).fetch1(
+            (ephys.DefaultCluster() & key).fetch(
                 'KEY', 'cluster_waveforms', 'cluster_waveforms_channels')
 
-        for ikey, waveforms, waveforms_channels in zip(
-                keys, clusters_waveforms, clusters_waveforms_channels):
+        for ikey, waveforms, waveforms_channels in tqdm(zip(
+                keys, clusters_waveforms, clusters_waveforms_channels)):
 
             # get channel locations
             channel_coords = (ephys.ChannelGroup() & ikey).fetch1(
