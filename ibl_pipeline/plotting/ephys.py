@@ -1270,11 +1270,11 @@ class WaveFormTemplate(dj.Lookup):
     )
 
     layout = go.Layout(
-        images=[dict(source=source,
-                     sizex=self.x_lim[1] - self.x_lim[0],
-                     sizey=self.y_lim[1] - self.y_lim[0],
-                     x=self.x_lim[0],
-                     y=self.y_lim[1],
+        images=[dict(source='',  # replace with plotting_fig_link from Waveform
+                     #  sizex=plot_xlim[1] - plot_xlim[0],
+                     #  sizey=plot_ylim[1] - plot_ylim[0],
+                     #  x=plot_xlim[0],
+                     #  y=plot_ylim[1],
                      xref='x',
                      yref='y',
                      sizing='stretch',
