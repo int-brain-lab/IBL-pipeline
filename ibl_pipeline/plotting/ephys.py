@@ -1321,7 +1321,7 @@ class WaveFormTemplate(dj.Lookup):
     contents = [
         dict(waveform_template_idx=0,
              waveform_template=go.Figure(
-                 data=axis, layout=layout))]
+                 data=axis, layout=layout).to_plotly_json())]
 
 
 @schema
