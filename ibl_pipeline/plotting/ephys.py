@@ -1355,7 +1355,7 @@ class Waveform(dj.Computed):
         fig_link = path.join(
                 'waveform',
                 str(key['subject_uuid']),
-                ikey['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+                key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
                 str(key['probe_idx']),
                 str(key['cluster_id'])) + '.png'
 
