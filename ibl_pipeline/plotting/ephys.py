@@ -1354,10 +1354,10 @@ class Waveform(dj.Computed):
 
         fig_link = path.join(
                 'waveform',
-                str(ikey['subject_uuid']),
+                str(key['subject_uuid']),
                 ikey['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
-                str(ikey['probe_idx']),
-                str(ikey['cluster_id'])) + '.png'
+                str(key['probe_idx']),
+                str(key['cluster_id'])) + '.png'
 
         fig.upload_to_s3(bucket, fig_link)
 
