@@ -1342,7 +1342,6 @@ class Waveform(dj.Computed):
         keys, clusters_waveforms, clusters_waveforms_channels = \
             (ephys.DefaultCluster() & key).fetch1(
                 'KEY', 'cluster_waveforms', 'cluster_waveforms_channels')
-        waveforms = waveforms * 1e6
 
         for ikey, waveforms, waveforms_channels in zip(
                 keys, clusters_waveforms, clusters_waveforms_channels):
@@ -1354,7 +1353,7 @@ class Waveform(dj.Computed):
 
             fig = PngFigure(
                 eplt.template_waveform,
-                data=dict(waveforms=waveforms, coords=coords),
+                data=dict(waveforms=waveforms*1e6, coords=coords),
                 ax_kwargs=dict(as_background=True, return_lims=True),
                 dpi=100, figsize=[5.8, 4])
 
