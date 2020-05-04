@@ -80,7 +80,7 @@ def driftmap_color(
         fig = plt.Figure(dpi=200, frameon=False, figsize=[10, 10])
         ax = plt.Axes(fig, [0.1, 0.1, 0.9, 0.9])
         ax.set_xlabel('Time (sec)')
-        ax.set_ylabel('Distance from the probe tip (um)')
+        ax.set_ylabel('Distance from the probe tip (µm)')
         savefig = True
         args.update(s=0.1)
 
@@ -148,7 +148,7 @@ def depth_peth(peth_df, ax=None, colors=None,
         cbar = None
     else:
         ax.set_xlabel('Time (s)')
-        ax.set_ylabel('Depth relative to the probe tip (um)')
+        ax.set_ylabel('Depth relative to the probe tip (µm)')
         cbar = 'auto'
 
     ax = sns.heatmap(peth_df,
@@ -173,7 +173,7 @@ def depth_peth(peth_df, ax=None, colors=None,
 
 
 def spike_amp_time(spike_times, spike_amps,
-                   ax=None, color=[0.2, 0.5, 0.8], alpha=0.1,
+                   ax=None, color=[0.2, 0.3, 0.8], alpha=0.1,
                    as_background=False, return_lims=False):
 
     '''
@@ -210,7 +210,7 @@ def spike_amp_time(spike_times, spike_amps,
         ax.axis('off')
     else:
         ax.set_xlabel('Time (s)')
-        ax.set_ylabel('Spike amplitude (uV)')
+        ax.set_ylabel('Spike amplitude (µV)')
 
     ax.scatter(spike_times, spike_amps, alpha=alpha,
                color=color, edgecolors='none')

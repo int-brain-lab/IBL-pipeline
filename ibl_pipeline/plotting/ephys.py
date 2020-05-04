@@ -68,7 +68,6 @@ class GeneralTemplate(dj.Lookup):
     """
 
 
-
 @schema
 class RasterLayoutTemplate(dj.Lookup):
     definition = """
@@ -627,7 +626,7 @@ class DepthRasterTemplate(dj.Lookup):
             showgrid=False
         ),
         yaxis=dict(
-            title='Distance from the probe tip (um)',
+            title='Distance from the probe tip (µm)',
             # range=plot_ylim,  # fetched from DepthRaster
             showgrid=False
         ))
@@ -702,7 +701,7 @@ class DepthRasterTemplate(dj.Lookup):
             showgrid=False
         ),
         yaxis=dict(
-            title='Depth relative to the probe tip (um)',
+            title='Depth relative to the probe tip (µm)',
             # range=plot_ylim,  # fetched from DepthRasterPerTrial
             showgrid=False
         ))
@@ -962,7 +961,7 @@ class DepthPethTemplate(dj.Lookup):
             # range=plot_xlim    # plot_xlim from DepthPeth
             ),
         yaxis=dict(
-            title='Depth from the probe tip (um)',
+            title='Depth from the probe tip (µm)',
             showgrid=False,
             # range=plot_ylim    # plot_ylim from DepthPeth
         ),
@@ -1071,13 +1070,13 @@ class SpikeAmpTimeTemplate(dj.Lookup):
             # range=plot_xlim,
             ticks='outside'),
         yaxis=dict(
-            title=dict(text='Spike amp (uV)', standoff=10),
+            title=dict(text='Spike amp (µV)', standoff=10),
             showgrid=False,
             # range=plot_ylim,
             ticks='outside'),
 
-        width=600,
-        height=480,
+        width=580,
+        height=400,
         title=dict(
             text='Spike amp - time',
             x=0.5,
@@ -1123,11 +1122,11 @@ class SpikeAmpTime(dj.Computed):
             fig = PngFigure(eplt.spike_amp_time,
                             data=dict(spike_times=spike_times,
                                       spike_amps=spike_amps*1e6),
-                            ax_kwargs=dict(color=[0.2, 0.5, 0.8],
+                            ax_kwargs=dict(color=[0.2, 0.3, 0.8],
                                            alpha=0.15,
                                            as_background=True,
                                            return_lims=True),
-                            dpi=100, figsize=[10, 8])
+                            dpi=100, figsize=[10, 5])
 
             fig_link = path.join(
                 'raster',
@@ -1163,7 +1162,7 @@ class AutoCorrelogramTemplate(dj.Lookup):
         name='data',
         type='scatter',
         marker=dict(
-            color='blue'
+            color='rgba(51, 76.5, 204, 0.8)'
         ),
         x0=0
     )
