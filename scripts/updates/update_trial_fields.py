@@ -22,7 +22,7 @@ def update_field(key, eID, trials, alf, djattr, dtype, status,
                 dict(**key, error=alf))
         else:
             for itrial, trial_key in enumerate(trials.fetch('KEY')):
-                print(dtype(dataset[itrial]))
+                # print(dtype(dataset[itrial]))
                 dj.Table._update(
                     behavior.TrialSet.Trial & trial_key,
                     djattr, dtype(dataset[itrial]))
