@@ -35,7 +35,7 @@ def update_field(key, eID, trials, alf, djattr, dtype, status,
 sessions = behavior.TrialSet.aggr(
     behavior.TrialSet.Trial,
     n_prob_trials='sum(trial_id=floor(trial_reward_volume)+1)',
-    n_total_trials='count(*)') & 'n_prob_trials=n_total_trials'
+    n_total_trials='count(*)') & 'n_prob_trials>5'
 
 if len(sys.argv) < 2:
     keys = sessions.fetch('KEY')
