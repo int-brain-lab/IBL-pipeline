@@ -16,14 +16,14 @@ def update_field(key, eID, trials, alf, djattr, dtype, status,
 
     if data_status != 'Missing' and \
             len(trials & f'{djattr} is null'):
-        dataset = np.squeeze(one.load(
-            eID, dataset_types=alf))
+        dataset = np.squeeze(one.load(eID, dataset_types=alf))
 
         if len(dataset) != len(trials):
             message_record.append(
                 dict(**key, error=alf))
         else:
             for itrial, trial_key in enumerate(trials.fetch('KEY')):
+                print(dtype(dataset[itrial]))
                 dj.Table._update(
                     behavior.TrialSet.Trial & trial_key,
                     djattr, dtype(dataset[itrial]))
@@ -33,24 +33,23 @@ def update_field(key, eID, trials, alf, djattr, dtype, status,
 
 # fetch keys with reward_volume but null in table TrialSet.Trial
 
+sessions = behavior.TrialSet.aggr(
+    behavior.TrialSet.Trial,
+    n_prob_trials='sum(trial_id=floor(trial_reward_volume)+1)',
+    n_total_trials='count(*)') & 'n_trials=n_total_trials'
+
 if len(sys.argv) < 2:
-    keys = (behavior.TrialSet &
-            (behavior.TrialSet.Trial & 'trial_reward_volume is null') &
-            (behavior.CompleteTrialSession &
-             'reward_volume_status="Complete"')).fetch('KEY')
+    keys = sessions.fetch('KEY')
 else:
-    keys = (behavior.TrialSet & sys.argv[1] &
-            (behavior.TrialSet.Trial & 'trial_reward_volume is null') &
-            (behavior.CompleteTrialSession &
-             'reward_volume_status="Complete"')).fetch('KEY')
+    keys = (sessions & sys.argv[1]).fetch('KEY')
 
 fields = [
-    {'alf': 'trials.repNum',             'djattr': 'trial_rep_num',             'dtype': int,   'status': 'rep_num_status'},
-    {'alf': 'trials.included',           'djattr': 'trial_included',            'dtype': bool,  'status': 'included_status'},
-    {'alf': 'trials.goCue_times',        'djattr': 'trial_go_cue_time',         'dtype': float, 'status': 'go_cue_times_status'},
-    {'alf': 'trials.goCueTrigger_times', 'djattr': 'trial_go_cue_trigger_time', 'dtype': float, 'status': 'go_cue_trigger_times_status'},
+    # {'alf': 'trials.repNum',             'djattr': 'trial_rep_num',             'dtype': int,   'status': 'rep_num_status'},
+    # {'alf': 'trials.included',           'djattr': 'trial_included',            'dtype': bool,  'status': 'included_status'},
+    # {'alf': 'trials.goCue_times',        'djattr': 'trial_go_cue_time',         'dtype': float, 'status': 'go_cue_times_status'},
+    # {'alf': 'trials.goCueTrigger_times', 'djattr': 'trial_go_cue_trigger_time', 'dtype': float, 'status': 'go_cue_trigger_times_status'},
     {'alf': 'trials.rewardVolume',       'djattr': 'trial_reward_volume',       'dtype': float, 'status': 'reward_volume_status'},
-    {'alf': 'trials.itiDuration',        'djattr': 'trial_iti_duration',        'dtype': float, 'status': 'iti_duration_status'},
+    # {'alf': 'trials.itiDuration',        'djattr': 'trial_iti_duration',        'dtype': float, 'status': 'iti_duration_status'},
 ]
 
 problematic_keys = []
