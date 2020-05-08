@@ -14,8 +14,7 @@ def update_field(key, eID, trials, alf, djattr, dtype, status,
 
     data_status = (behavior.CompleteTrialSession & key).fetch1(status)
 
-    if data_status != 'Missing' and \
-            len(trials & f'{djattr} is null'):
+    if data_status != 'Missing':
         dataset = np.squeeze(one.load(eID, dataset_types=alf))
 
         if len(dataset) != len(trials):
