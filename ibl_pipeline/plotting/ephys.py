@@ -833,7 +833,7 @@ class DepthRasterExampleTrial(dj.Computed):
             return None
 
     def _create_trial_raster(self, key, spikes_data, trial,
-                             trial_type, contrast):
+                             trial_type):
         f = np.logical_and(
             spikes_data['spikes_times'] < trial['trial_end_time'],
             spikes_data['spikes_times'] > trial['trial_start_time'])
@@ -866,8 +866,9 @@ class DepthRasterExampleTrial(dj.Computed):
             trial_id=trial['trial_id'],
             depth_raster_template_idx=1,
             trial_type=trial_type,
-            trial_contrast=contrast['trial_signed_contrast'],
-            plot_title='Depth Raster for a ' + trial_type + ' ' + str(contrast['trial_signed_contrast'])
+            trial_contrast=trial['trial_signed_contrast'],
+            plot_title='Depth Raster for a ' + trial_type + ' ' +
+                       str(trial['trial_signed_contrast'])
         )
 
         if not np.isnan(trial['trial_feedback_time']):
@@ -911,7 +912,7 @@ class DepthRasterExampleTrial(dj.Computed):
                     trial = np.random.choice(left_correct)
                     trial_depthraster = self._create_trial_raster(
                         key, spikes_data, trial,
-                        'Correct Left Contrast', contrast)
+                        'Correct Left Contrast')
                     trials_depthraster.append(trial_depthraster.copy())
 
                 left_incorrect = (trials_left_incorrect & contrast).fetch()
@@ -919,7 +920,7 @@ class DepthRasterExampleTrial(dj.Computed):
                     trial = np.random.choice(left_incorrect)
                     trial_depthraster = self._create_trial_raster(
                         key, spikes_data, trial,
-                        'Incorrect Left Contrast', contrast)
+                        'Incorrect Left Contrast')
                     trials_depthraster.append(trial_depthraster.copy())
 
                 right_correct = (trials_right_correct & contrast).fetch()
@@ -927,7 +928,7 @@ class DepthRasterExampleTrial(dj.Computed):
                     trial = np.random.choice(right_correct)
                     trial_depthraster = self._create_trial_raster(
                         key, spikes_data, trial,
-                        'Correct Right Contrast', contrast)
+                        'Correct Right Contrast')
                     trials_depthraster.append(trial_depthraster.copy())
 
                 right_incorrect = (trials_right_incorrect & contrast).fetch()
@@ -935,7 +936,7 @@ class DepthRasterExampleTrial(dj.Computed):
                     trial = np.random.choice(right_incorrect)
                     trial_depthraster = self._create_trial_raster(
                         key, spikes_data, trial,
-                        'Incorrect Right Contrast', contrast)
+                        'Incorrect Right Contrast')
                     trials_depthraster.append(trial_depthraster.copy())
 
                 try:
@@ -952,7 +953,7 @@ class DepthRasterExampleTrial(dj.Computed):
                 trial_type = self._get_trial_type(trial)
                 if trial_type:
                     trials_depthraster.append(self._create_trial_raster(
-                        key, spikes_data, trial, trial_type, contrast))
+                        key, spikes_data, trial, trial_type))
             self.insert(trials_depthraster)
 
 
