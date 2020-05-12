@@ -871,7 +871,7 @@ class DepthRasterExampleTrial(dj.Computed):
                        str(trial['trial_signed_contrast'])
         )
 
-        if not np.isnan(trial['trial_feedback_time']):
+        if trial['trial_feedback_time']:
             depth_raster.update(
                 trial_feedback=trial['trial_feedback_time']
             )
@@ -894,18 +894,18 @@ class DepthRasterExampleTrial(dj.Computed):
             trial_signed_contrast='trial_stim_contrast_right - trial_stim_contrast_left'
         ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"'
 
-        # choice of clockwise and feedback type is positive
-        trials_left_correct = trials_all & 'trial_response_choice="CW"' \
-            & 'trial_feedback_type=1'
-        trials_right_correct = trials_all & 'trial_response_choice="CCW"' \
-            & 'trial_feedback_type=1'
-        trials_left_incorrect = trials_all & 'trial_response_choice="CW"' \
-            & 'trial_feedback_type=-1'
-        trials_right_incorrect = trials_all & 'trial_response_choice="CCW"' \
-            & 'trial_feedback_type=-1'
-
         trials_depthraster = []
         if mode == 'example':
+            # choice of clockwise and feedback type is positive
+            trials_left_correct = trials_all & 'trial_response_choice="CW"' \
+                & 'trial_feedback_type=1'
+            trials_right_correct = trials_all & 'trial_response_choice="CCW"' \
+                & 'trial_feedback_type=1'
+            trials_left_incorrect = trials_all & 'trial_response_choice="CW"' \
+                & 'trial_feedback_type=-1'
+            trials_right_incorrect = trials_all & 'trial_response_choice="CCW"' \
+                & 'trial_feedback_type=-1'
+
             for contrast in tqdm(dj.U('trial_signed_contrast') & trials_all):
                 left_correct = (trials_left_correct & contrast).fetch()
                 if len(left_correct):
