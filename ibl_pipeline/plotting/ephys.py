@@ -863,6 +863,7 @@ class DepthRasterExampleTrial(dj.Computed):
             trial_start=trial['trial_start_time'],
             trial_end=trial['trial_end_time'],
             trial_stim_on=trial['trial_stim_on_time'],
+            trial_feedback=trial['trial_feedback_time'],
             trial_id=trial['trial_id'],
             depth_raster_template_idx=1,
             trial_type=trial_type,
@@ -871,10 +872,6 @@ class DepthRasterExampleTrial(dj.Computed):
                        str(trial['trial_signed_contrast'])
         )
 
-        if trial['trial_feedback_time']:
-            depth_raster.update(
-                trial_feedback=trial['trial_feedback_time']
-            )
         return depth_raster
 
     def make(self, key):
@@ -957,6 +954,8 @@ class DepthRasterExampleTrial(dj.Computed):
             try:
                 self.insert(trials_depthraster, skip_duplicates=True)
             except Exception:
+                print('Failed to insert all trials at once, \
+                       try inserting one by one...')
                 for trial_dr in trials_depthraster:
                     self.insert1(trial_dr, skip_duplicates=True)
 
