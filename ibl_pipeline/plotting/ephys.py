@@ -813,20 +813,20 @@ class DepthRasterExampleTrial(dj.Computed):
 
     def _get_trial_type(self, trial):
 
-        if trial['trial_response_choice'] = 'CW' and \
-                trial['trial_feedback_type'] = 1:
+        if trial['trial_response_choice'] == 'CW' and \
+                trial['trial_feedback_type'] == 1:
             return 'Correct Left Contrast'
 
-        elif trial['trial_response_choice'] = 'CCW' and \
-                trial['trial_feedback_type'] = 1:
+        elif trial['trial_response_choice'] == 'CCW' and \
+                trial['trial_feedback_type'] == 1:
             return 'Correct Right Contrast'
 
-        elif trial['trial_response_choice'] = 'CW' and \
-                trial['trial_feedback_type'] = -1:
+        elif trial['trial_response_choice'] == 'CW' and \
+                trial['trial_feedback_type'] == -1:
             return 'Incorrect Left Contrast'
 
-        elif trial['trial_response_choice'] = 'CCW' and \
-                trial['trial_feedback_type'] = -1:
+        elif trial['trial_response_choice'] == 'CCW' and \
+                trial['trial_feedback_type'] == -1:
             return 'Incorrect Right Contrast'
 
         else:
