@@ -811,8 +811,29 @@ class DepthRasterExampleTrial(dj.Computed):
     key_source = ephys.ProbeInsertion & behavior.TrialSet & \
         ephys.DefaultCluster
 
-    def create_trial_raster(self, key, spikes_data, trial,
-                            trial_type, contrast):
+    def _get_trial_type(self, trial):
+
+        if trial['trial_response_choice'] = 'CW' and \
+                trial['trial_feedback_type'] = 1:
+            return 'Correct Left Contrast'
+
+        elif trial['trial_response_choice'] = 'CCW' and \
+                trial['trial_feedback_type'] = 1:
+            return 'Correct Right Contrast'
+
+        elif trial['trial_response_choice'] = 'CW' and \
+                trial['trial_feedback_type'] = -1:
+            return 'Incorrect Left Contrast'
+
+        elif trial['trial_response_choice'] = 'CCW' and \
+                trial['trial_feedback_type'] = -1:
+            return 'Incorrect Right Contrast'
+
+        else:
+            return None
+
+    def _create_trial_raster(self, key, spikes_data, trial,
+                             trial_type, contrast):
         f = np.logical_and(
             spikes_data['spikes_times'] < trial['trial_end_time'],
             spikes_data['spikes_times'] > trial['trial_start_time'])
@@ -857,6 +878,7 @@ class DepthRasterExampleTrial(dj.Computed):
 
     def make(self, key):
 
+        mode = 'all'
         spikes_data = putils.prepare_spikes_data(key)
 
         # pick one example trial and generate depth raster
@@ -882,46 +904,56 @@ class DepthRasterExampleTrial(dj.Computed):
             & 'trial_feedback_type=-1'
 
         trials_depthraster = []
-        for contrast in tqdm(dj.U('trial_signed_contrast') & trials_all):
-            left_correct = (trials_left_correct & contrast).fetch()
-            if len(left_correct):
-                trial = np.random.choice(left_correct)
-                trial_depthraster = self.create_trial_raster(
-                    key, spikes_data, trial,
-                    'Correct Left Contrast', contrast)
-                trials_depthraster.append(trial_depthraster.copy())
+        if mode == 'example':
+            for contrast in tqdm(dj.U('trial_signed_contrast') & trials_all):
+                left_correct = (trials_left_correct & contrast).fetch()
+                if len(left_correct):
+                    trial = np.random.choice(left_correct)
+                    trial_depthraster = self._create_trial_raster(
+                        key, spikes_data, trial,
+                        'Correct Left Contrast', contrast)
+                    trials_depthraster.append(trial_depthraster.copy())
 
-            left_incorrect = (trials_left_incorrect & contrast).fetch()
-            if len(left_incorrect):
-                trial = np.random.choice(left_incorrect)
-                trial_depthraster = self.create_trial_raster(
-                    key, spikes_data, trial,
-                    'Incorrect Left Contrast', contrast)
-                trials_depthraster.append(trial_depthraster.copy())
+                left_incorrect = (trials_left_incorrect & contrast).fetch()
+                if len(left_incorrect):
+                    trial = np.random.choice(left_incorrect)
+                    trial_depthraster = self._create_trial_raster(
+                        key, spikes_data, trial,
+                        'Incorrect Left Contrast', contrast)
+                    trials_depthraster.append(trial_depthraster.copy())
 
-            right_correct = (trials_right_correct & contrast).fetch()
-            if len(right_correct):
-                trial = np.random.choice(right_correct)
-                trial_depthraster = self.create_trial_raster(
-                    key, spikes_data, trial,
-                    'Correct Right Contrast', contrast)
-                trials_depthraster.append(trial_depthraster.copy())
+                right_correct = (trials_right_correct & contrast).fetch()
+                if len(right_correct):
+                    trial = np.random.choice(right_correct)
+                    trial_depthraster = self._create_trial_raster(
+                        key, spikes_data, trial,
+                        'Correct Right Contrast', contrast)
+                    trials_depthraster.append(trial_depthraster.copy())
 
-            right_incorrect = (trials_right_incorrect & contrast).fetch()
-            if len(right_incorrect):
-                trial = np.random.choice(right_incorrect)
-                trial_depthraster = self.create_trial_raster(
-                    key, spikes_data, trial,
-                    'Incorrect Right Contrast', contrast)
-                trials_depthraster.append(trial_depthraster.copy())
+                right_incorrect = (trials_right_incorrect & contrast).fetch()
+                if len(right_incorrect):
+                    trial = np.random.choice(right_incorrect)
+                    trial_depthraster = self._create_trial_raster(
+                        key, spikes_data, trial,
+                        'Incorrect Right Contrast', contrast)
+                    trials_depthraster.append(trial_depthraster.copy())
 
-            try:
-                self.insert(trials_depthraster, skip_duplicates=True)
-            except Exception:
-                for trial_dr in trials_depthraster:
-                    self.insert1(trial_dr, skip_duplicates=True)
+                try:
+                    self.insert(trials_depthraster, skip_duplicates=True)
+                except Exception:
+                    for trial_dr in trials_depthraster:
+                        self.insert1(trial_dr, skip_duplicates=True)
 
-            trials_depthraster = []
+                trials_depthraster = []
+
+        else:
+            for trial_key in tqdm(trials_all.fetch('KEY')):
+                trial = (trials_all & trial_key).fetch1()
+                trial_type = self._get_trial_type(trial)
+                if trial_type:
+                    trials_depthraster.append(self._create_trial_raster(
+                        key, spikes_data, trial, trial_type, contrast))
+            self.insert(trials_depthraster)
 
 
 @schema
@@ -1157,7 +1189,7 @@ class AutoCorrelogramTemplate(dj.Lookup):
     acg_template        : longblob
     """
     data = dict(
-        # x=np.linspace(t_start, t_end, len(acg)),   # t_start, t_end, acg fetched from AutoCorrelogram
+        # x=np.linspace(t_start, t_end, len(acg)) * 1000,   # t_start, t_end, acg fetched from AutoCorrelogram
         # y=acg,                # fetched from AutoCorrelogram
         name='data',
         type='scatter',
