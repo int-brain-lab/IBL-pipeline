@@ -954,7 +954,11 @@ class DepthRasterExampleTrial(dj.Computed):
                 if trial_type:
                     trials_depthraster.append(self._create_trial_raster(
                         key, spikes_data, trial, trial_type))
-            self.insert(trials_depthraster)
+            try:
+                self.insert(trials_depthraster, skip_duplicates=True)
+            except Exception:
+                for trial_dr in trials_depthraster:
+                    self.insert1(trial_dr, skip_duplicates=True)
 
 
 @schema
