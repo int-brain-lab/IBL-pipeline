@@ -880,7 +880,7 @@ class DepthRasterExampleTrial(dj.Computed):
         mode = 'example'
         spikes_data = putils.prepare_spikes_data(key)
 
-        # pick one example trial and generate depth raster
+        # pick some example trials and generate depth raster
         trials_all = (behavior.TrialSet.Trial & key).proj(
             'trial_response_choice',
             'trial_feedback_type',
@@ -896,10 +896,10 @@ class DepthRasterExampleTrial(dj.Computed):
         if mode == 'example':
 
             conditions = [
-                {'trial_response_choice': 'CW', 'trial_feedback_type=1'},
-                {'trial_response_choice': 'CCW', 'trial_feedback_type=1'},
-                {'trial_response_choice': 'CW', 'trial_feedback_type=-1'},
-                {'trial_response_choice': 'CCW', 'trial_feedback_type=-1'},
+                {'trial_response_choice': 'CW', 'trial_feedback_type': 1},
+                {'trial_response_choice': 'CCW', 'trial_feedback_type': 1},
+                {'trial_response_choice': 'CW', 'trial_feedback_type': -1},
+                {'trial_response_choice': 'CCW', 'trial_feedback_type': -1},
             ]
 
             trial_num = 3
