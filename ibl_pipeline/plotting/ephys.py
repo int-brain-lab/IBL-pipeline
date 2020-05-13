@@ -877,7 +877,7 @@ class DepthRasterExampleTrial(dj.Computed):
 
     def make(self, key):
 
-        mode = 'example'
+        mode = 'all'
         spikes_data = putils.prepare_spikes_data(key)
 
         # pick some example trials and generate depth raster
