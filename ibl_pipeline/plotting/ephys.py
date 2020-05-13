@@ -907,7 +907,7 @@ class DepthRasterExampleTrial(dj.Computed):
             for contrast in tqdm(dj.U('trial_signed_contrast') & trials_all):
 
                 for cond in conditions:
-                    trials_cond = (trials_left_correct & cond & contrast).fetch()
+                    trials_cond = (trials_all & cond & contrast).fetch()
                     if len(trials_cond):
                         trials = np.random.choice(trials_cond,
                                                   size=[trial_num])
