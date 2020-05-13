@@ -832,8 +832,9 @@ class DepthRasterExampleTrial(dj.Computed):
         else:
             return None
 
-    def _create_trial_raster(self, key, spikes_data, trial,
-                             trial_type):
+    def _create_trial_raster(self, key, spikes_data, trial):
+
+        trial_type = self._get_trial_type(trial)
         f = np.logical_and(
             spikes_data['spikes_times'] < trial['trial_end_time'],
             spikes_data['spikes_times'] > trial['trial_start_time'])
@@ -876,7 +877,7 @@ class DepthRasterExampleTrial(dj.Computed):
 
     def make(self, key):
 
-        mode = 'all'
+        mode = 'example'
         spikes_data = putils.prepare_spikes_data(key)
 
         # pick one example trial and generate depth raster
@@ -893,71 +894,44 @@ class DepthRasterExampleTrial(dj.Computed):
 
         trials_depthraster = []
         if mode == 'example':
-            # choice of clockwise and feedback type is positive
-            trials_left_correct = trials_all & 'trial_response_choice="CW"' \
-                & 'trial_feedback_type=1'
-            trials_right_correct = trials_all & 'trial_response_choice="CCW"' \
-                & 'trial_feedback_type=1'
-            trials_left_incorrect = trials_all & 'trial_response_choice="CW"' \
-                & 'trial_feedback_type=-1'
-            trials_right_incorrect = trials_all & 'trial_response_choice="CCW"' \
-                & 'trial_feedback_type=-1'
+
+            conditions = [
+                {'trial_response_choice': 'CW', 'trial_feedback_type=1'},
+                {'trial_response_choice': 'CCW', 'trial_feedback_type=1'},
+                {'trial_response_choice': 'CW', 'trial_feedback_type=-1'},
+                {'trial_response_choice': 'CCW', 'trial_feedback_type=-1'},
+            ]
+
+            trial_num = 3
 
             for contrast in tqdm(dj.U('trial_signed_contrast') & trials_all):
-                left_correct = (trials_left_correct & contrast).fetch()
-                if len(left_correct):
-                    trial = np.random.choice(left_correct)
-                    trial_depthraster = self._create_trial_raster(
-                        key, spikes_data, trial,
-                        'Correct Left Contrast')
-                    trials_depthraster.append(trial_depthraster.copy())
 
-                left_incorrect = (trials_left_incorrect & contrast).fetch()
-                if len(left_incorrect):
-                    trial = np.random.choice(left_incorrect)
-                    trial_depthraster = self._create_trial_raster(
-                        key, spikes_data, trial,
-                        'Incorrect Left Contrast')
-                    trials_depthraster.append(trial_depthraster.copy())
+                for cond in conditions:
+                    trials_cond = (trials_left_correct & cond & contrast).fetch()
+                    if len(trials_cond):
+                        trials = np.random.choice(trials_cond,
+                                                  size=[trial_num])
 
-                right_correct = (trials_right_correct & contrast).fetch()
-                if len(right_correct):
-                    trial = np.random.choice(right_correct)
-                    trial_depthraster = self._create_trial_raster(
-                        key, spikes_data, trial,
-                        'Correct Right Contrast')
-                    trials_depthraster.append(trial_depthraster.copy())
-
-                right_incorrect = (trials_right_incorrect & contrast).fetch()
-                if len(right_incorrect):
-                    trial = np.random.choice(right_incorrect)
-                    trial_depthraster = self._create_trial_raster(
-                        key, spikes_data, trial,
-                        'Incorrect Right Contrast')
-                    trials_depthraster.append(trial_depthraster.copy())
-
-                try:
-                    self.insert(trials_depthraster, skip_duplicates=True)
-                except Exception:
-                    for trial_dr in trials_depthraster:
-                        self.insert1(trial_dr, skip_duplicates=True)
-
-                trials_depthraster = []
+                        for trial in trials:
+                            trials_depthraster.append(
+                                self._create_trial_raster(
+                                    key, spikes_data, trial))
 
         else:
             for trial_key in tqdm(trials_all.fetch('KEY')):
                 trial = (trials_all & trial_key).fetch1()
                 trial_type = self._get_trial_type(trial)
                 if trial_type:
-                    trials_depthraster.append(self._create_trial_raster(
-                        key, spikes_data, trial, trial_type))
-            try:
-                self.insert(trials_depthraster, skip_duplicates=True)
-            except Exception:
-                print('Failed to insert all trials at once, \
-                       try inserting one by one...')
-                for trial_dr in trials_depthraster:
-                    self.insert1(trial_dr, skip_duplicates=True)
+                    trials_depthraster.append(
+                        self._create_trial_raster(key, spikes_data, trial))
+
+        try:
+            self.insert(trials_depthraster, skip_duplicates=True)
+        except Exception:
+            print('Failed to insert all trials at once, \
+                    try inserting one by one...')
+            for trial_dr in trials_depthraster:
+                self.insert1(trial_dr, skip_duplicates=True)
 
 
 @schema
