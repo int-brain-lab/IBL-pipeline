@@ -1132,8 +1132,7 @@ class SpikeAmpTime(dj.Computed):
             fig = PngFigure(eplt.spike_amp_time,
                             data=dict(spike_times=spike_times,
                                       spike_amps=spike_amps*1e6),
-                            ax_kwargs=dict(color=[0.2, 0.3, 0.8],
-                                           alpha=0.15,
+                            ax_kwargs=dict(s=8,
                                            as_background=True,
                                            return_lims=True),
                             dpi=100, figsize=[10, 5])

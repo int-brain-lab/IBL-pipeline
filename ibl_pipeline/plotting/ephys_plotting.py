@@ -5,6 +5,9 @@ This module contains functions that generates plots.
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from matplotlib import cm
+from matplotlib.colors import Normalize
+from scipy.interpolate import interpn
 
 
 def driftmap_color(
@@ -173,7 +176,7 @@ def depth_peth(peth_df, ax=None, colors=None,
 
 
 def spike_amp_time(spike_times, spike_amps,
-                   ax=None, color=[0.2, 0.3, 0.8], alpha=0.1,
+                   ax=None, s=3,
                    as_background=False, return_lims=False):
 
     '''
@@ -187,8 +190,8 @@ def spike_amp_time(spike_times, spike_amps,
         amplitude of spikes, in uV
     ax: matplotlib.axes.Axes object (optional)
         axis object to plot on
-    color: list or tuple with 3 elements
-        color vector of the scatters
+    s:  scalar,
+        size of the scatters
     as_background: boolean
         if True, return only the heatmap without layout and colorbar
     return_lims: boolean
@@ -212,8 +215,22 @@ def spike_amp_time(spike_times, spike_amps,
         ax.set_xlabel('Time (s)')
         ax.set_ylabel('Spike amplitude (µV)')
 
-    ax.scatter(spike_times, spike_amps, alpha=alpha,
-               color=color, edgecolors='none')
+    x = spike_times
+    y = spike_amps
+    data, x_e, y_e = np.histogram2d(
+        x, y, bins=[100, 100], density=True)
+    z = interpn((0.5*(x_e[1:] + x_e[:-1]), 0.5*(y_e[1:]+y_e[:-1])),
+                data, np.vstack([x, y]).T,
+                method="splinef2d", bounds_error=False)
+
+    # To be sure to plot all data
+    z[np.where(np.isnan(z))] = 0.0
+
+    # Sort the points by density, so that the densest points are plotted last
+    idx = z.argsort()
+    x, y, z = x[idx], y[idx], z[idx]
+
+    ax.scatter(x, y, c=z, s=s)
 
     if len(spike_times):
         x_lim = [0, np.max(spike_times) + 10]
