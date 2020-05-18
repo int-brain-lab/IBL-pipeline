@@ -9,6 +9,8 @@ from uuid import UUID
 import re
 import alf.io
 
+wheel = dj.create_virtual_module('wheel', 'group_shared_wheel')
+
 try:
     from oneibl.one import ONE
     one = ONE()
@@ -505,7 +507,7 @@ class Event(dj.Lookup):
     definition = """
     event:       varchar(32)
     """
-    contents = zip(['go cue', 'stim on', 'response', 'feedback'])
+    contents = zip(['go cue', 'stim on', 'response', 'feedback', 'movement'])
 
 
 @schema
@@ -519,20 +521,20 @@ class AlignedTrialSpikes(dj.Computed):
     trial_spike_times=null:   longblob     # spike time for each trial, aligned to different event times
     trial_spikes_ts=CURRENT_TIMESTAMP:    timestamp
     """
-    key_source = behavior.TrialSet * DefaultCluster
+    key_source = behavior.TrialSet * DefaultCluster * Event & \
+        'event in ("stim on", "movement", "feedback")'
 
     def make(self, key):
 
         trials = behavior.TrialSet.Trial & key
         cluster = DefaultCluster() & key
         spike_times = cluster.fetch1('cluster_spikes_times')
-        events = (Event & 'event in ("feedback", "stim on")').fetch('event')
+        event = (Event & key).fetch1('event')
 
         trial_keys, trial_start_times, trial_end_times, \
             trial_stim_on_times, trial_response_times, trial_feedback_times = \
             trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
-                         'trial_stim_on_time', 'trial_response_time',
-                         'trial_feedback_time')
+                         'trial_stim_on_time', 'trial_feedback_time')
 
         # trial idx of each spike
         spike_ids = np.searchsorted(
@@ -550,22 +552,26 @@ class AlignedTrialSpikes(dj.Computed):
 
             trial_spike_time = spike_times[spike_ids == itrial*2+1]
 
-            for event in events:
-                if not len(trial_spike_time):
-                    trial_spk['trial_spike_times'] = []
-                else:
-                    if event == 'stim on':
+            if not len(trial_spike_time):
+                trial_spk['trial_spike_times'] = []
+            else:
+                if event == 'stim on':
+                    trial_spk['trial_spike_times'] = \
+                        trial_spike_time - trial_stim_on_times[itrial]
+                elif event == 'movement':
+
+                    if not len(wheel_MovementTimes & trial_key):
+                        continue
+                    trial_movement_time = (wheel.MovementTimes & trial_key).fetch1(
+                        'reaction_time')
+                    trial_spk['trial_spike_times'] = \
+                        trial_spike_time - trial_movement_time
+                elif event == 'feedback':
+                    if trial_feedback_times[itrial]:
                         trial_spk['trial_spike_times'] = \
-                            trial_spike_time - trial_stim_on_times[itrial]
-                    elif event == 'response':
-                        trial_spk['trial_spike_times'] = \
-                            trial_spike_time - trial_response_times[itrial]
-                    elif event == 'feedback':
-                        if trial_feedback_times[itrial]:
-                            trial_spk['trial_spike_times'] = \
-                                trial_spike_time - trial_feedback_times[itrial]
-                        else:
-                            continue
+                            trial_spike_time - trial_feedback_times[itrial]
+                    else:
+                        continue
                 trial_spk['event'] = event
                 trial_spks.append(trial_spk.copy())
 
