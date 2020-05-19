@@ -38,6 +38,8 @@ class Sorting(dj.Lookup):
                     'response - stim on',
                     'feedback - stim on',
                     'feedback - response',
+                    'movement - stim on',
+                    'feedback - movement',
                     'contrast',
                     'feedback type'])
 
@@ -52,6 +54,8 @@ class ValidAlignSort(dj.Lookup):
         ['stim on', 'trial_id'],
         ['stim on', 'contrast'],
         ['stim on', 'feedback - stim on'],
+        ['stim on', 'movement - stim on'],
+        ['feedback', 'feedback - movement'],
         ['feedback', 'trial_id'],
         ['feedback', 'feedback type']
     ]
@@ -222,6 +226,8 @@ class Raster(dj.Computed):
         [dict(event='stim on', sort_by='trial_id'),
          dict(event='stim on', sort_by='contrast'),
          dict(event='stim on', sort_by='feedback - stim on'),
+         dict(event='stim on', sort_by='movement - stim on'),
+         dict(event='feedback', sort_by='feedback - movement'),
          dict(event='feedback', sort_by='trial_id'),
          dict(event='feedback', sort_by='feedback type')]
 
@@ -681,8 +687,8 @@ class DepthRasterTemplate(dj.Lookup):
             sizing='stretch',
             layer='below'
             )],
-        width=720,
-        height=480,
+        width=1100,
+        height=800,
         margin=go.layout.Margin(
             l=50,
             r=30,
@@ -693,7 +699,7 @@ class DepthRasterTemplate(dj.Lookup):
         title=dict(
             # text=plot_title, # fetched from DepthRasterPerTrial
             x=0.45,
-            y=0.9
+            y=0.95
         ),
         xaxis=dict(
             title='Time (sec)',
