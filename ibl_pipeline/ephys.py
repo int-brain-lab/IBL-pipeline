@@ -560,7 +560,7 @@ class AlignedTrialSpikes(dj.Computed):
                         trial_spike_time - trial_stim_on_times[itrial]
                 elif event == 'movement':
 
-                    if not len(wheel_MovementTimes & trial_key):
+                    if not len(wheel.MovementTimes & trial_key):
                         continue
                     trial_movement_time = (wheel.MovementTimes & trial_key).fetch1(
                         'reaction_time')
