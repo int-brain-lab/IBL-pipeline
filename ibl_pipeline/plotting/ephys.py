@@ -488,7 +488,7 @@ class Psth(dj.Computed):
     psth_ts=CURRENT_TIMESTAMP:  timestamp
     -> PsthTemplate
     """
-    key_source = ephys.DefaultCluster * (ephys.Event & 'event in ("stim on", "feedback")') & \
+    key_source = ephys.DefaultCluster * (ephys.Event & 'event in ("stim on", "movement", "feedback")') & \
         behavior.TrialSet & ephys.AlignedTrialSpikes
 
     def make(self, key):
