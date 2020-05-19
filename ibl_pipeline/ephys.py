@@ -532,7 +532,7 @@ class AlignedTrialSpikes(dj.Computed):
         event = (Event & key).fetch1('event')
 
         trial_keys, trial_start_times, trial_end_times, \
-            trial_stim_on_times, trial_response_times, trial_feedback_times = \
+            trial_stim_on_times, trial_feedback_times = \
             trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
                          'trial_stim_on_time', 'trial_feedback_time')
 
