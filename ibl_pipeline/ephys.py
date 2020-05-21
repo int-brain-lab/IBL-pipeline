@@ -384,125 +384,6 @@ class GoodCluster(dj.Computed):
 
 
 @schema
-class Cluster(dj.Imported):
-    definition = """
-    -> ProbeInsertion
-    cluster_revision='0':            varchar(64)
-    cluster_id:                      int
-    ---
-    cluster_uuid:                    uuid            # uuid of this cluster
-    cluster_channel:                 int             # which channel this cluster is from
-    cluster_amp=null:                float           # Mean amplitude of each cluster (µV)
-    cluster_waveforms=null:          blob@ephys      # Waveform from spike sorting templates (stored as a sparse array, only for a subset of channels closest to the peak channel)
-    cluster_waveforms_channels=null: blob@ephys      # Index of channels that are stored for each cluster waveform. Sorted by increasing distance from the maximum amplitude channel.
-    cluster_depth=null:              float           # Depth of mean cluster waveform on probe (µm). 0 means deepest site, positive means above this.
-    cluster_peak_to_trough=null:     blob@ephys      # trough to peak time (ms)
-    cluster_spikes_times:            blob@ephys      # spike times of a particular cluster (seconds)
-    cluster_spikes_depths:           blob@ephys      # Depth along probe of each spike (µm; computed from waveform center of mass). 0 means deepest site, positive means above this
-    cluster_spikes_amps:             blob@ephys      # Amplitude of each spike (µV)
-    cluster_spikes_templates=null:   blob@ephys      # Template ID of each spike (i.e. output of automatic spike sorting prior to manual curation)
-    cluster_spikes_samples=null:     blob@ephys      # Time of spikes, measured in units of samples in their own electrophysiology binary file.
-    cluster_ts=CURRENT_TIMESTAMP  :  timestamp
-    """
-    key_source = ProbeInsertion
-
-    def make(self, key):
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-
-        dtypes = [
-            'clusters.amps',
-            'clusters.channels',
-            'clusters.depths',
-            'clusters.metrics',
-            'clusters.peakToTrough',
-            'clusters.uuids',
-            'clusters.waveforms',
-            'clusters.waveformsChannels',
-            'spikes.amps',
-            'spikes.clusters',
-            'spikes.depths',
-            'spikes.samples',
-            'spikes.templates',
-            'spikes.times'
-        ]
-
-        files = one.load(eID, dataset_types=dtypes, download_only=True)
-        ses_path = alf.io.get_session_path(files[0])
-
-        probe_name = (ProbeInsertion & key).fetch1('probe_label')
-
-        clusters = alf.io.load_object(
-            ses_path.joinpath('alf', probe_name), 'clusters')
-        spikes = alf.io.load_object(
-            ses_path.joinpath('alf', probe_name), 'spikes')
-
-        max_spike_time = spikes.times[-1]
-
-        for icluster, cluster_uuid in tqdm(enumerate(clusters.uuids['uuids'])):
-
-            idx = spikes.clusters == icluster
-            cluster = dict(
-                **key,
-                cluster_id=icluster,
-                cluster_uuid=cluster_uuid,
-                cluster_channel=clusters.channels[icluster],
-                cluster_amp=clusters.amps[icluster],
-                cluster_waveforms=clusters.waveforms[icluster],
-                cluster_waveforms_channels=clusters.waveformsChannels[icluster],
-                cluster_depth=clusters.depths[icluster],
-                cluster_peak_to_trough=clusters.peakToTrough[icluster],
-                cluster_spikes_times=spikes.times[idx],
-                cluster_spikes_depths=spikes.depths[idx],
-                cluster_spikes_amps=spikes.amps[idx],
-                cluster_spikes_templates=spikes.templates[idx],
-                cluster_spikes_samples=spikes.samples[idx])
-
-            self.insert1(cluster)
-
-            num_spikes = len(cluster['cluster_spikes_times'])
-            firing_rate = num_spikes/max_spike_time
-
-            metrics = clusters.metrics
-            cluster_metric_entry = dict(
-                **key,
-                cluster_id=icluster,
-                cluster_revision='0',
-                num_spikes=num_spikes,
-                firing_rate=firing_rate,
-                presence_ratio=metrics.presence_ratio[icluster],
-                presence_ratio_std=metrics.presence_ratio_std[icluster],
-                amplitude_cutoff=metrics.amplitude_cutoff[icluster],
-                amplitude_std=metrics.amplitude_std[icluster],
-                epoch_name=metrics.epoch_name[icluster],
-                ks2_label=metrics.ks2_label[icluster])
-
-            if not np.isnan(metrics.isi_viol[icluster]):
-                cluster_metric_entry.update(
-                    isi_viol=metrics.isi_viol[icluster])
-            if not np.isinf(metrics.ks2_contamination_pct[icluster]):
-                cluster_metric_entry.update(
-                    ks2_contamination_pct=metrics.ks2_contamination_pct[icluster])
-
-            self.ClusterMetrics.insert1(cluster_metric_entry)
-
-    class ClusterMetrics(dj.Part):
-        definition = """
-        -> master
-        ---
-        num_spikes:                 int    # total spike number
-        firing_rate:                float  # firing rate of the cluster
-        presence_ratio=null:        float
-        presence_ratio_std=null:    float
-        isi_viol=null:              float
-        amplitude_cutoff=null:      float
-        amplitude_std=null:         float
-        epoch_name:                 tinyint
-        ks2_contamination_pct=null: float
-        ks2_label:                  enum('good', 'mua')
-        """
-
-
-@schema
 class Event(dj.Lookup):
     definition = """
     event:       varchar(32)
@@ -521,7 +402,7 @@ class AlignedTrialSpikes(dj.Computed):
     trial_spike_times=null:   longblob     # spike time for each trial, aligned to different event times
     trial_spikes_ts=CURRENT_TIMESTAMP:    timestamp
     """
-    key_source = behavior.TrialSet * DefaultCluster * Event & \
+    key_source = behavior.TrialSet * DefaultCluster * Event * wheel.MovementTimes & \
         'event in ("stim on", "movement", "feedback")'
 
     def make(self, key):
@@ -559,11 +440,10 @@ class AlignedTrialSpikes(dj.Computed):
                     trial_spk['trial_spike_times'] = \
                         trial_spike_time - trial_stim_on_times[itrial]
                 elif event == 'movement':
-
                     if not len(wheel.MovementTimes & trial_key):
                         continue
                     trial_movement_time = (wheel.MovementTimes & trial_key).fetch1(
-                        'reaction_time')
+                        'movement_time')
                     trial_spk['trial_spike_times'] = \
                         trial_spike_time - trial_movement_time
                 elif event == 'feedback':
