@@ -402,8 +402,8 @@ class AlignedTrialSpikes(dj.Computed):
     trial_spike_times=null:   longblob     # spike time for each trial, aligned to different event times
     trial_spikes_ts=CURRENT_TIMESTAMP:    timestamp
     """
-    key_source = behavior.TrialSet * DefaultCluster * Event * wheel.MovementTimes & \
-        'event in ("stim on", "movement", "feedback")'
+    key_source = behavior.TrialSet * DefaultCluster * Event & \
+        wheel.MovementTimes & 'event in ("stim on", "movement", "feedback")'
 
     def make(self, key):
 
@@ -440,8 +440,6 @@ class AlignedTrialSpikes(dj.Computed):
                     trial_spk['trial_spike_times'] = \
                         trial_spike_time - trial_stim_on_times[itrial]
                 elif event == 'movement':
-                    if not len(wheel.MovementTimes & trial_key):
-                        continue
                     trial_movement_time = (wheel.MovementTimes & trial_key).fetch1(
                         'movement_time')
                     trial_spk['trial_spike_times'] = \
