@@ -100,7 +100,7 @@ class DepthPeth(dj.Computed):
             key.update(depth_peth=np.vstack(peth_list),
                        depth_baseline=np.array(baseline_list),
                        time_bin_centers=peths.tscale)
-            self.insert1(key)
+            self.insert1(key, skip_duplicates=True)
 
 
 @schema
