@@ -16,6 +16,9 @@ from tqdm import tqdm
 import boto3
 import brainbox as bb
 from matplotlib.axes import Axes
+import seaborn as sns
+import colorlover as cl
+
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_ephys')
@@ -293,20 +296,21 @@ class Raster(dj.Computed):
 
         if key['sort_by'] != 'trial_id':
             # plot different contrasts or different feedback types as background
-            contrasts, u_inds = np.unique(field, return_index=True)
+            values, u_inds = np.unique(field, return_index=True)
             u_inds = list(u_inds) + [len(field)]
 
-            if sorting_var == 'contrast':
+            if key['sort_by'] == 'contrast':
                 tick_positions = np.add(u_inds[1:], u_inds[:-1])/2
-                puor = cl.scales[str(len(contrasts))]['div']['PuOr']
+                puor = cl.scales[str(len(values))]['div']['PuOr']
                 colors = np.divide(cl.to_numeric(puor), 255)
                 alpha = 0.8
             else:
-                colors = sns.diverging_palette(10, 240, n=len(fb_types))
+                colors = sns.diverging_palette(10, 240, n=len(values))
                 alpha = 0.5
 
             for i, ind in enumerate(u_inds[:-1]):
-                ax.fill_between([-1, 1], u_inds[i], u_inds[i+1]-1, color=colors[i], alpha=alpha)
+                ax.fill_between([-1, 1], u_inds[i], u_inds[i+1]-1,
+                                color=colors[i], alpha=alpha)
         # set the limits
         ax.set_xlim(x_lim[0], x_lim[1])
 
@@ -317,7 +321,7 @@ class Raster(dj.Computed):
         ax.set_ylim(-2, y_lim)
 
         if key['sort_by'] == 'contrast':
-            return ax, x_lim, [-2, y_lim], contrasts, tick_positions
+            return ax, x_lim, [-2, y_lim], values, tick_positions
         else:
             return ax, x_lim, [-2, y_lim]
 
@@ -944,13 +948,14 @@ class DepthRasterExampleTrial(dj.Computed):
     trial_start:                  float
     trial_end:                    float
     trial_stim_on:                float
+    trial_movement:               float     # movement onset
     trial_feedback=null:          float
-    trial_contrast:               float     # signed contrast of
+    trial_contrast:               float     # signed contrast
     -> TrialType                  # type of trial
     -> DepthRasterTemplate
     """
     key_source = ephys.ProbeInsertion & behavior.TrialSet & \
-        ephys.DefaultCluster
+        ephys.DefaultCluster & wheel.MovementTimes
 
     def _get_trial_type(self, trial):
 
@@ -1006,6 +1011,7 @@ class DepthRasterExampleTrial(dj.Computed):
             trial_end=trial['trial_end_time'],
             trial_stim_on=trial['trial_stim_on_time'],
             trial_feedback=trial['trial_feedback_time'],
+            trial_movement=trial['movement_onset'],
             trial_id=trial['trial_id'],
             depth_raster_template_idx=1,
             trial_type=trial_type,
@@ -1022,10 +1028,11 @@ class DepthRasterExampleTrial(dj.Computed):
         spikes_data = putils.prepare_spikes_data(key)
 
         # pick some example trials and generate depth raster
-        trials_all = (behavior.TrialSet.Trial & key).proj(
+        trials_all = (behavior.TrialSet.Trial * wheel.MovementTimes & key).proj(
             'trial_response_choice',
             'trial_feedback_type',
             'trial_stim_on_time',
+            'movement_onset',
             'trial_feedback_time',
             'trial_start_time',
             'trial_end_time',
