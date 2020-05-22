@@ -72,7 +72,7 @@ class ValidAlignSort(dj.Lookup):
         ['movement', 'trial_id', 'regular', 'trial_id', 'trial_id', '', ''],
         ['movement', 'movement - stim on', 'difference', '',
          'movement_onset - trial_stim_on_time',
-          'trial_stim_on_time - movement_onset', 'stim on']
+         'trial_stim_on_time - movement_onset', 'stim on'],
         ['movement', 'feedback - movement', 'difference', '',
          'trial_feedback_time - movement_onset', '',
          'trial_feedback_time - movement_onset', 'feedback'],
