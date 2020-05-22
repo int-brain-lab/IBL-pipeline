@@ -776,33 +776,25 @@ class DepthRasterTemplate(dj.Lookup):
             showgrid=False
         ))
 
-    trial_start_mark = go.Scatter(
-        # x=[trial_start, trial_start],  # fetched from DepthRasterPerTrial
-        # y=plot_ylim,  # fetched from DepthRasterPerTrial
+    trial_stim_on_mark = go.Scatter(
+        # x=[trial_stim_on, trial_stim_on], # fetched from DepthRasterPerTrial
+        # y=plot_ylim, # fetched from DepthRasterPerTrial
         mode='lines',
         line=dict(
             color='rgba(20, 40, 255, 0.4)',
             width=1.5),
-        name='Trial start'
-    )
-    trial_end_mark = go.Scatter(
-        # x=[trial_end, trial_end], # fetched from DepthRasterPerTrial
-        # y=plot_ylim, # fetched from DepthRasterPerTrial
-        mode='lines',
-        line=dict(
-            color='rgba(255, 20, 20, 0.4)',
-            width=1.5),
-        name='Trial end'
+        name='Stim on'
     )
 
-    trial_stim_on_mark = go.Scatter(
+    trial_movement_mark = go.Scatter(
         # x=[trial_stim_on, trial_stim_on], # fetched from DepthRasterPerTrial
         # y=plot_ylim, # fetched from DepthRasterPerTrial
         mode='lines',
         line=dict(
             color='rgba(200, 40, 255, 0.4)',
             width=1.5),
-        name='Stim on')
+        name='Movement'
+    )
 
     trial_feedback_mark = go.Scatter( # if null, skip this line
         # x=[trial_feedback, trial_feedback], # fetched from DepthRasterPerTrial
@@ -852,8 +844,8 @@ class DepthRasterTemplate(dj.Lookup):
         ))
 
     data1 = [axis, first_trial_mark, last_trial_mark]
-    data2 = [axis, trial_start_mark, trial_stim_on_mark,
-             trial_feedback_mark, trial_end_mark]
+    data2 = [axis, trial_stim_on_mark, trial_movement_mark,
+             trial_feedback_mark]
     contents = [
         dict(depth_raster_template_idx=0,
              depth_raster_template=go.Figure(
