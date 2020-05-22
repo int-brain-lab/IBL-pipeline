@@ -416,7 +416,7 @@ class AlignedTrialSpikes(dj.Computed):
             trial_feedback_times, trial_movement_times = \
             trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
                          'trial_stim_on_time', 'trial_feedback_time',
-                         'movement_time')
+                         'movement_onset')
 
         # trial idx of each spike
         spike_ids = np.searchsorted(
