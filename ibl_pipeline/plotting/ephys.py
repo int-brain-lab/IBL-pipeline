@@ -15,9 +15,12 @@ from os import path
 from tqdm import tqdm
 import boto3
 import brainbox as bb
+from matplotlib.axes import Axes
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_ephys')
+
+wheel = dj.create_virtual_module('wheel', 'group_shared_wheel')
 
 # get external bucket
 store = dj.config['stores']['plotting']
@@ -49,27 +52,31 @@ class ValidAlignSort(dj.Lookup):
     definition = """
     -> ephys.Event
     -> Sorting
+    ---
+    condition_type='regular' : enum('regular', 'difference')
+    relevant_field=''        : varchar(64)
+    sorting_variable=''      : varchar(64)  # sorting variable used in the query. e.g. 'trial_feedback_time - trial_stim_on_time'
+    mark_variable=''         : varchar(64)  # mark variable for some combinations
+    label_variable=''        : varchar(64)  # label variable in the plot
     """
     contents = [
-        ['stim on', 'trial_id'],
-        ['stim on', 'contrast'],
-        ['stim on', 'feedback - stim on'],
-        ['stim on', 'movement - stim on'],
-        ['feedback', 'feedback - movement'],
-        ['feedback', 'trial_id'],
-        ['feedback', 'feedback type']
+        ['stim on', 'trial_id', 'regular', 'trial_id', 'trial_id', '', ''],
+        ['stim on', 'contrast', 'regular', 'trial_signed_contrast',
+         'trial_signed_contrast', '', ''],
+        ['stim on', 'feedback - stim on', 'difference', '',
+         'trial_feedback_time - trial_stim_on_time',
+         'trial_feedback_time - trial_stim_on_time', 'feedback'],
+        ['stim on', 'movement - stim on', 'difference', '',
+         'reaction_time - trial_stim_on_time',
+         'reaction_time - trial_stim_on_time', 'movement'],
+        ['movement', 'trial_id', 'regular', 'trial_id', 'trial_id', '', ''],
+        ['movement', 'feedback - movement', 'difference', '',
+         'trial_feedback_time - reaction_time', '',
+         'trial_feedback_time - reaction_time', 'feedback'],
+        ['feedback', 'trial_id', 'regular', 'trial_id', 'trial_id', '', ''],
+        ['feedback', 'feedback type', 'regular',
+         'trial_feedback_type', 'trial_feedback_type, trial_id', '', '']
     ]
-
-
-@schema
-class GeneralTemplate(dj.Lookup):
-    definition = """
-    # This serves as an general template to start with
-    general_template_name       : int
-    ---
-    data                        : longblob
-    layout                      : longblob
-    """
 
 
 @schema
@@ -80,13 +87,45 @@ class RasterLayoutTemplate(dj.Lookup):
     raster_data_template:   longblob
     """
 
-    legend_left = putils.get_legend('left', 'spike')
-    legend_right = putils.get_legend('right', 'spike')
-    legend_incorrect = putils.get_legend('incorrect', 'spike')
+    def get_legend(trials_type, legend_group):
+        if trials_type == 'left':
+            color = 'green'
+        elif trials_type == 'right':
+            color = 'blue'
+        elif trials_type == 'incorrect':
+            color = 'red'
+        else:
+            raise NameError(
+                f"""
+                Wrong trial type, has to be one of the following: \n
+                "left", "right", "incorrect"
+                """
+            )
+        if legend_group == 'spike':
+            marker = 'markers'
+        else:
+            marker = 'lines'
 
-    legend_mark_left = putils.get_legend('left', 'event')
-    legend_mark_right = putils.get_legend('right', 'event')
-    legend_mark_incorrect = putils.get_legend('incorrect', 'event')
+        return go.Scatter(
+            x=[5],
+            y=[10],
+            mode=marker,
+            marker=dict(
+                size=6,
+                color=color,
+                opacity=0.5
+            ),
+            name='{} time on {} trials'.format(legend_group, trials_type),
+            legendgroup=legend_group
+        )
+
+    legend_left = get_legend('left', 'spike')
+    legend_right = get_legend('right', 'spike')
+    legend_incorrect = get_legend('incorrect', 'spike')
+
+    legend_mark_left = get_legend('left', 'event')
+    legend_mark_right = get_legend('right', 'event')
+    legend_mark_incorrect = get_legend('incorrect', 'event')
 
     layout = go.Layout(
         images=[dict(
@@ -231,36 +270,145 @@ class Raster(dj.Computed):
          dict(event='feedback', sort_by='trial_id'),
          dict(event='feedback', sort_by='feedback type')]
 
+    def plot_regular(trials, key, ax, x_lim=[-1, 1]):
+
+        relevant_field, sorting_variable = (ValidAlignSort & key).fetch1(
+            'relevant_field', 'sorting_variable')
+
+        spk_times, field = (trials & key).fetch(
+            'trial_spike_times', relevant_field,
+            order_by=sorting_variable)
+
+        spk_trial_ids = np.hstack(
+            [[trial_id] * len(spk_time)
+                for trial_id, spk_time in enumerate(spk_times)])
+
+        ax.plot(np.hstack(spk_times), spk_trial_ids, 'k.', alpha=0.5,
+                markeredgewidth=0)
+
+        if key['sort_by'] != 'trial_id':
+            # plot different contrasts or different feedback types as background
+            contrasts, u_inds = np.unique(field, return_index=True)
+            u_inds = list(u_inds) + [len(field)]
+
+            if sorting_var == 'contrast':
+                tick_positions = np.add(u_inds[1:], u_inds[:-1])/2
+                puor = cl.scales[str(len(contrasts))]['div']['PuOr']
+                colors = np.divide(cl.to_numeric(puor), 255)
+                alpha = 0.8
+            else:
+                colors = sns.diverging_palette(10, 240, n=len(fb_types))
+                alpha = 0.5
+
+            for i, ind in enumerate(u_inds[:-1]):
+                ax.fill_between([-1, 1], u_inds[i], u_inds[i+1]-1, color=colors[i], alpha=alpha)
+        # set the limits
+        ax.set_xlim(x_lim[0], x_lim[1])
+
+        if len(spk_trial_ids):
+            y_lim = max(spk_trial_ids) * 1.02
+        else:
+            y_lim = 10
+        ax.set_ylim(-2, y_lim)
+
+        if key['sort_by'] == 'contrast':
+            return ax, x_lim, [-2, y_lim], contrasts, tick_positions
+        else:
+            return ax, x_lim, [-2, y_lim]
+
+    def plot_difference(trials, key, ax, x_lim=[-1, 1]):
+
+        sorting_variable, mark_variable, label_variable = \
+            (ValidAlignSort & key).fetch1(
+                'sorting_variable', 'mark_variable', 'label_variable')
+
+        trials_left = trials & 'trial_response_choice="CW"' & \
+            'trial_signed_contrast < 0'
+        trials_right = trials & 'trial_response_choice="CCW"' & \
+            'trial_signed_contrast > 0'
+        trials_incorrect = trials - trials_left.proj() - trials_right.proj()
+
+        trial_groups = [
+            {'trials': trials_incorrect, 'color': 'r', 'label': 'incorrect trials'},
+            {'trials': trials_left,      'color': 'g', 'label': 'left trials'},
+            {'trials': trials_right,     'color': 'b', 'label': 'right trials'}
+        ]
+
+        base = 0
+        for trial_group in trial_groups:
+
+            spk_times, marking_points = \
+                (trial_group['trials'].proj(
+                    'trial_spike_times',
+                    sort=sorting_variable,
+                    mark_point=mark_variable) & key).fetch(
+                        'trial_spike_times', 'mark_point', order_by='sort')
+
+            if len(spk_times):
+                spk_trial_ids = np.hstack(
+                    [[trial_id + base] * len(spk_time)
+                     for trial_id, spk_time in enumerate(spk_times)])
+                ax.plot(np.hstack(spk_times), spk_trial_ids,
+                        '{}.'.format(trial_group['color']),
+                        alpha=0.5, markeredgewidth=0,
+                        label=trial_group['label'])
+                ax.plot(marking_points,
+                        np.add(range(len(spk_times)), base),
+                        trial_group['color'],
+                        label=label_variable)
+            else:
+                spk_trial_ids = [base]
+            base = max(spk_trial_ids)
+
+        ax.set_xlim(x_lim[0], x_lim[1])
+        y_lim = base * 1.02
+        ax.set_ylim(-2, y_lim)
+
+        return ax, x_lim, [-2, y_lim]
+
     def make(self, key):
         cluster = ephys.DefaultCluster & key
         trials = \
-            (behavior.TrialSet.Trial * ephys.AlignedTrialSpikes & cluster).proj(
+            (behavior.TrialSet.Trial * wheel.MovementTimes *
+             ephys.AlignedTrialSpikes & cluster).proj(
                 'trial_start_time', 'trial_stim_on_time',
                 'trial_response_time',
                 'trial_feedback_time',
                 'trial_feedback_type',
                 'trial_response_choice',
                 'trial_spike_times',
+                'movement_onset',
                 trial_duration='trial_end_time-trial_start_time',
                 trial_signed_contrast="""trial_stim_contrast_right -
                                          trial_stim_contrast_left"""
             ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"' & key
 
+        if key['sort_by'] == 'trial_id':
+            key['template_idx'] = 0
+        elif key['sort_by'] == 'contrast':
+            key['template_idx'] = 2
+        elif key['sort_by'] == 'feeback type':
+            key['template_idx'] = 3
+        else:
+            key['template_idx'] = 1
+
         if not len(trials):
-            if key['sort_by'] == 'trial_id':
-                key['template_idx'] = 0
-            elif key['sort_by'] == 'contrast':
-                key['template_idx'] = 2
-            elif key['sort_by'] == 'feeback type':
-                key['template_idx'] = 3
-            else:
-                key['template_idx'] = 1
             self.insert1(dict(
                 **key, plot_ylim=[0, 3]))
             return
 
-        align_event = (ephys.Event & key).fetch1('event')
-        sorting_var = (Sorting & key).fetch1('sort_by')
+        cond_type = (ValidAlignSort & key).fetch1('condition_type')
+
+        if cond_type == 'regular':
+            draw = Raster.plot_regular
+        else:
+            draw = Raster.plot_difference
+
+        fig = PngFigure(draw, dict(trials=trials, key=key))
+
+        if key['sort_by'] == 'contrast':
+            key['plot_contrasts'] = fig.other_returns[0]
+            key['plot_contrast_tick_pos'] = fig.other_returns[1]
 
         fig_link = path.join(
             'raster',
@@ -271,30 +419,12 @@ class Raster(dj.Computed):
             key['sort_by'],
             str(key['cluster_id'])) + '.png'
 
-        if key['sort_by'] == 'contrast':
-            y_lim, label, contrasts, tick_pos = \
-                putils.create_raster_plot_combined(
-                    trials, align_event,
-                    sorting_var, fig_dir=fig_link, store_type='s3')
-            key['plot_contrasts'] = contrasts
-            key['plot_contrast_tick_pos'] = tick_pos
-        else:
-            y_lim, label = putils.create_raster_plot_combined(
-                trials, align_event,
-                sorting_var, fig_dir=fig_link, store_type='s3')
+        fig.upload_to_s3(bucket, fig_link)
 
         key['plotting_data_link'] = fig_link
-        key['plot_ylim'] = y_lim
-        key['mark_label'] = label
+        key['plot_ylim'] = fig.y_lim
+        key['mark_label'] = (ValidAlignSort & key).fetch1('label_variable')
 
-        if key['sort_by'] == 'trial_id':
-            key['template_idx'] = 0
-        elif key['sort_by'] == 'contrast':
-            key['template_idx'] = 2
-        elif key['sort_by'] == 'feedback type':
-            key['template_idx'] = 3
-        else:
-            key['template_idx'] = 1
         self.insert1(key)
 
 

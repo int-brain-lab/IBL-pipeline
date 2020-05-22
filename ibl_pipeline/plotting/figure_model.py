@@ -9,12 +9,18 @@ import gc
 
 class PngFigure(Figure):
 
-    def __init__(self, draw, data, ax_kwargs,
+    def __init__(self, draw, data, ax_kwargs={},
                  dpi=50, frameon=False, figsize=[8, 6]):
 
         super().__init__(dpi=dpi, frameon=frameon, figsize=figsize)
         ax = Axes(self, [0., 0., 1., 1.])
-        ax, self.x_lim, self.y_lim = draw(**data, **ax_kwargs, ax=ax)
+
+        result = draw(**data, **ax_kwargs, ax=ax)
+        (ax, self.x_lim, self.y_lim) = result[0:3]
+
+        if len(result) > 3:
+            self.other_returns = result[3:]
+
         self.add_axes(ax)
 
         self.buffer = io.BytesIO()
