@@ -407,15 +407,16 @@ class AlignedTrialSpikes(dj.Computed):
 
     def make(self, key):
 
-        trials = behavior.TrialSet.Trial & key
+        trials = behavior.TrialSet.Trial * wheel.MovementTimes & key
         cluster = DefaultCluster() & key
         spike_times = cluster.fetch1('cluster_spikes_times')
         event = (Event & key).fetch1('event')
 
-        trial_keys, trial_start_times, trial_end_times, \
-            trial_stim_on_times, trial_feedback_times = \
+        trial_keys, trial_start_times, trial_end_times, trial_stim_on_times, \
+            trial_feedback_times, trial_movement_times = \
             trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
-                         'trial_stim_on_time', 'trial_feedback_time')
+                         'trial_stim_on_time', 'trial_feedback_time',
+                         'movement_time')
 
         # trial idx of each spike
         spike_ids = np.searchsorted(
@@ -440,10 +441,8 @@ class AlignedTrialSpikes(dj.Computed):
                     trial_spk['trial_spike_times'] = \
                         trial_spike_time - trial_stim_on_times[itrial]
                 elif event == 'movement':
-                    trial_movement_time = (wheel.MovementTimes & trial_key).fetch1(
-                        'movement_time')
                     trial_spk['trial_spike_times'] = \
-                        trial_spike_time - trial_movement_time
+                        trial_spike_time - trial_movement_times[itrial]
                 elif event == 'feedback':
                     if trial_feedback_times[itrial]:
                         trial_spk['trial_spike_times'] = \
