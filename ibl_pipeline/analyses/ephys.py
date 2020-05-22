@@ -66,11 +66,11 @@ class DepthPeth(dj.Computed):
         key.update(trial_type='Correct All',
                    depth_bin_centers=(edges[:-1] + edges[1:])/2)
 
-        if event == 'feedback':
+        if key['event'] == 'feedback':
             event_times = trials['trial_feedback_time']
-        elif event == 'stim on':
+        elif key['event'] == 'stim on':
             event_times = trials['trial_stim_on_time']
-        elif event == 'movement':
+        elif key['event'] == 'movement':
             event_times = trials['movement_onset']
 
         peth_list = []
