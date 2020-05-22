@@ -34,7 +34,7 @@ class DepthPeth(dj.Computed):
     depth_baseline      : longblob     # baseline for each depth bin, average activity during -0.3 to 0 relative to the event
     depth_peth_ts=CURRENT_TIMESTAMP : timestamp
     """
-    key_source = ephys.ProbeInsertion * \
+    key_source = ephys.ProbeInsertion * ephys.Event * \
         (TrialType & 'trial_type="Correct All"') & ephys.DefaultCluster & \
         behavior.TrialSet & 'event in ("stim on", "feedback", "movement")'
 
