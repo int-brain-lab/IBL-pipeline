@@ -787,11 +787,11 @@ class DepthRasterTemplate(dj.Lookup):
     )
 
     trial_movement_mark = go.Scatter(
-        # x=[trial_stim_on, trial_stim_on], # fetched from DepthRasterPerTrial
+        # x=[trial_movement, trial_movement], # fetched from DepthRasterPerTrial
         # y=plot_ylim, # fetched from DepthRasterPerTrial
         mode='lines',
         line=dict(
-            color='rgba(200, 40, 255, 0.4)',
+            color='rgba(200, 40, 25, 0.4)',
             width=1.5),
         name='Movement'
     )
@@ -804,6 +804,16 @@ class DepthRasterTemplate(dj.Lookup):
             color='rgba(60, 255, 10, 0.4)',
             width=1.5),
         name='Feedback'
+    )
+
+    trial_stim_off_mark = go.Scatter(
+        # x=[trial_stim_off, trial_stim_off], # fetched from DepthRasterPerTrial
+        # y=plot_ylim, # fetched from DepthRasterPerTrial
+        mode='lines',
+        line=dict(
+            color='rgba(230, 190, 20, 0.8)',
+            width=1.5),
+        name='Stim on'
     )
 
     layout2 = go.Layout(
@@ -937,10 +947,9 @@ class DepthRasterExampleTrial(dj.Computed):
     plot_ylim:                    blob
     plot_xlim:                    blob
     plot_title:                   varchar(64)
-    trial_start:                  float
-    trial_end:                    float
     trial_stim_on:                float
-    trial_movement:               float     # movement onset
+    trial_stim_off:               float
+    trial_movement=null:          float     # movement onset
     trial_feedback=null:          float
     trial_contrast:               float     # signed contrast
     -> TrialType                  # type of trial
@@ -999,9 +1008,9 @@ class DepthRasterExampleTrial(dj.Computed):
         depth_raster = dict(
             **key,
             plotting_data_link=fig_link,
-            trial_start=trial['trial_start_time'],
-            trial_end=trial['trial_end_time'],
             trial_stim_on=trial['trial_stim_on_time'],
+            trial_stim_off=trial['trial_feedback_time'] +
+                           (1 if trial['trial_feedback_type'] > 0 else 2),
             trial_feedback=trial['trial_feedback_time'],
             trial_movement=trial['movement_onset'],
             trial_id=trial['trial_id'],
