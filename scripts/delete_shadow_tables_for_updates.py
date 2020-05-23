@@ -23,7 +23,9 @@ print('Deleting alyxraw entries of shadow weighing and water tables...')
 print('Deleting subject fields lab, user, user_hisotry and death date...')
 subject_fields = alyxraw.AlyxRaw.Field & \
     (alyxraw.AlyxRaw & 'model="subjects.subject"') & \
-    'fname in ("projects", "lab", "death_date", "responsible_user", "json")'
+    'fname in ("projects", "sex", "birth_date", "source", \
+               "strain", "line", "lab", \
+               "death_date", "responsible_user", "json")'
 subject_fields.delete_quick()
 
 print('Deleting project records...')
@@ -35,6 +37,8 @@ session_project = alyxraw.AlyxRaw.Field & \
     'fname in ("project")'
 session_project.delete_quick()
 
+print('Deleting trajectories estimates...')
+(alyxraw.AlyxRaw & 'model="experiments.trajectoryestimate"').delete()
 
 # delete some shadow membership tables
 print('Deleting shadow membership tables...')

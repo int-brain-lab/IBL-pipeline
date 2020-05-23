@@ -12,15 +12,13 @@ import time
 import datetime
 from uuid import UUID
 
-key = {'subject_uuid': UUID('7d334e82-1270-4346-86c2-4a8b7530946d'),
-       'session_start_time': datetime.datetime(2019, 11, 25, 22, 53, 11)}
-
-restriction = 'session_start_time > "2019-11-30"'
+key = {'subject_uuid': UUID('f6fe3981-8b66-4ff7-828b-1a79bd31f0fe'),
+       'session_start_time': datetime.datetime(2020, 2, 13, 10, 58, 33)}
 
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
-        logging.FileHandler("ephys_ingestion.log"),
+        logging.FileHandler("test_ephys_ingestion.log"),
         logging.StreamHandler()],
     level=30)
 
@@ -59,26 +57,26 @@ logger.log(30, 'Ingestion time of ChannelGroup {}'.format(
     channel_group_time-probe_trajectory_time))
 
 logger.log(30, 'Testing ingestion of Cluster...')
-ephys.Cluster.populate(key, **kargs)
+ephys.DefaultCluster.populate(key, **kargs)
 cluster_time = time.time()
 logger.log(30, 'Ingestion time of Cluster {}'.format(
     cluster_time-channel_group_time))
 
 logger.log(30, 'Testing ingestion of TrialSpikes...')
-ephys.TrialSpikes.populate(**kargs)
+ephys.AlignedTrialSpikes.populate(**kargs)
 trial_spikes_time = time.time()
 logger.log(30, 'Ingestion time of TrialSpikes {}'.format(
     trial_spikes_time-cluster_time))
 
 logger.log(30, 'Testing ingestion of plotting raster...')
-ephys_plotting.RasterLinkS3.populate(
+ephys_plotting.Raster.populate(
     **kargs)
 raster_plotting_time = time.time()
-logger.log(30, 'Ingestion time of RasterLinkS3 {}'.format(
+logger.log(30, 'Ingestion time of Raster {}'.format(
     raster_plotting_time-trial_spikes_time))
 
 logger.log(30, 'Testing ingestion of plotting psth...')
-ephys_plotting.PsthDataVarchar.populate(
+ephys_plotting.Psth.populate(
     **kargs)
 psth_plotting_time = time.time()
 logger.log(30, 'Ingestion time of TrialSpikes {}'.format(

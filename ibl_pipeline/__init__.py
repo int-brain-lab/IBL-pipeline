@@ -1,16 +1,14 @@
 import datajoint as dj
 import os
 
+dj.config['enable_python_native_blobs'] = True
 
 if os.environ.get('MODE') == 'test':
     dj.config['database.prefix'] = 'test_'
 elif os.environ.get('MODE') == 'update':
     dj.config['database.prefix'] = 'update_'
 
-
-if os.environ.get('MODE') == 'test':
-    schema = dj.schema('test_ibl_storage')
-elif os.environ.get('MODE') != 'public':
+if os.environ.get('MODE') != 'public':
     schema = dj.schema('ibl_storage')
 
     @schema

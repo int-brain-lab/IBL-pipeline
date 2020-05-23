@@ -272,6 +272,11 @@ class CumulativeSummary(dj.Computed):
             # add monday plots
             data = putils.create_monday_plot(data, yrange, d['mondays'])
 
+            # add ephys dates and good enough markers
+            if d['ephys_dates']:
+                data = putils.create_good_enough_brainmap_plot(
+                    data, yrange, d['ephys_dates'], d['good_enough'])
+
             # add status plots
             data = putils.create_status_plot(
                 data, yrange, status, public=public)
@@ -326,9 +331,15 @@ class CumulativeSummary(dj.Computed):
                         'median_reaction_time').fetch(as_dict=True)
             session_info = pd.DataFrame(session_info)
             yrange = [0, 1.1]
+            perf_easy = [None if np.isnan(p) else p
+                         for p in session_info['performance_easy']]
+
+            median_rt = [None if np.isnan(p) else p
+                         for p in session_info['median_reaction_time']]
+
             performance_easy = go.Scatter(
                 x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
-                y=session_info['performance_easy'].tolist(),
+                y=perf_easy,
                 mode='markers+lines',
                 marker=dict(
                     size=6,
@@ -344,7 +355,7 @@ class CumulativeSummary(dj.Computed):
             )
             rt = go.Scatter(
                 x=[t.strftime('%Y-%m-%d') for t in session_info['session_date'].tolist()],
-                y=session_info['median_reaction_time'].tolist(),
+                y=median_rt,
                 mode='markers+lines',
                 marker=dict(
                     size=6,
@@ -362,6 +373,11 @@ class CumulativeSummary(dj.Computed):
 
             # add monday plots
             data = putils.create_monday_plot(data, yrange, d['mondays'])
+
+            # add good enough for brain map plot
+            if d['ephys_dates']:
+                data = putils.create_good_enough_brainmap_plot(
+                    data, yrange, d['ephys_dates'], d['good_enough'])
 
             # add status plots
             data = putils.create_status_plot(
@@ -497,6 +513,15 @@ class CumulativeSummary(dj.Computed):
                     show_legend_external=show_legend
                 )
 
+                # add good enough for brainmap plots
+                if d['ephys_dates']:
+                    pars_data = putils.create_good_enough_brainmap_plot(
+                        pars_data, yranges[ipar], d['ephys_dates'],
+                        d['good_enough'],
+                        xaxis='x{}'.format(4-ipar),
+                        yaxis='y{}'.format(4-ipar),
+                        show_legend_external=show_legend)
+
                 # add status plots
                 pars_data = putils.create_status_plot(
                     pars_data, yranges[ipar], status,
@@ -621,8 +646,6 @@ class CumulativeSummary(dj.Computed):
 
             contrast_map = contrast_map.where(pd.notnull(contrast_map), None)
             contrasts = np.sort(contrast_df['signed_contrast'].unique())
-
-
 
             data = [dict(
                 x=[t.strftime('%Y-%m-%d')

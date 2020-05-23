@@ -2,16 +2,19 @@ import datajoint as dj
 import numpy as np
 from os import path, environ
 from . import acquisition, reference, behavior, data
+from .ingest import ephys as ephys_ingest
 from tqdm import tqdm
 import numpy as np
 from uuid import UUID
 import re
 import alf.io
 
+wheel = dj.create_virtual_module('wheel', 'group_shared_wheel')
+
 try:
     from oneibl.one import ONE
     one = ONE()
-except:
+except Exception:
     print('ONE not set up')
 
 mode = environ.get('MODE')
@@ -20,30 +23,23 @@ if mode == 'update':
     schema = dj.schema('ibl_ephys')
 else:
     schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
+    schema_groupshare = dj.schema(dj.config.get('database.prefix', '') + 'group_shared_ephys')
 
 dj.config['safemode'] = False
 
 
 @schema
-class Probe(dj.Lookup):
+class ProbeModel(dj.Lookup):
     definition = """
     # Description of a particular model of probe
-    probe_model_name:       varchar(128)        # String naming probe model, from probe.description
-    probe_serial_number:    varchar(64)         # serial number of a probe
+    probe_name           : varchar(128)
     ---
-    channel_counts:         smallint            # number of channels in the probe
+    probe_uuid           : uuid
+    probe_model          : varchar(32)                  # 3A, 3B
+    probe_manufacturer   : varchar(32)
+    probe_description=null : varchar(2048)
+    probe_model_ts=CURRENT_TIMESTAMP : timestamp
     """
-
-    class Channel(dj.Part):
-        definition = """
-        # positional information about every channel on this probe
-        -> master
-        channel_id:     smallint         # id of a channel on the probe
-        ---
-        channel_x_pos=null:  float       # x position relative to the tip of the probe in um, on the width of the shank
-        channel_y_pos=null:  float       # y position relative to the tip of the probe in um, the depth where 0 is the deepest site, and positive above this
-        channel_shank=null:  tinyint     # shank of the channel, 1 or 2
-        """
 
 
 @schema
@@ -116,34 +112,13 @@ class ProblematicDataSet(dj.Manual):
 class ProbeInsertion(dj.Imported):
     definition = """
     -> acquisition.Session
-    probe_idx:    int    # probe insertion number (0 corresponds to probe00, 1 corresponds to probe01)
+    probe_idx                   : int           # probe insertion number (0 corresponds to probe00, 1 corresponds to probe01)
     ---
-    probe_label=null: varchar(32)  # probe label
-    -> Probe
+    probe_label=null            : varchar(32)   # name in alyx table experiments.probeinsertion
+    probe_insertion_uuid=null   : uuid          # probe insertion uuid
+    -> [nullable] ProbeModel
+    probe_insertion_ts=CURRENT_TIMESTAMP  :  timestamp
     """
-    key_source = CompleteClusterSession - ProblematicDataSet
-
-    def make(self, key):
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        dtypes = ['probes.description']
-        files = one.load(eID, dataset_types=dtypes, download_only=True)
-        ses_path = alf.io.get_session_path(files[0])
-        probes = alf.io.load_object(ses_path.joinpath('alf'), 'probes')
-        for p in probes['description']:
-            # ingest probe information, including probe model and serial
-            probe = dict(
-                probe_model_name=p['model'],
-                probe_serial_number=str(p['serial']),
-                channel_counts=960)
-            Probe.insert1(probe, skip_duplicates=True)
-
-            # ingest probe insertion
-            idx = int(re.search('probe.?0([0-3])', p['label']).group(1))
-            key.update(probe_idx=idx,
-                       probe_model_name=p['model'],
-                       probe_label=p['label'],
-                       probe_serial_number=str(p['serial']))
-            self.insert1(key)
 
 
 @schema
@@ -153,6 +128,7 @@ class ChannelGroup(dj.Imported):
     ---
     channel_raw_inds:             blob  # Array of integers saying which index in the raw recording file (of its home probe) that the channel corresponds to (counting from zero)
     channel_local_coordinates:    blob  # Location of each channel relative to probe coordinate system (µm): x (first) dimension is on the width of the shank; (y) is the depth where 0 is the deepest site, and positive above this
+    channel_group_ts=CURRENT_TIMESTAMP  :  timestamp
     """
 
     key_source = ProbeInsertion \
@@ -181,63 +157,83 @@ class ChannelGroup(dj.Imported):
 
 
 @schema
+class InsertionDataSource(dj.Lookup):
+    definition = """
+    insertion_data_source:    varchar(128)     # type of trajectory
+    ---
+    provenance:         int             # provenance code
+    """
+    contents = [
+        ('Ephys aligned histology track', 70),
+        ('Histology track', 50),
+        ('Micro-manipulator', 30),
+        ('Planned', 10),
+    ]
+
+
+@schema
 class ProbeTrajectory(dj.Imported):
     definition = """
     # data imported from probes.trajectory
     -> ProbeInsertion
+    -> InsertionDataSource
     ---
+    -> [nullable] reference.CoordinateSystem
+    probe_trajectory_uuid: uuid
     x:                  float           # (um) medio-lateral coordinate relative to Bregma, left negative
     y:                  float           # (um) antero-posterior coordinate relative to Bregma, back negative
     z:                  float           # (um) dorso-ventral coordinate relative to Bregma, ventral negative
     phi:                float           # (degrees)[-180 180] azimuth
     theta:              float           # (degrees)[0 180] polar angle
     depth:              float           # (um) insertion depth
-    beta:               float           # (degrees) roll angle of the probe
+    roll=null:          float           # (degrees) roll angle of the probe
+    probe_trajectory_ts=CURRENT_TIMESTAMP  :  timestamp
     """
-    key_source = acquisition.Session & ProbeInsertion \
-        & (data.FileRecord & 'dataset_name="probes.description.json"') \
-        & (data.FileRecord & 'dataset_name="probes.trajectory.json"')
+    keys = ephys_ingest.ProbeTrajectory.fetch(
+        'subject_uuid', 'session_start_time', 'probe_idx',
+        'insertion_data_source', as_dict=True)
+    key_source = ProbeInsertion * InsertionDataSource & keys
 
     def make(self, key):
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        dtypes = ['probes.description', 'probes.trajectory']
-        files = one.load(eID, dataset_types=dtypes, download_only=True)
-        ses_path = alf.io.get_session_path(files[0])
-        probes = alf.io.load_object(ses_path.joinpath('alf'), 'probes')
-        for p in probes.trajectory:
 
-            # ingest probe trajectory
-            idx = int(re.search('probe.?0([0-3])', p['label']).group(1))
-            p.pop('label')
-            key.update(probe_idx=idx, **p)
-            self.insert1(key)
-
+        trajs = (ephys_ingest.ProbeTrajectory & key).fetch(as_dict=True)
+        for traj in trajs:
+            if not len(traj['coordinate_system_name']):
+                traj.pop('coordinate_system_name')
+            self.insert1(traj, skip_duplicates=True)
 
 # needs to be further adjusted by adding channels.mlapdvIntended
+# @schema
+# class ChannelBrainLocation(dj.Imported):
+#     definition = """
+#     -> ProbeInsertion
+#     -> Probe.Channel
+#     -> reference.Atlas
+#     histology_revision: varchar(64)
+#     ---
+#     # from channels.brainlocation
+#     version_time:       datetime
+#     channel_ap:         float           # anterior posterior CCF coordinate (um)
+#     channel_dv:         float           # dorsal ventral CCF coordinate (um)
+#     channel_lr:         float           # left right CCF coordinate (um)
+#     -> reference.BrainLocationAcronym.proj(channel_brain_location='acronym')   # acronym of the brain location
+#     channel_raw_row:        smallint    # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
+#     """
+
+
 @schema
-class ChannelBrainLocation(dj.Imported):
+class ClusteringMethod(dj.Lookup):
     definition = """
-    -> ProbeInsertion
-    -> Probe.Channel
-    -> reference.Atlas
-    histology_revision: varchar(64)
-    ---
-    # from channels.brainlocation
-    version_time:       datetime
-    channel_ap:         float           # anterior posterior CCF coordinate (um)
-    channel_dv:         float           # dorsal ventral CCF coordinate (um)
-    channel_lr:         float           # left right CCF coordinate (um)
-    -> reference.BrainLocationAcronym.proj(channel_brain_location='acronym')   # acronym of the brain location
-    channel_raw_row:        smallint    # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
+    clustering_method:   varchar(32)   # clustering method
     """
+    contents = [['ks2']]
 
 
 @schema
-class Cluster(dj.Imported):
+class DefaultCluster(dj.Imported):
     definition = """
     -> ProbeInsertion
-    cluster_revision='0':            varchar(64)
-    cluster_id:                      int
+    cluster_id:                 int
     ---
     cluster_uuid:                    uuid            # uuid of this cluster
     cluster_channel:                 int             # which channel this cluster is from
@@ -251,12 +247,11 @@ class Cluster(dj.Imported):
     cluster_spikes_amps:             blob@ephys      # Amplitude of each spike (µV)
     cluster_spikes_templates=null:   blob@ephys      # Template ID of each spike (i.e. output of automatic spike sorting prior to manual curation)
     cluster_spikes_samples=null:     blob@ephys      # Time of spikes, measured in units of samples in their own electrophysiology binary file.
+    cluster_ts=CURRENT_TIMESTAMP  :  timestamp
     """
-    key_source = ProbeInsertion
+    key_source = ProbeInsertion & (CompleteClusterSession - ProblematicDataSet)
 
     def make(self, key):
-
-        print(key)
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         dtypes = [
@@ -286,6 +281,8 @@ class Cluster(dj.Imported):
         spikes = alf.io.load_object(
             ses_path.joinpath('alf', probe_name), 'spikes')
 
+        max_spike_time = spikes.times[-1]
+
         for icluster, cluster_uuid in tqdm(enumerate(clusters.uuids['uuids'])):
 
             idx = spikes.clusters == icluster
@@ -307,13 +304,17 @@ class Cluster(dj.Imported):
 
             self.insert1(cluster)
 
+            num_spikes = len(cluster['cluster_spikes_times'])
+            firing_rate = num_spikes/max_spike_time
+
             metrics = clusters.metrics
             cluster_metric_entry = dict(
                 **key,
                 cluster_id=icluster,
-                cluster_revision='0',
-                num_spikes=metrics.num_spikes[icluster],
-                firing_rate=metrics.firing_rate[icluster],
+                num_spikes=num_spikes,
+                firing_rate=firing_rate)
+
+            metrics_dict = dict(
                 presence_ratio=metrics.presence_ratio[icluster],
                 presence_ratio_std=metrics.presence_ratio_std[icluster],
                 amplitude_cutoff=metrics.amplitude_cutoff[icluster],
@@ -322,41 +323,64 @@ class Cluster(dj.Imported):
                 ks2_label=metrics.ks2_label[icluster])
 
             if not np.isnan(metrics.isi_viol[icluster]):
-                cluster_metric_entry.update(
+                metrics_dict.update(
                     isi_viol=metrics.isi_viol[icluster])
             if not np.isinf(metrics.ks2_contamination_pct[icluster]):
-                cluster_metric_entry.update(
+                metrics_dict.update(
                     ks2_contamination_pct=metrics.ks2_contamination_pct[icluster])
 
-            self.ClusterMetrics.insert1(cluster_metric_entry)
+            cluster_metric_entry.update(
+                metrics=metrics_dict)
 
-    class ClusterMetrics(dj.Part):
+            self.Metrics.insert1(cluster_metric_entry)
+
+    class Metrics(dj.Part):
         definition = """
         -> master
         ---
-        num_spikes:                 int    # total spike number
-        firing_rate:                float  # firing rate of the cluster
-        presence_ratio=null:        float
-        presence_ratio_std=null:    float
-        isi_viol=null:              float
-        amplitude_cutoff=null:      float
-        amplitude_std=null:         float
-        epoch_name:                 tinyint
-        ks2_contamination_pct=null: float
-        ks2_label:                  enum('good', 'mua')
+        num_spikes:                 int         # total spike number
+        firing_rate:                float       # firing rate of the cluster
+        metrics:                    longblob    # a dictionary with fields of metrics, depend on the clustering method
         """
 
 
-@schema
-class ClusterBrainLocation(dj.Imported):
+@schema_groupshare
+class ClusterCuration(dj.Manual):
     definition = """
-    -> Cluster
+    -> DefaultCluster
+    curation_time=CURRENT_TIMESTAMP:    timestamp
     ---
-    -> reference.BrainLocationAcronym    # acronym of the brain location
-    cluster_ml_position:      float      # Estimated 3d location of the cell relative to bregma - mediolateral
-    cluster_ap_position:      float      # anterior-posterior
-    cluster_dv_position:      float      # dorsoventral
+    -> reference.LabMember
+    cluster_label:              enum('Good', 'MUA', 'Noise')
     """
+
+
+@schema
+class GoodClusterCriterion(dj.Lookup):
+    definition = """
+    criterion_id:               int
+    ---
+    criterion_description:      varchar(255)
+    """
+    contents = [[1, 'firing rate greater than 0.2']]
+
+
+@schema
+class GoodCluster(dj.Computed):
+    definition = """
+    -> DefaultCluster
+    -> GoodClusterCriterion
+    ---
+    is_good=0:       bool      # whether the unit is good
+    """
+    def make(self, key):
+
+        firing_rate = (DefaultCluster.Metrics & key).fetch1('firing_rate')
+        if key['criterion_id'] == 1:
+            if firing_rate > 0.2:
+                key['is_good'] = True
+
+        self.insert1(key)
 
 
 @schema
@@ -364,32 +388,35 @@ class Event(dj.Lookup):
     definition = """
     event:       varchar(32)
     """
-    contents = zip(['go cue', 'stim on', 'response', 'feedback'])
+    contents = zip(['go cue', 'stim on', 'response', 'feedback', 'movement'])
 
 
 @schema
-class TrialSpikes(dj.Computed):
+class AlignedTrialSpikes(dj.Computed):
     definition = """
-    -> Cluster
+    # spike times of each trial aligned to different events
+    -> DefaultCluster
     -> behavior.TrialSet.Trial
     -> Event
     ---
     trial_spike_times=null:   longblob     # spike time for each trial, aligned to different event times
+    trial_spikes_ts=CURRENT_TIMESTAMP:    timestamp
     """
-    key_source = behavior.TrialSet * Cluster
+    key_source = behavior.TrialSet * DefaultCluster * Event & \
+        wheel.MovementTimes & 'event in ("stim on", "movement", "feedback")'
 
     def make(self, key):
 
-        trials = behavior.TrialSet.Trial & key
-        cluster = Cluster() & key
+        trials = behavior.TrialSet.Trial * wheel.MovementTimes & key
+        cluster = DefaultCluster() & key
         spike_times = cluster.fetch1('cluster_spikes_times')
-        events = (Event & 'event!="go cue"').fetch('event')
+        event = (Event & key).fetch1('event')
 
-        trial_keys, trial_start_times, trial_end_times, \
-            trial_stim_on_times, trial_response_times, trial_feedback_times = \
+        trial_keys, trial_start_times, trial_end_times, trial_stim_on_times, \
+            trial_feedback_times, trial_movement_times = \
             trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
-                         'trial_stim_on_time', 'trial_response_time',
-                         'trial_feedback_time')
+                         'trial_stim_on_time', 'trial_feedback_time',
+                         'movement_onset')
 
         # trial idx of each spike
         spike_ids = np.searchsorted(
@@ -402,50 +429,48 @@ class TrialSpikes(dj.Computed):
             trial_spk = dict(
                 **trial_key,
                 cluster_id=key['cluster_id'],
-                cluster_revision=key['cluster_revision'],
                 probe_idx=key['probe_idx']
             )
 
             trial_spike_time = spike_times[spike_ids == itrial*2+1]
 
-            for event in events:
-                if not len(trial_spike_time):
-                    trial_spk['trial_spike_times'] = []
-                else:
-                    if event == 'stim on':
+            if not len(trial_spike_time):
+                trial_spk['trial_spike_times'] = []
+            else:
+                if event == 'stim on':
+                    trial_spk['trial_spike_times'] = \
+                        trial_spike_time - trial_stim_on_times[itrial]
+                elif event == 'movement':
+                    trial_spk['trial_spike_times'] = \
+                        trial_spike_time - trial_movement_times[itrial]
+                elif event == 'feedback':
+                    if trial_feedback_times[itrial]:
                         trial_spk['trial_spike_times'] = \
-                            trial_spike_time - trial_stim_on_times[itrial]
-                    elif event == 'response':
-                        trial_spk['trial_spike_times'] = \
-                            trial_spike_time - trial_response_times[itrial]
-                    elif event == 'feedback':
-                        if trial_feedback_times[itrial]:
-                            trial_spk['trial_spike_times'] = \
-                                trial_spike_time - trial_feedback_times[itrial]
-                        else:
-                            continue
+                            trial_spike_time - trial_feedback_times[itrial]
+                    else:
+                        continue
                 trial_spk['event'] = event
                 trial_spks.append(trial_spk.copy())
 
         self.insert(trial_spks)
 
 
-@schema
-class LFP(dj.Imported):
-    definition = """
-    -> ProbeInsertion
-    ---
-    lfp_timestamps:       blob@ephys    # Timestamps for LFP timeseries in seconds
-    lfp_start_time:       float         # (seconds)
-    lfp_end_time:         float         # (seconds)
-    lfp_duration:         float         # (seconds)
-    lfp_sampling_rate:    float         # samples per second
-    """
+# @schema
+# class LFP(dj.Imported):
+#     definition = """
+#     -> ProbeInsertion
+#     ---
+#     lfp_timestamps:       blob@ephys    # Timestamps for LFP timeseries in seconds
+#     lfp_start_time:       float         # (seconds)
+#     lfp_end_time:         float         # (seconds)
+#     lfp_duration:         float         # (seconds)
+#     lfp_sampling_rate:    float         # samples per second
+#     """
 
-    class Channel(dj.Part):
-        definition = """
-        -> master
-        -> Probe.Channel
-        ---
-        lfp: blob@ephys           # recorded lfp on this channel
-        """
+#     class Channel(dj.Part):
+#         definition = """
+#         -> master
+#         -> Probe.Channel
+#         ---
+#         lfp: blob@ephys           # recorded lfp on this channel
+#         """

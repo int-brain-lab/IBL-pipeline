@@ -178,7 +178,7 @@ class WaterRestriction(dj.Computed):
             key_res['restriction_end_time'] = end_time
 
         narrative = grf(key, 'narrative')
-        if narrative != 'None':
+        if narrative and narrative != 'None':
             key_res['restriction_narrative'] = narrative
 
         location_uuid = grf(key, 'location')

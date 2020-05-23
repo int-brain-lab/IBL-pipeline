@@ -1,7 +1,8 @@
 version: '3'
 services:
-  datajoint:
+  datajoint_test:
     build: .
+    container_name: ibl_datajoint_test
     env_file: .env_test
     volumes:
       - ./notebooks:/notebooks
@@ -9,6 +10,5 @@ services:
       - .:/src/IBL-pipeline
       - ./data:/data
       - ./root/.one_params:/root/.one_params
-      - ./snapshots:/Figures_DataJoint_shortcuts
     ports:
       - "8900:8888"

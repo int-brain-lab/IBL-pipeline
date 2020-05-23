@@ -1,6 +1,6 @@
 from ibl_pipeline.analyses import behavior
 from ibl_pipeline import behavior as behavior_ingest
-from ibl_pipeline import subject, action, acquisition
+from ibl_pipeline import subject, action, acquisition, ephys
 from ibl_pipeline.utils import psychofit as psy
 from uuid import UUID
 import numpy as np
@@ -101,6 +101,18 @@ def get_date_range(subj):
     mondays = [day.strftime('%Y-%m-%d')
                for day in date_array if day.weekday() == 0]
 
+    # get dates for good enough for brainwide map
+    ephys_sessions = behavior.SessionTrainingStatus & subj & \
+        (acquisition.Session & 'task_protocol like "%ephys%"')
+
+    if len(ephys_sessions):
+        ephys_dates, good_enough = ephys_sessions.fetch(
+            'session_start_time', 'good_enough_for_brainwide_map')
+        ephys_dates = [day.strftime('%Y-%m-%d') for day in ephys_dates]
+    else:
+        ephys_dates = None
+        good_enough = None
+
     # check whether the animal is already 7 months
     dob = subj.fetch1('subject_birth_date')
     if dob:
@@ -117,6 +129,8 @@ def get_date_range(subj):
         last_date_str=last_date_str,
         date_array=date_array,
         mondays=mondays,
+        ephys_dates=ephys_dates,
+        good_enough=good_enough,
         seven_months_date=seven_months_date)
 
 
@@ -136,6 +150,9 @@ def get_status(subj):
         first_session='DATE(min(session_start_time))')
     first_ready4recording = subj.aggr(
         behavior.SessionTrainingStatus & 'training_status = "ready4recording"',
+        first_session='DATE(min(session_start_time))')
+    first_ephys_session = subj.aggr(
+        behavior.SessionTrainingStatus & ephys.ProbeInsertion,
         first_session='DATE(min(session_start_time))')
 
     result = dict()
@@ -179,6 +196,15 @@ def get_status(subj):
     else:
         result.update(is_ready4recording=False)
 
+    if len(first_ephys_session):
+        first_ephys_session_date = first_ephys_session.fetch1(
+            'first_session').strftime('%Y-%m-%d')
+        result.update(
+            has_ephys_session=True,
+            first_ephys_session_date=first_ephys_session_date)
+    else:
+        result.update(has_ephys_session=False)
+
     return result
 
 
@@ -207,24 +233,15 @@ def get_color(prob_left, opacity=0.3):
 
     if prob_left == 0.2:
         color = cmap[0]
-        err_c = color.copy()
-        err_c[3] = err_c[3]*opacity
-        curve_color = 'rgba{}'.format(tuple(color))
-        error_color = 'rgba{}'.format(tuple(err_c))
     elif prob_left == 0.5:
         color = cmap[1]
-        err_c = color.copy()
-        err_c[3] = err_c[3]*opacity
-        curve_color = 'rgba{}'.format(tuple(color))
-        error_color = 'rgba{}'.format(tuple(err_c))
     elif prob_left == 0.8:
         color = cmap[2]
-        err_c = color.copy()
-        err_c[3] = err_c[3]*opacity
-        curve_color = 'rgba{}'.format(tuple(color))
-        error_color = 'rgba{}'.format(tuple(err_c))
     else:
         return
+
+    curve_color = 'rgba{}'.format(color + tuple([1]))
+    error_color = 'rgba{}'.format(color + tuple([opacity]))
 
     return curve_color, error_color
 
@@ -580,6 +597,25 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                hoverinfo='x'
             )
         )
+    if status['has_ephys_session']:
+        data.append(
+           go.Scatter(
+               x=[status['first_ephys_session_date'],
+                  status['first_ephys_session_date']],
+               y=yrange,
+               mode="lines",
+               line=dict(
+                   width=2,
+                   color='rgba(5, 142, 255, 1)',
+                   dash='dashdot'),
+               name='first ephys session date',
+               xaxis=xaxis,
+               yaxis=yaxis,
+               showlegend=show_legend_external,
+               hoverinfo='x',
+               legendgroup='ephys_good_enough'
+            )
+        )
 
     return data
 
@@ -608,6 +644,58 @@ def create_monday_plot(data, yrange, mondays, xaxis='x1', yaxis='y1',
                 yaxis=yaxis,
                 showlegend=show_legend,
                 legendgroup='monday',
+                hoverinfo='skip'
+            )
+        )
+
+    return data
+
+
+def create_good_enough_brainmap_plot(data, yrange, ephys_dates,
+                                     good_enough,
+                                     xaxis='x1', yaxis='y1',
+                                     show_legend_external=True):
+
+    shown_red = 0
+    shown_blue = 0
+    for i_good_date, (ephys_date, good) in \
+            enumerate(zip(ephys_dates, good_enough)):
+
+        if good:
+            color = 'rgba(5, 142, 255, 0.3)'
+            legend = 'good enough for brainwide map'
+            if shown_blue:
+                show_legend = False
+            elif show_legend_external:
+                show_legend = True
+                shown_blue = 1
+            else:
+                show_legend = False
+        else:
+            color = 'rgba(255, 18, 18, 0.2)'
+            legend = 'not good enough for brainwide map'
+            if shown_red:
+                show_legend = False
+            elif show_legend_external:
+                show_legend = True
+                shown_red = 1
+            else:
+                show_legend = False
+
+        data.append(
+            go.Scatter(
+                x=[ephys_date, ephys_date],
+                y=yrange,
+                mode="lines",
+                line=dict(
+                    width=2,
+                    color=color
+                ),
+                name=legend,
+                xaxis=xaxis,
+                yaxis=yaxis,
+                showlegend=show_legend,
+                legendgroup='ephys_good_enough',
                 hoverinfo='skip'
             )
         )

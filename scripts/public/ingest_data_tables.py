@@ -43,6 +43,8 @@ for key in tqdm(key_source.fetch('KEY')):
                     'user_name')
         except:
             print(user)
+    else:
+        key_ds['dataset_created_by'] = None
 
     format = grf(key, 'data_format')
     key_ds['format_name'] = \
@@ -54,23 +56,33 @@ for key in tqdm(key_source.fetch('KEY')):
     software = grf(key, 'generating_software')
     if software != 'None':
         key_ds['generating_software'] = software
+    else:
+        key_ds['generating_software'] = None
 
     directory = grf(key, 'provenance_directory')
     if directory != 'None':
         key_ds['provenance_directory'] = directory
+    else:
+        key_ds['provenance_directory'] = None
 
     md5 = grf(key, 'md5')
     if md5 != 'None':
         key_ds['md5'] = md5
+    else:
+        key_ds['md5'] = None
 
     file_size = grf(key, 'file_size')
     if file_size != 'None':
         key_ds['file_size'] = file_size
+    else:
+        key_ds['file_size'] = None
+
+    data_set.insert1(key_ds)
 
     if data_set.flush(
             skip_duplicates=True,
-            allow_direct_insert=True, chunksz=1000):
-        print('Inserted 1000 dataset tuples')
+            allow_direct_insert=True, chunksz=100):
+        print('Inserted 100 dataset tuples')
 
 if data_set.flush(skip_duplicates=True, allow_direct_insert=True):
     print('Inserted all remaining dataset tuples')
