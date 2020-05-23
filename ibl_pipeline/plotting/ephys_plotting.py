@@ -8,6 +8,7 @@ import seaborn as sns
 from matplotlib import cm
 from matplotlib.colors import Normalize
 from scipy.interpolate import interpn
+import colorlover as cl
 
 
 def driftmap_color(
