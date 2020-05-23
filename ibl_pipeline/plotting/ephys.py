@@ -813,7 +813,7 @@ class DepthRasterTemplate(dj.Lookup):
         line=dict(
             color='rgba(230, 190, 20, 0.8)',
             width=1.5),
-        name='Stim on'
+        name='Stim off'
     )
 
     layout2 = go.Layout(
@@ -1005,14 +1005,17 @@ class DepthRasterExampleTrial(dj.Computed):
                 spikes_data_trial, dpi=100, figsize=[18, 12],
                 fig_dir=fig_link, store_type='s3')
 
+        fb_time = trial['trial_feedback_time']
+        movement_time = trial['movement_onset']
+
         depth_raster = dict(
             **key,
             plotting_data_link=fig_link,
             trial_stim_on=trial['trial_stim_on_time'],
-            trial_stim_off=trial['trial_feedback_time'] +
+            trial_stim_off=(fb_time if fb_time else movement_time) +
                            (1 if trial['trial_feedback_type'] > 0 else 2),
-            trial_feedback=trial['trial_feedback_time'],
-            trial_movement=trial['movement_onset'],
+            trial_feedback=fb_time,
+            trial_movement=movement_time,
             trial_id=trial['trial_id'],
             depth_raster_template_idx=1,
             trial_type=trial_type,
