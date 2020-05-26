@@ -267,16 +267,7 @@ class Raster(dj.Computed):
     -> RasterLayoutTemplate
     """
     key_source = ephys.DefaultCluster * ValidAlignSort & behavior.TrialSet & \
-        ephys.AlignedTrialSpikes & \
-        [dict(event='stim on', sort_by='trial_id'),
-         dict(event='stim on', sort_by='contrast'),
-         dict(event='stim on', sort_by='feedback - stim on'),
-         dict(event='stim on', sort_by='movement - stim on'),
-         dict(event='movement', sort_by='movement - stim on'),
-         dict(event='movement', sort_by='trial_id'),
-         dict(event='feedback', sort_by='feedback - movement'),
-         dict(event='feedback', sort_by='trial_id'),
-         dict(event='feedback', sort_by='feedback type')]
+        ephys.AlignedTrialSpikes
 
     def plot_regular(trials, key, ax, x_lim=[-1, 1]):
 
