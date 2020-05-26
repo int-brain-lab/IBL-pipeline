@@ -344,7 +344,7 @@ class Raster(dj.Computed):
                     mark_point=mark_variable) & key).fetch(
                         'trial_spike_times', 'mark_point', order_by='sort')
 
-            if spk_times and len(np.hstack(spk_times)):
+            if spk_times.any() and len(np.hstack(spk_times)):
                 spk_trial_ids = np.hstack(
                     [[trial_id + base] * len(spk_time)
                      for trial_id, spk_time in enumerate(spk_times)])
