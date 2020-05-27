@@ -9,9 +9,9 @@ from ibl_pipeline.analyses import behavior as behavior_analyses
 from ibl_pipeline.plotting import behavior as behavior_plotting
 import numpy as np
 from datetime import datetime
+from tqdm import tqdm
 
-
-for key in subject.Subject.fetch('KEY'):
+for key in tqdm(subject.Subject.fetch('KEY')):
     behavior_summary = behavior_analyses.BehavioralSummaryByDate & key
     water_weight = action.Weighing * action.WaterAdministration & key
     if behavior_summary:

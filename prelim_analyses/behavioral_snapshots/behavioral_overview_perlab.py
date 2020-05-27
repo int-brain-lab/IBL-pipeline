@@ -193,7 +193,7 @@ for lidx, lab in enumerate(users):
 					ax.xaxis.label.set_color('orange')
 				elif training_status == 'ready for ephys':
 					ax.xaxis.label.set_color('forestgreen')
-				elif training_status == 'untrainable':
+				elif training_status == 'over40days':
 					ax.xaxis.label.set_color('red')
 
 			# FIX: after creating the whole plot, make sure xticklabels are shown

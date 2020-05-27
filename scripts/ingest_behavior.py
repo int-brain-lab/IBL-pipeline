@@ -10,8 +10,8 @@ kargs = dict(
 
 print('-------- Populating CompleteWheelMoveSession -------')
 behavior.CompleteWheelMoveSession.populate(**kargs)
-print('-------------- Populating WheelMoveSet -------------')
-behavior.WheelMoveSet.populate(**kargs)
+# print('-------------- Populating WheelMoveSet -------------')
+# behavior.WheelMoveSet.populate(**kargs)
 print('---------- Populating CompleteTrialSession ---------')
 behavior.CompleteTrialSession.populate(**kargs)
 print('---------------- Populating TrialSet ---------------')

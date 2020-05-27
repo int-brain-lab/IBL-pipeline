@@ -1,4 +1,8 @@
-'''This script tests the new version of criteria for the behavior benchmarks'''
+'''
+This script tests the new version of criteria for the behavior benchmarks
+
+Shan Shen, 2019-11-02
+'''
 
 from ibl_pipeline import subject, acquisition, behavior
 from ibl_pipeline.analyses import behavior as behavior_analyses

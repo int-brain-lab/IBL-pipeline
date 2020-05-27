@@ -5,6 +5,7 @@ from . import analysis_utils as utils
 from datetime import datetime
 import numpy as np
 import pandas as pd
+from pdb import set_trace as bp
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_analyses_behavior')
@@ -251,7 +252,7 @@ class BehavioralSummaryByDate(dj.Computed):
                 'task_protocol',
                 session_date='date(session_start_time)') &
              {'subject_uuid': key['subject_uuid']} &
-             'task_protocol not like "%habituation%"') &
+             'task_protocol not like "%habituation%" or task_protocol is null') &
             'session_date<="{}"'.format(
                 key['session_date'].strftime('%Y-%m-%d')))
         master_entry['training_week'] = np.floor(
@@ -425,8 +426,8 @@ class TrainingStatus(dj.Lookup):
                     'in_training',
                     'trained_1a',
                     'trained_1b',
-                    'ready4delay',
                     'ready4ephysrig',
+                    'ready4delay',
                     'ready4recording'])
 
 
@@ -436,6 +437,7 @@ class SessionTrainingStatus(dj.Computed):
     -> PsychResults
     ---
     -> TrainingStatus
+    good_enough_for_brainwide_map=0:     bool    # to be included in the brainwide map
     """
 
     def make(self, key):
@@ -443,12 +445,27 @@ class SessionTrainingStatus(dj.Computed):
         subject_key = key.copy()
         subject_key.pop('session_start_time')
 
+        # ========================================================= #
+        # check for "good enough for brainwide map"
+        # ========================================================= #
+
+        # trials for current session
+        n_trials_current = (behavior.TrialSet & key).fetch1('n_trials')
+
+        # performance of the current session
+        perf_current = (PsychResults & key).fetch1('performance_easy')
+
+        # check protocol
+        protocol = (acquisition.Session & key).fetch1('task_protocol')
+
+        if n_trials_current > 400 and perf_current > 0.9 and protocol and 'ephys' in protocol:
+            key['good_enough_for_brainwide_map'] = 1
+
         previous_sessions = SessionTrainingStatus & subject_key & \
             'session_start_time < "{}"'.format(
                 key['session_start_time'].strftime('%Y-%m-%d %H:%M:%S')
             )
         status = previous_sessions.fetch('training_status')
-
         # ========================================================= #
         # is the animal ready to be recorded?
         # ========================================================= #
@@ -512,6 +529,7 @@ class SessionTrainingStatus(dj.Computed):
 
                             if not (len(trials_80) and len(trials_20)):
                                 key['training_status'] = 'trained_1b'
+                                self.insert1(key)
                                 return
 
                             # also compute the median reaction time
@@ -614,6 +632,7 @@ class SessionTrainingStatus(dj.Computed):
 
                         if not (len(trials_80) and len(trials_20)):
                             key['training_status'] = 'trained_1b'
+                            self.insert1(key)
                             return
 
                         # also compute the median reaction time
@@ -752,4 +771,5 @@ class SessionTrainingStatus(dj.Computed):
         # ========================================================= #
 
         key['training_status'] = 'in_training'
+
         self.insert1(key)

@@ -116,6 +116,16 @@ class Severity(dj.Lookup):
 
 
 @schema
+class CoordinateSystem(dj.Lookup):
+    definition = """
+    coordinate_system_name: varchar(64)
+    ---
+    coordinate_system_uuid:  uuid
+    coordinate_system_description=null: varchar(2048)
+    """
+
+
+@schema
 class Atlas(dj.Lookup):
     definition = """
     atlas:      varchar(64)

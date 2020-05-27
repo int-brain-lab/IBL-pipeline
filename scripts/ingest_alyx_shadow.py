@@ -4,7 +4,8 @@ via auto-populating.
 '''
 
 import datajoint as dj
-from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data
+from ibl_pipeline.ingest import \
+    (alyxraw, reference, subject, action, acquisition, data, ephys)
 
 kargs = dict(
     display_progress=True,
@@ -17,6 +18,7 @@ reference.LabMember.populate(**kargs)
 reference.LabMembership.populate(**kargs)
 reference.LabLocation.populate(**kargs)
 reference.Project.populate(**kargs)
+reference.CoordinateSystem.populate(**kargs)
 
 # subject tables
 print('---------- Ingesting subject tables ---------')
@@ -61,5 +63,11 @@ data.DataFormat.populate(**kargs)
 data.DataRepositoryType.populate(**kargs)
 data.DataRepository.populate(**kargs)
 data.DataSetType.populate(**kargs)
-data.DataSet.populate(**kargs)
-data.FileRecord.populate(**kargs)
+# data.DataSet.populate(**kargs)
+# data.FileRecord.populate(**kargs)
+
+# ephys tables
+print('------------ Ingesting ephys tables -----------')
+ephys.ProbeModel.populate(**kargs)
+ephys.ProbeInsertion.populate(**kargs)
+ephys.ProbeTrajectory.populate(**kargs)

@@ -55,7 +55,10 @@ use for the ingest modules.
 import logging
 import datajoint as dj
 from . import alyxraw
+import os
 
+if os.environ.get('MODE') == 'test':
+    dj.config['database.prefix'] = 'test_'
 
 log = logging.getLogger(__name__)
 
@@ -68,8 +71,8 @@ def get_raw_field(key, field, multiple_entries=False, model=None):
     else:
         query = alyxraw.AlyxRaw.Field & key & 'fname="{}"'.format(field)
 
-    return query.fetch('fvalue') \
-        if multiple_entries else query.fetch1('fvalue')
+    return query.fetch1('fvalue') \
+        if not multiple_entries and len(query) else query.fetch('fvalue')
 
 
 class InsertBuffer(object):
@@ -91,26 +94,26 @@ class InsertBuffer(object):
               ignore_extra_fields=False, allow_direct_insert=False, chunksz=1):
         '''
         flush the buffer
-        XXX: use kwargs?
         XXX: ignore_extra_fields na, requires .insert() support
         '''
+        kwargs = dict(skip_duplicates=skip_duplicates,
+                      ignore_extra_fields=ignore_extra_fields)
+        if allow_direct_insert:
+            kwargs.update(allow_direct_insert=True)
+
         qlen = len(self._queue)
         if qlen > 0 and qlen % chunksz == 0:
             try:
-                if allow_direct_insert:
-                    self._rel.insert(
-                        self._queue, skip_duplicates=skip_duplicates,
-                        ignore_extra_fields=ignore_extra_fields,
-                        allow_direct_insert=True)
-                else:
-                    self._rel.insert(
-                        self._queue, skip_duplicates=skip_duplicates,
-                        ignore_extra_fields=ignore_extra_fields)
-
-                self._queue.clear()
-                return qlen
-            except dj.DataJointError as e:
-                log.error('error in flush: {}'.format(e))
-                raise
+                self._rel.insert(
+                    self._queue, **kwargs)
+            except Exception as e:
+                print('error in flush: {}, trying ingestion one by one'.format(e))
+                for t in self._queue:
+                    try:
+                        self._rel.insert1(t)
+                    except Exception as e:
+                        print('error in flush: {}'.format(e))
+            self._queue.clear()
+            return qlen
         else:
             return 0

@@ -8,9 +8,12 @@ from ibl_pipeline.ingest import subject as subject_ingest
 from ibl_pipeline.ingest import action as action_ingest
 from ibl_pipeline.ingest import acquisition as acquisition_ingest
 from ibl_pipeline.ingest import data as data_ingest
-from ibl_pipeline import reference, subject, action, acquisition, data
+from ibl_pipeline.ingest import ephys as ephys_ingest
+from ibl_pipeline import reference, subject, action, acquisition, data, ephys
 from ingest_utils import copy_table
 import table_names as tables
+
+dj.config['safemode'] = False
 
 tables.init()
 
@@ -37,3 +40,22 @@ for table in tables.ACQUISITION_TABLES:
 for table in tables.DATA_TABLES:
     print(table)
     copy_table(data, data_ingest, table)
+
+
+# ephys tables
+table = 'ProbeModel'
+print(table)
+copy_table(ephys, ephys_ingest, table)
+
+table = 'ProbeInsertion'
+print(table)
+copy_table(ephys, ephys_ingest, table, allow_direct_insert=True)
+
+# update and populate the ProbeTrajectory
+print('Updating and populate ProbeTrajectory')
+for key in ephys.ProbeTrajectory.fetch('KEY'):
+    (ephys.ProbeTrajectory & key).delete()
+    ephys.ProbeTrajectory.populate(key, suppress_errors=True,
+                                   display_progress=True)
+
+ephys.ProbeTrajectory.populate(suppress_errors=True, display_progress=True)
