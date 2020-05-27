@@ -403,20 +403,29 @@ class AlignedTrialSpikes(dj.Computed):
     trial_spikes_ts=CURRENT_TIMESTAMP:    timestamp
     """
     key_source = behavior.TrialSet * DefaultCluster * Event & \
-        wheel.MovementTimes & 'event in ("stim on", "movement", "feedback")'
+        ['event in ("stim on", "feedback")',
+         wheel.MovementTimes & 'event="movement"']
 
     def make(self, key):
 
-        trials = behavior.TrialSet.Trial * wheel.MovementTimes & key
         cluster = DefaultCluster() & key
         spike_times = cluster.fetch1('cluster_spikes_times')
         event = (Event & key).fetch1('event')
 
-        trial_keys, trial_start_times, trial_end_times, trial_stim_on_times, \
-            trial_feedback_times, trial_movement_times = \
-            trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
-                         'trial_stim_on_time', 'trial_feedback_time',
-                         'movement_onset')
+        if 'event' == 'movement':
+            trials = behavior.TrialSet.Trial * wheel.MovementTimes & key
+            trial_keys, trial_start_times, trial_end_times, \
+                trial_stim_on_times, trial_feedback_times, \
+                trial_movement_times = \
+                trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
+                             'trial_stim_on_time', 'trial_feedback_time',
+                             'movement_onset')
+        else:
+            trials = behavior.TrialSet.Trial & key
+            trial_keys, trial_start_times, trial_end_times, \
+                trial_stim_on_times, trial_feedback_times = \
+                trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
+                             'trial_stim_on_time', 'trial_feedback_time')
 
         # trial idx of each spike
         spike_ids = np.searchsorted(
