@@ -10,10 +10,12 @@ import gc
 class PngFigure(Figure):
 
     def __init__(self, draw, data, ax_kwargs={},
-                 dpi=50, frameon=False, figsize=[8, 6]):
+                 dpi=50, frameon=False, figsize=[8, 6],
+                 transparent=False):
 
         super().__init__(dpi=dpi, frameon=frameon, figsize=figsize)
         ax = Axes(self, [0., 0., 1., 1.])
+        ax.set_axis_off()
 
         result = draw(**data, **ax_kwargs, ax=ax)
         (ax, self.x_lim, self.y_lim) = result[0:3]
@@ -24,7 +26,9 @@ class PngFigure(Figure):
         self.add_axes(ax)
 
         self.buffer = io.BytesIO()
-        self.savefig(self.buffer, pad_inches=0, format='png')
+        self.savefig(self.buffer,
+                     transparent=transparent, dpi=dpi,
+                     pad_inches=0, format='png')
 
     def upload_to_s3(self, bucket, fig_link):
         self.buffer.seek(0)
