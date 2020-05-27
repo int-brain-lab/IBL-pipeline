@@ -78,7 +78,7 @@ class ValidAlignSort(dj.Lookup):
          'movement_onset - trial_stim_on_time',
          'trial_stim_on_time - movement_onset', 'stim on'],
         ['movement', 'feedback - movement', 'difference', 1, '',
-         'trial_feedback_time - movement_onset', '',
+         'trial_feedback_time - movement_onset',
          'trial_feedback_time - movement_onset', 'feedback'],
         ['feedback', 'trial_id', 'regular', 0, 'trial_id', 'trial_id', '', ''],
         ['feedback', 'feedback type', 'regular', 0,
