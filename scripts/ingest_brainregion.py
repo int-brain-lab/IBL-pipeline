@@ -30,3 +30,6 @@ for key in keys:
              parent=fields['parent']))
     if ib_brainregion.flush(skip_duplicates=True, chunksz=1000):
         print('Inserted 1000 raw tuples.')
+
+if ib_brainregion.flush(skip_duplicates=True):
+    print('Inserted all remaining raw field tuples')
