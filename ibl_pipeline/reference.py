@@ -1,5 +1,6 @@
 import datajoint as dj
 import os
+from ibl_pipeline.ingest import reference
 
 mode = os.environ.get('MODE')
 
@@ -144,11 +145,20 @@ class BrainRegion(dj.Lookup):
     """
 
 
-
 @schema
-class ParentRegion(dj.Lookup):
+class ParentRegion(dj.Imported):
     definition = """
     -> BrainRegion
     ---
     -> BrainRegion.proj(parent='acronym')
     """
+    key_source = BrainRegion & \
+        (reference.BrainRegion & 'parent is not NULL').proj()
+
+    def make(self, key):
+
+        parent_pk = (reference.BrainRegion & key).fetch1('parent')
+        acronym = BrainRegion & dict(acronym=parent_pk)
+
+        self.insert1(
+            dict(**key, parent=acronym))
