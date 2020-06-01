@@ -1,6 +1,7 @@
 import datajoint as dj
 import json
 import os.path as path
+import sys
 from ibl_pipeline.ingest import reference, InsertBuffer
 
 dir_name = path.dirname(__file__)
