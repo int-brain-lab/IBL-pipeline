@@ -26,14 +26,15 @@ else:
     filename = path.join(dir_name, sys.argv[1])
 
 with open(filename, 'r') as fid:
-    keys = json.load(fid)
+    keys_all = json.load(fid)
 
-# remove invalid uuid from unused tables
-keys = [key for key in keys
+# remove invalid uuid from some tables
+keys = [key for key in keys_all
         if key['model'] not in
-        ['auth.group', 'sessions.session', 'authtoken.token']]
+        ['auth.group', 'sessions.session', 'authtoken.token',
+         'experiments.brainregion']]
 
-# use insert buffer to speed up the insersion process
+# use insert buffer to speed up the insertion process
 ib_main = InsertBuffer(alyxraw.AlyxRaw)
 ib_part = InsertBuffer(alyxraw.AlyxRaw.Field)
 
@@ -54,14 +55,16 @@ if ib_main.flush(skip_duplicates=True):
     logger.debug('Inserted remaining raw tuples')
     # print('Inserted remaining raw tuples')
 
+
 # insert into the part table AlyxRaw.Field
 for ikey, key in enumerate(keys):
     try:
         try:
             pk = uuid.UUID(key['pk'])
-        except Exception:
+        except ValueError:
             print('Error for key: {}'.format(key))
             continue
+
         key_field = dict(uuid=uuid.UUID(key['pk']))
         for field_name, field_value in key['fields'].items():
             key_field = dict(key_field, fname=field_name)

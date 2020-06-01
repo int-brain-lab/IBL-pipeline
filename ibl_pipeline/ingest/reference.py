@@ -226,3 +226,15 @@ class CoordinateSystem(dj.Imported):
         key_coord['coordinate_system_name'] = grf(key, 'name')
         key_coord['coordinate_system_description'] = grf(key, 'description')
         self.insert1(key_coord)
+
+
+@schema
+class BrainRegion(dj.Lookup):
+    definition = """
+    brain_region_pk     : int           # primary key of brain region consistent with Allen marking
+    ---
+    acronym             : varchar(32)   # e.g. "Su3",
+    brain_region_name   : varchar(64)   # fullname of the brain region
+    parent              : int           # pk of the parent
+    ontology='CCF 2017' : varchar(32)   # ccf version
+    """
