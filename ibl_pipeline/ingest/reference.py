@@ -233,7 +233,7 @@ class BrainRegion(dj.Lookup):
     definition = """
     brain_region_pk     : int               # primary key of brain region consistent with Allen marking
     ---
-    acronym             : varchar(32) character set binary      # e.g. "Su3",
+    acronym             : varchar(32) CHARACTER SET binary      # e.g. "Su3",
     brain_region_name   : varchar(128)      # fullname of the brain region
     parent=null         : int               # pk of the parent
     ontology='CCF 2017' : varchar(32)       # ccf version
