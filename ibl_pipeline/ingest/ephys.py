@@ -194,7 +194,7 @@ class ChannelBrainLocation(dj.Imported):
 
     def make(self, key):
         key_brain_loc = key.copy()
-        key['uuid'] = key_brain_loc['_uuid']
+        key['uuid'] = key_brain_loc['channel_brain_location_uuid']
 
         probe_trajectory_uuid = grf(key, 'trajectory_estimate')
         subject_uuid, session_start_time, probe_idx = \
