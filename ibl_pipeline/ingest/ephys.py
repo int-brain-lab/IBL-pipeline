@@ -193,7 +193,7 @@ class ChannelBrainLocation(dj.Imported):
         channel_brain_location_uuid='uuid')
 
     def make(self, key):
-        key_channel_bl = key.copy()
+        key_brain_loc = key.copy()
         key['uuid'] = key_brain_loc['_uuid']
 
         probe_trajectory_uuid = grf(key, 'trajectory_estimate')
