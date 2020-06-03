@@ -189,8 +189,8 @@ class ChannelBrainLocation(dj.Imported):
     ontology                : varchar(32)
     acronym                 : varchar(32)
     """
-    key_source = (alyxraw.AlyxRaw & 'model="experiments.trajectoryestimate"').proj(
-        probe_trajectory_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model="experiments.channel"').proj(
+        channel_brain_location_uuid='uuid')
 
     def make(self, key):
         key_channel_bl = key.copy()
