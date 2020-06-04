@@ -393,7 +393,7 @@ class ClusterBrainLocation(dj.Computed):
 
     def make(self, key):
         channel_raw_inds, channel_local_coordinates = \
-            (ChannelGroup & key).fetch1('channel_raw_ids',
+            (ChannelGroup & key).fetch1('channel_raw_inds',
                                         'channel_local_coordinates')
         channel = (DefaultCluster & key).fetch1('cluster_channel')
         channel_coords = channel_local_coordinates[channel_raw_inds == channel]
