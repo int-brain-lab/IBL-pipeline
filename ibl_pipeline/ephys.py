@@ -202,23 +202,20 @@ class ProbeTrajectory(dj.Imported):
                 traj.pop('coordinate_system_name')
             self.insert1(traj, skip_duplicates=True)
 
-# needs to be further adjusted by adding channels.mlapdvIntended
-# @schema
-# class ChannelBrainLocation(dj.Imported):
-#     definition = """
-#     -> ProbeInsertion
-#     -> Probe.Channel
-#     -> reference.Atlas
-#     histology_revision: varchar(64)
-#     ---
-#     # from channels.brainlocation
-#     version_time:       datetime
-#     channel_ap:         float           # anterior posterior CCF coordinate (um)
-#     channel_dv:         float           # dorsal ventral CCF coordinate (um)
-#     channel_lr:         float           # left right CCF coordinate (um)
-#     -> reference.BrainLocationAcronym.proj(channel_brain_location='acronym')   # acronym of the brain location
-#     channel_raw_row:        smallint    # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
-#     """
+
+@schema
+class ChannelBrainLocation(dj.Imported):
+    definition = """
+    -> ProbeTrajectory
+    channel_brain_location_uuid    : uuid
+    ---
+    channel_axial   : decimal(6, 1)
+    channel_lateral : decimal(6, 1)
+    channel_x       : decimal(6, 1)
+    channel_y       : decimal(6, 1)
+    channel_z       : decimal(6, 1)
+    -> reference.BrainRegion
+    """
 
 
 @schema
@@ -381,6 +378,37 @@ class GoodCluster(dj.Computed):
                 key['is_good'] = True
 
         self.insert1(key)
+
+
+@schema
+class ClusterBrainLocation(dj.Computed):
+    definition = """
+    -> DefaultCluster
+    -> InsertionDataSource
+    ---
+    -> reference.BrainLocation
+    """
+    key_source = DefaultCluster * InsertionDataSource & \
+        ProbeTrajectory & ChannelGroup & ChannelBrainLocation
+
+    def make(self, key):
+        channel_raw_inds, channel_local_coordinates = \
+            (ChannelGroup & key).fetch1('channel_raw_ids',
+                                        'channel_local_coordinates')
+        channel = (DefaultCluster & key).fetch1('cluster_channel')
+        channel_coords = channel_local_coordinates[channel_raw_inds == channel]
+
+        q = ChannelBrainLocation & key & \
+            dict(channel_lateral=channel_coords[0],
+                 channel_axial=channel_coords[1])
+
+        if len(q) == 1:
+            key['ontology'], key['acronym'] = q.fetch1(
+                'ontology', 'acronym')
+
+            self.insert1(key)
+        else:
+            return
 
 
 @schema
