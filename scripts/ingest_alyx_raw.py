@@ -12,6 +12,7 @@ from ibl_pipeline.ingest import alyxraw, InsertBuffer
 import sys
 import uuid
 import re
+from tqdm import tqdm
 
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ ib_main = InsertBuffer(alyxraw.AlyxRaw)
 ib_part = InsertBuffer(alyxraw.AlyxRaw.Field)
 
 # insert into AlyxRaw table
-for key in keys:
+for key in tqdm(keys):
     try:
         pk = uuid.UUID(key['pk'])
     except Exception:
@@ -57,7 +58,7 @@ if ib_main.flush(skip_duplicates=True):
 
 
 # insert into the part table AlyxRaw.Field
-for ikey, key in enumerate(keys):
+for ikey, key in tqdm(enumerate(keys)):
     try:
         try:
             pk = uuid.UUID(key['pk'])
