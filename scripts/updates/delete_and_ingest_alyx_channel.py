@@ -22,6 +22,9 @@ print('Deleting experiments.channel...')
 
 filename = path.join(dir_name, '..', 'data', 'alyxfull.json')
 
+with open(filename, 'r') as fid:
+    keys_all = json.load(fid)
+
 # remove invalid uuid from some tables
 keys = [key for key in keys_all
         if key['model'] == 'experiments.channel']
