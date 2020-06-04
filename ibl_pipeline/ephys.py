@@ -396,7 +396,7 @@ class ClusterBrainLocation(dj.Computed):
             (ChannelGroup & key).fetch1('channel_raw_inds',
                                         'channel_local_coordinates')
         channel = (DefaultCluster & key).fetch1('cluster_channel')
-        channel_coords = channel_local_coordinates[channel_raw_inds == channel]
+        channel_coords = np.squeeze(channel_local_coordinates[channel_raw_inds == channel])
 
         q = ChannelBrainLocation & key & \
             dict(channel_lateral=channel_coords[0],
