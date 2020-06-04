@@ -227,22 +227,3 @@ class ChannelBrainLocation(dj.Imported):
         )
 
         self.insert1(key_brain_loc)
-
-
-
-ada6afbe-545a-4226-8ab3-86a38aafb629
-local variable 'subject_uuid' referenced before assignment
-e7d34ca2-5a6d-46a0-bf9b-b943c3cf05cb
-local variable 'subject_uuid' referenced before assignment
-  1%|▋                                                                                                 | 1864/267433 [01:57<4:53:20, 15.09it/s]9f6df584-47b0-4210-b2c8-59f31a92c684
-local variable 'subject_uuid' referenced before assignment
-16e0993c-2555-47d4-b9d7-92559c627202
-local variable 'subject_uuid' referenced before assignment
-  1%|▋                                                                                                 | 1866/267433 [01:57<4:47:40, 15.39it/s]8a3fb3c3-24e0-46c8-991d-e12b9b4c8be0
-local variable 'subject_uuid' referenced before assignment
-b9588542-3d33-4357-ae52-5505140f9417
-local variable 'subject_uuid' referenced before assignment
-  1%|▋                                                                                                 | 1868/267433 [01:57<4:42:34, 15.66it/s]e4264e37-202c-496d-a180-ac84323b5502
-local variable 'subject_uuid' referenced before assignment
-a2e7cc6e-58e1-4b2c-84f1-4c26ce92d0d0
-local variable 'subject_uuid' referenced before assignment
