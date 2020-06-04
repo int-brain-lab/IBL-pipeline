@@ -386,7 +386,7 @@ class ClusterBrainLocation(dj.Computed):
     -> DefaultCluster
     -> InsertionDataSource
     ---
-    -> reference.BrainLocation
+    -> reference.BrainRegion
     """
     key_source = DefaultCluster * InsertionDataSource & \
         ProbeTrajectory & ChannelGroup & ChannelBrainLocation
