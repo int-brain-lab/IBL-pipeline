@@ -110,7 +110,7 @@ class InsertBuffer(object):
                 print('error in flush: {}, trying ingestion one by one'.format(e))
                 for t in self._queue:
                     try:
-                        self._rel.insert1(t)
+                        self._rel.insert1(t, **kwargs)
                     except Exception as e:
                         print('error in flush: {}'.format(e))
             self._queue.clear()

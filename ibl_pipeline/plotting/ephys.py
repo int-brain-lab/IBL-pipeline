@@ -57,30 +57,31 @@ class ValidAlignSort(dj.Lookup):
     -> Sorting
     ---
     condition_type='regular' : enum('regular', 'difference')
+    wheel_needed             : bool
     relevant_field=''        : varchar(64)
     sorting_variable=''      : varchar(64)  # sorting variable used in the query. e.g. 'trial_feedback_time - trial_stim_on_time'
     mark_variable=''         : varchar(64)  # mark variable for some combinations
     label_variable=''        : varchar(64)  # label variable in the plot
     """
     contents = [
-        ['stim on', 'trial_id', 'regular', 'trial_id', 'trial_id', '', ''],
-        ['stim on', 'contrast', 'regular', 'trial_signed_contrast',
+        ['stim on', 'trial_id', 'regular', 0, 'trial_id', 'trial_id', '', ''],
+        ['stim on', 'contrast', 'regular', 0, 'trial_signed_contrast',
          'trial_signed_contrast', '', ''],
-        ['stim on', 'feedback - stim on', 'difference', '',
+        ['stim on', 'feedback - stim on', 'difference', 0, '',
          'trial_feedback_time - trial_stim_on_time',
          'trial_feedback_time - trial_stim_on_time', 'feedback'],
-        ['stim on', 'movement - stim on', 'difference', '',
+        ['stim on', 'movement - stim on', 'difference', 1, '',
          'movement_onset - trial_stim_on_time',
          'movement_onset - trial_stim_on_time', 'movement'],
-        ['movement', 'trial_id', 'regular', 'trial_id', 'trial_id', '', ''],
-        ['movement', 'movement - stim on', 'difference', '',
+        ['movement', 'trial_id', 'regular', 1, 'trial_id', 'trial_id', '', ''],
+        ['movement', 'movement - stim on', 'difference', 1, '',
          'movement_onset - trial_stim_on_time',
          'trial_stim_on_time - movement_onset', 'stim on'],
-        ['movement', 'feedback - movement', 'difference', '',
-         'trial_feedback_time - movement_onset', '',
+        ['movement', 'feedback - movement', 'difference', 1, '',
+         'trial_feedback_time - movement_onset',
          'trial_feedback_time - movement_onset', 'feedback'],
-        ['feedback', 'trial_id', 'regular', 'trial_id', 'trial_id', '', ''],
-        ['feedback', 'feedback type', 'regular',
+        ['feedback', 'trial_id', 'regular', 0, 'trial_id', 'trial_id', '', ''],
+        ['feedback', 'feedback type', 'regular', 0,
          'trial_feedback_type', 'trial_feedback_type, trial_id', '', '']
     ]
 
@@ -267,16 +268,13 @@ class Raster(dj.Computed):
     -> RasterLayoutTemplate
     """
     key_source = ephys.DefaultCluster * ValidAlignSort & behavior.TrialSet & \
-        ephys.AlignedTrialSpikes & \
-        [dict(event='stim on', sort_by='trial_id'),
-         dict(event='stim on', sort_by='contrast'),
-         dict(event='stim on', sort_by='feedback - stim on'),
-         dict(event='stim on', sort_by='movement - stim on'),
-         dict(event='movement', sort_by='movement - stim on'),
-         dict(event='movement', sort_by='trial_id'),
-         dict(event='feedback', sort_by='feedback - movement'),
-         dict(event='feedback', sort_by='trial_id'),
-         dict(event='feedback', sort_by='feedback type')]
+        ephys.AlignedTrialSpikes & [{'wheel_needed': 0}, wheel.MovementTimes]
+
+    def plot_empty(ax, x_lim=[-1, 1], y_lim=[0, 2]):
+        ax.set_xlim(x_lim)
+        ax.set_ylim(y_lim)
+
+        return ax, x_lim, y_lim
 
     def plot_regular(trials, key, ax, x_lim=[-1, 1]):
 
@@ -353,7 +351,7 @@ class Raster(dj.Computed):
                     mark_point=mark_variable) & key).fetch(
                         'trial_spike_times', 'mark_point', order_by='sort')
 
-            if len(np.hstack(spk_times)):
+            if len(spk_times) and len(np.hstack(spk_times)):
                 spk_trial_ids = np.hstack(
                     [[trial_id + base] * len(spk_time)
                      for trial_id, spk_time in enumerate(spk_times)])
@@ -377,20 +375,30 @@ class Raster(dj.Computed):
 
     def make(self, key):
         cluster = ephys.DefaultCluster & key
-        trials = \
-            (behavior.TrialSet.Trial * wheel.MovementTimes *
-             ephys.AlignedTrialSpikes & cluster).proj(
-                'trial_start_time', 'trial_stim_on_time',
-                'trial_response_time',
-                'trial_feedback_time',
-                'trial_feedback_type',
-                'trial_response_choice',
-                'trial_spike_times',
-                'movement_onset',
-                trial_duration='trial_end_time-trial_start_time',
-                trial_signed_contrast="""trial_stim_contrast_right -
-                                         trial_stim_contrast_left"""
-            ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"' & key
+        field_list = [
+            'trial_start_time',
+            'trial_stim_on_time',
+            'trial_response_time',
+            'trial_feedback_time',
+            'trial_feedback_type',
+            'trial_response_choice',
+            'trial_spike_times',
+        ]
+        field_dict = dict(
+            trial_duration='trial_end_time-trial_start_time',
+            trial_signed_contrast="""trial_stim_contrast_right -
+                                        trial_stim_contrast_left"""
+        )
+        trials = (behavior.TrialSet.Trial *
+                  ephys.AlignedTrialSpikes & cluster).proj(
+                      *field_list, **field_dict
+        ) & 'trial_duration < 5' & 'trial_response_choice!="No Go"' & key
+
+        wheel_needed = (ValidAlignSort & key).fetch1('wheel_needed')
+
+        if wheel_needed:
+            trials = (trials * wheel.MovementTimes).proj(
+                    ..., 'movement_onset')
 
         if key['sort_by'] == 'trial_id':
             key['template_idx'] = 0
@@ -401,19 +409,19 @@ class Raster(dj.Computed):
         else:
             key['template_idx'] = 1
 
-        if not len(trials):
-            self.insert1(dict(
-                **key, plot_ylim=[0, 3]))
-            return
-
         cond_type = (ValidAlignSort & key).fetch1('condition_type')
 
-        if cond_type == 'regular':
-            draw = Raster.plot_regular
+        if not len(trials):
+            draw = Raster.plot_empty
+            arg = dict()
         else:
-            draw = Raster.plot_difference
+            arg = dict(trials=trials, key=key)
+            if cond_type == 'regular':
+                draw = Raster.plot_regular
+            else:
+                draw = Raster.plot_difference
 
-        fig = PngFigure(draw, dict(trials=trials, key=key))
+        fig = PngFigure(draw, arg, dpi=60, transparent=True)
 
         if key['sort_by'] == 'contrast':
             key['plot_contrasts'] = fig.other_returns[0]
@@ -855,7 +863,7 @@ class DepthRasterTemplate(dj.Lookup):
 
     data1 = [axis, first_trial_mark, last_trial_mark]
     data2 = [axis, trial_stim_on_mark, trial_movement_mark,
-             trial_feedback_mark]
+             trial_feedback_mark, trial_stim_off_mark]
     contents = [
         dict(depth_raster_template_idx=0,
              depth_raster_template=go.Figure(

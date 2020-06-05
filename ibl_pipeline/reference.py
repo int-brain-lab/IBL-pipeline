@@ -1,5 +1,6 @@
 import datajoint as dj
 import os
+from ibl_pipeline.ingest import reference
 
 mode = os.environ.get('MODE')
 
@@ -121,33 +122,43 @@ class CoordinateSystem(dj.Lookup):
     coordinate_system_name: varchar(64)
     ---
     coordinate_system_uuid:  uuid
-    coordinate_system_description=null: varchar(2048)
+    coordinate_system_description='': varchar(2048)
     """
 
 
 @schema
-class Atlas(dj.Lookup):
+class Ontology(dj.Lookup):
     definition = """
-    atlas:      varchar(64)
+    ontology    : varchar(32)
     """
-    contents = zip(['allen_ccf'])
+    contents = zip(['CCF 2017'])
 
 
 @schema
-class BrainLocationAcronym(dj.Lookup):
+class BrainRegion(dj.Lookup):
     definition = """
-    acronym:  varchar(32) # acronym of a brain location
+    -> Ontology
+    acronym                 : varchar(32)
     ---
-    full_name = null: varchar(128) # full name of the brain location
+    brain_region_name       : varchar(128)
+    brain_region_pk         : int
     """
-    contents = [
-        ['ACA', 'Anterior cingulate area'],
-        ['ACB', 'Nucleus accumbens'],
-        ['IC', 'Inferior colliculus '],
-        ['MOs', 'Secondary motor area'],
-        ['MRN', 'Midbrain reticular nucleus'],
-        ['root', ''],
-        ['RSP', 'Retrosplenial area'],
-        ['SCsg', 'Superficial gray layer '],
-        ['VISp', 'Primary visual area']
-    ]
+
+
+@schema
+class ParentRegion(dj.Imported):
+    definition = """
+    -> BrainRegion
+    ---
+    -> BrainRegion.proj(parent='acronym')
+    """
+    key_source = BrainRegion & \
+        (reference.BrainRegion & 'parent is not NULL').proj()
+
+    def make(self, key):
+
+        parent_pk = (reference.BrainRegion & key).fetch1('parent')
+        acronym = (BrainRegion & dict(brain_region_pk=parent_pk)).fetch1('acronym')
+
+        self.insert1(
+            dict(**key, parent=acronym))

@@ -1,4 +1,5 @@
 # some unused files
+notebooks/notebooks_plotting/*
 scripts/update_entries.py
 scripts/compare_tables.py
 scripts/delete_shadow_tables.py
