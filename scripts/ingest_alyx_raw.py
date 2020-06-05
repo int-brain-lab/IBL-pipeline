@@ -133,5 +133,5 @@ def insert_to_raw(keys):
         # print('Inserted all remaining raw field tuples')
 
 
-if __file__ == '__main__':
+if __name__ == '__main__':
     insert_to_alyxraw(get_alyx_entries())
