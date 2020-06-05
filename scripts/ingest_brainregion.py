@@ -9,7 +9,7 @@ from tqdm import tqdm
 keys = get_alyx_entries(models='experiments.brainregion')
 ib_brainregion = InsertBuffer(reference.BrainRegion)
 
-for key in keys:
+for key in tqdm(keys):
     fields = key['fields']
     ib_brainregion.insert1(
         dict(brain_region_pk=key['pk'],

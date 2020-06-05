@@ -45,7 +45,7 @@ def get_alyx_entries(filename=None, models=None):
         raise ValueError('models should be a str, list or numpy array')
 
 
-def insert_to_raw(keys):
+def insert_to_alyxraw(keys):
 
     # use insert buffer to speed up the insertion process
     ib_main = InsertBuffer(alyxraw.AlyxRaw)
