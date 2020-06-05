@@ -3,22 +3,10 @@ import json
 import os.path as path
 import sys
 from ibl_pipeline.ingest import reference, InsertBuffer
+from ingest_alyx_raw import get_alyx_entries
+from tqdm import tqdm
 
-dir_name = path.dirname(__file__)
-
-
-if len(sys.argv) < 2:  # no arguments given
-    # if no argument given, assume a canonical file location and name
-    filename = path.join(dir_name, '..', 'data', 'alyxfull.json')
-else:
-    filename = path.join(dir_name, sys.argv[1])
-
-with open(filename, 'r') as fid:
-    keys_all = json.load(fid)
-
-keys = [key for key in keys_all
-        if key['model'] == 'experiments.brainregion']
-
+keys = get_alyx_entries(models='experiments.brainregion')
 ib_brainregion = InsertBuffer(reference.BrainRegion)
 
 for key in keys:
