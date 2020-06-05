@@ -170,3 +170,60 @@ class ProbeTrajectory(dj.Imported):
                     'coordinate_system_name')
 
         self.insert1(key_traj)
+
+
+@schema
+class ChannelBrainLocation(dj.Imported):
+    definition = """
+    (channel_brain_location_uuid) -> alyxraw.AlyxRaw
+    ---
+    subject_uuid            : uuid
+    session_start_time      : datetime
+    probe_idx               : tinyint
+    channel_axial           : decimal(6, 1)
+    channel_lateral         : decimal(6, 1)
+    channel_x               : decimal(6, 1)
+    channel_y               : decimal(6, 1)
+    channel_z               : decimal(6, 1)
+    insertion_data_source   : varchar(128)
+    ontology                : varchar(32)
+    acronym                 : varchar(32)
+    """
+    key_source = (alyxraw.AlyxRaw & 'model="experiments.channel"').proj(
+        channel_brain_location_uuid='uuid')
+
+    def make(self, key):
+        key_brain_loc = key.copy()
+        key['uuid'] = key_brain_loc['channel_brain_location_uuid']
+
+        probe_trajectory_uuid = grf(key, 'trajectory_estimate')
+        try:
+            subject_uuid, session_start_time, probe_idx, insertion_data_source = \
+                (ProbeTrajectory & dict(
+                    probe_trajectory_uuid=probe_trajectory_uuid)).fetch1(
+                    'subject_uuid', 'session_start_time', 'probe_idx',
+                    'insertion_data_source')
+        except Exception:
+            print(probe_trajectory_uuid)
+            return
+
+        brain_region_pk = grf(key, 'brain_region')
+        ontology, acronym = (reference.BrainRegion &
+                             dict(brain_region_pk=brain_region_pk)).fetch1(
+                                 'ontology', 'acronym')
+
+        key_brain_loc.update(
+            channel_x=grf(key, 'x'),
+            channel_y=grf(key, 'y'),
+            channel_z=grf(key, 'z'),
+            channel_axial=grf(key, 'axial'),
+            channel_lateral=grf(key, 'lateral'),
+            subject_uuid=subject_uuid,
+            session_start_time=session_start_time,
+            probe_idx=probe_idx,
+            insertion_data_source=insertion_data_source,
+            ontology=ontology,
+            acronym=acronym
+        )
+
+        self.insert1(key_brain_loc)

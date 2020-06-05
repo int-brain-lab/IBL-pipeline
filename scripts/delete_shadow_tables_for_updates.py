@@ -1,6 +1,6 @@
 import datajoint as dj
 from ibl_pipeline.ingest import alyxraw, data
-from ibl_pipeline.ingest import subject, action, acquisition
+from ibl_pipeline.ingest import subject, action, acquisition, ephys
 
 
 dj.config['safemode'] = False
@@ -37,8 +37,11 @@ session_project = alyxraw.AlyxRaw.Field & \
     'fname in ("project")'
 session_project.delete_quick()
 
-print('Deleting trajectories estimates...')
-(alyxraw.AlyxRaw & 'model="experiments.trajectoryestimate"').delete()
+# print('Deleting trajectories estimates...')
+# (alyxraw.AlyxRaw & 'model="experiments.trajectoryestimate"').delete()
+
+# print('Deleting experiments.channel...')
+# (alyxraw.AlyxRaw & 'model="experiments.channel"').delete()
 
 # delete some shadow membership tables
 print('Deleting shadow membership tables...')

@@ -202,23 +202,20 @@ class ProbeTrajectory(dj.Imported):
                 traj.pop('coordinate_system_name')
             self.insert1(traj, skip_duplicates=True)
 
-# needs to be further adjusted by adding channels.mlapdvIntended
-# @schema
-# class ChannelBrainLocation(dj.Imported):
-#     definition = """
-#     -> ProbeInsertion
-#     -> Probe.Channel
-#     -> reference.Atlas
-#     histology_revision: varchar(64)
-#     ---
-#     # from channels.brainlocation
-#     version_time:       datetime
-#     channel_ap:         float           # anterior posterior CCF coordinate (um)
-#     channel_dv:         float           # dorsal ventral CCF coordinate (um)
-#     channel_lr:         float           # left right CCF coordinate (um)
-#     -> reference.BrainLocationAcronym.proj(channel_brain_location='acronym')   # acronym of the brain location
-#     channel_raw_row:        smallint    # Each channel's row in its home file (look up via probes.rawFileName), counting from zero. Note some rows don't have a channel, for example if they were sync pulses
-#     """
+
+@schema
+class ChannelBrainLocation(dj.Imported):
+    definition = """
+    -> ProbeTrajectory
+    channel_brain_location_uuid    : uuid
+    ---
+    channel_axial   : decimal(6, 1)
+    channel_lateral : decimal(6, 1)
+    channel_x       : decimal(6, 1)
+    channel_y       : decimal(6, 1)
+    channel_z       : decimal(6, 1)
+    -> reference.BrainRegion
+    """
 
 
 @schema
@@ -384,6 +381,37 @@ class GoodCluster(dj.Computed):
 
 
 @schema
+class ClusterBrainLocation(dj.Computed):
+    definition = """
+    -> DefaultCluster
+    -> InsertionDataSource
+    ---
+    -> reference.BrainRegion
+    """
+    key_source = DefaultCluster * InsertionDataSource & \
+        ProbeTrajectory & ChannelGroup & ChannelBrainLocation
+
+    def make(self, key):
+        channel_raw_inds, channel_local_coordinates = \
+            (ChannelGroup & key).fetch1('channel_raw_inds',
+                                        'channel_local_coordinates')
+        channel = (DefaultCluster & key).fetch1('cluster_channel')
+        channel_coords = np.squeeze(channel_local_coordinates[channel_raw_inds == channel])
+
+        q = ChannelBrainLocation & key & \
+            dict(channel_lateral=channel_coords[0],
+                 channel_axial=channel_coords[1])
+
+        if len(q) == 1:
+            key['ontology'], key['acronym'] = q.fetch1(
+                'ontology', 'acronym')
+
+            self.insert1(key)
+        else:
+            return
+
+
+@schema
 class Event(dj.Lookup):
     definition = """
     event:       varchar(32)
@@ -403,20 +431,29 @@ class AlignedTrialSpikes(dj.Computed):
     trial_spikes_ts=CURRENT_TIMESTAMP:    timestamp
     """
     key_source = behavior.TrialSet * DefaultCluster * Event & \
-        wheel.MovementTimes & 'event in ("stim on", "movement", "feedback")'
+        ['event in ("stim on", "feedback")',
+         wheel.MovementTimes & 'event="movement"']
 
     def make(self, key):
 
-        trials = behavior.TrialSet.Trial * wheel.MovementTimes & key
         cluster = DefaultCluster() & key
         spike_times = cluster.fetch1('cluster_spikes_times')
         event = (Event & key).fetch1('event')
 
-        trial_keys, trial_start_times, trial_end_times, trial_stim_on_times, \
-            trial_feedback_times, trial_movement_times = \
-            trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
-                         'trial_stim_on_time', 'trial_feedback_time',
-                         'movement_onset')
+        if 'event' == 'movement':
+            trials = behavior.TrialSet.Trial * wheel.MovementTimes & key
+            trial_keys, trial_start_times, trial_end_times, \
+                trial_stim_on_times, trial_feedback_times, \
+                trial_movement_times = \
+                trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
+                             'trial_stim_on_time', 'trial_feedback_time',
+                             'movement_onset')
+        else:
+            trials = behavior.TrialSet.Trial & key
+            trial_keys, trial_start_times, trial_end_times, \
+                trial_stim_on_times, trial_feedback_times = \
+                trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
+                             'trial_stim_on_time', 'trial_feedback_time')
 
         # trial idx of each spike
         spike_ids = np.searchsorted(
