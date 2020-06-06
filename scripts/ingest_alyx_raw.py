@@ -36,7 +36,7 @@ def get_alyx_entries(filename=None, models=None):
                 if key['model'] not in
                 ['auth.group', 'sessions.session', 'authtoken.token',
                  'experiments.brainregion']]
-    elif isstring(models):
+    elif isinstance(models, str):
         return [key for key in keys_all if key['model'] == models]
 
     elif type(models) in (list, np.darray):
