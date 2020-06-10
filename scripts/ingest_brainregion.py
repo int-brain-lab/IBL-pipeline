@@ -17,7 +17,7 @@ for key in tqdm(keys):
     fields = key['fields']
     graph_order = atlas[atlas['id'] == key['pk']]['graph_order']
 
-    if np.isnan(graph_order):
+    if np.isnan(graph_order[0]):
         graph_order = None
     else:
         graph_order = int(graph_order)
