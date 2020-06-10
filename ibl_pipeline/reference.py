@@ -142,6 +142,8 @@ class BrainRegion(dj.Lookup):
     ---
     brain_region_name       : varchar(128)
     brain_region_pk         : int
+    brain_region_level=null : tinyint
+    graph_order=null        : smallint unsigned
     """
 
 

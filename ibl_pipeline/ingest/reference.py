@@ -237,4 +237,6 @@ class BrainRegion(dj.Lookup):
     brain_region_name   : varchar(128)      # fullname of the brain region
     parent=null         : int               # pk of the parent
     ontology='CCF 2017' : varchar(32)       # ccf version
+    brain_region_level=null          : tinyint           # level in the tree, root is 0
+    graph_order=null    : smallint unsigned # graph order shown in allen brain atlas
     """
