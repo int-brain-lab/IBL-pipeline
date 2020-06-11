@@ -8,6 +8,7 @@ import numpy as np
 from uuid import UUID
 import re
 import alf.io
+from ibl_pipeline.utils import atlas
 
 wheel = dj.create_virtual_module('wheel', 'group_shared_wheel')
 
@@ -413,6 +414,25 @@ class ClusterBrainLocation(dj.Computed):
             self.insert1(key)
         else:
             return
+
+
+@schema
+class SessionBrainLocation(dj.Computed):
+    definition = """
+    -> acquisition.Session
+    -> reference.BrainRegion
+    """
+    key_source = acquisition.Session & ClusterBrainLocation
+
+    def make(self, key):
+        regions = dj.U('acronym') & (ClusterBrainLocation & key)
+
+        associated_regions = [
+            atlas.BrainAtlas.get_associated_regions('acronym')
+            for acronym in regions.fetch('acronym')]
+
+        self.insert([dict(**key, acronym=region)
+                     for region in np.unique(associated_regions)])
 
 
 @schema
