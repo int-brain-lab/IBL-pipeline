@@ -431,7 +431,7 @@ class SessionBrainLocation(dj.Computed):
             atlas.BrainAtlas.get_associated_regions('acronym')
             for acronym in regions.fetch('acronym')]
 
-        self.insert([dict(**key, acronym=region)
+        self.insert([dict(**key, ontology='CCF 2017', acronym=region)
                      for region in np.unique(associated_regions)])
 
 
