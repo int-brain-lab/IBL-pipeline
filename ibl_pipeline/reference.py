@@ -160,7 +160,8 @@ class ParentRegion(dj.Imported):
     def make(self, key):
 
         parent_pk = (reference.BrainRegion & key).fetch1('parent')
-        acronym = (BrainRegion & dict(brain_region_pk=parent_pk)).fetch1('acronym')
+        acronym = (BrainRegion & dict(brain_region_pk=parent_pk)).fetch1(
+            'acronym')
 
         self.insert1(
             dict(**key, parent=acronym))
