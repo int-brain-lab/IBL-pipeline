@@ -432,7 +432,7 @@ class SessionBrainLocation(dj.Computed):
             for acronym in regions] + list(regions)
 
         self.insert([dict(**key, ontology='CCF 2017', acronym=region)
-                     for region in np.unique(associated_regions)])
+                     for region in np.unique(np.hstack(associated_regions))])
 
 
 @schema
