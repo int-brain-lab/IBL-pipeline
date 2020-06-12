@@ -294,7 +294,7 @@ for lidx, lab in enumerate(users):
             fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.pdf' % (last_date,
                                                                     subjects.loc[subjects['subject_nickname'] == mouse]['lab_name'].item(),
                                                                     mouse)))
-
+            print('saving figure...')
             fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.png' % (last_date,
                                                                             subjects.loc[
                                                                                 subjects['subject_nickname'] == mouse][
