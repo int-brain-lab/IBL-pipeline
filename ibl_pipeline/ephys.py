@@ -425,11 +425,11 @@ class SessionBrainLocation(dj.Computed):
     key_source = acquisition.Session & ClusterBrainLocation
 
     def make(self, key):
-        regions = dj.U('acronym') & (ClusterBrainLocation & key)
+        regions = (dj.U('acronym') & (ClusterBrainLocation & key)).fetch('acronym')
 
         associated_regions = [
             atlas.BrainAtlas.get_parents(acronym)
-            for acronym in regions.fetch('acronym')] + regions
+            for acronym in regions] + list(regions)
 
         self.insert([dict(**key, ontology='CCF 2017', acronym=region)
                      for region in np.unique(associated_regions)])
