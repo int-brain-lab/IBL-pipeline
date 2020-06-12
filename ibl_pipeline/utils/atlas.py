@@ -43,22 +43,6 @@ class BrainAtlas:
 
         return parent_list[::-1]
 
-    @staticmethod
-    def get_children(acronym):
-        children_list = []
-        regions = [dict(parent=acronym)]
-        while reference.ParentRegion & regions:
-            regions_list = list((reference.ParentRegion & regions).fetch(
-                'acronym'))
-            regions = [dict(parent=acronym) for region in regions_list]
-            children_list += regions_list
-        return children_list
-
-    @staticmethod
-    def get_associated_regions(acronym):
-        return BrainAtlas.get_parents(acronym) + \
-            BrainAtlas.get_children(acronym)
-
     def to_json(filename='/data/atlas.json'):
 
         with open('atlas.json', 'w') as json_file:
