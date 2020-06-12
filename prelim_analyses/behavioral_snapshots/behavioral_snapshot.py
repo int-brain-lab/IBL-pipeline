@@ -42,8 +42,8 @@ datapath = '/Data_shortcut/'
 #          as_dict=True, order_by=['lab_name', 'subject_nickname']))
 
 allsubjects = pd.DataFrame.from_dict(
-    (subject.Subject &
-     'subject_nickname="KS014"') * subject.SubjectLab).fetch(as_dict=True))
+    ((subject.Subject &
+      'subject_nickname="KS014"') * subject.SubjectLab).fetch(as_dict=True))
 
 if allsubjects.empty:
     raise ValueError('DataJoint seems to be down, please try again later')
