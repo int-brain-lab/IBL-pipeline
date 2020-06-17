@@ -1,5 +1,5 @@
 import datajoint as dj
-from . import reference, ephys
+from . import reference, acquisition, ephys
 from .ingest import histology as histology_ingest
 
 from os import path, environ
