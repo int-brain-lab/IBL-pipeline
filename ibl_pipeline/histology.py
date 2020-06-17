@@ -50,7 +50,7 @@ class ProbeTrajectory(dj.Imported):
     keys = histology_ingest.ProbeTrajectory.fetch(
         'subject_uuid', 'session_start_time', 'probe_idx',
         'insertion_data_source', as_dict=True)
-    key_source = ProbeInsertion * InsertionDataSource & keys
+    key_source = ephys.ProbeInsertion * InsertionDataSource & keys
 
     def make(self, key):
 
