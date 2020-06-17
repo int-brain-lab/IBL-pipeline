@@ -1,5 +1,5 @@
 import datajoint as dj
-from . import reference, acquisition, ephys
+from . import reference, acquisition, cipephys
 from .ingest import histology as histology_ingest
 
 from os import path, environ
@@ -56,7 +56,7 @@ class ProbeTrajectory(dj.Imported):
 
         trajs = (histology_ingest.ProbeTrajectory & key).fetch(as_dict=True)
         for traj in trajs:
-            if not len(traj['coordinate_system_name']):
+            if not traj['coordinate_system_name']:
                 traj.pop('coordinate_system_name')
             self.insert1(traj, skip_duplicates=True)
 
