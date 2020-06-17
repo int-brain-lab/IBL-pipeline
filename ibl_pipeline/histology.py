@@ -47,7 +47,7 @@ class ProbeTrajectory(dj.Imported):
     roll=null:          float           # (degrees) roll angle of the probe
     trajectory_ts:      datetime
     """
-    keys = ephys_ingest.ProbeTrajectory.fetch(
+    keys = histology_ingest.ProbeTrajectory.fetch(
         'subject_uuid', 'session_start_time', 'probe_idx',
         'insertion_data_source', as_dict=True)
     key_source = ProbeInsertion * InsertionDataSource & keys
