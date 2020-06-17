@@ -2,6 +2,7 @@ import datajoint as dj
 from . import reference, ephys
 from .ingest import histology as histology_ingest
 
+from os import path, environ
 import numpy as np
 from .utils import atlas
 
@@ -11,6 +12,7 @@ if mode == 'update':
     schema = dj.schema('ibl_histology')
 else:
     schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_histology')
+
 
 @schema
 class InsertionDataSource(dj.Lookup):
