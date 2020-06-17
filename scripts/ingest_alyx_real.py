@@ -9,7 +9,7 @@ from ibl_pipeline.ingest import action as action_ingest
 from ibl_pipeline.ingest import acquisition as acquisition_ingest
 from ibl_pipeline.ingest import data as data_ingest
 from ibl_pipeline.ingest import ephys as ephys_ingest
-from ibl_pipeline import reference, subject, action, acquisition, data, ephys
+from ibl_pipeline import reference, subject, action, acquisition, data, ephys, histology
 from ingest_utils import copy_table
 import table_names as tables
 
@@ -58,4 +58,4 @@ copy_table(ephys, ephys_ingest, table, allow_direct_insert=True)
 #     ephys.ProbeTrajectory.populate(key, suppress_errors=True,
 #                                    display_progress=True)
 
-ephys.ProbeTrajectory.populate(suppress_errors=True, display_progress=True)
+histology.ProbeTrajectory.populate(suppress_errors=True, display_progress=True)

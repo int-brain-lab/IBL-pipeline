@@ -5,6 +5,12 @@ from .ingest import histology as histology_ingest
 import numpy as np
 from .utils import atlas
 
+mode = environ.get('MODE')
+
+if mode == 'update':
+    schema = dj.schema('ibl_histology')
+else:
+    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_histology')
 
 @schema
 class InsertionDataSource(dj.Lookup):
