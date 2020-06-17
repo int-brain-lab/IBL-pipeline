@@ -42,7 +42,9 @@ class ProbeTrajectory(dj.Imported):
     roll=null:                  float
     insertion_data_source:      varchar(128)
     coordinate_system_name=null:     varchar(32)
+    trajectory_ts:              datetime
     """
+
     key_source = (alyxraw.AlyxRaw & 'model="experiments.trajectoryestimate"').proj(
         probe_trajectory_uuid='uuid')
 
@@ -52,7 +54,8 @@ class ProbeTrajectory(dj.Imported):
 
         probe_insertion_uuid = grf(key, 'probe_insertion')
         subject_uuid, session_start_time, probe_idx = \
-            (ephys.ProbeInsertion & dict(probe_insertion_uuid=probe_insertion_uuid)).fetch1(
+            (ephys.ProbeInsertion &
+             dict(probe_insertion_uuid=probe_insertion_uuid)).fetch1(
                 'subject_uuid', 'session_start_time', 'probe_idx')
 
         provenance = grf(key, 'provenance')
@@ -71,6 +74,7 @@ class ProbeTrajectory(dj.Imported):
             session_start_time=session_start_time,
             probe_idx=probe_idx,
             insertion_data_source=insertion_data_source,
+            trajectory_ts=grf(key, 'datetime')
         )
 
         roll = grf(key, 'roll')

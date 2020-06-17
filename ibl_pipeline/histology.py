@@ -37,7 +37,7 @@ class ProbeTrajectory(dj.Imported):
     theta:              float           # (degrees)[0 180] polar angle
     depth:              float           # (um) insertion depth
     roll=null:          float           # (degrees) roll angle of the probe
-    probe_trajectory_ts=CURRENT_TIMESTAMP  :  timestamp
+    trajectory_ts:      datetime
     """
     keys = ephys_ingest.ProbeTrajectory.fetch(
         'subject_uuid', 'session_start_time', 'probe_idx',
