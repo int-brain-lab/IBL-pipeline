@@ -158,68 +158,6 @@ class ChannelGroup(dj.Imported):
 
 
 @schema
-class InsertionDataSource(dj.Lookup):
-    definition = """
-    insertion_data_source:    varchar(128)     # type of trajectory
-    ---
-    provenance:         int             # provenance code
-    """
-    contents = [
-        ('Ephys aligned histology track', 70),
-        ('Histology track', 50),
-        ('Micro-manipulator', 30),
-        ('Planned', 10),
-    ]
-
-
-@schema
-class ProbeTrajectory(dj.Imported):
-    definition = """
-    # data imported from probes.trajectory
-    -> ProbeInsertion
-    -> InsertionDataSource
-    ---
-    -> [nullable] reference.CoordinateSystem
-    probe_trajectory_uuid: uuid
-    x:                  float           # (um) medio-lateral coordinate relative to Bregma, left negative
-    y:                  float           # (um) antero-posterior coordinate relative to Bregma, back negative
-    z:                  float           # (um) dorso-ventral coordinate relative to Bregma, ventral negative
-    phi:                float           # (degrees)[-180 180] azimuth
-    theta:              float           # (degrees)[0 180] polar angle
-    depth:              float           # (um) insertion depth
-    roll=null:          float           # (degrees) roll angle of the probe
-    probe_trajectory_ts=CURRENT_TIMESTAMP  :  timestamp
-    """
-    keys = ephys_ingest.ProbeTrajectory.fetch(
-        'subject_uuid', 'session_start_time', 'probe_idx',
-        'insertion_data_source', as_dict=True)
-    key_source = ProbeInsertion * InsertionDataSource & keys
-
-    def make(self, key):
-
-        trajs = (ephys_ingest.ProbeTrajectory & key).fetch(as_dict=True)
-        for traj in trajs:
-            if not len(traj['coordinate_system_name']):
-                traj.pop('coordinate_system_name')
-            self.insert1(traj, skip_duplicates=True)
-
-
-@schema
-class ChannelBrainLocation(dj.Imported):
-    definition = """
-    -> ProbeTrajectory
-    channel_brain_location_uuid    : uuid
-    ---
-    channel_axial   : decimal(6, 1)
-    channel_lateral : decimal(6, 1)
-    channel_x       : decimal(6, 1)
-    channel_y       : decimal(6, 1)
-    channel_z       : decimal(6, 1)
-    -> reference.BrainRegion
-    """
-
-
-@schema
 class ClusteringMethod(dj.Lookup):
     definition = """
     clustering_method:   varchar(32)   # clustering method
@@ -379,60 +317,6 @@ class GoodCluster(dj.Computed):
                 key['is_good'] = True
 
         self.insert1(key)
-
-
-@schema
-class ClusterBrainLocation(dj.Computed):
-    definition = """
-    -> DefaultCluster
-    -> InsertionDataSource
-    ---
-    -> reference.BrainRegion
-    """
-    key_source = DefaultCluster * InsertionDataSource & \
-        ProbeTrajectory & ChannelGroup & ChannelBrainLocation
-
-    def make(self, key):
-        channel_raw_inds, channel_local_coordinates = \
-            (ChannelGroup & key).fetch1('channel_raw_inds',
-                                        'channel_local_coordinates')
-        channel = (DefaultCluster & key).fetch1('cluster_channel')
-        if channel in channel_raw_inds:
-            channel_coords = np.squeeze(
-                channel_local_coordinates[channel_raw_inds == channel])
-        else:
-            return
-
-        q = ChannelBrainLocation & key & \
-            dict(channel_lateral=channel_coords[0],
-                 channel_axial=channel_coords[1])
-
-        if len(q) == 1:
-            key['ontology'], key['acronym'] = q.fetch1(
-                'ontology', 'acronym')
-
-            self.insert1(key)
-        else:
-            return
-
-
-@schema
-class SessionBrainLocation(dj.Computed):
-    definition = """
-    -> acquisition.Session
-    -> reference.BrainRegion
-    """
-    key_source = acquisition.Session & ClusterBrainLocation
-
-    def make(self, key):
-        regions = (dj.U('acronym') & (ClusterBrainLocation & key)).fetch('acronym')
-
-        associated_regions = [
-            atlas.BrainAtlas.get_parents(acronym)
-            for acronym in regions] + list(regions)
-
-        self.insert([dict(**key, ontology='CCF 2017', acronym=region)
-                     for region in np.unique(np.hstack(associated_regions))])
 
 
 @schema
