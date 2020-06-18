@@ -22,7 +22,7 @@ print('Deleting alyxraw entries for histology...')
 (alyxraw.AlyxRaw & changed).delete()
 
 print('Repopulate alyxraw.AlyxRaw for updates...')
-insert_to_alyxraw(get_alyx_entries(model='experiments.trajectoryestimate'))
+insert_to_alyxraw(get_alyx_entries(models='experiments.trajectoryestimate'))
 
 print('Repopulate shadow histology.ProbeTrajectory and ChannelBrainLocation...')
 histology_ingest.ProbeTrajectory.populate(**kwargs)
