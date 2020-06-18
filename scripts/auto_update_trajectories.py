@@ -3,7 +3,7 @@ import datajoint as dj
 from ibl_pipeline import histology
 from ibl_pipeline.ingest import histology as histology_ingest
 from ibl_pipeline.ingest import alyxraw
-from .ingest_alyx_raw import get_alyx_entries, insert_to_alyxraw
+from ingest_alyx_raw import get_alyx_entries, insert_to_alyxraw
 from ibl_pipeline.ingest.ingest_utils import copy_table
 
 from tqdm import tqdm
