@@ -51,11 +51,10 @@ table = 'ProbeInsertion'
 print(table)
 copy_table(ephys, ephys_ingest, table, allow_direct_insert=True)
 
-# update and populate the ProbeTrajectory
-# print('Updating and populate ProbeTrajectory')
-# for key in ephys.ProbeTrajectory.fetch('KEY'):
-#     (ephys.ProbeTrajectory & key).delete()
-#     ephys.ProbeTrajectory.populate(key, suppress_errors=True,
-#                                    display_progress=True)
-
+# histology tables
+print('ProbeTrajectory')
 histology.ProbeTrajectory.populate(suppress_errors=True, display_progress=True)
+
+print('ChannelBrainLocation')
+copy_table(histology, histology_ingest, 'ChannelBrainLocation',
+           allow_direct_insert=True)

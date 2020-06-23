@@ -6,6 +6,8 @@ from os import path, environ
 import numpy as np
 from .utils import atlas
 
+from ibllib.pipes.ephys_alignment import EphysAlignment
+
 mode = environ.get('MODE')
 
 if mode == 'update':
@@ -77,7 +79,7 @@ class ChannelBrainLocation(dj.Imported):
 
 
 @schema
-class ClusterBrainLocation(dj.Computed):
+class ClusterBrainRegion(dj.Computed):
     definition = """
     -> ephys.DefaultCluster
     -> InsertionDataSource
@@ -112,15 +114,15 @@ class ClusterBrainLocation(dj.Computed):
 
 
 @schema
-class SessionBrainLocation(dj.Computed):
+class SessionBrainRegion(dj.Computed):
     definition = """
     -> acquisition.Session
     -> reference.BrainRegion
     """
-    key_source = acquisition.Session & ClusterBrainLocation
+    key_source = acquisition.Session & ClusterBrainRegion
 
     def make(self, key):
-        regions = (dj.U('acronym') & (ClusterBrainLocation & key)).fetch('acronym')
+        regions = (dj.U('acronym') & (ClusterBrainRegion & key)).fetch('acronym')
 
         associated_regions = [
             atlas.BrainAtlas.get_parents(acronym)
@@ -128,3 +130,27 @@ class SessionBrainLocation(dj.Computed):
 
         self.insert([dict(**key, ontology='CCF 2017', acronym=region)
                      for region in np.unique(np.hstack(associated_regions))])
+
+
+@schema
+class DepthBrainRegion(dj.Computed):
+    definition = """
+    -> ephys.ProbeInsertion
+    ---
+    region_boundaries   : blob
+    region_label        : blob
+    region_color        : blob
+    region_id           : blob
+    """
+    key_source = ephys.ProbeInsertion() & ChannelBrainLocation
+
+    def make(self, key):
+
+        x, y, z, axial = (ChannelBrainLocation & key).fetch1(
+            'channel_x', 'channel_y', 'channel_z', 'channel_axial')
+        xyz_channels = np.c_[x, y, z]
+        key['region_boundaries'], key['region_label'], \
+            key['region_color'], key['region_id'] = \
+            EphysAlignment.get_histology_regions(xyz_channels, axial)
+
+        self.insert1(key)
