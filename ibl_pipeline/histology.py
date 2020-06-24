@@ -151,6 +151,7 @@ class DepthBrainRegion(dj.Computed):
         xyz_channels = np.c_[x, y, z]
         key['region_boundaries'], key['region_label'], \
             key['region_color'], key['region_id'] = \
-            EphysAlignment.get_histology_regions(xyz_channels.astype('float'), axial.astype('float'))
+            EphysAlignment.get_histology_regions(
+                xyz_channels.astype('float')/1e6, axial.astype('float'))
 
         self.insert1(key)
