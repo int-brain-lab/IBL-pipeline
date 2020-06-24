@@ -74,7 +74,9 @@ def update_real_field(field):
     entries_for_updates = \
         reference.BrainRegion.proj('brain_region_pk', field_real=field) * \
         reference_ingest.BrainRegion.proj(field_shadow=field) & \
-        'field_real != field_shadow'
+        ['field_real != field_shadow',
+         'field_real is null and field_shadow is not null',
+         'field_real is not null and field_shadow is null']
 
     for key in tqdm(entries_for_updates.fetch('KEY')):
         dj.Table._update(
