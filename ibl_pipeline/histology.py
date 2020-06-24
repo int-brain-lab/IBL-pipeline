@@ -146,7 +146,7 @@ class DepthBrainRegion(dj.Computed):
 
     def make(self, key):
 
-        x, y, z, axial = (ChannelBrainLocation & key).fetch1(
+        x, y, z, axial = (ChannelBrainLocation & key).fetch(
             'channel_x', 'channel_y', 'channel_z', 'channel_axial')
         xyz_channels = np.c_[x, y, z]
         key['region_boundaries'], key['region_label'], \
