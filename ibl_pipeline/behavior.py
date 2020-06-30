@@ -523,7 +523,7 @@ class TrialSet(dj.Imported):
         status = (CompleteTrialSession & key).fetch1()
 
         lab_name = (subject.SubjectLab & key).fetch1('lab_name')
-        if stim_on_times_status != 'Missing':
+        if status['stim_on_times_status'] != 'Missing':
             if lab_name == 'wittenlab':
                 trials['stimOn_times'] = np.squeeze(trials['stimOn_times'])
 
