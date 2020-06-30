@@ -585,28 +585,28 @@ class TrialSet(dj.Imported):
             else:
                 raise ValueError('Invalid reponse choice.')
 
-            if stim_on_times_status != 'Missing':
+            if status['stim_on_times_status'] != 'Missing':
                 trial['trial_stim_on_time'] = float(trials['stimOn_times'][idx_trial])
 
-            if rep_num_status != 'Missing':
+            if status['rep_num_status'] != 'Missing':
                 trial['trial_rep_num'] = int(trials['repNum'][idx_trial])
 
-            if included_status != 'Missing':
+            if status['included_status'] != 'Missing':
                 trial['trial_included'] = bool(trials['included'][idx_trial])
 
-            if go_cue_times_status != 'Missing':
+            if status['go_cue_times_status'] != 'Missing':
                 trial['trial_go_cue_time'] = float(
                     trials['goCue_times'][idx_trial])
 
-            if go_cue_trigger_times_status != 'Missing':
+            if status['go_cue_trigger_times_status'] != 'Missing':
                 trial['trial_go_cue_trigger_time'] = float(
                     trials['goCueTrigger_times'][idx_trial])
 
-            if reward_volume_status != 'Missing':
+            if status['reward_volume_status'] != 'Missing':
                 trial['trial_reward_volume'] = float(
                     trials['rewardVolume'][idx_trial])
 
-            if iti_duration_status != 'Missing':
+            if status['iti_duration_status'] != 'Missing':
                 trial['trial_iti_duration'] = float(
                     trials['itiDuration'][idx_trial])
 
