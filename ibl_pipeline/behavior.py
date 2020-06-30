@@ -531,7 +531,7 @@ class TrialSet(dj.Imported):
                 trials['stimOn_times'] = np.squeeze(trials['stimOn_times'])
 
         assert len(np.unique(np.array([len(trials['feedback_times']),
-                                       len(trials['feedbackTypes']),
+                                       len(trials['feedbackType']),
                                        len(trials['intervals']),
                                        len(trials['choice']),
                                        len(trials['response_times']),
@@ -572,7 +572,7 @@ class TrialSet(dj.Imported):
                 trial_stim_contrast_left=0 if np.isnan(c_left) else float(c_left),
                 trial_stim_contrast_right=0 if np.isnan(c_right) else float(c_right),
                 trial_feedback_time=float(trials['feedback_times'][idx_trial]),
-                trial_feedback_type=int(trials['feedbackTypes'][idx_trial]),
+                trial_feedback_type=int(trials['feedbackType'][idx_trial]),
                 trial_probability_left=float(trials['probabilityLeft'][idx_trial]),
             )
 
