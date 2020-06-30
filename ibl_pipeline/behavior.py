@@ -553,7 +553,7 @@ class TrialSet(dj.Imported):
 
         self.insert1(key)
 
-        trials = []
+        trial_entries = []
         for idx_trial in range(len(trials['choice'])):
 
             if np.any(np.isnan([trials['intervals'][idx_trial, 1],
@@ -610,9 +610,9 @@ class TrialSet(dj.Imported):
                 trial['trial_iti_duration'] = float(
                     trials['itiDuration'][idx_trial])
 
-            trials.append(trial)
+            trial_entries.append(trial)
 
-        self.Trial.insert(trials)
+        self.Trial.insert(trial_entries)
 
         logger.info('Populated a TrialSet tuple, \
             all Trial tuples and Excluded Trial tuples for \
