@@ -594,9 +594,9 @@ class TrialSet(dj.Imported):
             if trials['choice'][idx_trial] == -1:
                 trial['trial_response_choice'] = "CCW"
             elif trials['choice'][idx_trial] == 0:
-                trials['trial_response_choice'] = "No Go"
+                trial['trial_response_choice'] = "No Go"
             elif trials['choice'][idx_trial] == 1:
-                trials['trial_response_choice'] = "CW"
+                trial['trial_response_choice'] = "CW"
             else:
                 raise ValueError('Invalid reponse choice.')
 
