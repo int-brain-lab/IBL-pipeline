@@ -573,7 +573,7 @@ class TrialSet(dj.Imported):
                 trial_stim_contrast_right=0 if np.isnan(c_right) else float(c_right),
                 trial_feedback_time=float(trials['feedback_times'][idx_trial]),
                 trial_feedback_type=int(trials['feedbackType'][idx_trial]),
-                trial_probability_left=float(trials['probabilityLeft'][idx_trial]),
+                trial_stim_prob_left=float(trials['probabilityLeft'][idx_trial]),
             )
 
             if trials['choice'][idx_trial] == -1:
