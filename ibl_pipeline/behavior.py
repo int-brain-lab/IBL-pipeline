@@ -4,11 +4,14 @@ import pandas as pd
 from os import path, environ
 import datetime
 import logging
+import warnings
 from . import reference, subject, acquisition, data
 try:
     from oneibl.one import ONE
-except:
-    # TODO: consider issuing a warning about not being able to perform ingestion without ONE access
+    import alf.io
+    one = ONE()
+except Exception:
+    warnings.warn('ONE not installed, cannot use populate')
     pass
 
 logger = logging.getLogger(__name__)
@@ -18,11 +21,6 @@ if mode == 'update':
     schema = dj.schema('ibl_behavior')
 else:
     schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
-
-try:
-    one = ONE()
-except:
-    pass
 
 
 @schema
@@ -498,183 +496,119 @@ class TrialSet(dj.Imported):
 
         trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
+        dtypes = [
+            'trials.feedback_times',
+            'trials.feedbackType',
+            'trials.intervals',
+            'trials.choice',
+            'trials.response_times',
+            'trials.contrastLeft',
+            'trials.contrastRight',
+            'trials.probabilityLeft',
+            'trials.stimOn_times',
+            'trials.repNum',
+            'trials.included',
+            'trials.goCue_times',
+            'trials.goCueTrigger_times',
+            'trials.rewardVolume',
+            'trials.itiDuration'
+            ]
 
-        trials_feedback_times, trials_feedback_types, trials_intervals, \
-            trials_response_choice, trials_response_times, \
-            trials_contrast_left, trials_contrast_right, trials_p_left = \
-            one.load(eID, dataset_types=['trials.feedback_times',
-                                         'trials.feedbackType',
-                                         'trials.intervals',
-                                         'trials.choice',
-                                         'trials.response_times',
-                                         'trials.contrastLeft',
-                                         'trials.contrastRight',
-                                         'trials.probabilityLeft'])
+        files = one.load(
+            eID, dataset_types=dtypes, download_only=True, clobber=True)
+        ses_path = alf.io.get_session_path(files[0])
+        trials = alf.io.load_object(
+            ses_path.joinpath('alf'), '_ibl_trials')
 
-        stim_on_times_status, rep_num_status, included_status, \
-            go_cue_times_status, go_cue_trigger_times_status, \
-            reward_volume_status, iti_duration_status = \
-            (CompleteTrialSession & key).fetch1(
-                'stim_on_times_status', 'rep_num_status', 'included_status',
-                'go_cue_times_status', 'go_cue_trigger_times_status',
-                'reward_volume_status', 'iti_duration_status')
+        status = (CompleteTrialSession & key).fetch1()
 
         lab_name = (subject.SubjectLab & key).fetch1('lab_name')
         if stim_on_times_status != 'Missing':
             if lab_name == 'wittenlab':
-                trials_visual_stim_times = np.squeeze(one.load(
-                    eID, dataset_types='trials.stimOn_times',
-                    clobber=True))
-            else:
-                trials_visual_stim_times = one.load(
-                    eID, dataset_types='trials.stimOn_times')
+                trials['stimOn_times'] = np.squeeze(trials['stimOn_times'])
 
-            if len(trials_visual_stim_times) == 1:
-                trials_visual_stim_times = np.squeeze(trials_visual_stim_times)
+            if len(trials['stimOn_times']) == 1:
+                trials['stimOn_times'] = np.squeeze(trials['stimOn_times'])
 
-        if rep_num_status != 'Missing':
-            trials_rep_num = np.squeeze(one.load(
-                eID, dataset_types='trials.repNum'))
-
-        if included_status != 'Missing':
-            trials_included = np.squeeze(one.load(
-                eID, dataset_types='trials.included'))
-
-        if go_cue_times_status != 'Missing':
-            trials_go_cue_times = np.squeeze(one.load(
-                eID, dataset_types='trials.goCue_times'))
-
-        if go_cue_trigger_times_status != 'Missing':
-            trials_go_cue_trigger_times = np.squeeze(one.load(
-                eID, dataset_types='trials.goCueTrigger_times'))
-
-        if reward_volume_status != 'Missing':
-            trials_reward_volume = np.squeeze(one.load(
-                eID, dataset_types='trials.rewardVolume'))
-
-        if iti_duration_status != 'Missing':
-            trials_iti_duration = np.squeeze(one.load(
-                eID, dataset_types='trials.itiDuration'))
-
-        assert len(np.unique(np.array([len(trials_feedback_times),
-                                       len(trials_feedback_types),
-                                       len(trials_intervals),
-                                       # len(trials_rep_num),
-                                       len(trials_response_choice),
-                                       len(trials_response_times),
-                                       len(trials_contrast_left),
-                                       len(trials_contrast_right),
-                                       # len(trials_visual_stim_times),
-                                       # len(trials_included),
-                                       len(trials_p_left)
+        assert len(np.unique(np.array([len(trials['feedback_times']),
+                                       len(trials['feedbackTypes']),
+                                       len(trials['intervals']),
+                                       len(trials['choice']),
+                                       len(trials['response_times']),
+                                       len(trials['contrastLeft']),
+                                       len(trials['contrastRight']),
+                                       len(trials['probabilityLeft'])
                                        ]))) == 1
         'Loaded trial files do not have the same length'
 
-        key['n_trials'] = len(trials_response_choice)
-
-        key_session = dict()
-        key_session['model'] = 'actions.session'
-        key_session['uuid'] = (acquisition.Session & key).fetch1(
-            'session_uuid')
-
+        key['n_trials'] = len(trials['choice'])
         key['n_correct_trials'] = \
-            sum((np.squeeze(trials_response_choice) == 1) &
-                (np.squeeze(trials_contrast_left) > 0)) \
-            + sum((np.squeeze(trials_response_choice) == -1) &
-                  (np.squeeze(trials_contrast_right) > 0))
+            sum((np.squeeze(trials['choice']) == 1) &
+                (np.squeeze(trials['contrastLeft']) > 0)) \
+            + sum((np.squeeze(trials['choice']) == -1) &
+                  (np.squeeze(trials['contrastRight']) > 0))
 
-        key['trials_start_time'] = trials_intervals[0, 0]
-        key['trials_end_time'] = trials_intervals[-1, 1]
+        key['trials_start_time'] = trials['intervals'][0, 0]
+        key['trials_end_time'] = trials['intervals'][-1, 1]
 
         self.insert1(key)
 
         trials = []
-        for idx_trial in range(len(trials_response_choice)):
+        for idx_trial in range(len(trials['choice'])):
+
+            if np.any(np.isnan([trials['intervals'][idx_trial, 1],
+                                trials['choice'][idx_trial],
+                                trials['probabilityLeft'][idx_trial]])):
+                continue
+
             trial = trial_key.copy()
+            c_left = trials['contrastLeft'][idx_trial]
+            c_right = trials['contrastRight'][idx_trial]
+            trial.update(
+                trial_id=idx_trial+1,
+                trial_start_time=float(trials['intervals'][idx_trial, 0]),
+                trial_end_time=float(trials['intervals'][idx_trial, 1]),
+                trial_response_time=float(trials['response_times'][idx_trial]),
+                trial_stim_contrast_left=0 if np.isnan(c_left) else float(c_left),
+                trial_stim_contrast_right=0 if np.isnan(c_right) else float(c_right),
+                trial_feedback_time=float(trials['feedback_times'][idx_trial]),
+                trial_feedback_type=int(trials['feedbackTypes'][idx_trial]),
+                trial_probability_left=float(trials['probabilityLeft'][idx_trial]),
+            )
 
-            if np.isnan(trials_contrast_left[idx_trial]):
-                trial_stim_contrast_left = 0
-            else:
-                trial_stim_contrast_left = trials_contrast_left[idx_trial]
-
-            if np.isnan(trials_contrast_right[idx_trial]):
-                trial_stim_contrast_right = 0
-            else:
-                trial_stim_contrast_right = trials_contrast_right[idx_trial]
-
-            if trials_response_choice[idx_trial] == -1:
-                trial_response_choice = "CCW"
-            elif trials_response_choice[idx_trial] == 0:
-                trial_response_choice = "No Go"
-            elif trials_response_choice[idx_trial] == 1:
-                trial_response_choice = "CW"
+            if trials['choice'][idx_trial] == -1:
+                trial['trial_response_choice'] = "CCW"
+            elif trials['choice'][idx_trial] == 0:
+                trials['trial_response_choice'] = "No Go"
+            elif trials['choice'][idx_trial] == 1:
+                trials['trial_response_choice'] = "CW"
             else:
                 raise ValueError('Invalid reponse choice.')
 
-            trial['trial_id'] = idx_trial + 1
-            trial['trial_start_time'] = trials_intervals[idx_trial, 0]
-
-            if np.any(np.isnan([trials_intervals[idx_trial, 1],
-                                trials_response_choice[idx_trial],
-                                trials_p_left[idx_trial]])):
-                continue
-
-            trial['trial_end_time'] = trials_intervals[idx_trial, 1]
-            trial['trial_response_time'] = float(
-                trials_response_times[idx_trial])
-            trial['trial_response_choice'] = trial_response_choice
-
             if stim_on_times_status != 'Missing':
-                trial['trial_stim_on_time'] = trials_visual_stim_times[
-                    idx_trial]
-
-            trial['trial_stim_contrast_left'] = float(
-                trial_stim_contrast_left)
-            trial['trial_stim_contrast_right'] = float(
-                trial_stim_contrast_right)
-            trial['trial_feedback_time'] = float(
-                trials_feedback_times[idx_trial])
-            trial['trial_feedback_type'] = int(
-                trials_feedback_types[idx_trial])
+                trial['trial_stim_on_time'] = float(trials['stimOn_times'][idx_trial])
 
             if rep_num_status != 'Missing':
-                trial['trial_rep_num'] = int(trials_rep_num[idx_trial])
-
-            # ----------------------------------------
-            # this block of code deals with random values
-            # of prob_left in current ephys data
-            p_left = trials_p_left[idx_trial]
-
-            task_protocol = (acquisition.Session & key).fetch1('task_protocol')
-            if 'ephys' in task_protocol:
-                if p_left > 0.51:
-                    trial['trial_stim_prob_left'] = 0.8
-                elif p_left < 0.49:
-                    trial['trial_stim_prob_left'] = 0.2
-                else:
-                    trial['trial_stim_prob_left'] = 0.5
-            else:
-                trial['trial_stim_prob_left'] = float(p_left)
-            # -----------------------------------------
+                trial['trial_rep_num'] = int(trials['repNum'][idx_trial])
 
             if included_status != 'Missing':
-                trial['trial_included'] = bool(trials_included[idx_trial])
+                trial['trial_included'] = bool(trials['included'][idx_trial])
 
             if go_cue_times_status != 'Missing':
                 trial['trial_go_cue_time'] = float(
-                    trials_go_cue_times[idx_trial])
+                    trials['goCue_times'][idx_trial])
 
             if go_cue_trigger_times_status != 'Missing':
                 trial['trial_go_cue_trigger_time'] = float(
-                    trials_go_cue_trigger_times[idx_trial])
+                    trials['goCueTrigger_times'][idx_trial])
 
             if reward_volume_status != 'Missing':
                 trial['trial_reward_volume'] = float(
-                    trials_reward_volume[idx_trial])
+                    trials['rewardVolume'][idx_trial])
 
             if iti_duration_status != 'Missing':
                 trial['trial_iti_duration'] = float(
-                    trials_iti_duration[idx_trial])
+                    trials['itiDuration'][idx_trial])
 
             trials.append(trial)
 
