@@ -135,14 +135,14 @@ class SessionBrainRegion(dj.Computed):
 @schema
 class DepthBrainRegion(dj.Computed):
     definition = """
-    -> ephys.ProbeInsertion
+    -> ProbeTrajectory
     ---
     region_boundaries   : blob
     region_label        : blob
     region_color        : blob
     region_id           : blob
     """
-    key_source = ephys.ProbeInsertion() & ChannelBrainLocation
+    key_source = ProbeTrajectory & ChannelBrainLocation
 
     def make(self, key):
 
