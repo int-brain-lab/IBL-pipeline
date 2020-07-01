@@ -547,6 +547,7 @@ class UserHistory(dj.Computed):
 
         json_content = grf(key, 'json', model='subjects.subject')
         if json_content != 'None':
+            json_content = json_content.replace("\'", "\"")
             json_dict = json.loads(json_content)
             history = json_dict['history']
             if 'reponsible_user' not in history:

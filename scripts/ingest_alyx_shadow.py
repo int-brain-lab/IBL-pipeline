@@ -5,7 +5,7 @@ via auto-populating.
 
 import datajoint as dj
 from ibl_pipeline.ingest import \
-    (alyxraw, reference, subject, action, acquisition, data, ephys)
+    (alyxraw, reference, subject, action, acquisition, data, ephys, histology)
 
 kargs = dict(
     display_progress=True,
@@ -70,4 +70,7 @@ data.DataSetType.populate(**kargs)
 print('------------ Ingesting ephys tables -----------')
 ephys.ProbeModel.populate(**kargs)
 ephys.ProbeInsertion.populate(**kargs)
-ephys.ProbeTrajectory.populate(**kargs)
+
+# histology tables
+print('------------ Ingesting histology tables -----------')
+histology.ProbeTrajectory.populate(**kargs)
