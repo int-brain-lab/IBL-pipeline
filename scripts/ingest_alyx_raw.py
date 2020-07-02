@@ -40,7 +40,7 @@ def get_alyx_entries(filename=None, models=None):
         return [key for key in keys_all if key['model'] == models]
 
     elif isinstance(models, list):
-        return [key for key in keys_all if key['models'] in models]
+        return [key for key in keys_all if key['model'] in models]
     else:
         raise ValueError('models should be a str, list or numpy array')
 
