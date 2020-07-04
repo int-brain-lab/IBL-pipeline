@@ -38,7 +38,7 @@ def get_alyx_entries(filename=None, models=None,
         keys_all = json.load(fid)
 
     if not models:
-        return [key for key in keys_all if key['model'] not in exclude]
+        return [key for key in keys_all if key['model'] not in exclude_list]
     elif isinstance(models, str):
         return [key for key in keys_all if key['model'] == models]
 
