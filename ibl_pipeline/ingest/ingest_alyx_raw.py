@@ -19,7 +19,13 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-def get_alyx_entries(filename=None, models=None):
+def get_alyx_entries(filename=None, models=None,
+                     exclude=[]):
+
+    exclude_list = ['auth.group', 'sessions.session',
+                    'authtoken.token',
+                    'experiments.brainregion'] + exclude
+
     if not filename:
         dir_name = path.dirname(__file__)
         if len(sys.argv) < 2:  # no arguments given
@@ -32,10 +38,7 @@ def get_alyx_entries(filename=None, models=None):
         keys_all = json.load(fid)
 
     if not models:
-        return [key for key in keys_all
-                if key['model'] not in
-                ['auth.group', 'sessions.session', 'authtoken.token',
-                 'experiments.brainregion']]
+        return [key for key in keys_all if key['model'] not in exclude]
     elif isinstance(models, str):
         return [key for key in keys_all if key['model'] == models]
 
