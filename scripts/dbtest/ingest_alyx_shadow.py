@@ -47,5 +47,5 @@ tables = [
     ]
 
 for table in tables:
-    print('Populating {}...'.format(table.__name))
+    print('Populating {}...'.format(table.__name__))
     table.populate(**kwargs)
