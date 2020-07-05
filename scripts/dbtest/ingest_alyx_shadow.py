@@ -42,7 +42,7 @@ tables = [
     action.WaterAdministration,
     action.WaterRestriction,
     action.Surgery,
-    action.OtherAction
+    action.OtherAction,
     acquisition.Session,
     ]
 
