@@ -9,6 +9,10 @@ import alf.io
 import os
 
 log_dir = '/tmp/ibllib/logs'
+
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
 os.chmod(log_dir, 0o0777)
 
 logger = logging.getLogger(__name__)
@@ -21,7 +25,8 @@ mode = os.environ.get('MODE')
 if mode == 'update':
     schema = dj.schema('group_shared_wheel')
 else:
-    schema = dj.schema(dj.config.get('database.prefix', '') + 'group_shared_wheel')
+    schema = dj.schema(dj.config.get('database.prefix', '') +
+                       'group_shared_wheel')
 
 
 @schema
