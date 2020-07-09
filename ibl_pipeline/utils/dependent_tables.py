@@ -2,6 +2,7 @@ import datajoint as dj
 import ibl_pipeline
 import inspect
 import re
+import pdb
 
 
 class Graph():
@@ -24,6 +25,7 @@ class Graph():
                 continue
             except Exception as e:
                 pass
+            pdb.set_trace()
             t = dj.table.lookup_class_name(t_db, context)
 
             if not t:
