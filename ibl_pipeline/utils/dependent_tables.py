@@ -14,7 +14,7 @@ class Graph():
         self.graph.load()
         self.descendants = self.graph.descendants(table.full_table_name)
 
-    @schema
+    @property
     def table_list(self):
 
         context = inspect.currentframe().f_back.f_locals
