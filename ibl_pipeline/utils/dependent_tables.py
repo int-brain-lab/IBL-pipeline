@@ -18,7 +18,7 @@ class Graph():
 
         context = inspect.currentframe().f_back.f_locals
         table_list = []
-        user_table_list
+        user_table_list = []
         for t_db in self.descendants:
             try:
                 int(t_db)
