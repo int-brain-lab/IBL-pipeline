@@ -14,10 +14,11 @@ class Graph():
         self.graph.load()
         self.descendants = self.graph.descendants(table.full_table_name)
 
-    def table_list(self):
+    def get_table_list(self):
 
         context = inspect.currentframe().f_back.f_locals
         table_list = []
+        user_table_list
         for t_db in self.descendants:
             try:
                 int(t_db)
