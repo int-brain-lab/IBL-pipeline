@@ -14,11 +14,11 @@ class Graph():
         self.graph.load()
         self.descendants = self.graph.descendants(table.full_table_name)
 
-    def get_table_list(self):
+    @schema
+    def table_list(self):
 
         context = inspect.currentframe().f_back.f_locals
         table_list = []
-        user_table_list = []
         for t_db in self.descendants:
             try:
                 int(t_db)
@@ -26,14 +26,15 @@ class Graph():
             except Exception as e:
                 pass
             t = dj.table.lookup_class_name(t_db, context)
-            table_list.append(t)
 
-            if not t:
+            if t:
+                table_list.append(dict(label='package', table=t))
+            else:
                 schema_name = re.match('`(.*)`\.', t_db).group(1)
                 vmod = dj.create_virtual_module(schema_name, schema_name)
                 context[vmod.__name__] = vmod
                 t = dj.table.lookup_class_name(
                     t_db, context)
-                user_table_list.append(t)
+                table_list.append(dict(label='virtual', table=t))
 
-        return table_list, user_table_list
+        return table_list
