@@ -14,7 +14,6 @@ class Graph():
         self.graph.load()
         self.descendants = self.graph.descendants(table.full_table_name)
 
-    @property
     def table_list(self):
 
         context = inspect.currentframe().f_back.f_locals
@@ -26,6 +25,7 @@ class Graph():
             except Exception as e:
                 pass
             t = dj.table.lookup_class_name(t_db, context)
+            table_list.append(t)
 
             if not t:
                 schema_name = re.match('`(.*)`\.', t_db).group(1)
@@ -33,7 +33,6 @@ class Graph():
                 context[vmod.__name__] = vmod
                 t = dj.table.lookup_class_name(
                     t_db, context)
+                user_table_list.append(t)
 
-            table_list.append(t)
-
-        return table_list
+        return table_list, user_table_list
