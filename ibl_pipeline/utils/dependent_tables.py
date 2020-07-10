@@ -25,7 +25,6 @@ class Graph():
                 continue
             except Exception as e:
                 pass
-            pdb.set_trace()
             t = dj.table.lookup_class_name(t_db, context)
 
             if not t:
@@ -36,3 +35,5 @@ class Graph():
                     t_db, context)
 
             table_list.append(t)
+
+        return table_list
