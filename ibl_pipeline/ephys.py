@@ -144,7 +144,8 @@ class ChannelGroup(dj.Imported):
             'channels.localCoordinates'
         ]
 
-        files = one.load(eID, dataset_types=dtypes, download_only=True)
+        files = one.load(eID, dataset_types=dtypes, download_only=True,
+                         clobber=True)
         ses_path = alf.io.get_session_path(files[0])
 
         probe_name = (ProbeInsertion & key).fetch1('probe_label')
@@ -207,7 +208,8 @@ class DefaultCluster(dj.Imported):
             'spikes.times'
         ]
 
-        files = one.load(eID, dataset_types=dtypes, download_only=True)
+        files = one.load(eID, dataset_types=dtypes, download_only=True,
+                         clobber=True)
         ses_path = alf.io.get_session_path(files[0])
 
         probe_name = (ProbeInsertion & key).fetch1('probe_label')

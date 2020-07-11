@@ -712,8 +712,9 @@ class Settings(dj.Imported):
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         try:
-            setting = one.load(eID, dataset_types='_iblrig_taskSettings.raw')
-        except:
+            setting = one.load(eID, dataset_types='_iblrig_taskSettings.raw',
+                               clobber=True)
+        except Exception as e:
             key['error_type'] = 'settings not available'
             SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
@@ -752,7 +753,8 @@ class AmbientSensorData(dj.Imported):
     def make(self, key):
         trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        asd = one.load(eID, dataset_types='_iblrig_ambientSensorData.raw')
+        asd = one.load(eID, dataset_types='_iblrig_ambientSensorData.raw'
+                       clobber=True)
 
         if not len(TrialSet.Trial & key) == len(asd[0]):
             print('Size of ambient sensor data does not match the trial number')
@@ -790,7 +792,8 @@ class PassiveTrialSet(dj.Imported):
         passive_visual_stim_contrast_left, passive_visual_stim_contrast_right = \
             one.load(eID, dataset_types=['passiveTrials.contrastLeft',
                                          'passiveTrials.contrastRight',
-                                         'passiveTrials.times'])
+                                         'passiveTrials.times'],
+                     clobber=True)
 
         assert len(np.unique(np.array([len(passive_visual_stim_contrast_left),
                                        len(passive_visual_stim_contrast_right),
@@ -863,6 +866,7 @@ class PassiveRecordings(dj.Imported):
             key['passive_white_noise_times'] = \
             one.load(eID, dataset_types=['passiveBeeps.times',
                                          'passiveValveClicks.times',
-                                         'passiveWhiteNoise.times'])
+                                         'passiveWhiteNoise.times'],
+                     clobber=True)
 
         self.insert1(key)
