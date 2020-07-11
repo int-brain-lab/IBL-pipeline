@@ -753,7 +753,7 @@ class AmbientSensorData(dj.Imported):
     def make(self, key):
         trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        asd = one.load(eID, dataset_types='_iblrig_ambientSensorData.raw'
+        asd = one.load(eID, dataset_types='_iblrig_ambientSensorData.raw',
                        clobber=True)
 
         if not len(TrialSet.Trial & key) == len(asd[0]):
