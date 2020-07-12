@@ -14,8 +14,7 @@ class Graph():
         self.graph.load()
         self.descendants = self.graph.descendants(table.full_table_name)
 
-    @property
-    def table_list(self):
+    def get_table_list(self, virtual_only=False):
 
         context = inspect.currentframe().f_back.f_locals
         table_list = []
@@ -37,4 +36,7 @@ class Graph():
                     t_db, context)
                 table_list.append(dict(label='virtual', table=t))
 
-        return table_list
+        if virtual_only:
+            return [t for t in table_list if table_list['label'] == 'virtual']
+        else:
+            return table_list
