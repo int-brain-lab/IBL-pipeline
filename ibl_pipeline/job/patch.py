@@ -1,11 +1,11 @@
 import datajoint as dj
-from .. import acquisition, behavior, ephys, histology
-from ..analyses import behavior as behavior_analyses
-from ..analyses import ephys as ephys_analyses
-from ..plotting import behavior as behavior_plotting
-from ..plotting import ephys as ephys_plotting
-from ..group_shared import wheel
-from ..utils.dependent_tables import Graph
+from ibl_pipeline import acquisition, behavior, ephys, histology
+from ibl_pipeline.analyses import behavior as behavior_analyses
+from ibl_pipeline.analyses import ephys as ephys_analyses
+from ibl_pipeline.plotting import behavior as behavior_plotting
+from ibl_pipeline.plotting import ephys as ephys_plotting
+from ibl_pipeline.group_shared import wheel
+from ibl_pipeline.utils.dependent_tables import Graph
 
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_patch')
