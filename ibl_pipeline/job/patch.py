@@ -10,6 +10,7 @@ import ibl_pipeline
 import re
 from tqdm import tqdm
 import datetime
+import datajoint
 
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_patch')
