@@ -37,6 +37,6 @@ class Graph():
                 table_list.append(dict(label='virtual', table=t))
 
         if virtual_only:
-            return [t for t in table_list if table_list['label'] == 'virtual']
+            return [t['table'] for t in table_list if t['label'] == 'virtual']
         else:
             return table_list
