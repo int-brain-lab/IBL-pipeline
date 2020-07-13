@@ -143,7 +143,7 @@ class Run(dj.Manual):
                 table_key = dict(**key, full_table_name=t['full_table_name'])
                 status = RunStatus.TableStatus & table_key
                 print('Repopulating {}'.format(t['table_class']))
-                dj.Table._update(status, 'status', 'Populating')
+                dj.Table._update(status, 'status', 'Repopulating')
                 dj.Table._update(
                     status, 'populate_start_time', datetime.datetime.now())
 
