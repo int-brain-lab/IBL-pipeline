@@ -1,5 +1,5 @@
 
-from ibl_pipeline import acquisition
+from ibl_pipeline import subject, acquisition
 from ibl_pipeline.job import patch
 import datetime
 
