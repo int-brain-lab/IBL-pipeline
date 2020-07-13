@@ -123,8 +123,7 @@ class Run(dj.Manual):
         # start this job
         if not len(RunStatus & key):
             RunStatus.insert1(
-                **key,
-                run_start_time=datetime.datetime.now())
+                dict(**key, run_start_time=datetime.datetime.now()))
         else:
             dj.Table._update(
                 RunStatus & key,
