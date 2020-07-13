@@ -213,7 +213,8 @@ if __name__ == '__main__':
             table_order=itable,
             table_label='auto' if issubclass(table, (dj.Imported, dj.Computed))
                         else 'manual')
-        for itable, table in enumerate(TABLES[::-1])])
+        for itable, table in enumerate(TABLES[::-1])],
+        skip_duplicates=True)
 
     # insert virtual modules tables in order
     virtuals = Graph(behavior.TrialSet()).get_table_list(virtual_only=True) + \
@@ -226,4 +227,5 @@ if __name__ == '__main__':
             table_class=virtuals[::-1][itable],
             table_order=itable,
             table_label='virtual')
-        for itable, table in enumerate(virtual_classes[::-1])])
+        for itable, table in enumerate(virtual_classes[::-1])],
+        skip_duplicates=True)
