@@ -38,7 +38,7 @@ class Graph():
             if t:
                 table_list.append(dict(label='package', table=t))
             else:
-                Graph.get_virtual_module(t_db)
+                Graph.get_virtual_module(t_db, context)
                 t = dj.table.lookup_class_name(
                     t_db, context)
                 table_list.append(dict(label='virtual', table=t))
