@@ -6,7 +6,10 @@ from os import path, environ
 import numpy as np
 from .utils import atlas
 
-from ibllib.pipes.ephys_alignment import EphysAlignment
+try:
+    from ibllib.pipes.ephys_alignment import EphysAlignment
+except Exception as e:
+    Warning('Need to install the WIPhistologymayo branch for ibllib')
 
 mode = environ.get('MODE')
 
