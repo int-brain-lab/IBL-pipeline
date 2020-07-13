@@ -14,6 +14,15 @@ class Graph():
         self.graph.load()
         self.descendants = self.graph.descendants(table.full_table_name)
 
+    @staticmethod
+    def get_virtual_module(full_table_name, context=None):
+
+        if not context:
+            context = inspect.currentframe().f_back.f_locals
+        schema_name = re.match('`(.*)`\.', t_db).group(1)
+        vmod = dj.create_virtual_module(schema_name, schema_name)
+        context[vmod.__name__] = vmod
+
     def get_table_list(self, virtual_only=False):
 
         context = inspect.currentframe().f_back.f_locals
@@ -29,9 +38,7 @@ class Graph():
             if t:
                 table_list.append(dict(label='package', table=t))
             else:
-                schema_name = re.match('`(.*)`\.', t_db).group(1)
-                vmod = dj.create_virtual_module(schema_name, schema_name)
-                context[vmod.__name__] = vmod
+                Graph.get_virtual_module(t_db)
                 t = dj.table.lookup_class_name(
                     t_db, context)
                 table_list.append(dict(label='virtual', table=t))
