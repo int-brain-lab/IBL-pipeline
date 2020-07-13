@@ -9,6 +9,7 @@ from ibl_pipeline.utils.dependent_tables import Graph
 import ibl_pipeline
 import re
 from tqdm import tqdm
+import datetime
 
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_patch')
