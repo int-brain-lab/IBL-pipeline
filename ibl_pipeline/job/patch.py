@@ -8,6 +8,7 @@ from ibl_pipeline.group_shared import wheel
 from ibl_pipeline.utils.dependent_tables import Graph
 import ibl_pipeline
 import re
+from tqdm import tqdm
 
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_patch')
@@ -104,7 +105,11 @@ class Run(dj.Manual):
             dict(**key_table, original=original))
 
         print('Deleting table {} ...'.format(t['full_table_name']))
-        (table_class & key).delete_quick()
+        if t['full_table_name'] == '`ibl_ephys`.`__aligned_trial_spikes`':
+            for cluster in tqdm((ephys.DefaultCluster & key).fetch('KEY')):
+                (table_class & cluster).delete_quick()
+        else:
+            (table_class & key).delete_quick()
         dj.Table._update(
             RunStatus.TableStatus & key_table,
             'status', 'Deleted')
@@ -149,7 +154,7 @@ class Run(dj.Manual):
                     dj.Table._update(
                         status, 'error_message', 'No tuples to populate')
                 else:
-                    errors = table_class.populate(**populate_kwargs)
+                    errors = table_class.populate(key, **populate_kwargs)
                     dj.Table._update(
                         status, 'populate_end_time', datetime.datetime.now())
                     if len(errors):
