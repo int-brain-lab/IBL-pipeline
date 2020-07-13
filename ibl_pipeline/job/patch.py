@@ -156,7 +156,7 @@ class Run(dj.Manual):
                 else:
                     errors = table_class.populate(key, **populate_kwargs)
                     dj.Table._update(
-                        status, 'populate_end_time', datetime.datetime.now())
+                        status, 'populate_done_time', datetime.datetime.now())
                     if len(errors):
                         dj.Table._update(status, 'status', 'Error')
                         dj.Table._update(
