@@ -145,7 +145,7 @@ class Run(dj.Manual):
                 if not len((table_class.key_source - table_class.proj()) & key):
                     dj.Table._update(status, 'status', 'Error')
                     dj.Table._update(
-                        status, 'populate_end_time', datetime.datetime.now())
+                        status, 'populate_done_time', datetime.datetime.now())
                     dj.Table._update(
                         status, 'error_message', 'No tuples to populate')
                 else:
@@ -192,7 +192,7 @@ class RunStatus(dj.Manual):
         original                : bool
         status=null             : enum('Deleted', 'Repopulating', 'Success', 'Error')
         delete_time=null        : datetime
-        populate_time=null : datetime
+        populate_start_time=null: datetime
         populate_done_time=null : datetime
         error_message=''        : varchar(10000)
         """
