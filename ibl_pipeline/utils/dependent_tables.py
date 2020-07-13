@@ -19,7 +19,7 @@ class Graph():
 
         if not context:
             context = inspect.currentframe().f_back.f_locals
-        schema_name = re.match('`(.*)`\.', t_db).group(1)
+        schema_name = re.match('`(.*)`\.', full_table_name).group(1)
         vmod = dj.create_virtual_module(schema_name, schema_name)
         context[vmod.__name__] = vmod
 
