@@ -73,7 +73,7 @@ class Table(dj.Lookup):
 table_kwargs = dict(order_by='table_order desc', as_dict=True)
 
 TABLES_PACKAGE = (Table & 'table_label!="virtual"').fetch(**table_kwargs)
-TABLES_VIRTUAL = (Table & 'table_lable="virtual"').fetch(**table_kwargs)
+TABLES_VIRTUAL = (Table & 'table_label="virtual"').fetch(**table_kwargs)
 
 populate_kwargs = dict(
     suppress_errors=True, display_progress=True,
