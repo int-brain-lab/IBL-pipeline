@@ -103,7 +103,7 @@ class Run(dj.Manual):
             original = False
 
         RunStatus.TableStatus.insert1(
-            dict(**key_table, original=original))
+            dict(**key_table, original=original), skip_duplicates=True)
 
         print('Deleting table {} ...'.format(t['full_table_name']))
         if t['full_table_name'] == '`ibl_ephys`.`__aligned_trial_spikes`':
