@@ -10,7 +10,7 @@ for session in sessions.fetch('KEY'):
         'subject_uuid', 'session_start_time',
         'session_uuid', 'subject_nickname', as_dict=True)
     patch.Session.insert1(
-        dict(**entry, job_date=datetime.date(2020, 7, 10)),
+        dict(**entry[0], job_date=datetime.date(2020, 7, 10)),
         skip_duplicates=True)
 
 patch.Run.populate(display_progress=True)
