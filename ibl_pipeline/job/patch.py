@@ -10,7 +10,6 @@ import ibl_pipeline
 import re
 from tqdm import tqdm
 import datetime
-import datajoint
 
 
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_patch')
@@ -224,7 +223,7 @@ if __name__ == '__main__':
     Table.insert([
         dict(
             full_table_name=table.full_table_name,
-            table_class=table.__module__ + '.' + table.__name__,
+            table_class=table,
             table_order=itable,
             table_label='virtual')
         for itable, table in enumerate(virtual_classes[::-1])])
