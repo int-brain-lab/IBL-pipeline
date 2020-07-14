@@ -137,7 +137,8 @@ class Run(dj.Manual):
 
         for t in TABLES_PACKAGE:
             table_key = dict(**key, full_table_name=t['full_table_name'])
-            if (RunStatus.TableStatus & table_key & 'status="Success"'):
+            if (RunStatus.TableStatus & table_key &
+                    'status in ("Success", "Partial Success")'):
                 continue
 
             self._delete_table(t, key, virtual=False)
