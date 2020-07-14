@@ -245,32 +245,20 @@ class DefaultCluster(dj.Imported):
             num_spikes = len(cluster['cluster_spikes_times'])
             firing_rate = num_spikes/max_spike_time
 
-            metrics = clusters.metrics
-            cluster_metric_entry = dict(
-                **key,
-                cluster_id=icluster,
-                num_spikes=num_spikes,
-                firing_rate=firing_rate)
+            metrics = clusters.metrics.iloc[icluster]
 
-            metrics_dict = dict(
-                presence_ratio=metrics.presence_ratio[icluster],
-                presence_ratio_std=metrics.presence_ratio_std[icluster],
-                amplitude_cutoff=metrics.amplitude_cutoff[icluster],
-                amplitude_std=metrics.amplitude_std[icluster],
-                epoch_name=metrics.epoch_name[icluster],
-                ks2_label=metrics.ks2_label[icluster])
+            self.Metrics.insert1(
+                dict(
+                    **key,
+                    cluster_id=icluster,
+                    num_spikes=num_spikes,
+                    firing_rate=firing_rate,
+                    metrics=metrics.to_dict()))
 
-            if not np.isnan(metrics.isi_viol[icluster]):
-                metrics_dict.update(
-                    isi_viol=metrics.isi_viol[icluster])
-            if not np.isinf(metrics.ks2_contamination_pct[icluster]):
-                metrics_dict.update(
-                    ks2_contamination_pct=metrics.ks2_contamination_pct[icluster])
-
-            cluster_metric_entry.update(
-                metrics=metrics_dict)
-
-            self.Metrics.insert1(cluster_metric_entry)
+            if metrics.ks2_label and (not np.isnan(metrics.ks2_label)):
+                self.Ks2Label.insert1(
+                    dict(**key, cluster_id=icluster,
+                         ks2_label=metrics.ks2_label))
 
     class Metrics(dj.Part):
         definition = """
@@ -279,6 +267,13 @@ class DefaultCluster(dj.Imported):
         num_spikes:                 int         # total spike number
         firing_rate:                float       # firing rate of the cluster
         metrics:                    longblob    # a dictionary with fields of metrics, depend on the clustering method
+        """
+
+    class Ks2Label(dj.Part):
+        definition = """
+        -> master
+        ---
+        ks2_label       : enum('good', 'mua')
         """
 
 
