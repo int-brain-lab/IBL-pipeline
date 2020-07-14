@@ -227,7 +227,8 @@ if __name__ == '__main__':
             table_order=itable,
             table_label='auto' if issubclass(eval(table), (dj.Imported, dj.Computed))
                         else 'part',
-            table_parent=eval(re.match('(^.*)\..*$', table).group(1)).full_table_name)
+            table_parent=eval(re.match('(^.*)\..*$', table).group(1)).full_table_name
+                         if issubclass(eval(table), dj.Part) else None)
         for itable, table in enumerate(TABLES[::-1])],
         skip_duplicates=True)
 
