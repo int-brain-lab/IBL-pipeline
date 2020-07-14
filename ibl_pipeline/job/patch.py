@@ -29,6 +29,7 @@ TABLES = [
     'ephys.GoodCluster',
     'ephys.AlignedTrialSpikes',
     'histology.ClusterBrainRegion',
+    'ephys.DefaultCluster.Ks2Label',
     'ephys.DefaultCluster.Metrics',
     'ephys.DefaultCluster',
     'ephys.CompleteClusterSession',
@@ -68,7 +69,8 @@ class Table(dj.Lookup):
     ---
     table_class     : varchar(128)
     table_order     : smallint      # order to repopulate, the bigger, the earlier to delete and later to repopulate
-    table_label     : enum('virtual', 'auto', 'manual')  # virtual for virtual module, auto for computed or imported table, manual for manual table
+    table_label     : enum('virtual', 'auto', 'part')  # virtual for virtual module, auto for computed or imported table, manual for manual table
+    table_parent='' : varchar(128)  # only applicable to part table
     """
 
 
@@ -127,13 +129,17 @@ class Run(dj.Manual):
         else:
             dj.Table._update(
                 RunStatus & key,
-                'run_start_time', datetime.datetime.now())
+                'run_restart_time', datetime.datetime.now())
 
         # delete tables
         for t in TABLES_VIRTUAL:
             self._delete_table(t, key)
 
         for t in TABLES_PACKAGE:
+            table_key = dict(**key, full_table_name='full_table_name')
+            if (RunStatus.TableStatus & table_key & 'status="Success"'):
+                continue
+
             self._delete_table(t, key, virtual=False)
 
         # repopulate tables
@@ -165,6 +171,13 @@ class Run(dj.Manual):
                         dj.Table._update(status, 'status', 'Success')
                         dj.Table._update(
                             status, 'error_message', '')
+                        # mark its part table to Success
+                        for part_table in (Table &
+                                           dict(table_parent=t['full_table_name'])).fetch('KEY'):
+                            dj.Table._update(
+                                Table & part_table, 'status', 'Success')
+                            dj.Table._update(
+                                Table & part_table, 'error_message', '')
 
         # end this job
         dj.Table._update(
@@ -186,6 +199,7 @@ class RunStatus(dj.Manual):
     -> Session
     ---
     run_start_time          : datetime
+    run_restart_time=null   : datetime      # latest starting time to run this job
     run_end_time=null       : datetime
     """
 
@@ -212,7 +226,8 @@ if __name__ == '__main__':
             table_class=table,
             table_order=itable,
             table_label='auto' if issubclass(eval(table), (dj.Imported, dj.Computed))
-                        else 'manual')
+                        else 'part' if issubclass(eval(table), dj.Part),
+            table_parent=eval(re.match('(^.*)\..*$', text).group(1)).full_table_name),
         for itable, table in enumerate(TABLES[::-1])],
         skip_duplicates=True)
 
