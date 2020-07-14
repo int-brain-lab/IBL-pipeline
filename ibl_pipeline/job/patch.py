@@ -136,7 +136,7 @@ class Run(dj.Manual):
             self._delete_table(t, key)
 
         for t in TABLES_PACKAGE:
-            table_key = dict(**key, full_table_name='full_table_name')
+            table_key = dict(**key, full_table_name=t['full_table_name'])
             if (RunStatus.TableStatus & table_key & 'status="Success"'):
                 continue
 
