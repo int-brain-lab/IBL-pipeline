@@ -5,6 +5,7 @@ from . import acquisition, reference, behavior, data
 from .ingest import ephys as ephys_ingest
 from tqdm import tqdm
 import numpy as np
+import pandas as pd
 from uuid import UUID
 import re
 import alf.io
@@ -255,7 +256,7 @@ class DefaultCluster(dj.Imported):
                     firing_rate=firing_rate,
                     metrics=metrics.to_dict()))
 
-            if metrics.ks2_label and (not np.isnan(metrics.ks2_label)):
+            if metrics.ks2_label and (not pd.isnull(metrics.ks2_label)):
                 self.Ks2Label.insert1(
                     dict(**key, cluster_id=icluster,
                          ks2_label=metrics.ks2_label))
