@@ -97,10 +97,10 @@ class DepthPeth(dj.Computed):
                 peth_list.append(np.zeros_like(peths.tscale))
                 baseline_list.append(0)
 
-            key.update(depth_peth=np.vstack(peth_list),
-                       depth_baseline=np.array(baseline_list),
-                       time_bin_centers=peths.tscale)
-            self.insert1(key, skip_duplicates=True)
+        key.update(depth_peth=np.vstack(peth_list),
+                   depth_baseline=np.array(baseline_list),
+                   time_bin_centers=peths.tscale)
+        self.insert1(key, skip_duplicates=True)
 
 
 @schema
