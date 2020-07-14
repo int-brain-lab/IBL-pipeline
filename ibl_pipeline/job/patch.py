@@ -164,7 +164,13 @@ class Run(dj.Manual):
                     dj.Table._update(
                         status, 'populate_done_time', datetime.datetime.now())
                     if len(errors):
-                        dj.Table._update(status, 'status', 'Error')
+                        if len(table_class & key):
+                            dj.Table._update(status, 'status', 'Partial Success')
+                        else:
+                            dj.Table._update(status, 'status', 'Error')
+
+                        if len(errors) > 10:
+                            errors = errors[:10]
                         dj.Table._update(
                             status, 'error_message', str(errors))
                     else:
@@ -179,7 +185,7 @@ class Run(dj.Manual):
                                 'status', 'Success')
                             dj.Table._update(
                                 RunStatus.TableStatus & key & part_table,
-                                 'error_message', '')
+                                'error_message', '')
 
         # end this job
         dj.Table._update(
@@ -211,7 +217,7 @@ class RunStatus(dj.Manual):
         -> Table
         ---
         original                : bool
-        status=null             : enum('Deleted', 'Repopulating', 'Success', 'Error')
+        status=null             : enum('Deleted', 'Repopulating', 'Partial Success', 'Success', 'Error')
         delete_time=null        : datetime
         populate_start_time=null: datetime
         populate_done_time=null : datetime
