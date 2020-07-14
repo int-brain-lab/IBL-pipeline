@@ -175,9 +175,11 @@ class Run(dj.Manual):
                         for part_table in (Table &
                                            dict(table_parent=t['full_table_name'])).fetch('KEY'):
                             dj.Table._update(
-                                Table & part_table, 'status', 'Success')
+                                RunStatus.TableStatus & key & part_table,
+                                'status', 'Success')
                             dj.Table._update(
-                                Table & part_table, 'error_message', '')
+                                RunStatus.TableStatus & key & part_table,
+                                 'error_message', '')
 
         # end this job
         dj.Table._update(
