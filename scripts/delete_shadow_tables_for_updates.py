@@ -37,11 +37,11 @@ session_project = alyxraw.AlyxRaw.Field & \
     'fname in ("project")'
 session_project.delete_quick()
 
-# print('Deleting trajectories estimates...')
-# (alyxraw.AlyxRaw & 'model="experiments.trajectoryestimate"').delete()
+print('Deleting trajectories estimates time stamp...')
+(alyxraw.AlyxRaw.Field &
+ (alyxraw.AlyxRaw & 'model="experiments.trajectoryestimate"') &
+ 'fname="datetime"').delete()
 
-# print('Deleting experiments.channel...')
-# (alyxraw.AlyxRaw & 'model="experiments.channel"').delete()
 
 # delete some shadow membership tables
 print('Deleting shadow membership tables...')

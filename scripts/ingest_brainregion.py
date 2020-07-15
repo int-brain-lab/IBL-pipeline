@@ -19,7 +19,7 @@ def ingest_all():
 
     ib_brainregion = InsertBuffer(reference_ingest.BrainRegion)
 
-    for key in tqdm(keys):
+    for key in tqdm(keys, position=0):
         fields = key['fields']
         graph_order = atlas[atlas['id'] == key['pk']]['graph_order']
 
@@ -52,7 +52,7 @@ mapping = dict(acronym='acronym',
 
 def update_shadow_field(field):
 
-    for key in tqdm(keys):
+    for key in tqdm(keys, position=0):
         fields = key['fields']
         if mapping[field] == 'graph_order':
             graph_order = atlas[atlas['id'] == key['pk']]['graph_order']
@@ -78,7 +78,7 @@ def update_real_field(field):
          'field_real is null and field_shadow is not null',
          'field_real is not null and field_shadow is null']
 
-    for key in tqdm(entries_for_updates.fetch('KEY')):
+    for key in tqdm(entries_for_updates.fetch('KEY'), position=0):
         dj.Table._update(
             reference.BrainRegion & key, field,
             (reference_ingest.BrainRegion & key).fetch1(field))

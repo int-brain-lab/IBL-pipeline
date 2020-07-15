@@ -10,7 +10,7 @@ key_source = (alyxraw.AlyxRaw & 'model="data.dataset"').proj(
 
 data_set = InsertBuffer(data.DataSet)
 
-for key in tqdm(key_source.fetch('KEY')):
+for key in tqdm(key_source.fetch('KEY'), position=0):
     key_ds = key.copy()
     key['uuid'] = key['dataset_uuid']
 
@@ -101,7 +101,7 @@ key_source = (alyxraw.AlyxRaw & record_exists & records_flatiron).proj(
 
 file_record = InsertBuffer(data.FileRecord)
 
-for key in tqdm(key_source.fetch('KEY')):
+for key in tqdm(key_source.fetch('KEY'), position=0):
     key_fr = key.copy()
     key['uuid'] = key['record_uuid']
     key_fr['exists'] = True

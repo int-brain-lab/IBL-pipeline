@@ -30,7 +30,8 @@ histology_ingest.ChannelBrainRegion.populate(**kwargs)
 
 print('Updating and populate real histology.ProbeTrajectory and ChannelBrainRegion...')
 for key in tqdm((histology.ProbeTrajectory &
-                 changed.proj(probe_trajectory_uuid='uuid')).fetch('KEY')):
+                 changed.proj(probe_trajectory_uuid='uuid')).fetch('KEY'),
+                position=0):
     (histology.ProbeTrajectory & key).delete()
     histology.ProbeTrajectory.populate(key, **kwargs)
     copy_table(histology, histology_ingest, 'ChannelBrainRegion')

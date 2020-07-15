@@ -24,14 +24,14 @@ keys = (ephys.CompleteClusterSession &
 #      {'subject_uuid': UUID('d528fe0e-ac52-4fdc-bfb9-c545e44ded66'),
 #      'session_start_time': datetime.datetime(2020, 2, 3, 12, 31, 9)}]
 
-for key in tqdm(keys):
+for key in tqdm(keys, position=0):
     print(key)
     # delete tables
     print('deleting entries from TrialSpikes cluster by cluster...')
     # delete from TrialSpikes cluster by cluster
     clusters = (ephys.Cluster & key).fetch('KEY')
 
-    for cluster in tqdm(clusters):
+    for cluster in tqdm(clusters, position=0):
         (ephys.TrialSpikes & cluster).delete()
 
     print('repopulating TrialSpikes...')

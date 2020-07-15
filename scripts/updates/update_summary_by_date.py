@@ -1,4 +1,4 @@
-import tqdm
+from tqdm import tqdm
 from ibl_pipeline import subject, acquisition, behavior
 from ibl_pipeline.analyses import behavior as behavior_analyses
 import numpy as np
@@ -6,7 +6,7 @@ import numpy as np
 
 for key in tqdm(
         (behavior_analyses.BehavioralSummaryByDate &
-         'n_trials_date is null').fetch('KEY')):
+         'n_trials_date is null').fetch('KEY'), position=0):
     trial_sets = behavior.TrialSet.proj(
         session_date='date(session_start_time)') & key
     n_trials_date = len(behavior.TrialSet.Trial & trial_sets)

@@ -53,7 +53,7 @@ fields = [
 
 problematic_keys = []
 
-for key in tqdm(keys):
+for key in tqdm(keys, position=0):
     try:
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         trials = behavior.TrialSet.Trial & key

@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 
 # ========= update all subjects fields in the subject shadow table ==============
-for subj in tqdm((subject_ingest.Subject).fetch('KEY')):
+for subj in tqdm((subject_ingest.Subject).fetch('KEY'), position=0):
 
     # fetch corresponding entry in alyxraw table
     alyxraw.AlyxRaw & dict(uuid=subj['subject_uuid'])
@@ -124,7 +124,8 @@ for subj in tqdm((subject_ingest.Subject).fetch('KEY')):
 # find out the overlap of shadow subject table and main subject table
 
 for subj in tqdm((subject.Subject &
-                  subject_ingest.Subject.proj()).fetch('KEY')):
+                  subject_ingest.Subject.proj()).fetch('KEY'),
+                 position=0):
 
     subj_real = subject.Subject & subj
 

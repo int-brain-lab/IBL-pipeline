@@ -36,6 +36,6 @@ session_start_time_field = dj.U('uuid', 'session_start_time') & \
 
 for (key, uuid, session_uuid) in tqdm(zip(*(prob_sessions *
                                             session_start_time_field).fetch(
-        'KEY', 'uuid', 'session_uuid'))):
+        'KEY', 'uuid', 'session_uuid')), position=0):
     print(uuid)
     dj.Table._update(prob_sessions, 'session_uuid', uuid.bytes)

@@ -10,7 +10,7 @@ one = ONE()
 keys = ephys.ProbeInsertion.fetch('KEY')
 
 dtypes = ['probes.description']
-for key in tqdm(keys):
+for key in tqdm(keys, position=0):
     eID = str((acquisition.Session & key).fetch1('session_uuid'))
     files = one.load(eID, dataset_types=dtypes, download_only=True)
     ses_path = alf.io.get_session_path(files[0])

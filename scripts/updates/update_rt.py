@@ -26,7 +26,7 @@ sessions_with_small_rts = []
 unupdated_keys = []
 updated_keys = []
 
-for key, eID in tqdm(zip(keys, eIDs)):
+for key, eID in tqdm(zip(keys, eIDs), position=0):
     dtypes = ['trials.stimOn_times', 'trials.response_times']
     try:
         files = one.load(str(eID), dataset_types=dtypes, download_only=True)

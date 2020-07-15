@@ -40,7 +40,7 @@ latest = subject.Subject.aggr(
 subj_keys = (subject.Subject & latest).fetch('KEY')
 
 # delete and repopulate subject by subject
-for subj_key in tqdm(subj_keys):
+for subj_key in tqdm(subj_keys, position=0):
     (behavior.CumulativeSummary & subj_key & latest).delete()
     behavior.CumulativeSummary.populate(
         latest & subj_key, suppress_errors=True)

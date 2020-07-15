@@ -121,7 +121,7 @@ keys = [
 au_behavior = dj.create_virtual_module('au_behavior', 'user_anneurai_behavior')
 
 
-for key in tqdm(keys):
+for key in tqdm(keys, position=0):
     print('----------- Deleting AlignedTrialSpikes ---------')
     (ephys.AlignedTrialSpikes & key).delete_quick()
 

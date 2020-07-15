@@ -11,7 +11,7 @@ import numpy as np
 from datetime import datetime
 from tqdm import tqdm
 
-for key in tqdm(subject.Subject.fetch('KEY')):
+for key in tqdm(subject.Subject.fetch('KEY'), position=0):
     behavior_summary = behavior_analyses.BehavioralSummaryByDate & key
     water_weight = action.Weighing * action.WaterAdministration & key
     if behavior_summary:

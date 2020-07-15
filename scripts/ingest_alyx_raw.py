@@ -52,7 +52,7 @@ def insert_to_alyxraw(keys):
     ib_part = InsertBuffer(alyxraw.AlyxRaw.Field)
 
     # insert into AlyxRaw table
-    for key in tqdm(keys):
+    for key in tqdm(keys, position=0):
         try:
             pk = uuid.UUID(key['pk'])
         except Exception:
@@ -69,7 +69,7 @@ def insert_to_alyxraw(keys):
         # print('Inserted remaining raw tuples')
 
     # insert into the part table AlyxRaw.Field
-    for ikey, key in tqdm(enumerate(keys)):
+    for ikey, key in tqdm(enumerate(keys), position=0):
         try:
             try:
                 pk = uuid.UUID(key['pk'])
