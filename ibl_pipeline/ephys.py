@@ -222,7 +222,8 @@ class DefaultCluster(dj.Imported):
 
         max_spike_time = spikes.times[-1]
 
-        for icluster, cluster_uuid in tqdm(enumerate(clusters.uuids['uuids'])):
+        for icluster, cluster_uuid in tqdm(enumerate(clusters.uuids['uuids']),
+                                           position=0):
 
             idx = spikes.clusters == icluster
             cluster = dict(
@@ -367,7 +368,7 @@ class AlignedTrialSpikes(dj.Computed):
             spike_times)
 
         trial_spks = []
-        for itrial, trial_key in tqdm(enumerate(trial_keys)):
+        for itrial, trial_key in tqdm(enumerate(trial_keys), position=0):
 
             trial_spk = dict(
                 **trial_key,

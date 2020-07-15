@@ -109,7 +109,8 @@ class Run(dj.Manual):
 
         print('Deleting table {} ...'.format(t['full_table_name']))
         if t['full_table_name'] == '`ibl_ephys`.`__aligned_trial_spikes`':
-            for cluster in tqdm((ephys.DefaultCluster & key).fetch('KEY')):
+            for cluster in tqdm((ephys.DefaultCluster & key).fetch('KEY'),
+                                position=0):
                 (table_class & cluster).delete_quick()
         else:
             (table_class & key).delete_quick()
@@ -199,7 +200,7 @@ class Run(dj.Manual):
         self.key_source = (Session - self) & dj.AndList(restrictions)
         keys = self.key_source.fetch('KEY')
 
-        for key in (tqdm(keys) if display_progress else keys):
+        for key in (tqdm(keys, position=0) if display_progress else keys):
             self.make(key)
 
 
