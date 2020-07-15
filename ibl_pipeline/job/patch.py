@@ -154,7 +154,8 @@ class Run(dj.Manual):
                 dj.Table._update(
                     status, 'populate_start_time', datetime.datetime.now())
 
-                if not len((table_class.key_source - table_class.proj()) & key):
+                if not len((table_class.key_source - table_class.proj()) & key) \
+                        and len(RunStatus.TableStatus & table_key & 'status="Success"'):
                     dj.Table._update(status, 'status', 'Error')
                     dj.Table._update(
                         status, 'populate_done_time', datetime.datetime.now())
@@ -234,7 +235,8 @@ if __name__ == '__main__':
             full_table_name=eval(table).full_table_name,
             table_class=table,
             table_order=itable,
-            table_label='auto' if issubclass(eval(table), (dj.Imported, dj.Computed))
+            table_label='auto' if issubclass(eval(table),
+                                             (dj.Imported, dj.Computed))
                         else 'part',
             table_parent=eval(re.match('(^.*)\..*$', table).group(1)).full_table_name
                          if issubclass(eval(table), dj.Part) else None)
