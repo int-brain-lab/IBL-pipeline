@@ -346,7 +346,7 @@ class AlignedTrialSpikes(dj.Computed):
         spike_times = cluster.fetch1('cluster_spikes_times')
         event = (Event & key).fetch1('event')
 
-        if 'event' == 'movement':
+        if event == 'movement':
             trials = behavior.TrialSet.Trial * wheel.MovementTimes & key
             trial_keys, trial_start_times, trial_end_times, \
                 trial_stim_on_times, trial_feedback_times, \
