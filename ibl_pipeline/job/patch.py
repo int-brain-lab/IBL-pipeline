@@ -15,7 +15,7 @@ import datetime
 schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_patch')
 
 
-TABLES = [
+SESSION_TABLES = [
     'ephys_plotting.Waveform',
     'ephys_plotting.AutoCorrelogram',
     'ephys_plotting.SpikeAmpTime',
@@ -42,6 +42,8 @@ TABLES = [
     'behavior_analyses.PsychResultsBlock',
     'behavior_analyses.PsychResults',
     'wheel.MovementTimes',
+    'wheel.WheelMoveSet',
+    'behavior.CompleteWheelSession',
     'behavior.AmbientSensorData',
     'behavior.TrialSet.ExcludedTrial',
     'behavior.TrialSet.Trial',
@@ -75,19 +77,73 @@ class Session(dj.Manual):
 @schema
 class Table(dj.Lookup):
     definition = """
-    full_table_name : varchar(128)  # full table name in MySQL
+    full_table_name         : varchar(128)  # full table name in MySQL
     ---
-    table_class     : varchar(128)
-    table_order     : smallint      # order to repopulate, the bigger, the earlier to delete and later to repopulate
-    table_label     : enum('virtual', 'auto', 'part')  # virtual for virtual module, auto for computed or imported table, manual for manual table
-    table_parent='' : varchar(128)  # only applicable to part table
+    table_class             : varchar(128)
+    table_order             : smallint      # order to repopulate, the bigger, the earlier to delete and later to repopulate
+    table_order_category    : enum('virtual', 'session', 'date') # the table order is within one category
+    table_label             : enum('virtual', 'auto', 'part')  # virtual for virtual module, auto for computed or imported table, manual for manual table
+    table_parent=''         : varchar(128)  # only applicable to part table
     """
+
+    @classmethod
+    def _insert_package_tables(table_list):
+        for itable, table in enumerate(table_list[::-1]):
+            table_obj = eval(table)
+            table_key = dict(full_table_name=table_obj.full_table_name)
+
+            if Table & table_key:
+                dj.Table._update(Table & table_key, 'table_order', itable)
+            else:
+                Table.insert1(dict(
+                    **table_key,
+                    table_class=table,
+                    table_order=itable,
+                    table_order_category=table_type,
+                    table_label='auto' if issubclass(table_obj,
+                                                     (dj.Imported, dj.Computed))
+                                else 'part',
+                    table_parent=eval(re.match('(^.*)\..*$', table).group(1)).full_table_name
+                                 if issubclass(table_obj, dj.Part) else None))
+
+    @classmethod
+    def _insert_virtual_tables():
+        # insert virtual modules tables in order
+        virtuals = Graph(behavior.TrialSet()).get_table_list(virtual_only=True) + \
+            Graph(ephys.DefaultCluster()).get_table_list(virtual_only=True)
+        virtual_classes = [eval(v) for v in virtuals]
+
+        Table.insert([
+            dict(
+                full_table_name=table.full_table_name,
+                table_class=virtuals[::-1][itable],
+                table_order=itable,
+                table_label='virtual')
+            for itable, table in enumerate(virtual_classes[::-1])],
+            skip_duplicates=True)
+
+    @classmethod
+    def insert_tables(table_type):
+
+        if table_type == 'session':
+            Table._insert_package_tables(SESSION_TABLES)
+        elif table_type == 'date':
+            Table._insert_package_tables(DATE_TABLES)
+        elif table_type == 'virtual':
+            Table._insert_virtual_tables()
+        elif table_type == 'All':
+            Table._insert_package_tables(SESSION_TABLES)
+            Table._insert_package_tables(DATE_TABLES)
+            Table._insert_virtual_tables()
+        else:
+            ValueError('Invalid table_type. It has to be one of the following: session, date, virtual')
 
 
 table_kwargs = dict(order_by='table_order desc', as_dict=True)
 
-TABLES_PACKAGE = (Table & 'table_label!="virtual"').fetch(**table_kwargs)
-TABLES_VIRTUAL = (Table & 'table_label="virtual"').fetch(**table_kwargs)
+tables_session = (Table & 'table_order_category="session"').fetch(**table_kwargs)
+tables_date = (Table & 'table_order_category="date"').fetch(**table_kwargs)
+tables_virtual = (Table & 'table_order_category="virtual"').fetch(**table_kwargs)
 
 populate_kwargs = dict(
     suppress_errors=True, display_progress=True,
@@ -103,15 +159,19 @@ class Run(dj.Manual):
     job_status='' : enum('Success', 'Partial Success', 'Error', '')
     """
 
-    def _delete_table(self, t, key, virtual=True):
+    def _delete_table(self, t, key, table_type='session'):
 
-        if virtual:
+        key_del = key.copy()
+        if table_type == 'virtual':
             Graph.get_virtual_module(t['full_table_name'])
+
+        elif table_type == 'date':
+            key_del['session_date'] = key_del.pop('session_start_time').date()
 
         table_class = eval(t['table_class'])
         key_table = dict(**key, full_table_name=t['full_table_name'])
 
-        if len(table_class & key):
+        if table_class & key:
             original = True
         else:
             original = False
@@ -125,7 +185,7 @@ class Run(dj.Manual):
                                 position=0):
                 (table_class & cluster).delete_quick()
         else:
-            (table_class & key).delete_quick()
+            (table_class & key_del).delete_quick()
         dj.Table._update(
             RunStatus.TableStatus & key_table,
             'status', 'Deleted')
@@ -136,7 +196,7 @@ class Run(dj.Manual):
     def make(self, key):
 
         # start this job
-        if not len(RunStatus & key):
+        if not RunStatus & key:
             RunStatus.insert1(
                 dict(**key, run_start_time=datetime.datetime.now()))
         else:
@@ -145,10 +205,16 @@ class Run(dj.Manual):
                 'run_restart_time', datetime.datetime.now())
 
         # delete tables
-        for t in TABLES_VIRTUAL:
-            self._delete_table(t, key)
+        for t in tables_virtual:
+            self._delete_table(t, key, table_type='virtual')
 
-        for t in TABLES_PACKAGE:
+        for t in tables_date:
+            self._delete_table(t, key, table_type='date')
+
+        for t in tables_session:
+            self._delete_table(t, key, table_type='session')
+
+        for t in tables_package:
             table_key = dict(**key, full_table_name=t['full_table_name'])
             if (RunStatus.TableStatus & table_key &
                     'status in ("Success", "Partial Success")'):
@@ -157,7 +223,10 @@ class Run(dj.Manual):
             self._delete_table(t, key, virtual=False)
 
         # repopulate tables
-        for t in TABLES_PACKAGE[::-1]:
+        for t in (tables_session[::-1] + tables_date[::-1]):
+            key_pop = key.copy()
+            if t['table_order_category'] == 'date':
+                key_pop['session_date'] = key_pop.pop('session_start_time').date()
             if t['table_label'] == 'auto':
                 table_class = eval(t['table_class'])
                 table_key = dict(**key, full_table_name=t['full_table_name'])
@@ -167,19 +236,19 @@ class Run(dj.Manual):
                 dj.Table._update(
                     status, 'populate_start_time', datetime.datetime.now())
 
-                if not len((table_class.key_source - table_class.proj()) & key) \
-                        and len(RunStatus.TableStatus & table_key & 'status="Success"'):
+                if not (table_class.key_source - table_class.proj()) & key_pop \
+                        and RunStatus.TableStatus & table_key & 'status="Success"':
                     dj.Table._update(status, 'status', 'Error')
                     dj.Table._update(
                         status, 'populate_done_time', datetime.datetime.now())
                     dj.Table._update(
                         status, 'error_message', 'No tuples to populate')
                 else:
-                    errors = table_class.populate(key, **populate_kwargs)
+                    errors = table_class.populate(key_pop, **populate_kwargs)
                     dj.Table._update(
                         status, 'populate_done_time', datetime.datetime.now())
-                    if len(errors):
-                        if len(table_class & key):
+                    if errors:
+                        if table_class & key_pop:
                             dj.Table._update(status, 'status', 'Partial Success')
                         else:
                             dj.Table._update(status, 'status', 'Error')
@@ -207,14 +276,17 @@ class Run(dj.Manual):
             RunStatus & key,
             'run_end_time', datetime.datetime.now())
 
-        if len(RunStatus.TableStatus & TABLES_PACKAGE & 'status in ("Success")'):
-            key['job_status'] = 'Partial Success'
-            if not len(RunStatus.TableStatus & TABLES_PACKAGE & 'status in ("Error", "Partial Success")'):
-                key['job_status'] = 'Success'
+        if RunStatus.TableStatus & key & tables_package & 'status in ("Success")':
+            job_status = 'Partial Success'
+            if not RunStatus.TableStatus & key & tables_package & 'status in ("Error", "Partial Success")':
+                job_status = 'Success'
         else:
-            key['job_status'] = 'Error'
+            job_status = 'Error'
 
-        self.insert1(key)
+        if self & key:
+            dj.Table._update(self & key, 'job_status', job_status)
+        else:
+            self.insert1(key)
 
     def populate(self, *restrictions, level='New', display_progress=False):
 
@@ -263,30 +335,14 @@ class RunStatus(dj.Manual):
 
 if __name__ == '__main__':
 
-    # insert regular tables in order
-    Table.insert([
-        dict(
-            full_table_name=eval(table).full_table_name,
-            table_class=table,
-            table_order=itable,
-            table_label='auto' if issubclass(eval(table),
-                                             (dj.Imported, dj.Computed))
-                        else 'part',
-            table_parent=eval(re.match('(^.*)\..*$', table).group(1)).full_table_name
-                         if issubclass(eval(table), dj.Part) else None)
-        for itable, table in enumerate(TABLES[::-1])],
+    session = acquisition.Session & {'session_uuid': 'f8d5c8b0-b931-4151-b86c-c471e2e80e5d'}
+    entry = (acquisition.Session*subject.Subject & session).fetch(
+        'subject_uuid', 'session_start_time',
+        'session_uuid', 'subject_nickname', as_dict=True)
+    Session.insert1(
+        dict(**entry[0], job_date=datetime.datetime.now().date()),
         skip_duplicates=True)
 
-    # insert virtual modules tables in order
-    virtuals = Graph(behavior.TrialSet()).get_table_list(virtual_only=True) + \
-        Graph(ephys.DefaultCluster()).get_table_list(virtual_only=True)
-    virtual_classes = [eval(v) for v in virtuals]
+    Table.insert_tables('All')
 
-    Table.insert([
-        dict(
-            full_table_name=table.full_table_name,
-            table_class=virtuals[::-1][itable],
-            table_order=itable,
-            table_label='virtual')
-        for itable, table in enumerate(virtual_classes[::-1])],
-        skip_duplicates=True)
+    Run.populate(display_progress=True)

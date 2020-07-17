@@ -429,7 +429,8 @@ class CompleteTrialSession(dj.Computed):
                             clobber=True))
                 else:
                     stimOn_times = one.load(
-                        eID, dataset_types='trials.stimOn_times')
+                        eID, dataset_types='trials.stimOn_times',
+                        clobber=True)
 
                 if np.all(np.isnan(stimOn_times)):
                     key['stim_on_times_status'] = 'Missing'
