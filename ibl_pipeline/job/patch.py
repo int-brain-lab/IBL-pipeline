@@ -87,15 +87,15 @@ class Table(dj.Lookup):
     """
 
     @classmethod
-    def _insert_package_tables(table_list):
+    def _insert_package_tables(self, table_list):
         for itable, table in enumerate(table_list[::-1]):
             table_obj = eval(table)
             table_key = dict(full_table_name=table_obj.full_table_name)
 
             if Table & table_key:
-                dj.Table._update(Table & table_key, 'table_order', itable)
+                dj.Table._update(self & table_key, 'table_order', itable)
             else:
-                Table.insert1(dict(
+                self.insert1(dict(
                     **table_key,
                     table_class=table,
                     table_order=itable,
@@ -106,14 +106,13 @@ class Table(dj.Lookup):
                     table_parent=eval(re.match('(^.*)\..*$', table).group(1)).full_table_name
                                  if issubclass(table_obj, dj.Part) else None))
 
-    @classmethod
-    def _insert_virtual_tables():
+    def _insert_virtual_tables(self):
         # insert virtual modules tables in order
         virtuals = Graph(behavior.TrialSet()).get_table_list(virtual_only=True) + \
             Graph(ephys.DefaultCluster()).get_table_list(virtual_only=True)
         virtual_classes = [eval(v) for v in virtuals]
 
-        Table.insert([
+        self.insert([
             dict(
                 full_table_name=table.full_table_name,
                 table_class=virtuals[::-1][itable],
@@ -122,19 +121,18 @@ class Table(dj.Lookup):
             for itable, table in enumerate(virtual_classes[::-1])],
             skip_duplicates=True)
 
-    @classmethod
-    def insert_tables(table_type):
+    def insert_tables(self, table_type='All'):
 
         if table_type == 'session':
-            Table._insert_package_tables(SESSION_TABLES)
+            self._insert_package_tables(SESSION_TABLES)
         elif table_type == 'date':
-            Table._insert_package_tables(DATE_TABLES)
+            self._insert_package_tables(DATE_TABLES)
         elif table_type == 'virtual':
-            Table._insert_virtual_tables()
+            self._insert_virtual_tables()
         elif table_type == 'All':
-            Table._insert_package_tables(SESSION_TABLES)
-            Table._insert_package_tables(DATE_TABLES)
-            Table._insert_virtual_tables()
+            self._insert_package_tables(SESSION_TABLES)
+            self._insert_package_tables(DATE_TABLES)
+            self._insert_virtual_tables()
         else:
             ValueError('Invalid table_type. It has to be one of the following: session, date, virtual')
 
