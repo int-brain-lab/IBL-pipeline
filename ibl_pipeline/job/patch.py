@@ -49,6 +49,16 @@ TABLES = [
     'behavior.CompleteTrialSession',
 ]
 
+DATE_TABLES = [
+    'behavior_plotting.DatePsychCurve',
+    'behavior_plotting.DateReactionTimeContrast',
+    'behavior_plotting.DateReactionTimeTrialNumber',
+    'behavior_analyses.BehavioralSummaryByDate.ReactionTimeByDate',
+    'behavior_analyses.BehavioralSummaryByDate.ReactionTimeContrast',
+    'behavior_analyses.BehavioralSummaryByDate.PsychResults',
+    'behavior_analyses.BehavioralSummaryByDate',
+]
+
 
 @schema
 class Session(dj.Manual):
@@ -89,6 +99,8 @@ class Run(dj.Manual):
     definition = """
     # the table that drives deletion and repopulate
     -> Session
+    ---
+    job_status='' : enum('Success', 'Partial Success', 'Error', '')
     """
 
     def _delete_table(self, t, key, virtual=True):
@@ -195,9 +207,30 @@ class Run(dj.Manual):
             RunStatus & key,
             'run_end_time', datetime.datetime.now())
 
-    def populate(self, *restrictions, display_progress=False):
+        if len(RunStatus.TableStatus & TABLES_PACKAGE & 'status in ("Success")'):
+            key['job_status'] = 'Partial Success'
+            if not len(RunStatus.TableStatus & TABLES_PACKAGE & 'status in ("Error", "Partial Success")'):
+                key['job_status'] = 'Success'
+        else:
+            key['job_status'] = 'Error'
 
-        self.key_source = (Session - self) & dj.AndList(restrictions)
+        self.insert1(key)
+
+    def populate(self, *restrictions, level='New', display_progress=False):
+
+        # populate new jobs only
+        if level == 'New':
+            cond = {}
+        # populate new jobs and error jobs only
+        elif level == 'Error':
+            cond = 'job_status in ("Success", "Partial Success")'
+        # populate new jobs, partial success jobs and error jobs
+        elif level == 'Partial':
+            cond = 'job_status in ("Success")'
+        elif level == 'All':
+            cond = []
+
+        self.key_source = (Session - (self & cond)) & dj.AndList(restrictions)
         keys = self.key_source.fetch('KEY')
 
         for key in (tqdm(keys, position=0) if display_progress else keys):
