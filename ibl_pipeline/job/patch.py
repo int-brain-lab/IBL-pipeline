@@ -87,7 +87,7 @@ class Table(dj.Lookup):
     """
 
     @classmethod
-    def _insert_package_tables(self, table_list):
+    def _insert_package_tables(self, table_list, table_type):
         for itable, table in enumerate(table_list[::-1]):
             table_obj = eval(table)
             table_key = dict(full_table_name=table_obj.full_table_name)
@@ -124,14 +124,14 @@ class Table(dj.Lookup):
     def insert_tables(self, table_type='All'):
 
         if table_type == 'session':
-            self._insert_package_tables(SESSION_TABLES)
+            self._insert_package_tables(SESSION_TABLES, table_type)
         elif table_type == 'date':
-            self._insert_package_tables(DATE_TABLES)
+            self._insert_package_tables(DATE_TABLES, table_type)
         elif table_type == 'virtual':
             self._insert_virtual_tables()
         elif table_type == 'All':
-            self._insert_package_tables(SESSION_TABLES)
-            self._insert_package_tables(DATE_TABLES)
+            self._insert_package_tables(SESSION_TABLES, 'session')
+            self._insert_package_tables(DATE_TABLES, 'date')
             self._insert_virtual_tables()
         else:
             ValueError('Invalid table_type. It has to be one of the following: session, date, virtual')
