@@ -113,8 +113,8 @@ class Table(dj.Lookup):
             Graph(behavior_analyses.BehavioralSummaryByDate()).get_table_list(virtual_only=True)
 
         for v in virtuals:
-            Graph.get_virtual_module(v)
-        virtual_classes = [eval(v) for v in virtuals]
+            Graph.get_virtual_module(v['full_table_name'])
+        virtual_classes = [eval(v['table']) for v in virtuals]
 
         for itable, table in enumerate(virtual_classes[::-1]):
             table_key = dict(full_table_name=table.full_table_name)

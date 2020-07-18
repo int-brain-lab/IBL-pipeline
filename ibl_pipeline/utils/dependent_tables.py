@@ -42,15 +42,17 @@ class Graph():
             t = dj.table.lookup_class_name(t_db, context, depth=3)
 
             if t:
-                table_list.append(dict(label='package', table=t))
+                table_list.append(dict(label='package', table=t,
+                                       full_table_name=t_db))
             else:
                 vmod_name = Graph.get_virtual_module(t_db, context)
                 t = dj.table.lookup_class_name(
                     t_db, context)
-                table_list.append(dict(label='virtual', table=t))
+                table_list.append(dict(label='virtual', table=t,
+                                       full_table_name=t_db))
                 context.pop(vmod_name)
 
         if virtual_only:
-            return [t['table'] for t in table_list if t['label'] == 'virtual']
+            return [t for t in table_list if t['label'] == 'virtual']
         else:
             return table_list
