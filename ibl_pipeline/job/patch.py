@@ -42,6 +42,7 @@ SESSION_TABLES = [
     'behavior_analyses.PsychResultsBlock',
     'behavior_analyses.PsychResults',
     'wheel.MovementTimes',
+    'wheel.WheelMoveSet.Move',
     'wheel.WheelMoveSet',
     'behavior.CompleteWheelSession',
     'behavior.AmbientSensorData',
