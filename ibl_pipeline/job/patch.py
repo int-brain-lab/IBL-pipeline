@@ -279,9 +279,10 @@ class Run(dj.Manual):
             RunStatus & key,
             'run_end_time', datetime.datetime.now())
 
-        if RunStatus.TableStatus & key & tables_package & 'status in ("Success")':
+        if RunStatus.TableStatus & key & [tables_session, tables_date] & 'status in ("Success")':
             job_status = 'Partial Success'
-            if not RunStatus.TableStatus & key & tables_package & 'status in ("Error", "Partial Success")':
+            if not RunStatus.TableStatus & key & [tables_session, tables_date] & \
+                    'status in ("Error", "Partial Success")':
                 job_status = 'Success'
         else:
             job_status = 'Error'
