@@ -93,7 +93,7 @@ class Table(dj.Lookup):
             table_obj = eval(table)
             table_key = dict(full_table_name=table_obj.full_table_name)
 
-            if Table & table_key:
+            if self & table_key:
                 dj.Table._update(self & table_key, 'table_order', itable)
             else:
                 self.insert1(dict(
