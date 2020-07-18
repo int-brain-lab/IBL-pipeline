@@ -39,7 +39,7 @@ class Graph():
                 continue
             except Exception as e:
                 pass
-            t = dj.table.lookup_class_name(t_db, context, depth=4)
+            t = dj.table.lookup_class_name(t_db, context, depth=3)
 
             if t:
                 table_list.append(dict(label='package', table=t))
