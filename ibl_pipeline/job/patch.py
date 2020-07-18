@@ -223,7 +223,7 @@ class Run(dj.Manual):
                     'status in ("Success", "Partial Success")'):
                 continue
 
-            self._delete_table(t, key, virtual=False)
+            self._delete_table(t, key, table_type=t['table_order_category'])
 
         # repopulate tables
         for t in (tables_session[::-1] + tables_date[::-1]):
