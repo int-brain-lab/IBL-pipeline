@@ -123,7 +123,7 @@ class Table(dj.Lookup):
                     dict(
                         full_table_name=table.full_table_name,
                         table_class=virtuals[::-1][itable],
-                        table_order_category='virtual'
+                        table_order_category='virtual',
                         table_order=itable,
                         table_label='virtual'),
                     skip_duplicates=True)
