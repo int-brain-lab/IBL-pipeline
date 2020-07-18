@@ -25,7 +25,7 @@ class Graph():
 
     def get_table_list(self, virtual_only=False):
 
-        context = inspect.currentframe().f_back.f_locals
+        context = inspect.currentframe().f_back.f_globals
         table_list = []
         for t_db in self.descendants:
             try:
