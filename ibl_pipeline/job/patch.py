@@ -112,20 +112,16 @@ class Table(dj.Lookup):
             Graph(ephys.DefaultCluster()).get_table_list(virtual_only=True) + \
             Graph(behavior_analyses.BehavioralSummaryByDate()).get_table_list(virtual_only=True)
 
-        for v in virtuals:
-            Graph.get_virtual_module(v['full_table_name'])
-        virtual_classes = [eval(v['table']) for v in virtuals]
-
-        for itable, table in enumerate(virtual_classes[::-1]):
-            table_key = dict(full_table_name=table.full_table_name)
+        for itable, vtable in enumerate(virtuals[::-1]):
+            table_key = dict(full_table_name=vtable['full_table_name'])
 
             if Table & table_key:
                 dj.Table._update(self & table_key, 'table_order', itable)
             else:
                 self.insert1(
                     dict(
-                        full_table_name=table.full_table_name,
-                        table_class=virtuals[::-1][itable],
+                        full_table_name=vtable['full_table_name'],
+                        table_class=vtable['table'],
                         table_order_category='virtual',
                         table_order=itable,
                         table_label='virtual'),
