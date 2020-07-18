@@ -109,7 +109,8 @@ class Table(dj.Lookup):
     def _insert_virtual_tables(self):
         # insert virtual modules tables in order
         virtuals = Graph(behavior.TrialSet()).get_table_list(virtual_only=True) + \
-            Graph(ephys.DefaultCluster()).get_table_list(virtual_only=True)
+            Graph(ephys.DefaultCluster()).get_table_list(virtual_only=True) + \
+            Graph(behavior_analyses.BehavioralSummaryByDate()).get_table_list(virtual_only=True)
         virtual_classes = [eval(v) for v in virtuals]
 
         self.insert([
