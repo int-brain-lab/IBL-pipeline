@@ -113,14 +113,20 @@ class Table(dj.Lookup):
             Graph(behavior_analyses.BehavioralSummaryByDate()).get_table_list(virtual_only=True)
         virtual_classes = [eval(v) for v in virtuals]
 
-        self.insert([
-            dict(
-                full_table_name=table.full_table_name,
-                table_class=virtuals[::-1][itable],
-                table_order=itable,
-                table_label='virtual')
-            for itable, table in enumerate(virtual_classes[::-1])],
-            skip_duplicates=True)
+        for itable, table in enumerate(virtual_classes[::-1]):
+            table_key = dict(full_table_name=table.full_table_name)
+
+            if Table & table_key:
+                dj.Table._update(self & table_key, 'table_order', itable)
+            else:
+                self.insert1(
+                    dict(
+                        full_table_name=table.full_table_name,
+                        table_class=virtuals[::-1][itable],
+                        table_order_category='virtual'
+                        table_order=itable,
+                        table_label='virtual'),
+                    skip_duplicates=True)
 
     def insert_tables(self, table_type='All'):
 
