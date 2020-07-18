@@ -111,6 +111,9 @@ class Table(dj.Lookup):
         virtuals = Graph(behavior.TrialSet()).get_table_list(virtual_only=True) + \
             Graph(ephys.DefaultCluster()).get_table_list(virtual_only=True) + \
             Graph(behavior_analyses.BehavioralSummaryByDate()).get_table_list(virtual_only=True)
+
+        for v in virtuals:
+            Graph.get_virtual_module(v)
         virtual_classes = [eval(v) for v in virtuals]
 
         for itable, table in enumerate(virtual_classes[::-1]):
