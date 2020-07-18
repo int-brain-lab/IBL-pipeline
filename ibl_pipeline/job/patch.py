@@ -217,7 +217,7 @@ class Run(dj.Manual):
         for t in tables_session:
             self._delete_table(t, key, table_type='session')
 
-        for t in tables_package:
+        for t in tables_session + tables_date:
             table_key = dict(**key, full_table_name=t['full_table_name'])
             if (RunStatus.TableStatus & table_key &
                     'status in ("Success", "Partial Success")'):
