@@ -144,11 +144,6 @@ class Table(dj.Lookup):
 
 
 table_kwargs = dict(order_by='table_order desc', as_dict=True)
-
-tables_session = (Table & 'table_order_category="session"').fetch(**table_kwargs)
-tables_date = (Table & 'table_order_category="date"').fetch(**table_kwargs)
-tables_virtual = (Table & 'table_order_category="virtual"').fetch(**table_kwargs)
-
 populate_kwargs = dict(
     suppress_errors=True, display_progress=True,
     return_exception_objects=True)
@@ -198,6 +193,10 @@ class Run(dj.Manual):
             'delete_time', datetime.datetime.now())
 
     def make(self, key):
+
+        tables_session = (Table & 'table_order_category="session"').fetch(**table_kwargs)
+        tables_date = (Table & 'table_order_category="date"').fetch(**table_kwargs)
+        tables_virtual = (Table & 'table_order_category="virtual"').fetch(**table_kwargs)
 
         # start this job
         if not RunStatus & key:
@@ -350,3 +349,5 @@ if __name__ == '__main__':
     Table.insert_tables('All')
 
     Run.populate(display_progress=True)
+
+    # check results at location https://djcompute.internationalbrainlab.org/session/f8d5c8b0-b931-4151-b86c-c471e2e80e5d
