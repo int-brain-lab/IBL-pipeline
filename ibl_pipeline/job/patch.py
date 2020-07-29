@@ -234,8 +234,8 @@ class Run(dj.Manual):
                 dj.Table._update(
                     status, 'populate_start_time', datetime.datetime.now())
 
-                if not (table_class.key_source - table_class.proj()) & key_pop \
-                        and RunStatus.TableStatus & table_key & 'status="Success"':
+                if (not (table_class.key_source - table_class.proj()) & key_pop) \
+                        and (not RunStatus.TableStatus & table_key & 'status="Success"'):
                     dj.Table._update(status, 'status', 'Error')
                     dj.Table._update(
                         status, 'populate_done_time', datetime.datetime.now())
