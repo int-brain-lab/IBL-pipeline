@@ -13,3 +13,5 @@ RUN pip install scikits.bootstrap
 
 RUN pip install ibllib
 RUN pip install "git+https://github.com/ixcat/djwip.git#egg=djwip"
+
+ADD ./allen_structure_tree.csv /usr/local/lib/python3.6/dist-packages/ibllib/atlas
