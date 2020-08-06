@@ -262,6 +262,19 @@ class DefaultCluster(dj.Imported):
                     dict(**key, cluster_id=icluster,
                          ks2_label=metrics.ks2_label))
 
+            self.Metric.insert(
+                [dict(**key, metric_name=name, metric_value=value)
+                 for name, value in metrics.to_dict().items()]
+            )
+
+    class Metric(dj.Part):
+        definition = """
+        -> master
+        metric_name: varchar(32)
+        ---
+        metric_value: float
+        """
+
     class Metrics(dj.Part):
         definition = """
         -> master
