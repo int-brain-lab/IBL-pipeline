@@ -10,7 +10,7 @@ try:
     from oneibl.one import ONE
     import alf.io
     one = ONE()
-except Exception:
+except ImportError:
     warnings.warn('ONE not installed, cannot use populate')
     pass
 
@@ -525,9 +525,6 @@ class TrialSet(dj.Imported):
 
         lab_name = (subject.SubjectLab & key).fetch1('lab_name')
         if status['stim_on_times_status'] != 'Missing':
-            if lab_name == 'wittenlab':
-                trials['stimOn_times'] = np.squeeze(trials['stimOn_times'])
-
             if len(trials['stimOn_times']) == 1:
                 trials['stimOn_times'] = np.squeeze(trials['stimOn_times'])
 
