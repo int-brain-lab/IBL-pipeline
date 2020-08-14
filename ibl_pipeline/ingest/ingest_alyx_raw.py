@@ -20,11 +20,13 @@ logger = logging.getLogger(__name__)
 
 
 def get_alyx_entries(filename=None, models=None,
-                     exclude=[]):
+                     exclude=None):
 
-    exclude_list = ['auth.group', 'sessions.session',
+    exclude_list = {'auth.group', 'sessions.session',
                     'authtoken.token',
-                    'experiments.brainregion'] + exclude
+                    'experiments.brainregion'}
+    if exclude:
+        exclude_list = exclude_list.union(set(exclude))
 
     if not filename:
         dir_name = path.dirname(__file__)
