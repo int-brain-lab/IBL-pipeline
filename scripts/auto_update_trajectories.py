@@ -8,34 +8,36 @@ from ibl_pipeline.ingest.ingest_utils import copy_table
 
 from tqdm import tqdm
 
-dj.config['safemode'] = False
+if __name__ == '__main__':
 
-kwargs = dict(display_progress=True, suppress_errors=True)
+    dj.config['safemode'] = False
 
-# Get the entries whose timestamp has changed
-changed = histology_ingest.ProbeTrajectory.proj(
-    'trajectory_ts', uuid='probe_trajectory_uuid') * \
-          (alyxraw.AlyxRaw.Field & 'fname="datetime"').proj(
-            ts='cast(fvalue as datetime)') & 'ts!=trajectory_ts'
+    kwargs = dict(display_progress=True, suppress_errors=True)
 
-print('Deleting alyxraw entries for histology...')
-(alyxraw.AlyxRaw & changed).delete()
+    # Get the entries whose timestamp has changed
+    changed = histology_ingest.ProbeTrajectory.proj(
+        'trajectory_ts', uuid='probe_trajectory_uuid') * \
+              (alyxraw.AlyxRaw.Field & 'fname="datetime"').proj(
+                ts='cast(fvalue as datetime)') & 'ts!=trajectory_ts'
 
-print('Repopulate alyxraw.AlyxRaw for updates...')
-insert_to_alyxraw(get_alyx_entries(models='experiments.trajectoryestimate'))
+    print('Deleting alyxraw entries for histology...')
+    (alyxraw.AlyxRaw & changed).delete()
 
-print('Repopulate shadow histology.ProbeTrajectory and ChannelBrainRegion...')
-histology_ingest.ProbeTrajectory.populate(**kwargs)
-histology_ingest.ChannelBrainRegion.populate(**kwargs)
+    print('Repopulate alyxraw.AlyxRaw for updates...')
+    insert_to_alyxraw(get_alyx_entries(models='experiments.trajectoryestimate'))
 
-print('Updating and populate real histology.ProbeTrajectory and ChannelBrainRegion...')
-for key in tqdm((histology.ProbeTrajectory &
-                 changed.proj(probe_trajectory_uuid='uuid')).fetch('KEY'),
-                position=0):
-    (histology.ProbeTrajectory & key).delete()
-    histology.ProbeTrajectory.populate(key, **kwargs)
-    copy_table(histology, histology_ingest, 'ChannelBrainRegion')
-    (histology.ClusterBrainRegion & key).delete()
-    histology.ClusterBrainRegion.populate(key, **kwargs)
-    (histology.SessionBrainRegion & key).delete()
-    histology.SessionBrainRegion.populate(key, **kwargs)
+    print('Repopulate shadow histology.ProbeTrajectory and ChannelBrainRegion...')
+    histology_ingest.ProbeTrajectory.populate(**kwargs)
+    histology_ingest.ChannelBrainRegion.populate(**kwargs)
+
+    print('Updating and populate real histology.ProbeTrajectory and ChannelBrainRegion...')
+    for key in tqdm((histology.ProbeTrajectory &
+                    changed.proj(probe_trajectory_uuid='uuid')).fetch('KEY'),
+                    position=0):
+        (histology.ProbeTrajectory & key).delete()
+        histology.ProbeTrajectory.populate(key, **kwargs)
+        copy_table(histology, histology_ingest, 'ChannelBrainRegion')
+        (histology.ClusterBrainRegion & key).delete()
+        histology.ClusterBrainRegion.populate(key, **kwargs)
+        (histology.SessionBrainRegion & key).delete()
+        histology.SessionBrainRegion.populate(key, **kwargs)

@@ -30,42 +30,44 @@ def update_field(key, eID, trials, alf, djattr, dtype, status,
         return
 
 
-# fetch keys with reward_volume but null in table TrialSet.Trial
+if __name__ == '__main__':
 
-sessions = behavior.TrialSet.aggr(
-    behavior.TrialSet.Trial,
-    n_prob_trials='sum(trial_id=floor(trial_reward_volume)+1)',
-    n_total_trials='count(*)') & 'n_prob_trials>5'
+    # fetch keys with reward_volume but null in table TrialSet.Trial
 
-if len(sys.argv) < 2:
-    keys = sessions.fetch('KEY')
-else:
-    keys = (sessions & sys.argv[1]).fetch('KEY')
+    sessions = behavior.TrialSet.aggr(
+        behavior.TrialSet.Trial,
+        n_prob_trials='sum(trial_id=floor(trial_reward_volume)+1)',
+        n_total_trials='count(*)') & 'n_prob_trials>5'
 
-fields = [
-    # {'alf': 'trials.repNum',             'djattr': 'trial_rep_num',             'dtype': int,   'status': 'rep_num_status'},
-    # {'alf': 'trials.included',           'djattr': 'trial_included',            'dtype': bool,  'status': 'included_status'},
-    # {'alf': 'trials.goCue_times',        'djattr': 'trial_go_cue_time',         'dtype': float, 'status': 'go_cue_times_status'},
-    # {'alf': 'trials.goCueTrigger_times', 'djattr': 'trial_go_cue_trigger_time', 'dtype': float, 'status': 'go_cue_trigger_times_status'},
-    {'alf': 'trials.rewardVolume',       'djattr': 'trial_reward_volume',       'dtype': float, 'status': 'reward_volume_status'},
-    # {'alf': 'trials.itiDuration',        'djattr': 'trial_iti_duration',        'dtype': float, 'status': 'iti_duration_status'},
-]
+    if len(sys.argv) < 2:
+        keys = sessions.fetch('KEY')
+    else:
+        keys = (sessions & sys.argv[1]).fetch('KEY')
 
-problematic_keys = []
+    fields = [
+        # {'alf': 'trials.repNum',             'djattr': 'trial_rep_num',             'dtype': int,   'status': 'rep_num_status'},
+        # {'alf': 'trials.included',           'djattr': 'trial_included',            'dtype': bool,  'status': 'included_status'},
+        # {'alf': 'trials.goCue_times',        'djattr': 'trial_go_cue_time',         'dtype': float, 'status': 'go_cue_times_status'},
+        # {'alf': 'trials.goCueTrigger_times', 'djattr': 'trial_go_cue_trigger_time', 'dtype': float, 'status': 'go_cue_trigger_times_status'},
+        {'alf': 'trials.rewardVolume',       'djattr': 'trial_reward_volume',       'dtype': float, 'status': 'reward_volume_status'},
+        # {'alf': 'trials.itiDuration',        'djattr': 'trial_iti_duration',        'dtype': float, 'status': 'iti_duration_status'},
+    ]
 
-for key in tqdm(keys, position=0):
-    try:
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        trials = behavior.TrialSet.Trial & key
+    problematic_keys = []
 
-        for field in fields:
-            update_field(key, eID, trials, **field,
-                         message_record=problematic_keys)
+    for key in tqdm(keys, position=0):
+        try:
+            eID = str((acquisition.Session & key).fetch1('session_uuid'))
+            trials = behavior.TrialSet.Trial & key
 
-    except Exception:
-        problematic_keys.append(dict(**key, error='other'))
-        print(
-            'problem updating {}'.format(
-                ', '.join('{}: {}'.format(k, value) for k, value in key.items())))
+            for field in fields:
+                update_field(key, eID, trials, **field,
+                            message_record=problematic_keys)
 
-np.save('problematic_keys.npy', problematic_keys)
+        except Exception:
+            problematic_keys.append(dict(**key, error='other'))
+            print(
+                'problem updating {}'.format(
+                    ', '.join('{}: {}'.format(k, value) for k, value in key.items())))
+
+    np.save('problematic_keys.npy', problematic_keys)
