@@ -38,8 +38,8 @@ if __name__ == '__main__':
         (alyxraw.AlyxRaw.Field & session_raw & 'fname="start_time"').proj(
             session_start_time='cast(fvalue as datetime)')
 
-    for (key, uuid, session_uuid) in tqdm(zip(*(prob_sessions *
-                                                session_start_time_field).fetch(
-            'KEY', 'uuid', 'session_uuid')), position=0):
+    vals = (prob_sessions * session_start_time_field).fetch(
+        'KEY', 'uuid', 'session_uuid')
+    for (key, uuid, session_uuid) in tqdm(zip(*vals), position=0, total=len(vals[0])):
         print(uuid)
         dj.Table._update(prob_sessions, 'session_uuid', uuid.bytes)
