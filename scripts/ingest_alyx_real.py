@@ -12,39 +12,25 @@ from ibl_pipeline.ingest import ephys as ephys_ingest
 from ibl_pipeline.ingest import histology as histology_ingest
 from ibl_pipeline import reference, subject, action, acquisition, data, ephys, histology
 from ingest_utils import copy_table
-import table_names as tables
+from table_names import *
 
 
 if __name__ == '__main__':
 
     dj.config['safemode'] = False
 
-    tables.init()
+    mods = [
+        [reference, reference_ingest, REF_TABLES],
+        [subject, subject_ingest, SUBJECT_TABLES],
+        [action, action_ingest, ACTION_TABLES],
+        [acquisition, acquisition_ingest, ACQUISITION_TABLES],
+        [data, data_ingest, DATA_TABLES]
+    ]
 
-    for table in tables.REF_TABLES:
-        print(table)
-        copy_table(reference, reference_ingest, table)
-
-
-    for table in tables.SUBJECT_TABLES:
-        print(table)
-        copy_table(subject, subject_ingest, table)
-
-
-    for table in tables.ACTION_TABLES:
-        print(table)
-        copy_table(action, action_ingest, table)
-
-
-    for table in tables.ACQUISITION_TABLES:
-        print(table)
-        copy_table(acquisition, acquisition_ingest, table)
-
-
-    for table in tables.DATA_TABLES:
-        print(table)
-        copy_table(data, data_ingest, table)
-
+    for (target, source, table_list) in mods:
+        for table in table_list:
+            print(table)
+            copy_table(target, source, table)
 
     # ephys tables
     table = 'ProbeModel'
