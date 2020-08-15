@@ -29,12 +29,7 @@ def get_alyx_entries(filename=None, models=None,
         exclude_list = exclude_list.union(set(exclude))
 
     if not filename:
-        dir_name = path.dirname(__file__)
-        if len(sys.argv) < 2:  # no arguments given
-            # if no argument given, assume a canonical file location and name
-            filename = path.join('/', 'data', 'alyxfull.json')
-        else:
-            filename = path.join(dir_name, sys.argv[1])
+        filename = path.join('/', 'data', 'alyxfull.json')
 
     with open(filename, 'r') as fid:
         keys_all = json.load(fid)
@@ -139,4 +134,11 @@ def insert_to_alyxraw(keys):
 
 
 if __name__ == '__main__':
-    insert_to_alyxraw(get_alyx_entries())
+
+    if len(sys.argv) < 2:  # no arguments given
+        # if no argument given, assume a canonical file location and name
+        filename = path.join('/', 'data', 'alyxfull.json')
+    else:
+        filename = path.join(dir_name, sys.argv[1])
+
+    insert_to_alyxraw(get_alyx_entries(filename))
