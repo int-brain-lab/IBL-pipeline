@@ -1,18 +1,41 @@
+#!/usr/bin/python3
+
 '''
 This script tests the ingestion of ephys pipeline.
-
 Shan Shen, 2019-11-20
+
+Added a number of plotting tables.
+Shan Shen, 2020-08-15
 '''
 
-from ibl_pipeline import subject, acquisition, behavior, ephys
-from ibl_pipeline.plotting import ephys as ephys_plotting
+from ibl_pipeline.common import *
 import logging
 import time
 
 import datetime
 from uuid import UUID
 
+EPHYS_TABLES = [
+    ephys.CompleteClusterSession,
+    ephys.DefaultCluster,
+    ephys.AlignedTrialSpikes,
+    ephys.GoodCluster,
+    ephys_analyses.DepthPeth,
+    ephys_analyses.NormedDepthPeth,
+    histology.ClusterBrainRegion,
+    histology.SessionBrainRegion,
+    ephys_plotting.DepthRaster,
+    ephys_plotting.DepthPeth,
+    ephys_plotting.Raster,
+    ephys_plotting.Psth,
+    ephys_plotting.SpikeAmpTime,
+    ephys_plotting.AutoCorrelogram,
+    ephys_plotting.Waveform,
+    ephys_plotting.DepthRasterExampleTrial,
+]
+
 if __name__ == '__main__':
+
     logging.basicConfig(
         format='%(asctime)s - %(message)s',
         handlers=[
@@ -22,49 +45,17 @@ if __name__ == '__main__':
 
     logger = logging.getLogger(__name__)
 
-    kargs = dict(display_progress=True, suppress_errors=True)
+    kwargs = dict(display_progress=True, suppress_errors=True)
 
     start_time = time.time()
 
-    logger.log(30, 'Ingesting CompleteClusterSession...')
-    ephys.CompleteClusterSession.populate(**kargs)
-
-    complete_cluster_time = time.time()
-    logger.log(30, 'Ingestion time of CompleteCluster {}'.format(
-        complete_cluster_time-start_time))
-
-    logger.log(30, 'Ingesting ChannelGroup...')
-    ephys.ChannelGroup.populate(**kargs)
-    channel_group_time = time.time()
-    logger.log(30, 'Ingestion time of ChannelGroup {}'.format(
-        channel_group_time-complete_cluster_time))
-
-    logger.log(30, 'Ingesting Cluster...')
-    ephys.DefaultCluster.populate(**kargs)
-    cluster_time = time.time()
-    logger.log(30, 'Ingestion time of Cluster {}'.format(
-        cluster_time-channel_group_time))
-
-    ephys.GoodCluster.populate(**kargs)
-
-    logger.log(30, 'Ingesting TrialSpikes...')
-    ephys.AlignedTrialSpikes.populate(**kargs)
-    trial_spikes_time = time.time()
-    logger.log(30, 'Ingestion time of TrialSpikes {}'.format(
-        trial_spikes_time-cluster_time))
-
-    logger.log(30, 'Ingesting plotting psth...')
-    ephys_plotting.Psth.populate(
-        **kargs)
-    psth_plotting_time = time.time()
-    logger.log(30, 'Ingestion time of PSTH {}'.format(
-        psth_plotting_time-trial_spikes_time))
-
-    logger.log(30, 'Ingesting plotting Raster...')
-    ephys_plotting.Raster.populate(**kargs)
-    raster_plotting_time = time.time()
-    logger.log(30, 'Ingestion time of Raster {}'.format(
-        raster_plotting_time-psth_plotting_time))
+    for table in EPHYS_TABLES:
+        table_start_time = time.time()
+        logger.log(30, 'Ingesting {}...'.format(table.__name__))
+        table.populate(**kwargs)
+        logger.log(30, 'Ingestion time of {} is {}'.format(
+            table.__name__,
+            time.time()-table_start_time))
 
     end_time = time.time()
     logger.log(30, 'Total ingestion time {}'.format(
