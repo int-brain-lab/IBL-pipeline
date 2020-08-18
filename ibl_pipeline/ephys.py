@@ -380,7 +380,7 @@ class AlignedTrialSpikes(dj.Computed):
             spike_times)
 
         trial_spks = []
-        for itrial, trial_key in tqdm(enumerate(trial_keys), position=0):
+        for itrial, trial_key in enumerate(trial_keys):
 
             trial_spk = dict(
                 **trial_key,
