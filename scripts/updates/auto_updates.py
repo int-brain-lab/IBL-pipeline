@@ -19,47 +19,49 @@ class UpdateError(dj.Manual):
 def get_ts_attr(table):
     return [attr for attr in table.heading.secondary_attributes if '_ts' in attr][0]
 
-# get the unique records
-records_for_updating = dj.U('table', 'attribute', 'pk_hash') & \
-                       (update.UpdateRecord & {'updated': False} &
-                        [{'table': 'ibl_pipeline.subject.Subject'}])
 
-updated_errors = []
-for r in records_for_updating.fetch('KEY'):
+if __name__ == '__main__':
+    # get the unique records
+    records_for_updating = dj.U('table', 'attribute', 'pk_hash') & \
+                        (update.UpdateRecord & {'updated': False} &
+                            [{'table': 'ibl_pipeline.subject.Subject'}])
 
-    current_record = records_for_updating & r
+    updated_errors = []
+    for r in records_for_updating.fetch('KEY'):
 
-    q = current_record.aggr(
-        (update.UpdateRecord & {'updated': False}), update_ts='max(update_ts)')
-    last_record = update.UpdateRecord & q
+        current_record = records_for_updating & r
 
-    pk_dict, table, attribute, updated_value, original_value, update_ts = last_record.fetch1(
-        'pk_dict', 'table', 'attribute', 'updated_value', 'original_value', 'update_ts')
+        q = current_record.aggr(
+            (update.UpdateRecord & {'updated': False}), update_ts='max(update_ts)')
+        last_record = update.UpdateRecord & q
 
-    key = last_record.fetch1('KEY')
+        pk_dict, table, attribute, updated_value, original_value, update_ts = last_record.fetch1(
+            'pk_dict', 'table', 'attribute', 'updated_value', 'original_value', 'update_ts')
 
-    table = eval(table)
+        key = last_record.fetch1('KEY')
 
-    try:
-        # update the current record
-        dj.Table._update(table & pk_dict, attribute, updated_value)
+        table = eval(table)
 
-        # update the updated status
-        dj.Table._update(last_record, 'updated', True)
+        try:
+            # update the current record
+            dj.Table._update(table & pk_dict, attribute, updated_value)
 
-        # update the timestamp of the field in the original table
-        attr_ts = get_ts_attr(table)
-        dj.Table._update(table & pk_dict, attr_ts, update_ts)
+            # update the updated status
+            dj.Table._update(last_record, 'updated', True)
 
-        print(f'Updated {pk_dict} field "{attribute}" from {original_value} to {updated_value}')
+            # update the timestamp of the field in the original table
+            attr_ts = get_ts_attr(table)
+            dj.Table._update(table & pk_dict, attr_ts, update_ts)
 
-    except BaseException as e:
-        if len(str(e)) > 255:
-            error_msg = str(e)[0:250]
-        else:
-            error_msg = str(e)
-        print(len(last_record))
-        UpdateError.insert1(
-            dict(**key,
-                 update_error_msg=error_msg))
-        print(f'Fail to update {pk_dict} field "{attribute}" from {original_value} to {updated_value}')
+            print(f'Updated {pk_dict} field "{attribute}" from {original_value} to {updated_value}')
+
+        except BaseException as e:
+            if len(str(e)) > 255:
+                error_msg = str(e)[0:250]
+            else:
+                error_msg = str(e)
+            print(len(last_record))
+            UpdateError.insert1(
+                dict(**key,
+                    update_error_msg=error_msg))
+            print(f'Fail to update {pk_dict} field "{attribute}" from {original_value} to {updated_value}')

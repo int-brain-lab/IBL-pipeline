@@ -36,11 +36,11 @@ def get_alyx_entries(filename=None, models=None):
                 if key['model'] not in
                 ['auth.group', 'sessions.session', 'authtoken.token',
                  'experiments.brainregion']]
-    elif isstring(models):
+    elif isinstance(models, str):
         return [key for key in keys_all if key['model'] == models]
 
-    elif type(models) in (list, np.darray):
-        return [key for key in keys_all if key['models'] in models]
+    elif isinstance(models, list):
+        return [key for key in keys_all if key['model'] in models]
     else:
         raise ValueError('models should be a str, list or numpy array')
 
@@ -52,7 +52,7 @@ def insert_to_alyxraw(keys):
     ib_part = InsertBuffer(alyxraw.AlyxRaw.Field)
 
     # insert into AlyxRaw table
-    for key in tqdm(keys):
+    for key in tqdm(keys, position=0):
         try:
             pk = uuid.UUID(key['pk'])
         except Exception:
@@ -69,7 +69,7 @@ def insert_to_alyxraw(keys):
         # print('Inserted remaining raw tuples')
 
     # insert into the part table AlyxRaw.Field
-    for ikey, key in tqdm(enumerate(keys)):
+    for ikey, key in tqdm(enumerate(keys), position=0):
         try:
             try:
                 pk = uuid.UUID(key['pk'])

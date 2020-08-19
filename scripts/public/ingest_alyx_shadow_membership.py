@@ -175,7 +175,7 @@ keys = (alyxraw.AlyxRaw & sessions_with_users).proj(
 
 session_user = InsertBuffer(acquisition.SessionUser)
 
-for key in tqdm(keys):
+for key in tqdm(keys, position=0):
 
     key['uuid'] = key['session_uuid']
 
@@ -217,7 +217,7 @@ keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
 
 session_procedure = InsertBuffer(acquisition.SessionProcedure)
 
-for key in tqdm(keys):
+for key in tqdm(keys, position=0):
     key['uuid'] = key['session_uuid']
     if not len(acquisition.Session & key):
         print('Session {} is not in the table acquisition.Session'.format(
@@ -254,7 +254,7 @@ keys = (alyxraw.AlyxRaw & sessions_with_projects).proj(
 
 session_project = InsertBuffer(acquisition.SessionProject)
 
-for key in tqdm(keys):
+for key in tqdm(keys, position=0):
     key['uuid'] = key['session_uuid']
     if not len(acquisition.Session & key):
         print('Session {} is not in the table acquisition.Session'.format(

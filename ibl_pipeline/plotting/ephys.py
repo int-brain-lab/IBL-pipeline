@@ -1064,7 +1064,8 @@ class DepthRasterExampleTrial(dj.Computed):
 
             trial_num = 3
 
-            for contrast in tqdm(dj.U('trial_signed_contrast') & trials_all):
+            for contrast in tqdm(dj.U('trial_signed_contrast') & trials_all,
+                                 position=0):
 
                 for cond in conditions:
                     trials_cond = (trials_all & cond & contrast).fetch()
@@ -1078,7 +1079,7 @@ class DepthRasterExampleTrial(dj.Computed):
                                     key, spikes_data, trial))
 
         else:
-            for trial_key in tqdm(trials_all.fetch('KEY')):
+            for trial_key in tqdm(trials_all.fetch('KEY'), position=0):
                 trial = (trials_all & trial_key).fetch1()
                 trial_type = self._get_trial_type(trial)
                 if trial_type:
@@ -1288,7 +1289,8 @@ class SpikeAmpTime(dj.Computed):
 
         for ikey, spike_times, spike_amps in tqdm(zip(keys,
                                                       clusters_spike_times,
-                                                      clusters_spike_amps)):
+                                                      clusters_spike_amps),
+                                                  position=0):
             fig = PngFigure(eplt.spike_amp_time,
                             data=dict(spike_times=spike_times,
                                       spike_amps=spike_amps*1e6),
@@ -1511,8 +1513,9 @@ class Waveform(dj.Computed):
             (ephys.DefaultCluster() & key).fetch(
                 'KEY', 'cluster_waveforms', 'cluster_waveforms_channels')
 
-        for ikey, waveforms, waveforms_channels in tqdm(zip(
-                keys, clusters_waveforms, clusters_waveforms_channels)):
+        for ikey, waveforms, waveforms_channels in tqdm(
+                zip(keys, clusters_waveforms, clusters_waveforms_channels),
+                position=0):
 
             # get channel locations
             channel_coords = (ephys.ChannelGroup() & ikey).fetch1(
