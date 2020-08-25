@@ -169,7 +169,7 @@ class OtherActionUser(dj.Manual):
     other_action_start_time:    datetime	# start time
     ---
     user_name:          varchar(255)
-    otheractiouser_ts=CURRENT_TIMESTAMP:   timestamp
+    otheractionuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 

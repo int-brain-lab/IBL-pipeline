@@ -76,7 +76,7 @@ class DepthPeth(dj.Computed):
         peth_list = []
         baseline_list = []
 
-        for i in tqdm(np.arange(len(bin_edges)) + 1):
+        for i in tqdm(np.arange(len(bin_edges)) + 1, position=0):
             f = spk_bin_ids == i
             spikes_ibin = spikes_times[f]
             spike_clusters = spikes_clusters[f]
@@ -97,10 +97,10 @@ class DepthPeth(dj.Computed):
                 peth_list.append(np.zeros_like(peths.tscale))
                 baseline_list.append(0)
 
-            key.update(depth_peth=np.vstack(peth_list),
-                       depth_baseline=np.array(baseline_list),
-                       time_bin_centers=peths.tscale)
-            self.insert1(key, skip_duplicates=True)
+        key.update(depth_peth=np.vstack(peth_list),
+                   depth_baseline=np.array(baseline_list),
+                   time_bin_centers=peths.tscale)
+        self.insert1(key, skip_duplicates=True)
 
 
 @schema

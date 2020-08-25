@@ -36,10 +36,14 @@ datapath = '/Data_shortcut/'
 
 # all mice that are alive, without those with undefined sex (i.e. example mice)
 # restrict to animals that have trial data, weights and water logged
+# allsubjects = pd.DataFrame.from_dict(
+#     ((subject.Subject - subject.Death) * subject.SubjectLab & 'sex!="U"' &
+#      action.Weighing & action.WaterAdministration).fetch(
+#          as_dict=True, order_by=['lab_name', 'subject_nickname']))
+
 allsubjects = pd.DataFrame.from_dict(
-    ((subject.Subject - subject.Death) * subject.SubjectLab & 'sex!="U"' &
-     action.Weighing & action.WaterAdministration).fetch(
-         as_dict=True, order_by=['lab_name', 'subject_nickname']))
+    ((subject.Subject &
+      'subject_nickname="KS014"') * subject.SubjectLab).fetch(as_dict=True))
 
 if allsubjects.empty:
     raise ValueError('DataJoint seems to be down, please try again later')
@@ -290,7 +294,7 @@ for lidx, lab in enumerate(users):
             fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.pdf' % (last_date,
                                                                     subjects.loc[subjects['subject_nickname'] == mouse]['lab_name'].item(),
                                                                     mouse)))
-
+            print('saving figure...')
             fig.savefig(os.path.join(path + '%s_%s_mouse_%s_snapshot.png' % (last_date,
                                                                             subjects.loc[
                                                                                 subjects['subject_nickname'] == mouse][
