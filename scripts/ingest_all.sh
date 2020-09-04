@@ -1,5 +1,6 @@
-
-
+date
+echo "Deleting alyx shadow tables for updates..."
+python delete_real_tables_for_updates.py
 date
 echo "Ingesting alyx raw..."
 python ingest_alyx_raw.py "$@"
