@@ -52,7 +52,7 @@ class Eye(dj.Imported):
             one.load(eID, dataset_types=['eye.area',
                                          'eye.blink',
                                          'eye.xypos',
-                                         'eye.timestamps'])
+                                         'eye.timestamps'], dry_run=True)
 
         eye_sample_ids = eye_timestamps[:, 0]
         eye_timestamps = eye_timestamps[:, 1]
@@ -124,7 +124,8 @@ class Wheel(dj.Imported):
         wheel_position, wheel_velocity, wheel_timestamps = \
             one.load(eID, dataset_types=['wheel.position',
                                          'wheel.velocity',
-                                         'wheel.timestamps'])
+                                         'wheel.timestamps'],
+                    dry_run=True)
 
         wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
 
@@ -183,7 +184,8 @@ class WheelMoveSet(dj.Imported):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         wheel_moves_intervals, wheel_moves_types = \
             one.load(eID, dataset_types=['wheelMoves.intervals',
-                                         'wheelMoves.type'])
+                                         'wheelMoves.type'],
+                     dry_run=True)
 
         wheel_moves_types = wheel_moves_types.columns
 
@@ -247,7 +249,8 @@ class SparseNoise(dj.Imported):
 
         sparse_noise_positions, sparse_noise_times = \
             one.load(eID, dataset_types=['sparseNoise.positions',
-                                         'sparseNoise.times'])
+                                         'sparseNoise.times'],
+                    dry_run=True)
 
         assert len(np.unique(np.array([len(sparse_noise_positions),
                                        len(sparse_noise_times)]))) == 1, \
@@ -279,7 +282,7 @@ class ExtraRewards(dj.Imported):
         eID = (acquisition.Session & key).fetch1('session_uuid')
 
         extra_rewards_times = \
-            one.load(eID, dataset_types=['extraRewards.times'])
+            one.load(eID, dataset_types=['extraRewards.times'], dry_run=True)
 
         key['extra_rewards_times'] = extra_rewards_times
 
@@ -309,7 +312,7 @@ class SpontaneousTimeSet(dj.Imported):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         spontaneous_intervals = \
-            one.load(eID, dataset_types=['spontaneous.intervals'])
+            one.load(eID, dataset_types=['spontaneous.intervals'], dry_run=True)
 
         key['spontaneous_time_total_num'] = len(spontaneous_intervals)
         self.insert1(key)
@@ -367,7 +370,8 @@ class Lick(dj.Imported):
         lick_times, lick_piezo_raw, lick_piezo_timestamps = \
             one.load(eID, dataset_types=['licks.times',
                                          'lickPiezo.raw',
-                                         'lickPiezo.timestamps'])
+                                         'lickPiezo.timestamps'],
+                     dry_run=True)
 
         lick_sample_ids = lick_piezo_timestamps[:, 0]
         lick_piezo_timestamps = lick_piezo_timestamps[:, 1]
@@ -426,11 +430,11 @@ class CompleteTrialSession(dj.Computed):
                 if lab_name == 'wittenlab':
                     stimOn_times = np.squeeze(one.load(
                             eID, dataset_types='trials.stimOn_times',
-                            clobber=True))
+                            clobber=True, dry_run=True))
                 else:
                     stimOn_times = one.load(
                         eID, dataset_types='trials.stimOn_times',
-                        clobber=True)
+                        clobber=True, dry_run=True)
 
                 if stimOn_times is not None and len(stimOn_times):
                     if (len(stimOn_times)==1 and stimOn_times[0] is None) or \
@@ -669,7 +673,7 @@ class SessionDelay(dj.Imported):
 
     def make(self, key):
         eID = (acquisition.Session & key).fetch1('session_uuid')
-        data = one.load(str(eID), dataset_types=['_iblrig_taskData.raw'])
+        data = one.load(str(eID), dataset_types=['_iblrig_taskData.raw'], dry_run=True)
         trial_start, trial_end = (TrialSet.Trial & key & 'trial_id=1').fetch1(
             'trial_start_time', 'trial_end_time')
         first_trial_duration = trial_end - trial_start
@@ -716,7 +720,7 @@ class Settings(dj.Imported):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         try:
             setting = one.load(eID, dataset_types='_iblrig_taskSettings.raw',
-                               clobber=True)
+                               clobber=True, dry_run=True)
         except Exception as e:
             key['error_type'] = 'settings not available'
             SettingsAvailability.insert1(key, allow_direct_insert=True)
@@ -757,7 +761,7 @@ class AmbientSensorData(dj.Imported):
         trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         asd = one.load(eID, dataset_types='_iblrig_ambientSensorData.raw',
-                       clobber=True)
+                       clobber=True, dry_run=True)
 
         if not len(TrialSet.Trial & key) == len(asd[0]):
             print('Size of ambient sensor data does not match the trial number')
@@ -796,7 +800,7 @@ class PassiveTrialSet(dj.Imported):
             one.load(eID, dataset_types=['passiveTrials.contrastLeft',
                                          'passiveTrials.contrastRight',
                                          'passiveTrials.times'],
-                     clobber=True)
+                     clobber=True, dry_run=True)
 
         assert len(np.unique(np.array([len(passive_visual_stim_contrast_left),
                                        len(passive_visual_stim_contrast_right),
@@ -870,6 +874,6 @@ class PassiveRecordings(dj.Imported):
             one.load(eID, dataset_types=['passiveBeeps.times',
                                          'passiveValveClicks.times',
                                          'passiveWhiteNoise.times'],
-                     clobber=True)
+                     clobber=True, dry_run=True)
 
         self.insert1(key)
