@@ -432,12 +432,17 @@ class CompleteTrialSession(dj.Computed):
                         eID, dataset_types='trials.stimOn_times',
                         clobber=True)
 
-                if np.all(np.isnan(stimOn_times)):
-                    key['stim_on_times_status'] = 'Missing'
-                elif np.any(np.isnan(stimOn_times)):
-                    key['stim_on_times_status'] = 'Partial'
+                if stimOn_times is not None and len(stimOn_times):
+                    if (len(stimOn_times)==1 and stimOn_times[0] is None) or \
+                            np.all(np.isnan(np.array(stimOn_times))):
+                        key['stim_on_times_status'] = 'Missing'
+                    elif np.any(np.isnan(np.array(stimOn_times))):
+                        key['stim_on_times_status'] = 'Partial'
+                    else:
+                        key['stim_on_times_status'] = 'Complete'
                 else:
-                    key['stim_on_times_status'] = 'Complete'
+                    key['stim_on_times_status'] = 'Missing'
+
 
             if '_ibl_trials.repNum.npy' not in datasets:
                 key['rep_num_status'] = 'Missing'
@@ -516,10 +521,10 @@ class TrialSet(dj.Imported):
             ]
 
         files = one.load(
-            eID, dataset_types=dtypes, download_only=True, clobber=True)
+            eID, dataset_types=dtypes, download_only=True, clobber=True, dry_run=True)
         ses_path = alf.io.get_session_path(files[0])
         trials = alf.io.load_object(
-            ses_path.joinpath('alf'), '_ibl_trials')
+            ses_path.joinpath('alf'), 'trials')
 
         status = (CompleteTrialSession & key).fetch1()
 
