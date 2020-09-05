@@ -1,7 +1,7 @@
 import datajoint as dj
 from ibl_pipeline.ingest import alyxraw, data
 from ibl_pipeline.ingest import subject, action, acquisition, ephys
-
+from tqdm import tqdm
 
 if __name__ == '__main__':
 
@@ -12,7 +12,7 @@ if __name__ == '__main__':
     file_record_fields = alyxraw.AlyxRaw.Field & \
         'fname = "exists"' & 'fvalue = "False"'
 
-    for key in file_record_fields:
+    for key in tqdm(file_record_fields):
         (alyxraw.AlyxRaw.Field & key).delete_quick()
 
     # delete water tables and related alyxraw entries
