@@ -9,7 +9,7 @@ from . import reference, subject, acquisition, data
 try:
     from oneibl.one import ONE
     import alf.io
-    one = ONE()
+    one = ONE(silent=True)
 except ImportError:
     warnings.warn('ONE not installed, cannot use populate')
     pass
@@ -496,8 +496,8 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    if not environ.get('MODE') == 'test':
-        key_source = acquisition.Session & CompleteTrialSession
+    # if not environ.get('MODE') == 'test':
+    key_source = acquisition.Session & CompleteTrialSession
 
     def make(self, key):
 
