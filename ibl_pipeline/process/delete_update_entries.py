@@ -1,5 +1,5 @@
 '''
-This module delete the entries from alyxraw, shadow tables and update real tables
+This module delete the entries from alyxraw, shadow membership_tables and update real membership_tables
 '''
 import datajoint as dj
 from ibl_pipeline.process.ingest_membership import membership_tables
@@ -10,37 +10,36 @@ from ibl_pipeline.ingest import ingest_utils
 from ibl_pipeline import update
 from uuid import UUID
 from tqdm import tqdm
+import pdb
+from ibl_pipeline.utils import is_valid_uuid
+from ibl_pipeline.process import get_important_pks
 
 
-# ====================================== functions for deletion ===================================
-
-def is_valid_uuid(uuid):
-    try:
-        UUID(uuid)
-        return True
-    except ValueError:
-        return False
-
-
-def delete_entries_from_alyxraw(pks_to_be_deleted):
+# ====================================== functions for deletion ==================================
+def delete_entries_from_alyxraw(pks_to_be_deleted, modified_pks_important):
     '''
-    Delete entries from alyxraw and shadow tables, excluding the membership table.
+    Delete entries from alyxraw and shadow membership_tables, excluding the membership table.
     '''
-    # TODO: this function to be tested
-    print('Deleting entries from alyxraw ...')
 
-    main_buffer = alyxraw.AlyxRaw
+    print('Deleting alyxraw entries corresponding to file records...')
+    if len(pks_to_be_deleted) > 2000:
+        file_record_fields = alyxraw.AlyxRaw.Field & \
+            'fname = "exists"' & 'fvalue = "false"'
+    else:
+        file_record_fields = alyxraw.AlyxRaw.Field & \
+            'fname = "exists"' & 'fvalue = "false"' & \
+                [{'uuid': pk} for pk in pks_to_be_deleted]
 
-    for pk in tqdm(pks_to_be_deleted, position=0):
-        if is_valid_uuid(pk):
-            main_buffer.delete1({'uuid': pk})
-            main_buffer.flush_delete(skip_duplicates=True, chunksz=50)
+    for key in tqdm(file_record_fields):
+        (alyxraw.AlyxRaw.Field & key).delete_quick()
 
-    main_buffer.flush_delete()
+    print('Deleting modified and deleted records...')
+    (alyxraw.AlyxRaw & [{'uuid': pk} for pk in modified_pks_important]).delete()
+
 
 def delete_entries_from_membership(pks_to_be_deleted):
     '''
-    Delete entries from shadow membership tables
+    Delete entries from shadow membership membership_tables
     '''
     for t in membership_tables:
         ingest_mod = t['dj_parent_table'].__module__
@@ -116,15 +115,18 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
 
         if not shadow_table & r:
             try:
+                real_record = (real_table & r).fetch1()
                 (real_table & r).delete()
                 if insert_to_table:
                     delete_record = dict(
                         table=real_table.__module__ + '.' + real_table.__name__,
                         pk_hash=pk_hash,
+                        pk_dict=r,
                         original_ts=real_record[ts_field],
                         deleted=1,
                     )
-                    update.DeleteRecord.insert1(delete_record)
+                    update.DeletionRecord.insert1(delete_record)
+                    print('Deleted record. {}'.format(r))
             except BaseException as e:
                 print(f'Error while deleting record {r}: {str(e)}')
 
@@ -162,6 +164,7 @@ def update_entries_from_real_tables(modified_pks):
 
     for table in TABLES_TO_UPDATE:
 
+        print('Updating {}...'.format(table['table_name']))
         t = table.copy()
         table = getattr(t['real_schema'], t['table_name'])
 
@@ -171,7 +174,9 @@ def update_entries_from_real_tables(modified_pks):
             uuid_field = [f for f in table.heading.secondary_attributes
                             if '_uuid' in f and 'subject' not in f][0]
 
-        query = table & [{uuid_field: pk} for pk in modified_pks if is_valid_uuid(pk)]
+        pks_important = get_important_pks(modified_pks)
+
+        query = table & [{uuid_field: pk} for pk in pks_important]
 
         if query:
             members = t.pop('members')
@@ -190,8 +195,8 @@ if __name__ == '__main__':
 
     dj.config['safemode'] = False
 
-deleted_pks, modified_pks = (job.Job & 'job_date="2020-09-03"').fetch1(
-    'deleted_keys', 'modified_keys'
-)
-# delete_entries_from_membership(deleted_pks+modified_pks)
-update_entries_from_real_tables(modified_pks)
+    deleted_pks, modified_pks, modified_pks_important = \
+        (job.Job & 'job_date="2020-09-04"').fetch1(
+            'deleted_pks', 'modified_pks', 'modified_pks_important')
+    # delete_entries_from_membership(deleted_pks+modified_pks)
+    delete_entries_from_alyxraw(deleted_pks+modified_pks, modified_pks_important)

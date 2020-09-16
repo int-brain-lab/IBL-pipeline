@@ -8,6 +8,8 @@ import json
 import uuid
 from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data
 from ibl_pipeline.ingest import get_raw_field as grf
+from ibl_pipeline.utils import is_valid_uuid
+
 
 
 membership_tables = [
@@ -185,7 +187,7 @@ def ingest_membership_table(dj_current_table,
                                 default is None if all entries are inserted.
     '''
     if new_pks:
-        restr = [{'uuid': pk} for pk in new_pks]
+        restr = [{'uuid': pk} for pk in new_pks if is_valid_uuid(pk)]
     else:
         restr = {}
 

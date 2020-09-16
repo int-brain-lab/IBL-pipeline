@@ -108,11 +108,7 @@ def copy_table(target_schema, src_schema, table_name, fresh=False, **kwargs):
                     print("Error when inserting {}".format(t))
                     traceback.print_exc()
 
-
-if __name__ == '__main__':
-
-    dj.config['safemode'] = False
-
+def main():
     mods = [
         [reference, reference_ingest, REF_TABLES],
         [subject, subject_ingest, SUBJECT_TABLES],
@@ -142,3 +138,8 @@ if __name__ == '__main__':
     print('ChannelBrainLocation')
     copy_table(histology, histology_ingest, 'ChannelBrainLocation',
             allow_direct_insert=True)
+
+if __name__ == '__main__':
+
+    dj.config['safemode'] = False
+    main()
