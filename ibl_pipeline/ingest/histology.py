@@ -45,7 +45,7 @@ class ProbeTrajectory(dj.Imported):
     trajectory_ts:              datetime
     """
 
-    key_source = (alyxraw.AlyxRaw & 'model="experiments.trajectoryestimate"').proj(
+    key_source = (alyxraw.AlyxRaw - alyxraw.ProblematicData & 'model="experiments.trajectoryestimate"').proj(
         probe_trajectory_uuid='uuid')
 
     def make(self, key):
@@ -87,8 +87,12 @@ class ProbeTrajectory(dj.Imported):
                 (reference.CoordinateSystem &
                  {'coordinate_system_uuid': coord_uuid}).fetch1(
                     'coordinate_system_name')
-
+        # try:
         self.insert1(key_traj)
+        # except ValueError:
+        #     alyxraw.ProblematicData.insert1(
+        #         {'uuid': key_traj['probe_trajectory_uuid']}
+        #     )
 
 
 @schema

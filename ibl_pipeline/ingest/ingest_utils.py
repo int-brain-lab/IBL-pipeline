@@ -2,6 +2,9 @@
 Utility functions for ingestion
 '''
 import traceback
+import json
+import gzip
+import time
 
 
 def copy_table(target_schema, src_schema, table_name, fresh=False, **kwargs):
@@ -14,7 +17,7 @@ def copy_table(target_schema, src_schema, table_name, fresh=False, **kwargs):
         try:
             target_table.insert(src_table - target_table.proj(),
                                 skip_duplicates=True, **kwargs)
-        except Exception as e:
+        except Exception:
             for t in (src_table - target_table.proj()).fetch(as_dict=True):
                 try:
                     if table_name == 'DataSet' and \
