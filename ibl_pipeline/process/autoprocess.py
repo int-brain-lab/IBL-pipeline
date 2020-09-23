@@ -5,7 +5,8 @@ from ibl_pipeline.process import (
     ingest_membership,
     ingest_shadow,
     ingest_real,
-    populate_behavior
+    populate_behavior,
+    get_timezone
 )
 from ibl_pipeline.ingest import job
 from os import path
@@ -15,6 +16,7 @@ import time
 
 def process_all():
     pass
+
 
 def ingest_status(job_key, task, start, end):
 
@@ -28,6 +30,7 @@ def ingest_status(job_key, task, start, end):
         ),
         skip_duplicates=True
     )
+
 
 def process_new(previous_dump=None, latest_dump=None,
                 job_date=datetime.date.today().strftime('%Y-%m-%d'),
@@ -53,14 +56,18 @@ def process_new(previous_dump=None, latest_dump=None,
 
     print('Deleting modified entries from alyxraw and shadow tables...')
     start = datetime.datetime.now()
+
     delete_update_entries.delete_entries_from_alyxraw(
-        modified_pks+deleted_pks, modified_pks_important)
+        modified_pks, modified_pks_important)
+
     ingest_status(job_key, 'Delete alyxraw', start, end=datetime.datetime.now())
 
+    print('Deleting modified entries from membership tables...')
     start = datetime.datetime.now()
     delete_update_entries.delete_entries_from_membership(
-        modified_pks_important+deleted_pks)
-    ingest_status(job_key, 'Delete shadow membership', start, end=datetime.datetime.now())
+        modified_pks_important)
+    ingest_status(job_key, 'Delete shadow membership', start,
+                  end=datetime.datetime.now())
 
     print('Ingesting into alyxraw...')
     start = datetime.datetime.now()
@@ -77,7 +84,8 @@ def process_new(previous_dump=None, latest_dump=None,
     print('Ingesting into shadow membership tables...')
     start = datetime.datetime.now()
     ingest_membership.main(created_pks+modified_pks_important)
-    ingest_status(job_key, 'Ingest shadow membership', start, end=datetime.datetime.now())
+    ingest_status(job_key, 'Ingest shadow membership', start,
+                  end=datetime.datetime.now())
 
     print('Ingesting alyx real...')
     start = datetime.datetime.now()
@@ -93,8 +101,11 @@ def process_new(previous_dump=None, latest_dump=None,
     print('Ingesting behavior...')
     start = datetime.datetime.now()
     populate_behavior.main(backtrack_days=12)
-    ingest_status(job_key, 'Populate behavior', start, end=datetime.datetime.now())
+    ingest_status(job_key, 'Populate behavior', start,
+                  end=datetime.datetime.now())
+
 
 if __name__ == '__main__':
-    process_new('/data/alyxfull_0908.json', '/data/alyxfull_0909.json',
-                job_date='2020-09-09', timezone='EST')
+    process_new(previous_dump='/data/alyxfull_0914.json',
+                latest_dump='/data/alyxfull_0915.json',
+                job_date='2020-09-15', timezone='EST')
