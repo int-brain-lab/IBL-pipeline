@@ -44,5 +44,9 @@ if os.environ.get('MODE') != 'public':
             secret_key=secret_key,
             bucket='ibl-dj-external',
             location='/plotting'
+        ),
+        'ephys_local': dict(
+            protocol='file',
+            location='/data/ephys'
         )
     }
