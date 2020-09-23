@@ -16,13 +16,14 @@ from ibl_pipeline.process import get_important_pks
 
 
 # ====================================== functions for deletion ==================================
+
 def delete_entries_from_alyxraw(pks_to_be_deleted, modified_pks_important):
     '''
     Delete entries from alyxraw and shadow membership_tables, excluding the membership table.
     '''
 
     print('Deleting alyxraw entries corresponding to file records...')
-    if len(pks_to_be_deleted) > 2000:
+    if len(pks_to_be_deleted) > 5000:
         file_record_fields = alyxraw.AlyxRaw.Field & \
             'fname = "exists"' & 'fvalue = "false"'
     else:
@@ -33,8 +34,8 @@ def delete_entries_from_alyxraw(pks_to_be_deleted, modified_pks_important):
     for key in tqdm(file_record_fields):
         (alyxraw.AlyxRaw.Field & key).delete_quick()
 
-    print('Deleting modified and deleted records...')
-    (alyxraw.AlyxRaw & [{'uuid': pk} for pk in modified_pks_important]).delete()
+    (alyxraw.AlyxRaw & [{'uuid': pk} for pk in modified_pks_important
+                        if is_valid_uuid(pk)]).delete()
 
 
 def delete_entries_from_membership(pks_to_be_deleted):
@@ -90,6 +91,7 @@ TABLES_TO_UPDATE = [
      'members': ['SessionUser', 'SessionProject']
     }
 ]
+
 
 def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=False):
     '''

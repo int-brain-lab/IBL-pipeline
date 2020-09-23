@@ -191,7 +191,8 @@ def ingest_membership_table(dj_current_table,
     else:
         restr = {}
 
-    alyxraw_to_insert = alyxraw.AlyxRaw & restr & {'model': alyx_parent_model}
+    alyxraw_to_insert = (alyxraw.AlyxRaw & restr &
+                         {'model': alyx_parent_model}).fetch('KEY')
 
     if not alyxraw_to_insert:
         return
