@@ -509,7 +509,12 @@ class Caging(dj.Computed):
         key_cage['cage_name'] = grf(key, 'cage')
         json_content = grf(key, 'json')
         if json_content != 'None':
-            json_dict = json.loads(json_content)
+            try:
+                json_dict = json.loads(json_content)
+            except json.decoder.JSONDecodeError:
+                json_content = json_content.replace("\'", "\"")
+                json_dict = json.loads(json_content)
+
             history = json_dict['history']
             if 'cage' not in history:
                 self.insert1(key_cage, skip_duplicates=True)
