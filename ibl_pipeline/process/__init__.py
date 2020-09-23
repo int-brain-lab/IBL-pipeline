@@ -1,6 +1,17 @@
 from ibl_pipeline.ingest import alyxraw
 from ibl_pipeline.utils import is_valid_uuid
+import datetime
 
+def get_timezone(t=datetime.datetime.now().time()):
+    if t < datetime.time(8, 30):
+        timezone = 'European'
+    elif t > datetime.time(8, 30) and t < datetime.time(10, 30):
+        timezone = 'EST'
+    elif t > datetime.time(10, 30) and t < datetime.time(14, 30):
+        timezone = 'PST'
+    else:
+        timezone = 'other'
+    return timezone
 
 def get_important_pks(pks, return_original_dict=False):
     '''
