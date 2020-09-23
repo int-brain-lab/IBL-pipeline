@@ -13,6 +13,7 @@ from tqdm import tqdm
 import pdb
 from ibl_pipeline.utils import is_valid_uuid
 from ibl_pipeline.process import get_important_pks
+import datetime
 
 
 # ====================================== functions for deletion ==================================
@@ -108,7 +109,7 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
 
     secondary_fields = set(real_table.heading.secondary_attributes)
     ts_field = [f for f in secondary_fields
-                  if '_ts' in f][0]
+                if '_ts' in f][0]
     fields_to_update = secondary_fields - {ts_field}
 
     for r in (real_table & pks).fetch('KEY'):
@@ -116,33 +117,38 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
         pk_hash = UUID(dj.hash.hash_key_values(r))
 
         if not shadow_table & r:
-            try:
-                real_record = (real_table & r).fetch1()
-                (real_table & r).delete()
-                if insert_to_table:
-                    delete_record = dict(
-                        table=real_table.__module__ + '.' + real_table.__name__,
-                        pk_hash=pk_hash,
-                        pk_dict=r,
-                        original_ts=real_record[ts_field],
-                        deleted=1,
-                    )
-                    update.DeletionRecord.insert1(delete_record)
-                    print('Deleted record. {}'.format(r))
-            except BaseException as e:
-                print(f'Error while deleting record {r}: {str(e)}')
+            real_record = (real_table & r).fetch1()
+            if insert_to_table:
+                update_record = dict(
+                    table=real_table.__module__ + '.' + real_table.__name__,
+                    attribute='unknown',
+                    pk_hash=pk_hash,
+                    original_ts=real_record[ts_field],
+                    update_ts=datetime.datetime.now(),
+                    pk_dict=r,
+                )
+                update.UpdateRecord.insert1(update_record)
+                update_record.pop('pk_dict')
 
+                update_error_msg = 'Record does not exist in the shadow {}'.format(r)
+                update_record_error = dict(
+                    **update_record,
+                    update_action_ts=datetime.datetime.now(),
+                    update_error_msg=update_error_msg
+                )
+                update.UpdateError.insert1(update_record_error)
+
+            print(update_error_msg)
             continue
 
         shadow_record = (shadow_table & r).fetch1()
         real_record = (real_table & r).fetch1()
 
-
         for f in fields_to_update:
             if real_record[f] != shadow_record[f]:
                 try:
                     dj.Table._update(real_table & r, f, shadow_record[f])
-                    update_narrative=f'{table_name}.{f}: {shadow_record[f]} != {real_record[f]}'
+                    update_narrative = f'{table_name}.{f}: {shadow_record[f]} != {real_record[f]}'
                     print(update_narrative)
                     if insert_to_table:
                         update_record = dict(

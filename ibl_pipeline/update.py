@@ -28,6 +28,16 @@ class UpdateRecord(dj.Manual):
 
 
 @schema
+class UpdateError(dj.Manual):
+    definition = """
+    -> UpdateRecord
+    update_action_ts=CURRENT_TIMESTAMP  : timestamp   # time stamp of the update error
+    ---
+    update_error_msg:     varchar(255)
+    """
+
+
+@schema
 class DeletionRecord(dj.Manual):
     definition = """
     table:              varchar(64)
