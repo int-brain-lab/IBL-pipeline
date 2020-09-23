@@ -83,12 +83,16 @@ class InsertBuffer(object):
     def __init__(self, rel):
         self._rel = rel
         self._queue = []
+        self._delete_queue = []
 
     def insert1(self, r):
         self._queue.append(r)
 
     def insert(self, recs):
         self._queue += recs
+
+    def delete1(self, r):
+        self._delete_queue.append(r)
 
     def flush(self, replace=False, skip_duplicates=False,
               ignore_extra_fields=False, allow_direct_insert=False, chunksz=1):
@@ -114,6 +118,28 @@ class InsertBuffer(object):
                     except Exception as e:
                         print('error in flush: {}'.format(e))
             self._queue.clear()
+            return qlen
+        else:
+            return 0
+
+    def flush_delete(self, chunksz=1):
+        '''
+        flush the buffer
+        XXX: ignore_extra_fields na, requires .insert() support
+        '''
+
+        qlen = len(self._delete_queue)
+        if qlen > 0 and qlen % chunksz == 0:
+            try:
+                (self._rel & self._delete_queue).delete()
+            except Exception as e:
+                print('error in flush delete: {}, trying deletion one by one'.format(e))
+                for t in self._delete_queue:
+                    try:
+                        (self._rel & self._delete_queue).delete()
+                    except Exception as e:
+                        print('error in flush delete: {}'.format(e))
+            self._delete_queue.clear()
             return qlen
         else:
             return 0

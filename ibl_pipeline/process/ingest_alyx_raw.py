@@ -18,9 +18,8 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-
 def get_alyx_entries(filename=None, models=None,
-                     exclude=None):
+                     exclude=None, new_pks=None):
 
     exclude_list = {'auth.group', 'sessions.session',
                     'authtoken.token',
@@ -34,13 +33,23 @@ def get_alyx_entries(filename=None, models=None,
     with open(filename, 'r') as fid:
         keys_all = json.load(fid)
 
+    print('Creating entries to insert into alyxraw...')
     if not models:
-        return [key for key in keys_all if key['model'] not in exclude_list]
+        if new_pks:
+            return [key for key in tqdm(keys_all) if key['model'] not in exclude_list and key['pk'] in new_pks]
+        else:
+            return [key for key in keys_all if key['model'] not in exclude_list]
     elif isinstance(models, str):
-        return [key for key in keys_all if key['model'] == models]
+        if new_pks:
+            return [key for key in keys_all if key['model'] == models and key['pk'] in new_pks]
 
+        else:
+            return [key for key in keys_all if key['model'] == models]
     elif isinstance(models, list):
-        return [key for key in keys_all if key['model'] in models]
+        if new_pks:
+            return [key for key in keys_all if key['model'] in models and key['pk'] in new_pks]
+        else:
+            return [key for key in keys_all if key['model'] in models]
     else:
         raise ValueError('models should be a str, list or numpy array')
 
@@ -141,4 +150,9 @@ if __name__ == '__main__':
     else:
         filename = path.join(dir_name, sys.argv[1])
 
-    insert_to_alyxraw(get_alyx_entries(filename))
+    new_pks_file = path.join('/', 'data', 'created_pks.json')
+
+    with open(new_pks_file, 'r') as fid:
+        new_pks = json.load(fid)
+
+    insert_to_alyxraw(get_alyx_entries(filename, new_pks=new_pks))

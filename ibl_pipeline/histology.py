@@ -22,6 +22,7 @@ else:
 @schema
 class InsertionDataSource(dj.Lookup):
     definition = """
+    # Method to estimate the probe trajectory, including Ephys aligned histology track, Histology track, Micro-manipulator, and Planned
     insertion_data_source:    varchar(128)     # type of trajectory
     ---
     provenance:         int             # provenance code
@@ -37,7 +38,7 @@ class InsertionDataSource(dj.Lookup):
 @schema
 class ProbeTrajectory(dj.Imported):
     definition = """
-    # data imported from probes.trajectory
+    # Probe trajectory estimated with each method, ingested from Alyx table experiments.probetrajectory
     -> ephys.ProbeInsertion
     -> InsertionDataSource
     ---
@@ -69,6 +70,7 @@ class ProbeTrajectory(dj.Imported):
 @schema
 class ChannelBrainLocation(dj.Imported):
     definition = """
+    # Brain coordinates and region assignment of each channel, ingested from Alyx table experiments.channel
     -> ProbeTrajectory
     channel_brain_location_uuid    : uuid
     ---
@@ -84,6 +86,7 @@ class ChannelBrainLocation(dj.Imported):
 @schema
 class ClusterBrainRegion(dj.Computed):
     definition = """
+    # Brain region assignment to each cluster
     -> ephys.DefaultCluster
     -> InsertionDataSource
     ---
@@ -119,6 +122,7 @@ class ClusterBrainRegion(dj.Computed):
 @schema
 class SessionBrainRegion(dj.Computed):
     definition = """
+    # Brain regions assignment to each session, including the regions of finest granularity and their upper-level areas.
     -> acquisition.Session
     -> reference.BrainRegion
     """
@@ -138,6 +142,7 @@ class SessionBrainRegion(dj.Computed):
 @schema
 class DepthBrainRegion(dj.Computed):
     definition = """
+    # For each ProbeTrajectory, assign depth boundaries relative to the probe tip to each brain region covered by the trajectory
     -> ProbeTrajectory
     ---
     region_boundaries   : blob

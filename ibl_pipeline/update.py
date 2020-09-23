@@ -3,7 +3,7 @@ schema for update records
 '''
 import datajoint as dj
 
-schema = dj.schema('ibl_update')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_update')
 
 
 @schema
@@ -24,6 +24,16 @@ class UpdateRecord(dj.Manual):
     user_email='alyx@internationalbrainlab.org':         varchar(128)
     notified=0:         boolean
     updated=0:          boolean
+    """
+
+
+@schema
+class UpdateError(dj.Manual):
+    definition = """
+    -> UpdateRecord
+    update_action_ts=CURRENT_TIMESTAMP  : timestamp   # time stamp of the update error
+    ---
+    update_error_msg:     varchar(255)
     """
 
 

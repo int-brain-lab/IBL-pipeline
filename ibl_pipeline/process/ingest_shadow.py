@@ -7,7 +7,7 @@ import uuid
 from tqdm import tqdm
 
 
-shadow_tables = [
+SHADOW_TABLES = [
     reference.Lab,
     reference.LabMember,
     reference.LabMembership,
@@ -54,16 +54,16 @@ shadow_tables = [
 
 ]
 
-if __name__ == '__main__':
+def main():
     kwargs = dict(
         display_progress=True,
         suppress_errors=True)
 
-    for t in shadow_tables:
+    for t in SHADOW_TABLES:
         print(f'Ingesting shadow table {t.__name__}...')
         t.populate(**kwargs)
 
-    # ingest dataset entries
+    print('Ingesting dataset entries...')
     key_source = (alyxraw.AlyxRaw & 'model="data.dataset"').proj(
         dataset_uuid="uuid") - data.DataSet
 
@@ -147,7 +147,7 @@ if __name__ == '__main__':
         print('Inserted all remaining dataset tuples')
 
 
-    # ingest file record entries
+    print('Ingesting file record entries...')
     records = alyxraw.AlyxRaw & 'model="data.filerecord"'
     repos = (data.DataRepository & 'repo_name LIKE "flatiron%"').fetch(
         'repo_uuid')
@@ -191,3 +191,7 @@ if __name__ == '__main__':
 
     if file_record.flush(skip_duplicates=True, allow_direct_insert=True):
         print('Inserted all remaining file record tuples')
+
+
+if __name__ == '__main__':
+    main()

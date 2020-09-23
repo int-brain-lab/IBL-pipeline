@@ -29,8 +29,10 @@ SESSION_TABLES = [
     'ephys.GoodCluster',
     'ephys.AlignedTrialSpikes',
     'histology.ClusterBrainRegion',
+    'ephys.ChannelGroup',
     'ephys.DefaultCluster.Ks2Label',
     'ephys.DefaultCluster.Metrics',
+    'ephys.DefaultCluster.Metric',
     'ephys.DefaultCluster',
     'ephys.CompleteClusterSession',
     'behavior_plotting.SessionPsychCurve',
@@ -285,7 +287,7 @@ class Run(dj.Manual):
         if self & key:
             dj.Table._update(self & key, 'job_status', job_status)
         else:
-            self.insert1(key)
+            self.insert1(dict(**key, job_status=job_status))
 
     def populate(self, *restrictions, level='New', display_progress=False):
 

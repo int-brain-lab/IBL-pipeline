@@ -1,8 +1,8 @@
 '''
-This module delete the entries from alyxraw, shadow tables and update real tables
+This module delete the entries from alyxraw, shadow membership_tables and update real membership_tables
 '''
 import datajoint as dj
-from ibl_pipeline.ingest.ingest_membership import membership_tables
+from ibl_pipeline.process.ingest_membership import membership_tables
 from ibl_pipeline.common import *
 from ibl_pipeline.ingest.common import *
 from ibl_pipeline.ingest import job, InsertBuffer
@@ -10,37 +10,38 @@ from ibl_pipeline.ingest import ingest_utils
 from ibl_pipeline import update
 from uuid import UUID
 from tqdm import tqdm
+import pdb
+from ibl_pipeline.utils import is_valid_uuid
+from ibl_pipeline.process import get_important_pks
+import datetime
 
 
-# ====================================== functions for deletion ===================================
+# ====================================== functions for deletion ==================================
 
-def is_valid_uuid(uuid):
-    try:
-        UUID(uuid)
-        return True
-    except ValueError:
-        return False
-
-
-def delete_entries_from_alyxraw(pks_to_be_deleted):
+def delete_entries_from_alyxraw(pks_to_be_deleted, modified_pks_important):
     '''
-    Delete entries from alyxraw and shadow tables, excluding the membership table.
+    Delete entries from alyxraw and shadow membership_tables, excluding the membership table.
     '''
-    # TODO: this function to be tested
-    print('Deleting entries from alyxraw ...')
 
-    main_buffer = alyxraw.AlyxRaw
+    print('Deleting alyxraw entries corresponding to file records...')
+    if len(pks_to_be_deleted) > 5000:
+        file_record_fields = alyxraw.AlyxRaw.Field & \
+            'fname = "exists"' & 'fvalue = "false"'
+    else:
+        file_record_fields = alyxraw.AlyxRaw.Field & \
+            'fname = "exists"' & 'fvalue = "false"' & \
+                [{'uuid': pk} for pk in pks_to_be_deleted]
 
-    for pk in tqdm(pks_to_be_deleted, position=0):
-        if is_valid_uuid(pk):
-            main_buffer.delete1({'uuid': pk})
-            main_buffer.flush_delete(skip_duplicates=True, chunksz=50)
+    for key in tqdm(file_record_fields):
+        (alyxraw.AlyxRaw.Field & key).delete_quick()
 
-    main_buffer.flush_delete()
+    (alyxraw.AlyxRaw & [{'uuid': pk} for pk in modified_pks_important
+                        if is_valid_uuid(pk)]).delete()
+
 
 def delete_entries_from_membership(pks_to_be_deleted):
     '''
-    Delete entries from shadow membership tables
+    Delete entries from shadow membership membership_tables
     '''
     for t in membership_tables:
         ingest_mod = t['dj_parent_table'].__module__
@@ -92,6 +93,7 @@ TABLES_TO_UPDATE = [
     }
 ]
 
+
 def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=False):
     '''
     Given a table and the primary key of real table, update all the fields that have discrepancy.
@@ -106,20 +108,48 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
     shadow_table = getattr(shadow_schema, table_name)
 
     secondary_fields = set(real_table.heading.secondary_attributes)
-    ts_field = [f for f in all_fields
-                  if '_ts' in f][0]
+    ts_field = [f for f in secondary_fields
+                if '_ts' in f][0]
     fields_to_update = secondary_fields - {ts_field}
 
-    for r in real_table & pks:
+    for r in (real_table & pks).fetch('KEY'):
+
+        pk_hash = UUID(dj.hash.hash_key_values(r))
+
+        if not shadow_table & r:
+            real_record = (real_table & r).fetch1()
+            if insert_to_table:
+                update_record = dict(
+                    table=real_table.__module__ + '.' + real_table.__name__,
+                    attribute='unknown',
+                    pk_hash=pk_hash,
+                    original_ts=real_record[ts_field],
+                    update_ts=datetime.datetime.now(),
+                    pk_dict=r,
+                )
+                update.UpdateRecord.insert1(update_record)
+                update_record.pop('pk_dict')
+
+                update_error_msg = 'Record does not exist in the shadow {}'.format(r)
+                update_record_error = dict(
+                    **update_record,
+                    update_action_ts=datetime.datetime.now(),
+                    update_error_msg=update_error_msg
+                )
+                update.UpdateError.insert1(update_record_error)
+
+            print(update_error_msg)
+            continue
+
         shadow_record = (shadow_table & r).fetch1()
         real_record = (real_table & r).fetch1()
 
-        pk_hash = UUID(dj.hash.key_hash(r))
         for f in fields_to_update:
             if real_record[f] != shadow_record[f]:
                 try:
                     dj.Table._update(real_table & r, f, shadow_record[f])
-
+                    update_narrative = f'{table_name}.{f}: {shadow_record[f]} != {real_record[f]}'
+                    print(update_narrative)
                     if insert_to_table:
                         update_record = dict(
                             table=real_table.__module__ + '.' + real_table.__name__,
@@ -129,39 +159,43 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
                             update_ts=shadow_record[ts_field],
                             pk_dict=r,
                             original_value=real_record[f],
-                            updated_value=shadow_value,
-                            update_narrative='{t}.{a}: {s} != {d}'.format(
-                                t=t, a=attr, s=shadow_record[f], d=real_record[f])
+                            updated_value=shadow_record[f],
+                            update_narrative=update_narrative
                         )
                         update.UpdateRecord.insert1(update_record)
+
                 except BaseException as e:
-                    print(f'Error while updating record {pk}: {str(e)}')
+                    print(f'Error while updating record {r}: {str(e)}')
 
 
 def update_entries_from_real_tables(modified_pks):
 
-    for t in TABLES_TO_UPDATE:
+    for table in TABLES_TO_UPDATE:
 
+        print('Updating {}...'.format(table['table_name']))
+        t = table.copy()
         table = getattr(t['real_schema'], t['table_name'])
 
         if t['table_name'] == 'Subject':
             uuid_field = 'subject_uuid'
         else:
             uuid_field = [f for f in table.heading.secondary_attributes
-                            if '_uuid' in f and 'subject' not in f]
+                            if '_uuid' in f and 'subject' not in f][0]
 
-        q = table & [{uuid_field: pk} for pk in modified_pks]
+        pks_important = get_important_pks(modified_pks)
 
-        if q:
+        query = table & [{uuid_field: pk} for pk in pks_important]
+
+        if query:
             members = t.pop('members')
-            update_fields(**t, pks=q.fetch('KEY'), insert_to_table=True)
+            update_fields(**t, pks=query.fetch('KEY'), insert_to_table=True)
 
             if members:
                 for m in members:
                     sub_t = getattr(t['real_schema'], m)
-                    if sub_t & q:
-                        update_fields(t['real_schema'], t['shadow_shema'],
-                                      m, (sub_t & q).fetch('KEY'),
+                    if sub_t & query:
+                        update_fields(t['real_schema'], t['shadow_schema'],
+                                      m, (sub_t & query).fetch('KEY'),
                                       insert_to_table=True)
 
 
@@ -169,7 +203,8 @@ if __name__ == '__main__':
 
     dj.config['safemode'] = False
 
-    deleted_pks, modified_pks = (job.Job & 'job_date="2020-09-03"').fetch1(
-        'deleted_keys', 'modified_keys'
-    )
-    delete_entries_from_membership(deleted_pks+modified_pks)
+    deleted_pks, modified_pks, modified_pks_important = \
+        (job.Job & 'job_date="2020-09-04"').fetch1(
+            'deleted_pks', 'modified_pks', 'modified_pks_important')
+    # delete_entries_from_membership(deleted_pks+modified_pks)
+    delete_entries_from_alyxraw(deleted_pks+modified_pks, modified_pks_important)
