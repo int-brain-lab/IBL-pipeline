@@ -42,7 +42,7 @@ if __name__ == '__main__':
     print('Deleting trajectories estimates time stamp...')
     (alyxraw.AlyxRaw.Field &
     (alyxraw.AlyxRaw & 'model="experiments.trajectoryestimate"') &
-    'fname="datetime"').delete()
+    'fname="datetime"').delete(force=True)
 
 
     # delete some shadow membership tables
