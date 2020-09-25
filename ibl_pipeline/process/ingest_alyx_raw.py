@@ -23,7 +23,13 @@ def get_alyx_entries(filename=None, models=None,
 
     exclude_list = {'auth.group', 'sessions.session',
                     'authtoken.token',
-                    'experiments.brainregion'}
+                    'experiments.brainregion',
+                    'actions.notificationrule',
+                    'misc.note',
+                    'jobs.task',
+                    'actions.notificationrule',
+                    'actions.notifications'
+                   }
     if exclude:
         exclude_list = exclude_list.union(set(exclude))
 

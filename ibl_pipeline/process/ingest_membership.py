@@ -11,7 +11,6 @@ from ibl_pipeline.ingest import get_raw_field as grf
 from ibl_pipeline.utils import is_valid_uuid
 
 
-
 membership_tables = [
     {'dj_current_table': reference.ProjectLabMember,
      'alyx_parent_model': 'subjects.project',
@@ -151,9 +150,11 @@ membership_tables = [
      'dj_other_uuid_name': 'repo_uuid'},
 ]
 
-def main(new_pks=None):
+def main(new_pks=None, excluded_tables=[]):
     for tab_args in membership_tables:
         table_name = tab_args['dj_current_table'].__name__
+        if table_name in excluded_tables:
+            continue
         print(f'Ingesting table {table_name}...')
         ingest_membership_table(**tab_args, new_pks=new_pks)
 

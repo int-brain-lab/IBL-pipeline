@@ -1,7 +1,14 @@
 import datajoint as dj
 from ibl_pipeline.ingest import \
     (alyxraw, InsertBuffer,
-     reference, subject, action, acquisition, data, ephys, histology)
+     reference, subject, action, acquisition, data)
+
+from os import environ
+
+mode = environ.get('MODE')
+if mode != 'public':
+    from ibl_pipelinge.ingest import ephys, histology
+
 from ibl_pipeline.ingest import get_raw_field as grf
 import uuid
 from tqdm import tqdm
@@ -48,18 +55,24 @@ SHADOW_TABLES = [
     data.DataSetType,
     # data.DataSet,
     # data.FileRecord,
-    ephys.ProbeModel,
-    ephys.ProbeInsertion,
-    histology.ProbeTrajectory,
-
 ]
 
-def main():
+if mode != 'public':
+    SHADOW_TABLES = SHADOW_TABLES + [
+        ephys.ProbeModel,
+        ephys.ProbeInsertion,
+        histology.ProbeTrajectory,
+    ]
+
+def main(excluded_tables=[]):
+
     kwargs = dict(
         display_progress=True,
         suppress_errors=True)
 
     for t in SHADOW_TABLES:
+        if t.__name__ in excluded_tables:
+            continue
         print(f'Ingesting shadow table {t.__name__}...')
         t.populate(**kwargs)
 

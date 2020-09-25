@@ -108,7 +108,7 @@ def copy_table(target_schema, src_schema, table_name, fresh=False, **kwargs):
                     print("Error when inserting {}".format(t))
                     traceback.print_exc()
 
-def main():
+def main(excluded_tables=[], public=False):
     mods = [
         [reference, reference_ingest, REF_TABLES],
         [subject, subject_ingest, SUBJECT_TABLES],
@@ -119,8 +119,13 @@ def main():
 
     for (target, source, table_list) in mods:
         for table in table_list:
+            if table in excluded_tables:
+                continue
             print(table)
             copy_table(target, source, table)
+
+    if public:
+        return
 
     # ephys tables
     table = 'ProbeModel'
