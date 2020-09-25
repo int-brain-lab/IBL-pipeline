@@ -1,6 +1,10 @@
 from ibl_pipeline.analyses import behavior
 from ibl_pipeline import behavior as behavior_ingest
-from ibl_pipeline import subject, action, acquisition, ephys
+from ibl_pipeline import subject, action, acquisition
+from os import environ
+mode = environ.get('MODE')
+if mode != 'public':
+    from ibl_pipeline import ephys
 from ibl_pipeline.utils import psychofit as psy
 from uuid import UUID
 import numpy as np
