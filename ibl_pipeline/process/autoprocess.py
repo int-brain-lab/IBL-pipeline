@@ -14,10 +14,6 @@ import datetime
 import time
 
 
-def process_all():
-    pass
-
-
 def ingest_status(job_key, task, start, end):
 
     job.TaskStatus.insert1(
@@ -103,6 +99,68 @@ def process_new(previous_dump=None, latest_dump=None,
     populate_behavior.main(backtrack_days=12)
     ingest_status(job_key, 'Populate behavior', start,
                   end=datetime.datetime.now())
+
+
+def process_public():
+
+    from ibl_pipeline import public
+    from ibl_pipeline.common import *
+
+    ingest_alyx_raw.insert_to_alyxraw(
+        ingest_alyx_raw.get_alyx_entries())
+
+    excluded_tables = [
+        'Weighing',
+        'WaterType',
+        'WaterAdministration',
+        'WaterRestriction',
+        'ProbeModel',
+        'ProbeInsertion',
+        'ProbeTrajectory'
+    ]
+
+    ingest_shadow.main(excluded_tables=excluded_tables)
+
+    excluded_membership_tables = [
+        'WaterRestrictionUser',
+        'WaterRestrictionProcedure',
+        'SurgeryUser',
+        'WaterAdministrationSession',
+    ]
+
+    ingest_membership.main(
+        excluded_tables=excluded_membership_tables)
+
+    ingest_real.main(
+        excluded_tables=excluded_tables+excluded_membership_tables,
+        public=True)
+
+    # delete non-releasing tables
+    from ibl_pipeline.ingest import InsertBuffer
+
+    table = InsertBuffer(acquisition.Session)
+    for key in tqdm(
+            (acquisition.Session - public.PublicSession - behavior.TrialSet).fetch('KEY')):
+        table.delete1(key)
+        if table.flush_delete(chunksz=100):
+            print('Deleted 100 sessions')
+
+    table.flush_delete()
+    print('Deleted the rest of the sessions')
+
+    subjs = subject.Subject & acquisition.Session
+
+    for key in tqdm(
+            (subject.Subject - public.PublicSubjectUuid - subjs.proj()).fetch('KEY')):
+        (subject.Subject & key).delete()
+
+    excluded_behavior_tables = [
+        'AmbientSensorData',
+        'Settings',
+        'SessionDelay'
+    ]
+
+    populate_behavior.main(excluded_tables=excluded_behavior_tables)
 
 
 if __name__ == '__main__':
