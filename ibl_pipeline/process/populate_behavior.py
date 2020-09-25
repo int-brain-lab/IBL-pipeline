@@ -8,7 +8,9 @@ from ibl_pipeline.plotting import behavior as behavior_plotting
 import datetime
 from ibl_pipeline import subject, reference, action
 from tqdm import tqdm
+from os import environ
 
+mode = environ.get('MODE')
 
 BEHAVIOR_TABLES = [
     behavior.CompleteWheelMoveSession,
@@ -77,7 +79,7 @@ def compute_latest_date():
         key['latest_date'] = latest_date
         behavior_plotting.LatestDate.insert1(key)
 
-def main(backtrack_days=None):
+def main(backtrack_days=None, excluded_tables=[]):
 
     kwargs = dict(
         suppress_errors=True, display_progress=True)
@@ -88,6 +90,9 @@ def main(backtrack_days=None):
              datetime.timedelta(days=backtrack_days)).strftime('%Y-%m-%d')
 
     for table in BEHAVIOR_TABLES:
+
+        if table.__name__ in excluded_tables:
+            continue
         print(f'Populating {table.__name__}...')
 
         if backtrack_days and table.__name__ != 'WaterTypeColor':
@@ -100,6 +105,9 @@ def main(backtrack_days=None):
             restrictor = {}
 
         table.populate(restrictor, **kwargs)
+
+    if mode == 'public':
+        return
 
     print('Populating latest date...')
 
@@ -130,6 +138,8 @@ def main(backtrack_days=None):
         else:
             behavior_plotting.SubjectLatestDate.insert1(
                 subj_with_latest_date.fetch1())
+
+    behavior_plotting.CumulativeSummary.populate(display_progress=True)
 
     print('Populating plotting.DailyLabSummary...')
     last_sessions = (reference.Lab.aggr(

@@ -7,7 +7,7 @@ from os import environ
 
 mode = environ.get('MODE')
 if mode != 'public':
-    from ibl_pipelinge.ingest import ephys, histology
+    from ibl_pipeline.ingest import ephys, histology
 
 from ibl_pipeline.ingest import get_raw_field as grf
 import uuid
