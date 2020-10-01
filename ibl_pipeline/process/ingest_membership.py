@@ -130,7 +130,7 @@ membership_tables = [
      'dj_other_field': 'project_name',
      'dj_parent_uuid_name': 'session_uuid',
      'dj_other_uuid_name': 'project_uuid',
-     'renamed_other_field_name': 'parent_session_start_time'},
+     'renamed_other_field_name': 'session_project'},
     {'dj_current_table': acquisition.WaterAdministrationSession,
      'alyx_parent_model': 'actions.wateradministration',
      'alyx_field': 'session',
