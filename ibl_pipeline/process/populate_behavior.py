@@ -106,8 +106,6 @@ def main(backtrack_days=None, excluded_tables=[]):
 
         table.populate(restrictor, **kwargs)
 
-    if mode == 'public':
-        return
 
     print('Populating latest date...')
 
