@@ -12,6 +12,7 @@ from ibl_pipeline.ingest import job
 from os import path
 import datetime
 import time
+from tqdm import tqdm
 
 
 def ingest_status(job_key, task, start, end):
@@ -96,7 +97,7 @@ def process_new(previous_dump=None, latest_dump=None,
 
     print('Ingesting behavior...')
     start = datetime.datetime.now()
-    populate_behavior.main(backtrack_days=12)
+    populate_behavior.main(backtrack_days=30)
     ingest_status(job_key, 'Populate behavior', start,
                   end=datetime.datetime.now())
 
@@ -104,7 +105,7 @@ def process_new(previous_dump=None, latest_dump=None,
 def process_public():
 
     from ibl_pipeline import public
-    from ibl_pipeline.common import *
+    from ibl_pipeline.common import subject, acquisition
 
     ingest_alyx_raw.insert_to_alyxraw(
         ingest_alyx_raw.get_alyx_entries())
@@ -163,7 +164,45 @@ def process_public():
     populate_behavior.main(excluded_tables=excluded_behavior_tables)
 
 
+def process_updates(pks, current_dump='/data/alyxfull.json'):
+    '''
+    Update the all the fields in givens a set of pks
+    :param pks: uuids where an update is needed
+    :param current_dump: the latest
+    '''
+    print('Deleting from alyxraw...')
+    delete_update_entries.delete_entries_from_alyxraw(
+        modified_pks_important=pks)
+    print('Deleting from shadow membership...')
+    delete_update_entries.delete_entries_from_membership(pks)
+
+    print('Ingesting alyxraw...')
+    ingest_alyx_raw.insert_to_alyxraw(
+        ingest_alyx_raw.get_alyx_entries(
+            current_dump, new_pks=pks))
+
+    print('Ingesting into shadow tables...')
+    ingest_shadow.main(excluded_tables=['DataSet', 'FileRecord'])
+
+    print('Ingesting into shadow membership tables...')
+    ingest_membership.main(pks)
+
+    print('Ingesting alyx real...')
+    ingest_real.main(excluded_tables=['DataSet', 'FileRecord'])
+
+    print('Updating field...')
+    delete_update_entries.update_entries_from_real_tables(pks)
+
+
 if __name__ == '__main__':
-    process_new(previous_dump='/data/alyxfull_0914.json',
-                latest_dump='/data/alyxfull_0915.json',
-                job_date='2020-09-15', timezone='EST')
+    # process_new(previous_dump='/data/alyxfull_20201003_0400.json',
+    #             latest_dump='/data/alyxfull.json',
+    #             job_date='2020-10-04', timezone='other')
+
+    from ibl_pipeline import subject
+    uuids = (subject.Subject &
+             'subject_strain is null or subject_line is null' &
+             'subject_nickname not like "%human%"').fetch('subject_uuid')
+    pks = [str(uuid) for uuid in uuids]
+
+    process_updates(pks)

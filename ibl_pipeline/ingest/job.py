@@ -126,6 +126,7 @@ def compare_json_dumps(previous_dump=None, latest_dump=None,
     # figure out job date and timezone
     latest_modified_time = datetime.datetime.fromtimestamp(os.path.getmtime(latest_dump))
     d = latest_modified_time.date()
+    print(d)
     t = latest_modified_time.time()
     previous_modified_time = datetime.datetime.fromtimestamp(os.path.getmtime(previous_dump))
 

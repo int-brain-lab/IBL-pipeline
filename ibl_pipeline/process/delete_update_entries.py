@@ -18,25 +18,29 @@ import datetime
 
 # ====================================== functions for deletion ==================================
 
-def delete_entries_from_alyxraw(pks_to_be_deleted, modified_pks_important):
+def delete_entries_from_alyxraw(pks_to_be_deleted=[], modified_pks_important=[]):
+
     '''
     Delete entries from alyxraw and shadow membership_tables, excluding the membership table.
     '''
 
     print('Deleting alyxraw entries corresponding to file records...')
-    if len(pks_to_be_deleted) > 5000:
-        file_record_fields = alyxraw.AlyxRaw.Field & \
-            'fname = "exists"' & 'fvalue = "false"'
-    else:
-        file_record_fields = alyxraw.AlyxRaw.Field & \
-            'fname = "exists"' & 'fvalue = "false"' & \
-                [{'uuid': pk} for pk in pks_to_be_deleted]
 
-    for key in tqdm(file_record_fields):
-        (alyxraw.AlyxRaw.Field & key).delete_quick()
+    if pks_to_be_deleted:
+        if len(pks_to_be_deleted) > 5000:
+            file_record_fields = alyxraw.AlyxRaw.Field & \
+                'fname = "exists"' & 'fvalue = "false"'
+        else:
+            file_record_fields = alyxraw.AlyxRaw.Field & \
+                'fname = "exists"' & 'fvalue = "false"' & \
+                    [{'uuid': pk} for pk in pks_to_be_deleted]
 
-    (alyxraw.AlyxRaw & [{'uuid': pk} for pk in modified_pks_important
-                        if is_valid_uuid(pk)]).delete()
+        for key in tqdm(file_record_fields):
+            (alyxraw.AlyxRaw.Field & key).delete_quick()
+
+    if modified_pks_important:
+        (alyxraw.AlyxRaw & [{'uuid': pk} for pk in modified_pks_important
+                            if is_valid_uuid(pk)]).delete()
 
 
 def delete_entries_from_membership(pks_to_be_deleted):
@@ -206,5 +210,5 @@ if __name__ == '__main__':
     deleted_pks, modified_pks, modified_pks_important = \
         (job.Job & 'job_date="2020-09-04"').fetch1(
             'deleted_pks', 'modified_pks', 'modified_pks_important')
-    # delete_entries_from_membership(deleted_pks+modified_pks)
+
     delete_entries_from_alyxraw(deleted_pks+modified_pks, modified_pks_important)

@@ -240,6 +240,12 @@ class Subject(dj.Computed):
         if sex != 'None':
             key_subject['sex'] = sex
 
+        strain_uuid = grf(key, 'strain')
+        if strain_uuid != 'None':
+            key_subject['subject_strain'] = \
+                (Strain & dict(strain_uuid=uuid.UUID(strain_uuid))).fetch1(
+                    'strain_name')
+
         birth_date = grf(key, 'birth_date')
         if birth_date != 'None':
             key_subject['subject_birth_date'] = birth_date

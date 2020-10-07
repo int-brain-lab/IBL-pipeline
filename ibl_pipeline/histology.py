@@ -122,7 +122,8 @@ class ClusterBrainRegion(dj.Computed):
 @schema
 class SessionBrainRegion(dj.Computed):
     definition = """
-    # Brain regions assignment to each session, including the regions of finest granularity and their upper-level areas.
+    # Brain regions assignment to each session
+    # including the regions of finest granularity and their upper-level areas.
     -> acquisition.Session
     -> reference.BrainRegion
     """
