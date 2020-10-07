@@ -155,9 +155,12 @@ def get_status(subj):
     first_ready4recording = subj.aggr(
         behavior.SessionTrainingStatus & 'training_status = "ready4recording"',
         first_session='DATE(min(session_start_time))')
-    first_ephys_session = subj.aggr(
-        behavior.SessionTrainingStatus & ephys.ProbeInsertion,
-        first_session='DATE(min(session_start_time))')
+    if mode != 'public':
+        first_ephys_session = subj.aggr(
+            behavior.SessionTrainingStatus & ephys.ProbeInsertion,
+            first_session='DATE(min(session_start_time))')
+    else:
+        first_ephys_session = []
 
     result = dict()
     if len(first_trained_1a):
