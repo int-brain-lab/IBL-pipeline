@@ -405,7 +405,8 @@ class AlignedTrialSpikes(dj.Computed):
                             trial_spike_time - trial_feedback_times[itrial]
                     else:
                         continue
-                trial_spk['event'] = event
-                trial_spks.append(trial_spk.copy())
+
+            trial_spk['event'] = event
+            trial_spks.append(trial_spk.copy())
 
         self.insert(trial_spks)
