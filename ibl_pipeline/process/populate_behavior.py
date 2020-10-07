@@ -34,6 +34,7 @@ BEHAVIOR_TABLES = [
     behavior_plotting.WaterTypeColor
 ]
 
+
 def compute_latest_date():
 
     for key in tqdm(subject.Subject.fetch('KEY'), position=0):
@@ -78,6 +79,7 @@ def compute_latest_date():
 
         key['latest_date'] = latest_date
         behavior_plotting.LatestDate.insert1(key)
+
 
 def main(backtrack_days=None, excluded_tables=[]):
 
@@ -137,7 +139,7 @@ def main(backtrack_days=None, excluded_tables=[]):
             behavior_plotting.SubjectLatestDate.insert1(
                 subj_with_latest_date.fetch1())
 
-    behavior_plotting.CumulativeSummary.populate(display_progress=True)
+    behavior_plotting.CumulativeSummary.populate(**kwargs)
 
     print('Populating plotting.DailyLabSummary...')
     last_sessions = (reference.Lab.aggr(
@@ -146,6 +148,7 @@ def main(backtrack_days=None, excluded_tables=[]):
     (behavior_plotting.DailyLabSummary & last_sessions).delete()
     behavior_plotting.DailyLabSummary.populate(**kwargs)
 
+
 if __name__ == '__main__':
 
-    main(backtrack_days=12)
+    main(backtrack_days=30)
