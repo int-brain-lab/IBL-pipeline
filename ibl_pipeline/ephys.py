@@ -69,7 +69,7 @@ class CompleteClusterSession(dj.Computed):
     ]
     key_source = acquisition.Session & \
         'task_protocol like "%ephysChoiceWorld%"' \
-        & (data.FileRecord & 'dataset_name="spikes.times.npy"') \
+        & (data.FileRecord & 'dataset_name="spikes.times.npy" or dataset_name="spikes.times_probe_left.npy"') \
         & (data.FileRecord & 'dataset_name="spikes.clusters.npy"') \
         & (data.FileRecord & 'dataset_name="probes.description.json"')
 
