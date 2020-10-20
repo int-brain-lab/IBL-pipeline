@@ -5,6 +5,7 @@ from .ingest import histology as histology_ingest
 from os import path, environ
 import numpy as np
 from .utils import atlas
+import pdb
 
 try:
     from ibllib.pipes.ephys_alignment import EphysAlignment
@@ -115,6 +116,14 @@ class ClusterBrainRegion(dj.Computed):
                 'ontology', 'acronym')
 
             self.insert1(key)
+        elif len(q) > 1:
+            ontology, acronym = q.fetch('ontology', 'acronym')
+            if len(np.unique(acronym)) == 1:
+                key['ontology'] = 'CCF 2017'
+                key['acronym'] = acronym[0]
+                self.insert1(key)
+            else:
+                print('Conflict regions')
         else:
             return
 

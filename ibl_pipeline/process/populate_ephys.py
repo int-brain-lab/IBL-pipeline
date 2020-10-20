@@ -20,6 +20,7 @@ EPHYS_TABLES = [
     ephys.DefaultCluster,
     ephys.AlignedTrialSpikes,
     ephys.GoodCluster,
+    ephys.ChannelGroup,
     ephys_analyses.DepthPeth,
     ephys_analyses.NormedDepthPeth,
     histology.ClusterBrainRegion,
@@ -67,4 +68,4 @@ def main(exclude_plottings=False):
 
 if __name__ == '__main__':
 
-    main(exclude_plottings=True)
+    main()
