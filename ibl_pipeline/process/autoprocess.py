@@ -6,7 +6,8 @@ from ibl_pipeline.process import (
     ingest_shadow,
     ingest_real,
     populate_behavior,
-    get_timezone
+    get_timezone,
+    process_histology
 )
 from ibl_pipeline.ingest import job
 from os import path
@@ -75,7 +76,7 @@ def process_new(previous_dump=None, latest_dump=None,
 
     print('Ingesting into shadow tables...')
     start = datetime.datetime.now()
-    ingest_shadow.main()
+    ingest_shadow.main(modified_pks=modified_pks_important)
     ingest_status(job_key, 'Ingest shadow', start, end=datetime.datetime.now())
 
     print('Ingesting into shadow membership tables...')
@@ -195,14 +196,14 @@ def process_updates(pks, current_dump='/data/alyxfull.json'):
 
 
 if __name__ == '__main__':
-    # process_new(previous_dump='/data/alyxfull_20201003_0400.json',
-    #             latest_dump='/data/alyxfull.json',
-    #             job_date='2020-10-04', timezone='other')
+    process_new(previous_dump='/data/alyxfull_20201029_1200.json',
+                latest_dump='/data/alyxfull.json',
+                job_date='2020-10-30', timezone='PST')
 
-    from ibl_pipeline import subject
-    uuids = (subject.Subject &
-             'subject_strain is null or subject_line is null' &
-             'subject_nickname not like "%human%"').fetch('subject_uuid')
-    pks = [str(uuid) for uuid in uuids]
+    # from ibl_pipeline import subject
+    # uuids = (subject.Subject &
+    #          'subject_strain is null or subject_line is null' &
+    #          'subject_nickname not like "%human%"').fetch('subject_uuid')
+    # pks = [str(uuid) for uuid in uuids]
 
-    process_updates(pks)
+    # process_updates(pks)
