@@ -87,18 +87,29 @@ EPHYS_TABLES = (
     'Probe',
 )
 
-def copy_table(target_schema, src_schema, table_name, fresh=False, **kwargs):
+
+def copy_table(target_schema, src_schema, table_name,
+               fresh=False, use_uuid=True, **kwargs):
     target_table = getattr(target_schema, table_name)
     src_table = getattr(src_schema, table_name)
 
     if fresh:
         target_table.insert(src_table, **kwargs)
     else:
+        if use_uuid:
+            pk = src_table.heading.primary_key
+            if len(pk) == 1 and 'uuid' in pk[0]:
+                q_insert = src_table - (dj.U(pk[0]) & target_table & f'{pk[0]} is not null')
+            else:
+                q_insert = src_table - target_table.proj()
+        else:
+            q_insert = src_table - target_table.proj()
+
         try:
-            target_table.insert(src_table - target_table.proj(),
-                                skip_duplicates=True, **kwargs)
+            target_table.insert(q_insert, skip_duplicates=True, **kwargs)
+
         except Exception:
-            for t in (src_table - target_table.proj()).fetch(as_dict=True):
+            for t in (q_insert).fetch(as_dict=True):
                 try:
                     if table_name == 'DataSet' and \
                          not len(t['dataset_created_by']):
@@ -107,6 +118,7 @@ def copy_table(target_schema, src_schema, table_name, fresh=False, **kwargs):
                 except Exception:
                     print("Error when inserting {}".format(t))
                     traceback.print_exc()
+
 
 def main(excluded_tables=[], public=False):
     mods = [
@@ -143,6 +155,7 @@ def main(excluded_tables=[], public=False):
     print('ChannelBrainLocation')
     copy_table(histology, histology_ingest, 'ChannelBrainLocation',
             allow_direct_insert=True)
+
 
 if __name__ == '__main__':
 
