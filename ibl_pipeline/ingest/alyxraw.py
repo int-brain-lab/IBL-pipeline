@@ -1,5 +1,6 @@
 import datajoint as dj
 
+
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_alyxraw')
 
@@ -21,6 +22,7 @@ class AlyxRaw(dj.Manual):
         fvalue=null: varchar(40000)  # field value in the position of value_idx
         index (fname)
         '''
+
 
 @schema
 class ProblematicData(dj.Manual):
