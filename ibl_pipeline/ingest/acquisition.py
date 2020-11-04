@@ -12,7 +12,7 @@ schema = dj.schema(dj.config.get('database.prefix', '') +
 @schema
 class Session(dj.Computed):
     definition = """
-    (session_uuid) -> alyxraw.AlyxRaw
+    -> alyxraw.AlyxRaw.proj(session_uuid='uuid')
     ---
     session_number=null:        int
     subject_uuid:               uuid
@@ -28,7 +28,8 @@ class Session(dj.Computed):
     key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(
         session_uuid='uuid')
 
-    def make(self, key):
+    @staticmethod
+    def create_entry(key):
         key_session = key.copy()
         key['uuid'] = key['session_uuid']
         key_session['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
@@ -67,7 +68,12 @@ class Session(dj.Computed):
         if protocol != 'None':
             key_session['task_protocol'] = protocol
 
-        self.insert1(key_session)
+        return key_session
+
+    def make(self, key):
+
+        self.insert1(
+            Session.create_entry(key))
 
 
 @schema
