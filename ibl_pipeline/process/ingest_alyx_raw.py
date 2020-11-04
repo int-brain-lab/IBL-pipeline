@@ -18,6 +18,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+
 def get_alyx_entries(filename=None, models=None,
                      exclude=None, new_pks=None):
 
@@ -60,11 +61,11 @@ def get_alyx_entries(filename=None, models=None,
         raise ValueError('models should be a str, list or numpy array')
 
 
-def insert_to_alyxraw(keys):
+def insert_to_alyxraw(keys, alyxraw_module=alyxraw):
 
     # use insert buffer to speed up the insertion process
-    ib_main = InsertBuffer(alyxraw.AlyxRaw)
-    ib_part = InsertBuffer(alyxraw.AlyxRaw.Field)
+    ib_main = InsertBuffer(alyxraw_module.AlyxRaw)
+    ib_part = InsertBuffer(alyxraw_module.AlyxRaw.Field)
 
     # insert into AlyxRaw table
     for key in tqdm(keys, position=0):
