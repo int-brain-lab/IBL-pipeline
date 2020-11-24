@@ -61,92 +61,94 @@ def get_alyx_entries(filename=None, models=None,
         raise ValueError('models should be a str, list or numpy array')
 
 
-def insert_to_alyxraw(keys, alyxraw_module=alyxraw):
+def insert_to_alyxraw(
+        keys, alyxraw_module=alyxraw,
+        alyx_type='all'):
 
     # use insert buffer to speed up the insertion process
-    ib_main = InsertBuffer(alyxraw_module.AlyxRaw)
-    ib_part = InsertBuffer(alyxraw_module.AlyxRaw.Field)
+    if alyx_type in ('all', 'main'):
 
-    # insert into AlyxRaw table
-    for key in tqdm(keys, position=0):
-        try:
-            pk = uuid.UUID(key['pk'])
-        except Exception:
-            print('Error for key: {}'.format(key))
-            continue
-
-        ib_main.insert1(dict(uuid=pk, model=key['model']))
-        if ib_main.flush(skip_duplicates=True, chunksz=10000):
-            logger.debug('Inserted 10000 raw tuples.')
-            # print('Inserted 10000 raw tuples.')
-
-    if ib_main.flush(skip_duplicates=True):
-        logger.debug('Inserted remaining raw tuples')
-        # print('Inserted remaining raw tuples')
-
-    # insert into the part table AlyxRaw.Field
-    for ikey, key in tqdm(enumerate(keys), position=0):
-        try:
+        ib_main = InsertBuffer(alyxraw_module.AlyxRaw)
+        # insert into AlyxRaw table
+        for key in tqdm(keys, position=0):
             try:
                 pk = uuid.UUID(key['pk'])
-            except ValueError:
+            except Exception:
                 print('Error for key: {}'.format(key))
                 continue
 
-            key_field = dict(uuid=uuid.UUID(key['pk']))
-            for field_name, field_value in key['fields'].items():
-                key_field = dict(key_field, fname=field_name)
+            ib_main.insert1(dict(uuid=pk, model=key['model']))
+            if ib_main.flush(skip_duplicates=True, chunksz=10000):
+                logger.debug('Inserted 10000 raw tuples.')
 
-                if field_name == 'json' and field_value is not None:
+        if ib_main.flush(skip_duplicates=True):
+            logger.debug('Inserted remaining raw tuples')
+            ib_main = InsertBuffer(alyxraw_module.AlyxRaw)
 
-                    key_field['value_idx'] = 0
-                    key_field['fvalue'] = json.dumps(field_value)
-                    if len(key_field['fvalue']) < 10000:
+    if alyx_type in ('all', 'part'):
+        ib_part = InsertBuffer(alyxraw_module.AlyxRaw.Field)
+        # insert into the part table AlyxRaw.Field
+        for ikey, key in tqdm(enumerate(keys), position=0):
+            try:
+                try:
+                    pk = uuid.UUID(key['pk'])
+                except ValueError:
+                    print('Error for key: {}'.format(key))
+                    continue
+
+                key_field = dict(uuid=uuid.UUID(key['pk']))
+                for field_name, field_value in key['fields'].items():
+                    key_field = dict(key_field, fname=field_name)
+
+                    if field_name == 'json' and field_value is not None:
+
+                        key_field['value_idx'] = 0
+                        key_field['fvalue'] = json.dumps(field_value)
+                        if len(key_field['fvalue']) < 10000:
+                            ib_part.insert1(key_field)
+                        else:
+                            continue
+                    if field_name == 'narrative' and field_value is not None:
+                        # filter out emoji
+                        emoji_pattern = re.compile(
+                            "["
+                            u"\U0001F600-\U0001F64F"  # emoticons
+                            u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                            u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                            u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                            u"\U00002702-\U000027B0"
+                            u"\U000024C2-\U0001F251"
+                            "]+", flags=re.UNICODE)
+
+                        key_field['value_idx'] = 0
+                        key_field['fvalue'] = emoji_pattern.sub(r'', field_value)
+
+                    elif field_value is None or field_value == '' or field_value == [] or \
+                            (isinstance(field_value, float) and math.isnan(field_value)):
+                        key_field['value_idx'] = 0
+                        key_field['fvalue'] = 'None'
                         ib_part.insert1(key_field)
+
+                    elif type(field_value) is list and \
+                            (type(field_value[0]) is dict or type(field_value[0]) is str):
+                        for value_idx, value in enumerate(field_value):
+                            key_field['value_idx'] = value_idx
+                            key_field['fvalue'] = str(value)
+                            ib_part.insert1(key_field)
                     else:
-                        continue
-                if field_name == 'narrative' and field_value is not None:
-                    # filter out emoji
-                    emoji_pattern = re.compile(
-                        "["
-                        u"\U0001F600-\U0001F64F"  # emoticons
-                        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-                        u"\U0001F680-\U0001F6FF"  # transport & map symbols
-                        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-                        u"\U00002702-\U000027B0"
-                        u"\U000024C2-\U0001F251"
-                        "]+", flags=re.UNICODE)
-
-                    key_field['value_idx'] = 0
-                    key_field['fvalue'] = emoji_pattern.sub(r'', field_value)
-
-                elif field_value is None or field_value == '' or field_value == [] or \
-                        (isinstance(field_value, float) and math.isnan(field_value)):
-                    key_field['value_idx'] = 0
-                    key_field['fvalue'] = 'None'
-                    ib_part.insert1(key_field)
-
-                elif type(field_value) is list and \
-                        (type(field_value[0]) is dict or type(field_value[0]) is str):
-                    for value_idx, value in enumerate(field_value):
-                        key_field['value_idx'] = value_idx
-                        key_field['fvalue'] = str(value)
+                        key_field['value_idx'] = 0
+                        key_field['fvalue'] = str(field_value)
                         ib_part.insert1(key_field)
-                else:
-                    key_field['value_idx'] = 0
-                    key_field['fvalue'] = str(field_value)
-                    ib_part.insert1(key_field)
 
-                if ib_part.flush(skip_duplicates=True, chunksz=10000):
-                    logger.debug('Inserted 10000 raw field tuples')
-                    # print('Inserted 10000 raw field tuples')
-        except Exception as e:
-            print('Problematic entry:{}'.format(ikey))
-            raise
+                    if ib_part.flush(skip_duplicates=True, chunksz=10000):
+                        logger.debug('Inserted 10000 raw field tuples')
 
-    if ib_part.flush(skip_duplicates=True):
-        logger.debug('Inserted all remaining raw field tuples')
-        # print('Inserted all remaining raw field tuples')
+            except Exception:
+                print('Problematic entry:{}'.format(ikey))
+                raise
+
+        if ib_part.flush(skip_duplicates=True):
+            logger.debug('Inserted all remaining raw field tuples')
 
 
 if __name__ == '__main__':
