@@ -36,15 +36,20 @@ def get_deleted_keys(model):
             f'model="{model}"').fetch('KEY')
 
 
-def get_updated_keys(model):
+def get_updated_keys(model, fields=None):
 
     fields = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & f'model="{model}"')
     fields_update = alyxraw_update.AlyxRaw.Field & \
         (alyxraw_update.AlyxRaw & f'model="{model}"')
 
+    if fields:
+        fields_restr = {}
+    else:
+        fields_restr = [{'fname': f} for f in fields]
+
     return (alyxraw.AlyxRaw &
             (fields_update.proj(fvalue_new='fvalue') * fields &
-             'fvalue_new != fvalue' & 'fname not in ("json")')).fetch('KEY')
+            'fvalue_new != fvalue' & 'fname not in ("json")' & fields_restr)).fetch('KEY')
 
 
 def delete_from_alyxraw(keys):
