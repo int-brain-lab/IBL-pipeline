@@ -90,8 +90,17 @@ EPHYS_TABLES = (
 
 def copy_table(target_schema, src_schema, table_name,
                fresh=False, use_uuid=True, **kwargs):
-    target_table = getattr(target_schema, table_name)
-    src_table = getattr(src_schema, table_name)
+    if '.' in table_name:
+        attrs = table_name.split('.')
+
+        target_table = target_schema
+        src_table = src_schema
+        for a in attrs:
+            target_table = getattr(target_table, a)
+            src_table = getattr(src_table, a)
+    else:
+        target_table = getattr(target_schema, table_name)
+        src_table = getattr(src_schema, table_name)
 
     if fresh:
         target_table.insert(src_table, **kwargs)

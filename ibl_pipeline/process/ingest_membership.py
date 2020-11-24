@@ -151,6 +151,7 @@ membership_tables = [
      'dj_other_uuid_name': 'repo_uuid'},
 ]
 
+
 def main(new_pks=None, excluded_tables=[]):
     for tab_args in membership_tables:
         table_name = tab_args['dj_current_table'].__name__
