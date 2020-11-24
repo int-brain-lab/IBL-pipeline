@@ -186,5 +186,4 @@ def main(fpath='/data/alyxfull.json'):
 
 if __name__ == '__main__':
 
-    # fpath = '/data/alyxfull_20201016_1200.json'
     main()
