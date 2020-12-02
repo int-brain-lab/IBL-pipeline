@@ -1,5 +1,6 @@
 
 from ibl_pipeline.process import (
+    create_ingest_task,
     delete_update_entries,
     ingest_alyx_raw,
     ingest_membership,
@@ -46,7 +47,7 @@ def process_new(previous_dump=None, latest_dump=None,
         latest_dump = path.join('/', 'data', 'alyxfull.json')
 
     print('Comparing json dumps ...')
-    job.compare_json_dumps(previous_dump, latest_dump)
+    create_ingest_task.compare_json_dumps(previous_dump, latest_dump)
 
     created_pks, modified_pks, deleted_pks, modified_pks_important = (
         job.Job & job_key).fetch1(
@@ -196,14 +197,7 @@ def process_updates(pks, current_dump='/data/alyxfull.json'):
 
 
 if __name__ == '__main__':
-    process_new(previous_dump='/data/alyxfull_20201029_1200.json',
-                latest_dump='/data/alyxfull.json',
-                job_date='2020-10-30', timezone='PST')
 
-    # from ibl_pipeline import subject
-    # uuids = (subject.Subject &
-    #          'subject_strain is null or subject_line is null' &
-    #          'subject_nickname not like "%human%"').fetch('subject_uuid')
-    # pks = [str(uuid) for uuid in uuids]
-
-    # process_updates(pks)
+    process_new(previous_dump='/data/alyxfull.json.last',
+                latest_dump='/data/alyxfull_20201128_0400.json',
+                job_date='2020-11-28', timezone='European')
