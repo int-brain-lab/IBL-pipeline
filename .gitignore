@@ -1,5 +1,6 @@
 
 # some unused files
+rasters/*
 notebooks/.*
 notebooks/notebooks_plotting/*
 scripts/update_entries.py

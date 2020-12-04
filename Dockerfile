@@ -6,9 +6,6 @@ RUN pip install --upgrade datajoint
 ADD . /src/IBL-pipeline
 RUN pip install -e /src/IBL-pipeline
 
-
-ADD ./allen_structure_tree.csv /usr/local/lib/python3.7/dist-packages/ibllib/atlas
-
 RUN pip uninstall opencv-python -y
 RUN conda install -c conda-forge opencv -y
 COPY --chown=dja:anaconda ./apt_requirements.txt /tmp/apt_requirements.txt
