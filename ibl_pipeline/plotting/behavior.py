@@ -969,7 +969,7 @@ class DailyLabSummary(dj.Computed):
         last_sessions = last_sessions * acquisition.Session * \
             behavior.SessionTrainingStatus
 
-        filerecord = data.FileRecord & subjects & 'relative_path LIKE "%alf%"'
+        filerecord = data.FileRecord & subjects.fetch('KEY') & 'relative_path LIKE "%alf%"'
         last_filerecord = subjects.aggr(
             filerecord, latest_session_on_flatiron='max(session_start_time)')
 

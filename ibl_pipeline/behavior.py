@@ -9,8 +9,8 @@ from . import reference, subject, acquisition, data
 try:
     from oneibl.one import ONE
     import alf.io
-    one = ONE()
-except Exception:
+    one = ONE(silent=True)
+except ImportError:
     warnings.warn('ONE not installed, cannot use populate')
     pass
 
@@ -124,7 +124,8 @@ class Wheel(dj.Imported):
         wheel_position, wheel_velocity, wheel_timestamps = \
             one.load(eID, dataset_types=['wheel.position',
                                          'wheel.velocity',
-                                         'wheel.timestamps'])
+                                         'wheel.timestamps'],
+                    )
 
         wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
 
@@ -432,12 +433,17 @@ class CompleteTrialSession(dj.Computed):
                         eID, dataset_types='trials.stimOn_times',
                         clobber=True)
 
-                if np.all(np.isnan(stimOn_times)):
-                    key['stim_on_times_status'] = 'Missing'
-                elif np.any(np.isnan(stimOn_times)):
-                    key['stim_on_times_status'] = 'Partial'
+                if stimOn_times is not None and len(stimOn_times):
+                    if (len(stimOn_times)==1 and stimOn_times[0] is None) or \
+                            np.all(np.isnan(np.array(stimOn_times))):
+                        key['stim_on_times_status'] = 'Missing'
+                    elif np.any(np.isnan(np.array(stimOn_times))):
+                        key['stim_on_times_status'] = 'Partial'
+                    else:
+                        key['stim_on_times_status'] = 'Complete'
                 else:
-                    key['stim_on_times_status'] = 'Complete'
+                    key['stim_on_times_status'] = 'Missing'
+
 
             if '_ibl_trials.repNum.npy' not in datasets:
                 key['rep_num_status'] = 'Missing'
@@ -490,8 +496,8 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    if not environ.get('MODE') == 'test':
-        key_source = acquisition.Session & CompleteTrialSession
+    # if not environ.get('MODE') == 'test':
+    key_source = acquisition.Session & CompleteTrialSession
 
     def make(self, key):
 
@@ -519,15 +525,12 @@ class TrialSet(dj.Imported):
             eID, dataset_types=dtypes, download_only=True, clobber=True)
         ses_path = alf.io.get_session_path(files[0])
         trials = alf.io.load_object(
-            ses_path.joinpath('alf'), '_ibl_trials')
+            ses_path.joinpath('alf'), 'trials')
 
         status = (CompleteTrialSession & key).fetch1()
 
         lab_name = (subject.SubjectLab & key).fetch1('lab_name')
         if status['stim_on_times_status'] != 'Missing':
-            if lab_name == 'wittenlab':
-                trials['stimOn_times'] = np.squeeze(trials['stimOn_times'])
-
             if len(trials['stimOn_times']) == 1:
                 trials['stimOn_times'] = np.squeeze(trials['stimOn_times'])
 

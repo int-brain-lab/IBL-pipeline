@@ -25,7 +25,6 @@ if mode == 'update':
     schema = dj.schema('ibl_ephys')
 else:
     schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
-    schema_groupshare = dj.schema(dj.config.get('database.prefix', '') + 'group_shared_ephys')
 
 dj.config['safemode'] = False
 
@@ -33,7 +32,7 @@ dj.config['safemode'] = False
 @schema
 class ProbeModel(dj.Lookup):
     definition = """
-    # Description of a particular model of probe
+    # Model of a probe, ingested from the alyx table experiments.probemodel
     probe_name           : varchar(128)
     ---
     probe_uuid           : uuid
@@ -47,7 +46,7 @@ class ProbeModel(dj.Lookup):
 @schema
 class CompleteClusterSession(dj.Computed):
     definition = """
-    # sessions that are complete with ephys datasets
+    # Sessions that are complete with ephys datasets
     -> acquisition.Session
     ---
     complete_cluster_session_ts=CURRENT_TIMESTAMP  :  timestamp
@@ -70,7 +69,7 @@ class CompleteClusterSession(dj.Computed):
     ]
     key_source = acquisition.Session & \
         'task_protocol like "%ephysChoiceWorld%"' \
-        & (data.FileRecord & 'dataset_name="spikes.times.npy"') \
+        & (data.FileRecord & 'dataset_name="spikes.times.npy" or dataset_name="spikes.times_probe_left.npy"') \
         & (data.FileRecord & 'dataset_name="spikes.clusters.npy"') \
         & (data.FileRecord & 'dataset_name="probes.description.json"')
 
@@ -113,6 +112,7 @@ class ProblematicDataSet(dj.Manual):
 @schema
 class ProbeInsertion(dj.Imported):
     definition = """
+    # Probe insertion of a session, ingested from the alyx table experiments.probeinsertion
     -> acquisition.Session
     probe_idx                   : int           # probe insertion number (0 corresponds to probe00, 1 corresponds to probe01)
     ---
@@ -126,6 +126,7 @@ class ProbeInsertion(dj.Imported):
 @schema
 class ChannelGroup(dj.Imported):
     definition = """
+    # Raw index and local coordinates of each channel group, ingested from channels.rawInd and localCoordinates
     -> ProbeInsertion
     ---
     channel_raw_inds:             blob  # Array of integers saying which index in the raw recording file (of its home probe) that the channel corresponds to (counting from zero)
@@ -170,6 +171,7 @@ class ClusteringMethod(dj.Lookup):
 @schema
 class DefaultCluster(dj.Imported):
     definition = """
+    # Cluster properties achieved from the default clustering method, ingested from alf files clusters.*
     -> ProbeInsertion
     cluster_id:                 int
     ---
@@ -262,8 +264,25 @@ class DefaultCluster(dj.Imported):
                     dict(**key, cluster_id=icluster,
                          ks2_label=metrics.ks2_label))
 
+            self.Metric.insert(
+                [dict(**key, cluster_id=icluster,
+                      metric_name=name, metric_value=value)
+                 for name, value in metrics.to_dict().items()
+                 if name != 'ks2_label' and not np.isnan(value)]
+            )
+
+    class Metric(dj.Part):
+        definition = """
+        # Individual quality metric, ingested from clusters.metrics
+        -> master
+        metric_name: varchar(32)
+        ---
+        metric_value: float
+        """
+
     class Metrics(dj.Part):
         definition = """
+        # Quality metrics as a dictionary, ingested from cluster.metrics
         -> master
         ---
         num_spikes:                 int         # total spike number
@@ -273,26 +292,17 @@ class DefaultCluster(dj.Imported):
 
     class Ks2Label(dj.Part):
         definition = """
+        # Quality label given by kilosort2, ‘good’ or ‘mua’
         -> master
         ---
         ks2_label       : enum('good', 'mua')
         """
 
 
-@schema_groupshare
-class ClusterCuration(dj.Manual):
-    definition = """
-    -> DefaultCluster
-    curation_time=CURRENT_TIMESTAMP:    timestamp
-    ---
-    -> reference.LabMember
-    cluster_label:              enum('Good', 'MUA', 'Noise')
-    """
-
-
 @schema
 class GoodClusterCriterion(dj.Lookup):
     definition = """
+    # Criterion to identify whether a cluster is good.
     criterion_id:               int
     ---
     criterion_description:      varchar(255)
@@ -303,6 +313,7 @@ class GoodClusterCriterion(dj.Lookup):
 @schema
 class GoodCluster(dj.Computed):
     definition = """
+    # Whether a cluster is good based on the criterion defined in GoodClusterCriterion
     -> DefaultCluster
     -> GoodClusterCriterion
     ---
@@ -321,6 +332,7 @@ class GoodCluster(dj.Computed):
 @schema
 class Event(dj.Lookup):
     definition = """
+    # Different behavioral events, including 'go cue', 'stim on', 'response', 'feedback', and 'movement'
     event:       varchar(32)
     """
     contents = zip(['go cue', 'stim on', 'response', 'feedback', 'movement'])
@@ -329,7 +341,7 @@ class Event(dj.Lookup):
 @schema
 class AlignedTrialSpikes(dj.Computed):
     definition = """
-    # spike times of each trial aligned to different events
+    # Spike times of each trial aligned to different events
     -> DefaultCluster
     -> behavior.TrialSet.Trial
     -> Event
@@ -368,7 +380,7 @@ class AlignedTrialSpikes(dj.Computed):
             spike_times)
 
         trial_spks = []
-        for itrial, trial_key in tqdm(enumerate(trial_keys), position=0):
+        for itrial, trial_key in enumerate(trial_keys):
 
             trial_spk = dict(
                 **trial_key,
@@ -393,28 +405,8 @@ class AlignedTrialSpikes(dj.Computed):
                             trial_spike_time - trial_feedback_times[itrial]
                     else:
                         continue
-                trial_spk['event'] = event
-                trial_spks.append(trial_spk.copy())
+
+            trial_spk['event'] = event
+            trial_spks.append(trial_spk.copy())
 
         self.insert(trial_spks)
-
-
-# @schema
-# class LFP(dj.Imported):
-#     definition = """
-#     -> ProbeInsertion
-#     ---
-#     lfp_timestamps:       blob@ephys    # Timestamps for LFP timeseries in seconds
-#     lfp_start_time:       float         # (seconds)
-#     lfp_end_time:         float         # (seconds)
-#     lfp_duration:         float         # (seconds)
-#     lfp_sampling_rate:    float         # samples per second
-#     """
-
-#     class Channel(dj.Part):
-#         definition = """
-#         -> master
-#         -> Probe.Channel
-#         ---
-#         lfp: blob@ephys           # recorded lfp on this channel
-#         """

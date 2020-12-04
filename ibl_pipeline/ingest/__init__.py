@@ -54,6 +54,7 @@ use for the ingest modules.
 '''
 import logging
 import datajoint as dj
+from tqdm import tqdm
 from . import alyxraw
 import os
 
@@ -83,12 +84,16 @@ class InsertBuffer(object):
     def __init__(self, rel):
         self._rel = rel
         self._queue = []
+        self._delete_queue = []
 
     def insert1(self, r):
         self._queue.append(r)
 
     def insert(self, recs):
         self._queue += recs
+
+    def delete1(self, r):
+        self._delete_queue.append(r)
 
     def flush(self, replace=False, skip_duplicates=False,
               ignore_extra_fields=False, allow_direct_insert=False, chunksz=1):
@@ -117,3 +122,49 @@ class InsertBuffer(object):
             return qlen
         else:
             return 0
+
+    def flush_delete(self, chunksz=1, quick=True):
+        '''
+        flush the buffer
+        XXX: ignore_extra_fields na, requires .insert() support
+        '''
+
+        qlen = len(self._delete_queue)
+        if qlen > 0 and qlen % chunksz == 0:
+            try:
+                if quick:
+                    (self._rel & self._delete_queue).delete_quick()
+                else:
+                    (self._rel & self._delete_queue).delete()
+            except Exception as e:
+                print('error in flush delete: {}, trying deletion one by one'.format(e))
+                for t in self._delete_queue:
+                    try:
+                        if quick:
+                            (self._rel & self._delete_queue).delete_quick()
+                        else:
+                            (self._rel & self._delete_queue).delete()
+                    except Exception as e:
+                        print('error in flush delete: {}'.format(e))
+            self._delete_queue.clear()
+            return qlen
+        else:
+            return 0
+
+
+def populate_batch(t, chunksz=1000, verbose=True):
+
+    keys = (t.key_source - t.proj()).fetch('KEY')
+    table = InsertBuffer(t)
+    for key in tqdm(keys, position=0):
+        entry = t.create_entry(key)
+        if entry:
+            table.insert1(entry)
+
+        if table.flush(
+                skip_duplicates=True,
+                allow_direct_insert=True, chunksz=chunksz) and verbose:
+            print(f'Inserted {chunksz} {t.__name__} tuples.')
+
+    if table.flush(skip_duplicates=True, allow_direct_insert=True) and verbose:
+        print(f'Inserted all remaining {t.__name__} tuples.')

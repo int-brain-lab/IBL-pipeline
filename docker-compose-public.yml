@@ -5,11 +5,15 @@ services:
     container_name: ibl_datajoint_public
     env_file: .env_public
     volumes:
-      - ./notebooks:/notebooks
+      - ./notebooks:/home/dja
       - ./images:/images
       - .:/src/IBL-pipeline
       - ./data:/data
       - ./root/.one_params:/root/.one_params
-      - ./snapshots:/Figures_DataJoint_shortcuts
+    user: 1000:anaconda
     ports:
       - "8300:8888"
+    networks:
+      - ibl_public
+networks:
+  ibl_public:

@@ -9,27 +9,21 @@ from ibl_pipeline.ingest import action as action_ingest
 from ibl_pipeline.ingest import acquisition as acquisition_ingest
 from ibl_pipeline import reference, subject, action, acquisition
 from ibl_pipeline.ingest.ingest_utils import copy_table
-import table_names as tables
+from table_names import *
 
-dj.config['safemode'] = False
+if __name__ = '__main__':
 
-tables.init()
+    dj.config['safemode'] = False
 
-for table in tables.REF_TABLES:
-    print(table)
-    copy_table(reference, reference_ingest, table)
+    mods = [
+        [reference, reference_ingest, REF_TABLES],
+        [subject, subject_ingest, SUBJECT_TABLES],
+        [action, action_ingest, ACTION_TABLES],
+        [acquisition, acquisition_ingest, ACQUISITION_TABLES],
+        [data, data_ingest, DATA_TABLES]
+    ]
 
-
-for table in tables.SUBJECT_TABLES:
-    print(table)
-    copy_table(subject, subject_ingest, table)
-
-
-for table in tables.ACTION_TABLES:
-    print(table)
-    copy_table(action, action_ingest, table)
-
-
-for table in tables.ACQUISITION_TABLES:
-    print(table)
-    copy_table(acquisition, acquisition_ingest, table)
+    for (target, source, table_list) in mods:
+        for table in table_list:
+            print(table)
+            copy_table(target, source, table)

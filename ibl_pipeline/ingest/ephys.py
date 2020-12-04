@@ -6,6 +6,8 @@ import re
 from . import alyxraw, reference, acquisition
 from . import get_raw_field as grf
 
+from ibl_pipeline import acquisition as acquisition_real
+
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_ingest_ephys')
 
@@ -63,9 +65,15 @@ class ProbeInsertion(dj.Imported):
         key['uuid'] = key['probe_insertion_uuid']
 
         session_uuid = grf(key, 'session')
-        subject_uuid, session_start_time = \
-            (acquisition.Session & dict(session_uuid=session_uuid)).fetch1(
-                'subject_uuid', 'session_start_time')
+
+        if (acquisition_real.Session & dict(session_uuid=session_uuid)):
+            subject_uuid, session_start_time = \
+                (acquisition_real.Session & dict(session_uuid=session_uuid)).fetch1(
+                    'subject_uuid', 'session_start_time')
+        else:
+            subject_uuid, session_start_time = \
+                (acquisition.Session & dict(session_uuid=session_uuid)).fetch1(
+                    'subject_uuid', 'session_start_time')
 
         key_pi.update(
             subject_uuid=subject_uuid,

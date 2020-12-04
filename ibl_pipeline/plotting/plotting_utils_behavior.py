@@ -1,6 +1,10 @@
 from ibl_pipeline.analyses import behavior
 from ibl_pipeline import behavior as behavior_ingest
-from ibl_pipeline import subject, action, acquisition, ephys
+from ibl_pipeline import subject, action, acquisition
+from os import environ
+mode = environ.get('MODE')
+if mode != 'public':
+    from ibl_pipeline import ephys
 from ibl_pipeline.utils import psychofit as psy
 from uuid import UUID
 import numpy as np
@@ -151,9 +155,12 @@ def get_status(subj):
     first_ready4recording = subj.aggr(
         behavior.SessionTrainingStatus & 'training_status = "ready4recording"',
         first_session='DATE(min(session_start_time))')
-    first_ephys_session = subj.aggr(
-        behavior.SessionTrainingStatus & ephys.ProbeInsertion,
-        first_session='DATE(min(session_start_time))')
+    if mode != 'public':
+        first_ephys_session = subj.aggr(
+            behavior.SessionTrainingStatus & ephys.ProbeInsertion,
+            first_session='DATE(min(session_start_time))')
+    else:
+        first_ephys_session = []
 
     result = dict()
     if len(first_trained_1a):

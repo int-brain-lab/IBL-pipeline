@@ -18,26 +18,29 @@ from ibl_pipeline.utils import dj_compare_table
 import numpy as np
 import tables_for_updates as tables
 
-tables.init()
-schemas = [reference, subject]
-schemas_shadow = [reference_shadow,
-                  subject_shadow,
-                #   action_shadow,
-                #   acquisition_shadow,
-                #   data_shadow
-                  ]
-tablenames = [
-    tables.REF_TABLES,
-    tables.SUBJECT_TABLES,
-    # tables.ACTION_TABLES,
-    # tables.ACQUISITION_TABLES,
-    # tables.DATA_TABLES,
-]
 
-tablepairs = {t: (getattr(s_src, t), getattr(s_dest, t))
-              for tablename, s_src, s_dest
-              in zip(tablenames, schemas_shadow, schemas)
-              for t in tablename}
+if __name__ == '__main__':
 
-tablenames = np.hstack(tablenames)
-dj_compare_table.diff(tablenames, tablepairs)
+    tables.init()
+    schemas = [reference, subject]
+    schemas_shadow = [reference_shadow,
+                      subject_shadow,
+                    #   action_shadow,
+                    #   acquisition_shadow,
+                    #   data_shadow
+                      ]
+    tablenames = [
+        tables.REF_TABLES,
+        tables.SUBJECT_TABLES,
+        # tables.ACTION_TABLES,
+        # tables.ACQUISITION_TABLES,
+        # tables.DATA_TABLES,
+    ]
+
+    tablepairs = {t: (getattr(s_src, t), getattr(s_dest, t))
+                  for tablename, s_src, s_dest
+                  in zip(tablenames, schemas_shadow, schemas)
+                  for t in tablename}
+
+    tablenames = np.hstack(tablenames)
+    dj_compare_table.diff(tablenames, tablepairs)
