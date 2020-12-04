@@ -119,7 +119,7 @@ def compare_json_dumps(previous_dump='/data/alyxfull.json',
             created_pks=created_pks,
             modified_pks=modified_pks,
             deleted_pks=deleted_pks,
-            filter_pks_for_unused_session_fields=filter_pks_for_unused_session_fields
+            session_prefiltered=filter_pks_for_unused_session_fields
         )
         if filter_pks_for_unused_models:
             job.Job.insert1(
