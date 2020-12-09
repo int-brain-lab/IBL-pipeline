@@ -121,13 +121,13 @@ def compare_json_dumps(previous_dump='/data/alyxfull.json',
             deleted_pks=deleted_pks,
             session_prefiltered=filter_pks_for_unused_session_fields
         )
-        if filter_pks_for_unused_models:
-            job.Job.insert1(
+        if not filter_pks_for_unused_models:
+            modified_pks_important = None
+
+        job.Job.insert1(
                 dict(**entry,
                      modified_pks_important=modified_pks_important),
                 skip_duplicates=True)
-        else:
-            job.Job.insert1(entry, skip_duplicates=True)
 
 
 if __name__ == '__main__':
