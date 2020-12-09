@@ -187,7 +187,7 @@ def update_entries_from_real_tables(modified_pks):
         if t['table_name'] == 'Subject':
             uuid_field = 'subject_uuid'
         else:
-            uuid_field = [f for f in table.heading.secondary_attributes
+            uuid_field = next(f for f in table.heading.secondary_attributes if '_uuid' in f and 'subject' not in f)
                             if '_uuid' in f and 'subject' not in f][0]
 
         pks_important = get_important_pks(modified_pks)
