@@ -118,7 +118,7 @@ class ClusterBrainRegion(dj.Computed):
             self.insert1(key)
         elif len(q) > 1:
             ontology, acronym = q.fetch('ontology', 'acronym')
-            if len(np.unique(acronym)) == 1:
+            if len(set(acronym)) == 1:
                 key['ontology'] = 'CCF 2017'
                 key['acronym'] = acronym[0]
                 self.insert1(key)
