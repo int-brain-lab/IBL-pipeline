@@ -23,7 +23,12 @@ date
 echo "Auto updating subject fields..."
 python auto_update_subject_fields.py
 date
+<<<<<<< HEAD
+python auto_update_trajectories.py
+date
+=======
 echo "Populating behavior tables..."
+>>>>>>> d52428199b75e85e94dc8ba56cb96bf3fa0c44c2
 python ingest_behavior.py
 date
 echo "Populating behavior analyses tables..."
