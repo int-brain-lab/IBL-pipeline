@@ -67,13 +67,13 @@ class ProbeInsertion(dj.Imported):
         session_uuid = grf(key, 'session')
 
         if (acquisition_real.Session & dict(session_uuid=session_uuid)):
-            subject_uuid, session_start_time = \
-                (acquisition_real.Session & dict(session_uuid=session_uuid)).fetch1(
-                    'subject_uuid', 'session_start_time')
+            session_table = acquisition_real.Session
         else:
-            subject_uuid, session_start_time = \
-                (acquisition.Session & dict(session_uuid=session_uuid)).fetch1(
-                    'subject_uuid', 'session_start_time')
+            session_table = acquisition.Session
+
+        subject_uuid, session_start_time = \
+            (session_table & dict(session_uuid=session_uuid)).fetch1(
+                'subject_uuid', 'session_start_time')
 
         key_pi.update(
             subject_uuid=subject_uuid,
