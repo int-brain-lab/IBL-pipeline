@@ -99,18 +99,16 @@ class SessionQCIngest(dj.Computed):
                             qc_type=qc_type,
                             qc_fname=k)
                         if type(v) == float:
-                            SessionExtendedQC.Field.insert1(
-                                dict(**qc_field,
-                                     qc_fvalue_float=v))
+                            qc_fvalue_name = 'qc_fvalue_float'
                         elif v == "None":
                             pass
                         elif type(v) == str:
-                            SessionExtendedQC.Field.insert1(
-                                dict(**qc_field,
-                                     qc_fvalue_varchar=v))
+                            qc_fvalue_name = 'qc_fvalue_varchar'
                         else:
-                            SessionExtendedQC.Field.insert1(
-                                dict(**qc_field,
-                                     qc_fvalue_blob=v))
+                            qc_fvalue_name = 'qc_fvalue_blob'
+
+                        SessionExtendedQC.Field.insert1(
+                                {**qc_field,
+                                 qc_fvalue_name: v})
             except Exception:
                 pass
