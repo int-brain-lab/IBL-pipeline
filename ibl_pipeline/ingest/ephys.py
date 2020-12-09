@@ -1,4 +1,5 @@
 import datajoint as dj
+from datajoint.errors import DataJointError
 import json
 import uuid
 import re
@@ -65,15 +66,16 @@ class ProbeInsertion(dj.Imported):
         key['uuid'] = key['probe_insertion_uuid']
 
         session_uuid = grf(key, 'session')
+        session_key = dict(session_uuid=session_uuid)
 
-        if (acquisition_real.Session & dict(session_uuid=session_uuid)):
-            session_table = acquisition_real.Session
-        else:
-            session_table = acquisition.Session
-
-        subject_uuid, session_start_time = \
-            (session_table & dict(session_uuid=session_uuid)).fetch1(
-                'subject_uuid', 'session_start_time')
+        try:
+            subject_uuid, session_start_time = \
+                (acquisition_real.Session & session_key).fetch1(
+                    'subject_uuid', 'session_start_time')
+        except DataJointError:
+            subject_uuid, session_start_time = \
+                (acquisition.Session & session_key).fetch1(
+                    'subject_uuid', 'session_start_time')
 
         key_pi.update(
             subject_uuid=subject_uuid,

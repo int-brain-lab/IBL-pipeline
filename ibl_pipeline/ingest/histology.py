@@ -1,4 +1,5 @@
 import datajoint as dj
+from datajoint.errors import DataJointError
 import json
 import uuid
 import re
@@ -202,17 +203,15 @@ class ProbeTrajectoryTemp(dj.Imported):
         key['uuid'] = key_traj['probe_trajectory_uuid']
 
         probe_insertion_uuid = grf(key, 'probe_insertion')
-        if len(ephys_real.ProbeInsertion &
-               dict(probe_insertion_uuid=probe_insertion_uuid)) == 1:
+        probe_insertion_key = dict(probe_insertion_uuid=probe_insertion_uuid)
 
+        try:
             subject_uuid, session_start_time, probe_idx = \
-                (ephys_real.ProbeInsertion &
-                 dict(probe_insertion_uuid=probe_insertion_uuid)).fetch1(
+                (ephys_real.ProbeInsertion & probe_insertion_key).fetch1(
                     'subject_uuid', 'session_start_time', 'probe_idx')
-        else:
+        except DataJointError:
             subject_uuid, session_start_time, probe_idx = \
-                (ephys.ProbeInsertion &
-                 dict(probe_insertion_uuid=probe_insertion_uuid)).fetch1(
+                (ephys.ProbeInsertion & probe_insertion_key).fetch1(
                     'subject_uuid', 'session_start_time', 'probe_idx')
 
         key_traj.update(
