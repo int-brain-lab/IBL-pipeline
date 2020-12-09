@@ -117,7 +117,7 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
 
     secondary_fields = set(real_table.heading.secondary_attributes)
     ts_field = [f for f in secondary_fields
-                if '_ts' in f][0]
+                if f.endswith('_ts')][0]
     fields_to_update = secondary_fields - {ts_field}
 
     for r in (real_table & pks).fetch('KEY'):
