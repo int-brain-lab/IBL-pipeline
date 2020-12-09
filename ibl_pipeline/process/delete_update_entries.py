@@ -155,7 +155,7 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
         for f in fields_to_update:
             if real_record[f] != shadow_record[f]:
                 try:
-                    dj.Table._update(real_table & r, f, shadow_record[f])
+                    (real_table & r)._update(f, shadow_record[f])
                     update_narrative = f'{table_name}.{f}: {shadow_record[f]} != {real_record[f]}'
                     print(update_narrative)
                     if insert_to_table:
