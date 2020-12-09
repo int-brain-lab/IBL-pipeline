@@ -318,8 +318,7 @@ class ClusterBrainRegionTemp(dj.Computed):
 @schema
 class ProbeBrainRegionTemp(dj.Computed):
     definition = """
-    # Brain regions assignment to each probe insertion
-    # including the regions of finest granularity and their upper-level areas.
+    # Brain regions assignment to each probe insertion, including the regions of finest granularity and their upper-level areas.
     -> ProbeTrajectoryTemp
     -> reference.BrainRegion
     """
