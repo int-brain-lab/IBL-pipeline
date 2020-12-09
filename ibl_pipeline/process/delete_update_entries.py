@@ -155,7 +155,7 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
         for f in fields_to_update:
             if real_record[f] != shadow_record[f]:
                 try:
-                    dj.Table._update(real_table & r, f, shadow_record[f])
+                    (real_table & r)._update(f, shadow_record[f])
                     update_narrative = f'{table_name}.{f}: {shadow_record[f]} != {real_record[f]}'
                     print(update_narrative)
                     if insert_to_table:
@@ -187,7 +187,7 @@ def update_entries_from_real_tables(modified_pks):
         if t['table_name'] == 'Subject':
             uuid_field = 'subject_uuid'
         else:
-            uuid_field = [f for f in table.heading.secondary_attributes
+            uuid_field = next(f for f in table.heading.secondary_attributes if '_uuid' in f and 'subject' not in f)
                             if '_uuid' in f and 'subject' not in f][0]
 
         pks_important = get_important_pks(modified_pks)
