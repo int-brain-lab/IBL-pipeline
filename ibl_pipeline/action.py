@@ -183,3 +183,40 @@ class OtherActionProcedure(dj.Manual):
     procedure_type_name:        varchar(255)
     otheractionprocedure_ts=CURRENT_TIMESTAMP:   timestamp
     """
+
+
+@schema
+class CullMethod(dj.Lookup):
+    definition = """
+    cull_method:    varchar(64)
+    ---
+    cull_method_uuid:     uuid
+    cull_method_description='':    varchar(255)
+    cull_method_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+
+@schema
+class CullReason(dj.Lookup):
+    definition = """
+    cull_reason:    varchar(64)
+    ---
+    cull_reason_uuid: uuid
+    cull_reason_description='':    varchar(255)
+    cull_reason_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+
+@schema
+class Cull(dj.Manual):
+    definition = """
+    subject_uuid:                   uuid
+    ---
+    cull_uuid:                      uuid
+    cull_date:                      date
+    cull_user=null:                 varchar(255)
+    cull_reason=null:               varchar(64)
+    cull_method=null:               varchar(64)
+    cull_description='':            varchar(1024)
+    cull_ts=CURRENT_TIMESTAMP:      timestamp
+    """
