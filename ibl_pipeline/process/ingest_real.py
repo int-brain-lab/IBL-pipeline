@@ -61,7 +61,10 @@ ACTION_TABLES = (
     'SurgeryProcedure',
     'OtherAction',
     'OtherActionUser',
-    'OtherActionProcedure'
+    'OtherActionProcedure',
+    'CullMethod',
+    'CullReason',
+    'Cull'
 )
 
 ACQUISITION_TABLES = (
@@ -163,7 +166,7 @@ def main(excluded_tables=[], public=False):
 
     print('ChannelBrainLocation')
     copy_table(histology, histology_ingest, 'ChannelBrainLocation',
-            allow_direct_insert=True)
+               allow_direct_insert=True)
 
 
 if __name__ == '__main__':
