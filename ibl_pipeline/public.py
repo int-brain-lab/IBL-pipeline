@@ -2,6 +2,7 @@ import datajoint as dj
 import pandas as pd
 import datetime
 import re
+from tqdm import tqdm
 from uuid import UUID
 
 from ibl_pipeline.ingest import alyxraw
@@ -48,7 +49,17 @@ class PublicSubjectUuid(dj.Computed):
         self.insert1(dict(**key, subject_uuid=subject.fetch1('uuid')))
 
 
-if __name__ == "__main__":
+@schema
+class PublicSession(dj.Manual):
+    definition = """
+    session_uuid        : uuid
+    ---
+    subject_uuid=null        : uuid
+    session_start_time=null  : datetime
+    """
+
+
+def import_public_subjects():
 
     subject_lists = pd.read_csv('/data/list_of_subjects_behavior_paper.csv')
 
@@ -118,3 +129,19 @@ if __name__ == "__main__":
 
     PublicSubject.insert(subjs, skip_duplicates=True)
     PublicSubjectUuid.populate(display_progress=True)
+
+
+def import_public_sessions():
+
+    sessions = pd.read_csv('/data/sessions.csv')
+
+    session_uuids = sessions['0'].values
+
+    PublicSession.insert(
+        [{'session_uuid': uuid} for uuid in tqdm(session_uuids)]
+    )
+
+
+if __name__ == "__main__":
+
+    import_public_sessions()

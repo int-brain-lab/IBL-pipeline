@@ -64,23 +64,25 @@ class CompleteClusterSession(dj.Computed):
         'spikes.clusters.npy',
         'spikes.depths.npy',
         'spikes.samples.npy',
-        'spikes.templates.npy',
-        'spikes.times.npy'
+        'spikes.templates.npy'
     ]
     key_source = acquisition.Session & \
         'task_protocol like "%ephysChoiceWorld%"' \
-        & (data.FileRecord & 'dataset_name="spikes.times.npy"') \
+        & (data.FileRecord & 'dataset_name like "%spikes.times%.npy"') \
         & (data.FileRecord & 'dataset_name="spikes.clusters.npy"') \
         & (data.FileRecord & 'dataset_name="probes.description.json"')
 
     def make(self, key):
+
         datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
                     {'exists': 1}).fetch('dataset_name')
         is_complete = bool(np.all([req_ds in datasets
-                                   for req_ds in self.required_datasets]))
+                                   for req_ds in self.required_datasets])) \
+            and bool(np.any(['spikes.times' in d for d in datasets]))
+
         if is_complete:
             self.insert1(key)
-            (EphysMissingDataLog & key).delete()
+            (EphysMissingDataLog & key).delete_quick()
         else:
             for req_ds in self.required_datasets:
                 if req_ds not in datasets:
@@ -194,6 +196,11 @@ class DefaultCluster(dj.Imported):
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
+        spikes_times_dtype_name = (
+            data.FileRecord & key &
+            'dataset_name like "%spikes.times%.npy"').fetch1(
+                'dataset_name').split('.npy')[0]
+
         dtypes = [
             'clusters.amps',
             'clusters.channels',
@@ -208,7 +215,7 @@ class DefaultCluster(dj.Imported):
             'spikes.depths',
             'spikes.samples',
             'spikes.templates',
-            'spikes.times'
+            spikes_times_dtype_name
         ]
 
         files = one.load(eID, dataset_types=dtypes, download_only=True,
@@ -222,7 +229,14 @@ class DefaultCluster(dj.Imported):
         spikes = alf.io.load_object(
             ses_path.joinpath('alf', probe_name), 'spikes')
 
-        max_spike_time = spikes.times[-1]
+        time_fnames = [k for k in spikes.keys() if 'times' in k]
+
+        if len(time_fnames) > 1:
+            raise ValueError('More than one fields of spikes are about times: {}'.format(spikes.keys()))
+        else:
+            time_fname = time_fnames[0]
+
+        max_spike_time = spikes[time_fname][-1]
 
         for icluster, cluster_uuid in tqdm(enumerate(clusters.uuids['uuids']),
                                            position=0):
@@ -238,7 +252,7 @@ class DefaultCluster(dj.Imported):
                 cluster_waveforms_channels=clusters.waveformsChannels[icluster],
                 cluster_depth=clusters.depths[icluster],
                 cluster_peak_to_trough=clusters.peakToTrough[icluster],
-                cluster_spikes_times=spikes.times[idx],
+                cluster_spikes_times=spikes[time_fname][idx],
                 cluster_spikes_depths=spikes.depths[idx],
                 cluster_spikes_amps=spikes.amps[idx],
                 cluster_spikes_templates=spikes.templates[idx],
@@ -268,7 +282,7 @@ class DefaultCluster(dj.Imported):
                 [dict(**key, cluster_id=icluster,
                       metric_name=name, metric_value=value)
                  for name, value in metrics.to_dict().items()
-                 if name != 'ks2_label' and not np.isnan(value)]
+                 if name != 'ks2_label' and not np.isnan(value) and not np.isinf(value)]
             )
 
     class Metric(dj.Part):
@@ -319,6 +333,7 @@ class GoodCluster(dj.Computed):
     ---
     is_good=0:       bool      # whether the unit is good
     """
+
     def make(self, key):
 
         firing_rate = (DefaultCluster.Metrics & key).fetch1('firing_rate')
@@ -391,7 +406,7 @@ class AlignedTrialSpikes(dj.Computed):
             trial_spike_time = spike_times[spike_ids == itrial*2+1]
 
             if not len(trial_spike_time):
-                trial_spk['trial_spike_times'] = []
+                trial_spk['trial_spike_times'] = np.array([])
             else:
                 if event == 'stim on':
                     trial_spk['trial_spike_times'] = \
@@ -405,7 +420,8 @@ class AlignedTrialSpikes(dj.Computed):
                             trial_spike_time - trial_feedback_times[itrial]
                     else:
                         continue
-                trial_spk['event'] = event
-                trial_spks.append(trial_spk.copy())
+
+            trial_spk['event'] = event
+            trial_spks.append(trial_spk.copy())
 
         self.insert(trial_spks)

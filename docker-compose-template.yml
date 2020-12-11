@@ -4,11 +4,15 @@ services:
     build: .
     env_file: .env
     volumes:
-      - ./notebooks:/notebooks
+      - ./notebooks:/home/dja
       - ./images:/images
       - .:/src/IBL-pipeline
       - ./data:/data
-      - ~/.one_params:/root/.one_params
-      - ./snapshots:/Figures_DataJoint_shortcuts
+      - ./root/.one_params:/home/dja/.one_params
+    user: 1000:anaconda
     ports:
       - "8888:8888"
+    networks:
+      - ibl
+networks:
+  ibl:

@@ -3,6 +3,7 @@ import json
 import uuid
 
 from . import alyxraw, reference, subject, action
+from .. import acquisition
 from . import get_raw_field as grf
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
@@ -12,7 +13,7 @@ schema = dj.schema(dj.config.get('database.prefix', '') +
 @schema
 class Session(dj.Computed):
     definition = """
-    (session_uuid) -> alyxraw.AlyxRaw
+    -> alyxraw.AlyxRaw.proj(session_uuid='uuid')
     ---
     session_number=null:        int
     subject_uuid:               uuid
@@ -28,7 +29,8 @@ class Session(dj.Computed):
     key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(
         session_uuid='uuid')
 
-    def make(self, key):
+    @staticmethod
+    def create_entry(key):
         key_session = key.copy()
         key['uuid'] = key['session_uuid']
         key_session['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
@@ -67,7 +69,12 @@ class Session(dj.Computed):
         if protocol != 'None':
             key_session['task_protocol'] = protocol
 
-        self.insert1(key_session)
+        return key_session
+
+    def make(self, key):
+
+        self.insert1(
+            Session.create_entry(key))
 
 
 @schema
@@ -123,3 +130,36 @@ class WaterAdministrationSession(dj.Manual):
     session_start_time:     datetime
     wateradministrationsession_ts=CURRENT_TIMESTAMP:   timestamp
     """
+
+
+@schema
+class SessionQC(dj.Manual):
+    definition = """
+    subject_uuid        : uuid
+    session_start_time  : datetime
+    ---
+    qc                  : tinyint unsigned
+    sessionqc_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+
+@schema
+class SessionExtendedQC(dj.Manual):
+    definition = """
+    subject_uuid             : uuid
+    session_start_time       : datetime
+    qc_type                  : varchar(16)
+    ---
+    extended_qc              : tinyint unsigned
+    session_extended_qc_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+    class Field(dj.Part):
+        definition = """
+        -> master
+        qc_fname               : varchar(32)
+        ---
+        qc_fvalue_float=null   : float
+        qc_fvalue_str=null     : varchar(32)
+        qc_fvalue_blob=null    : blob
+        """

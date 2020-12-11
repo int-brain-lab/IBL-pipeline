@@ -1,0 +1,17 @@
+version: '3'
+services:
+  datajoint_test_new:
+    build:
+      context: .
+      dockerfile: Dockerfile_new
+    container_name: ibl_datajoint_test_new
+    env_file: .env_test
+    volumes:
+      - ./notebooks:/home/dja
+      - ./images:/images
+      - .:/src/IBL-pipeline
+      - ./data:/data
+      - ./root/.one_params:/home/dja/.one_params
+    user: 1000:anaconda
+    ports:
+      - "9999:8888"

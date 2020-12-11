@@ -1,4 +1,5 @@
 import datajoint as dj
+from datajoint.errors import DataJointError
 import uuid
 from . import alyxraw, reference, subject
 from . import get_raw_field as grf
@@ -240,7 +241,7 @@ class Surgery(dj.Computed):
         key_surgery['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
         if not len(subject.Subject & key_surgery):
             print('Subject {} is not in the table subject.Subject'.format(
-                key_surgery['surgery_uuid']
+                key_surgery['subject_uuid']
             ))
 
         key_surgery['surgery_start_time'] = grf(key, 'start_time')
@@ -365,3 +366,102 @@ class OtherActionProcedure(dj.Manual):
     procedure_type_name:        varchar(255)
     otheractionprocedure_ts=CURRENT_TIMESTAMP:   timestamp
     """
+
+
+@schema
+class CullMethod(dj.Computed):
+    definition = """
+    -> alyxraw.AlyxRaw.proj(cull_method_uuid='uuid')
+    ---
+    cull_method:    varchar(64)
+    cull_method_description='':    varchar(255)
+    cull_method_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+    key_source = (alyxraw.AlyxRaw & 'model="actions.cullmethod"').proj(
+        cull_method_uuid='uuid')
+
+    def make(self, key):
+        key_cm = key.copy()
+        key['uuid'] = key['cull_method_uuid']
+        key_cm['cull_method'] = grf(key, 'name')
+
+        description = grf(key, 'description')
+        if description != 'None':
+            key_cm['cull_method_description'] = description
+
+        self.insert1(key_cm)
+
+
+@schema
+class CullReason(dj.Computed):
+    definition = """
+    -> alyxraw.AlyxRaw.proj(cull_reason_uuid='uuid')
+    ---
+    cull_reason:    varchar(64)
+    cull_reason_description='':    varchar(255)
+    cull_reason_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+    key_source = (alyxraw.AlyxRaw & 'model="actions.cullreason"').proj(
+        cull_reason_uuid='uuid')
+
+    def make(self, key):
+        key_cr = key.copy()
+        key['uuid'] = key['cull_reason_uuid']
+        key_cr['cull_reason'] = grf(key, 'name')
+
+        description = grf(key, 'description')
+        if description != 'None':
+            key_cr['cull_reason_description'] = description
+
+        self.insert1(key_cr)
+
+
+@schema
+class Cull(dj.Computed):
+    definition = """
+    -> alyxraw.AlyxRaw.proj(cull_uuid='uuid')
+    ---
+    subject_uuid:                   uuid
+    cull_date:                      date
+    cull_user=null:                 varchar(255)
+    cull_reason=null:               varchar(64)
+    cull_method=null:               varchar(64)
+    cull_description='':            varchar(1024)
+    cull_ts=CURRENT_TIMESTAMP:      timestamp
+    """
+    key_source = (alyxraw.AlyxRaw & 'model = "actions.cull"').proj(
+        cull_uuid='uuid')
+
+    def make(self, key):
+        key_cull = key.copy()
+        key['uuid'] = key['cull_uuid']
+
+        key_cull['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
+        if not len(subject.Subject & key_cull):
+            print('Subject {} is not in the table subject.Subject'.format(
+                key_cull['subject_uuid']
+            ))
+            return
+
+        user_uuid = grf(key, 'user')
+        if user_uuid != 'None':
+            key_cull['cull_user'] = (
+                reference.LabMember & {'user_uuid': user_uuid}).fetch1('user_name')
+
+        cull_method_uuid = grf(key, 'cull_method')
+        if cull_method_uuid != 'None':
+            key_cull['cull_method'] = (
+                CullMethod & {'cull_method_uuid': cull_method_uuid}).fetch1('cull_method')
+
+        cull_reason_uuid = grf(key, 'cull_reason')
+        if cull_reason_uuid != 'None':
+            key_cull['cull_reason'] = (
+                CullReason & {'cull_reason_uuid': cull_reason_uuid}).fetch1('cull_reason')
+
+        description = grf(key, 'description')
+        if description != 'None':
+            key_cull['cull_description'] = description
+
+        key_cull['cull_date'] = grf(key, 'date')
+
+        self.insert1(key_cull)

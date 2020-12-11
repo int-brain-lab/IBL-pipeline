@@ -1,10 +1,13 @@
 import datajoint as dj
+from datajoint.errors import DataJointError
 import json
 import uuid
 import re
 
 from . import alyxraw, reference, acquisition
 from . import get_raw_field as grf
+
+from ibl_pipeline import acquisition as acquisition_real
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_ingest_ephys')
@@ -63,9 +66,16 @@ class ProbeInsertion(dj.Imported):
         key['uuid'] = key['probe_insertion_uuid']
 
         session_uuid = grf(key, 'session')
-        subject_uuid, session_start_time = \
-            (acquisition.Session & dict(session_uuid=session_uuid)).fetch1(
-                'subject_uuid', 'session_start_time')
+        session_key = dict(session_uuid=session_uuid)
+
+        try:
+            subject_uuid, session_start_time = \
+                (acquisition_real.Session & session_key).fetch1(
+                    'subject_uuid', 'session_start_time')
+        except DataJointError:
+            subject_uuid, session_start_time = \
+                (acquisition.Session & session_key).fetch1(
+                    'subject_uuid', 'session_start_time')
 
         key_pi.update(
             subject_uuid=subject_uuid,

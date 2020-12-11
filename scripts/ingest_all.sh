@@ -1,5 +1,6 @@
-
-
+date
+echo "Deleting alyx shadow tables for updates..."
+python delete_shadow_tables_for_updates.py
 date
 echo "Ingesting alyx raw..."
 python ingest_alyx_raw.py "$@"
@@ -22,7 +23,12 @@ date
 echo "Auto updating subject fields..."
 python auto_update_subject_fields.py
 date
+<<<<<<< HEAD
+python auto_update_trajectories.py
+date
+=======
 echo "Populating behavior tables..."
+>>>>>>> d52428199b75e85e94dc8ba56cb96bf3fa0c44c2
 python ingest_behavior.py
 date
 echo "Populating behavior analyses tables..."
