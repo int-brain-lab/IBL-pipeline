@@ -240,6 +240,12 @@ class Subject(dj.Computed):
         if sex != 'None':
             key_subject['sex'] = sex
 
+        strain_uuid = grf(key, 'strain')
+        if strain_uuid != 'None':
+            key_subject['subject_strain'] = \
+                (Strain & dict(strain_uuid=uuid.UUID(strain_uuid))).fetch1(
+                    'strain_name')
+
         birth_date = grf(key, 'birth_date')
         if birth_date != 'None':
             key_subject['subject_birth_date'] = birth_date
@@ -509,7 +515,12 @@ class Caging(dj.Computed):
         key_cage['cage_name'] = grf(key, 'cage')
         json_content = grf(key, 'json')
         if json_content != 'None':
-            json_dict = json.loads(json_content)
+            try:
+                json_dict = json.loads(json_content)
+            except json.decoder.JSONDecodeError:
+                json_content = json_content.replace("\'", "\"")
+                json_dict = json.loads(json_content)
+
             history = json_dict['history']
             if 'cage' not in history:
                 self.insert1(key_cage, skip_duplicates=True)

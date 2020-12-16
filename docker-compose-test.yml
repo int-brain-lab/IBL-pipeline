@@ -5,10 +5,15 @@ services:
     container_name: ibl_datajoint_test
     env_file: .env_test
     volumes:
-      - ./notebooks:/notebooks
+      - ./notebooks:/home/dja
       - ./images:/images
       - .:/src/IBL-pipeline
       - ./data:/data
       - ./root/.one_params:/root/.one_params
+    user: 1000:anaconda
     ports:
-      - "8900:8888"
+      - "9999:8888"
+    networks:
+      - ibl_test
+networks:
+  ibl_test:

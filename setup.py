@@ -6,7 +6,7 @@ here = path.abspath(path.dirname(__file__))
 
 setup(
     name='ibl_pipeline',
-    version='0.2.2',
+    version='0.2.3',
     description='Datajoint schemas for IBL',
     author='Vathes',
     author_email='support@vathes.com',
