@@ -1,0 +1,33 @@
+version: '3'
+services:
+
+  pg:
+    image: postgres:13.1
+    environment:
+      - POSTGRES_PASSWORD=${ALYX_DB_PASSWORD?set ALYX_DB_PASSWORD in .env}
+    healthcheck:
+      test: [ "CMD", "/usr/bin/psql", "-U", "postgres", "-c", "\\l" ]
+      timeout: 5s
+      retries: 60
+      interval: 1s
+
+  datajoint-ingest:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingest
+    env_file: .env
+    volumes:
+      - ./notebooks:/home/dja
+      - ./images:/images
+      - .:/src/IBL-pipeline
+      - ./data:/data
+      - ./root/.one_params:/home/dja/.one_params
+    user: 1000:anaconda
+    ports:
+      - "8888:8888"
+    networks:
+      - ibl
+
+networks:
+  ibl:
+

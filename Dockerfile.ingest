@@ -1,0 +1,35 @@
+
+FROM datajoint/djlab:py3.7-debian
+
+RUN pip install --upgrade pip \
+	&& pip install --upgrade datajoint
+
+ADD . /src/IBL-pipeline
+
+USER root
+
+RUN pip install -e /src/IBL-pipeline
+
+RUN pip uninstall opencv-python -y
+
+RUN conda install -c conda-forge opencv -y
+
+COPY --chown=dja:anaconda ./apt_requirements.txt /tmp/apt_requirements.txt
+
+RUN apt-get update && apt-get -y install postgresql-client
+
+USER dja:anaconda
+
+RUN \
+    /entrypoint.sh echo "Requirements updated..." && \
+    rm "${APT_REQUIREMENTS}"
+
+RUN cd /src \
+	&& git clone https://github.com/cortex-lab/alyx.git \
+	&& cd alyx && pip3 install -r requirements.txt
+
+EXPOSE 8000/tcp
+COPY ingest-entrypoint.sh /
+ENTRYPOINT ["/ingest-entrypoint.sh" ]
+CMD ["run" ]
+
