@@ -1,4 +1,4 @@
-version: '3'
+version: '2.4'
 services:
 
   pg:
@@ -10,19 +10,30 @@ services:
       timeout: 5s
       retries: 60
       interval: 1s
+    networks:
+      - ibl
 
   datajoint-ingest:
     build:
       context: .
       dockerfile: Dockerfile.ingest
-    env_file: .env
+    init: true
+    depends_on:
+      pg:
+          condition: service_healthy
+    environment:
+      - PGUSER=${ALYX_DB_USER?set ALYX_DB_USER in .env}
+      - PGHOST=${ALYX_DB_HOST?set ALYX_DB_HOST in .env}
+      - PGPASSWORD=${ALYX_DB_PASSWORD?set ALYX_DB_PASSWORD in .env}
+      - ALYX_DL_DATE=${ALYX_DL_DATE?set ALYX_DL_DATE in .env}
+      - ALYX_DL_USER=${ALYX_DL_USER?set ALYX_DL_USER in .env}
+      - ALYX_DL_PASSWORD=${ALYX_DL_PASSWORD?set ALYX_DL_PASSWORD in .env}
     volumes:
       - ./notebooks:/home/dja
       - ./images:/images
       - .:/src/IBL-pipeline
       - ./data:/data
       - ./root/.one_params:/home/dja/.one_params
-    user: 1000:anaconda
     ports:
       - "8888:8888"
     networks:

@@ -6,7 +6,7 @@
 # globals
 # -------
 
-dbdump="/dump.sql.gz"
+dbdump="/tmp/dump.sql.gz"
 dbloaded="/src/alyx/alyx/db_loaded"
 sucreated="/src/alyx/alyx/superuser_created"
 
@@ -27,16 +27,16 @@ fetchdump() {
 
 	mv -f ${dbdump} ${dbdump}.prev >/dev/null 2>&1;
 
-	wget -O ${dbdump} \
+	wget -q -O ${dbdump} \
 		--user "$ALYX_DL_USER" \
 		--password "$ALYX_DL_PASSWORD" \
-	http://ibl.flatironinstitute.org/json/$${ALYX_DL_DATE}_alyxfull.sql.gz
+	http://ibl.flatironinstitute.org/json/${ALYX_DL_DATE}_alyxfull.sql.gz
 }
 
-# createdb
-# --------
+# mkdb
+# ----
 
-createdb() {
+mkdb() {
 	if [ -f "${dbloaded}" ]; then
 		echo '# => using existing database';
 	else
@@ -45,7 +45,7 @@ createdb() {
 		[ ! -f "${dbdump}" ] \
 			&& err_exit ".. no database dump in $dbdump";
 
-		createdb -U $PGUSER alyx;
+		createdb alyx;
 	fi
 }
 
@@ -54,7 +54,7 @@ createdb() {
 
 loaddb() {
 	echo "# => loading database ${dbdump}"
-	gzip -dc ${dbdump} |psql -U postgres -d alyx;
+	gzip -dc ${dbdump} |psql -d alyx;
 	touch ${dbloaded};
 }
 
@@ -134,7 +134,7 @@ alyxprep() {
 
 alyxstart() {
 	echo '# => starting alyx'
-	/src/alyx/alyx/manage.py runserver --insecure 0.0.0.0:8000;
+	/src/alyx/alyx/manage.py runserver --insecure 0.0.0.0:8888;
 }
 
 # run 
@@ -143,7 +143,7 @@ alyxstart() {
 
 run() {
 	fetchdump;
-	createdb;
+	mkdb;
 	loaddb;
 	alyxcfg;
 	alyxprep;
