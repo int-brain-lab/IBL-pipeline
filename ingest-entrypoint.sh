@@ -45,6 +45,7 @@ mkdb() {
 		[ ! -f "${dbdump}" ] \
 			&& err_exit ".. no database dump in $dbdump";
 
+		createdb alyx-old;
 		createdb alyx;
 	fi
 }
@@ -63,7 +64,13 @@ loaddb() {
 
 rotatedb() {
 	echo "# => rotating databases";
-	echo "# ==> NOT IMPLEMENTED"; 
+
+	echo "# ==> ... dropping alyx-old"; 
+	dropdb alyx-old || err_exit "couldn't drop alyx-old";
+
+	echo "# ==> ... renaming alyx to alyx-old"; 
+	psql -c 'alter database alyx rename to alyx-old;' \
+		|| err_exit "couldn't rename alyx to alyx-old";
 }
 
 
@@ -113,7 +120,7 @@ alyxcfg() {
 		admin.save()
 		exit()
 EOF
-	
+
 		touch ${sucreated};
 	fi
 
