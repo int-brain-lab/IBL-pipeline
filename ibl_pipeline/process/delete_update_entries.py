@@ -39,8 +39,12 @@ def delete_entries_from_alyxraw(pks_to_be_deleted=[], modified_pks_important=[])
             (alyxraw.AlyxRaw.Field & key).delete_quick()
 
     if modified_pks_important:
-        (alyxraw.AlyxRaw & [{'uuid': pk} for pk in modified_pks_important
-                            if is_valid_uuid(pk)]).delete()
+        pk_list = [{'uuid': pk} for pk in modified_pks_important
+                            if is_valid_uuid(pk)]
+        (alyxraw.AlyxRaw & 'model != "actions.session"' &
+         pk_list).delete()
+        (alyxraw.AlyxRaw.Field & pk_list & 'fname!="start_time"' &
+         (alyxraw.AlyxRaw & 'model="actions.session"')).delete_quick()
 
 
 def delete_entries_from_membership(pks_to_be_deleted):
@@ -113,7 +117,7 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
 
     secondary_fields = set(real_table.heading.secondary_attributes)
     ts_field = [f for f in secondary_fields
-                if '_ts' in f][0]
+                if f.endswith('_ts')][0]
     fields_to_update = secondary_fields - {ts_field}
 
     for r in (real_table & pks).fetch('KEY'):
@@ -151,7 +155,7 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
         for f in fields_to_update:
             if real_record[f] != shadow_record[f]:
                 try:
-                    dj.Table._update(real_table & r, f, shadow_record[f])
+                    (real_table & r)._update(f, shadow_record[f])
                     update_narrative = f'{table_name}.{f}: {shadow_record[f]} != {real_record[f]}'
                     print(update_narrative)
                     if insert_to_table:
@@ -183,8 +187,8 @@ def update_entries_from_real_tables(modified_pks):
         if t['table_name'] == 'Subject':
             uuid_field = 'subject_uuid'
         else:
-            uuid_field = [f for f in table.heading.secondary_attributes
-                            if '_uuid' in f and 'subject' not in f][0]
+            uuid_field = next(f for f in table.heading.secondary_attributes
+                              if '_uuid' in f and 'subject' not in f)
 
         pks_important = get_important_pks(modified_pks)
 
@@ -201,6 +205,7 @@ def update_entries_from_real_tables(modified_pks):
                         update_fields(t['real_schema'], t['shadow_schema'],
                                       m, (sub_t & query).fetch('KEY'),
                                       insert_to_table=True)
+
 
 
 if __name__ == '__main__':

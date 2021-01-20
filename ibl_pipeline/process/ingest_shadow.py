@@ -48,6 +48,9 @@ SHADOW_TABLES = [
     action.WaterRestriction,
     action.Surgery,
     action.OtherAction,
+    action.CullMethod,
+    action.CullReason,
+    action.Cull,
     acquisition.Session,
     data.DataFormat,
     data.DataRepositoryType,
@@ -62,10 +65,11 @@ if mode != 'public':
         ephys.ProbeModel,
         ephys.ProbeInsertion,
         histology.ProbeTrajectory,
+        # histology.ChannelBrainLocation
     ]
 
 
-def main(excluded_tables=[]):
+def main(excluded_tables=[], modified_pks=None):
 
     kwargs = dict(
         display_progress=True,
@@ -75,6 +79,23 @@ def main(excluded_tables=[]):
         if t.__name__ in excluded_tables:
             continue
         print(f'Ingesting shadow table {t.__name__}...')
+
+        if t.__name__ == 'Session' and modified_pks:
+            modified_session_keys = [
+                {'session_uuid': pk} for pk in modified_pks]
+            sessions = acquisition.Session & modified_session_keys
+            if sessions:
+                modified_session_entries = []
+                for key in sessions.fetch('KEY'):
+                    try:
+                        entry = acquisition.Session.create_entry(key)
+                        modified_session_entries.append(entry)
+                    except:
+                        print("Error creating entry for key: {}".format(key))
+                if modified_session_entries:
+                    t.insert(modified_session_entries,
+                             allow_direct_insert=True, replace=True)
+
         t.populate(**kwargs)
 
     if 'DataSet' not in excluded_tables:

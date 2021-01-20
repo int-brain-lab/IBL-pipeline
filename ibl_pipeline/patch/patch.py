@@ -161,7 +161,7 @@ class Run(dj.Manual):
     job_status='' : enum('Success', 'Partial Success', 'Error', '')
     """
 
-    def _delete_table(self, t, key, table_type='session'):
+    def _delete_table(self, t, key, table_type='session', save_status=True):
 
         key_del = key.copy()
         if table_type == 'virtual':
@@ -178,8 +178,9 @@ class Run(dj.Manual):
         else:
             original = False
 
-        RunStatus.TableStatus.insert1(
-            dict(**key_table, original=original), skip_duplicates=True)
+        if save_status:
+            RunStatus.TableStatus.insert1(
+                dict(**key_table, original=original), skip_duplicates=True)
 
         print('Deleting table {} ...'.format(t['full_table_name']))
         if t['full_table_name'] == '`ibl_ephys`.`__aligned_trial_spikes`':
@@ -188,12 +189,14 @@ class Run(dj.Manual):
                 (table_class & cluster).delete_quick()
         else:
             (table_class & key_del).delete_quick()
-        dj.Table._update(
-            RunStatus.TableStatus & key_table,
-            'status', 'Deleted')
-        dj.Table._update(
-            RunStatus.TableStatus & key_table,
-            'delete_time', datetime.datetime.now())
+
+        if save_status:
+            dj.Table._update(
+                RunStatus.TableStatus & key_table,
+                'status', 'Deleted')
+            dj.Table._update(
+                RunStatus.TableStatus & key_table,
+                'delete_time', datetime.datetime.now())
 
     def make(self, key):
 
