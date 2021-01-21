@@ -7,6 +7,7 @@
 # -------
 
 dbdump="/tmp/dump.sql.gz"
+dbcreated="/src/alyx/alyx/db_created"
 dbloaded="/src/alyx/alyx/db_loaded"
 sucreated="/src/alyx/alyx/superuser_created"
 
@@ -37,16 +38,18 @@ fetchdump() {
 # ----
 
 mkdb() {
-	if [ -f "${dbloaded}" ]; then
+	if [ -f "${dbcreated}" ]; then
 		echo '# => using existing database';
 	else
-		echo '#==> creating database';
+		echo '# ==> creating database';
 
 		[ ! -f "${dbdump}" ] \
 			&& err_exit ".. no database dump in $dbdump";
 
-		createdb alyx-old;
+		createdb alyx_old;
 		createdb alyx;
+
+		touch ${dbcreated};
 	fi
 }
 
@@ -54,23 +57,35 @@ mkdb() {
 # ------
 
 loaddb() {
-	echo "# => loading database ${dbdump}"
-	gzip -dc ${dbdump} |psql -d alyx;
-	touch ${dbloaded};
+	if [ -f "${dbloaded}" ]; then
+		echo '# => database loaded - skipping load.';
+	else
+		echo "# => loading database ${dbdump}"
+		gzip -dc ${dbdump} |psql -d alyx;
+		touch ${dbloaded};
+	fi
 }
 
 # rotatedb
 # --------
 
 rotatedb() {
-	echo "# => rotating databases";
+	echo "# => rotating databases:";
 
-	echo "# ==> ... dropping alyx-old"; 
-	dropdb alyx-old || err_exit "couldn't drop alyx-old";
+	echo "# ==> ... dropping alyx_old"; 
+	dropdb alyx_old || err_exit "couldn't drop alyx_old";
 
-	echo "# ==> ... renaming alyx to alyx-old"; 
-	psql -c 'alter database alyx rename to alyx-old;' \
-		|| err_exit "couldn't rename alyx to alyx-old";
+	echo "# ==> ... renaming alyx to alyx_old"; 
+	psql -c 'alter database alyx rename to alyx_old;' \
+			> /dev/null \
+		|| err_exit "couldn't rename alyx to alyx_old";
+
+	echo "# ==> ... creating new alyx"; 
+	createdb alyx || err_exit "couldn't rename alyx to alyx_old";
+
+	rm -f ${dbloaded};
+
+	echo "# => ok.";
 }
 
 
@@ -144,28 +159,52 @@ alyxstart() {
 	/src/alyx/alyx/manage.py runserver --insecure 0.0.0.0:8888;
 }
 
-# run 
-# ---
-# create/load/etc full-command
+# init
+# ----
+# perform all initialization steps
 
-run() {
+init() {
 	fetchdump;
 	mkdb;
 	loaddb;
 	alyxcfg;
 	alyxprep;
+}
+
+
+# www 
+# ---
+# initialize environment and run alyx web 
+
+www() {
+	init;
 	alyxstart;
 }
+
+
+# dev
+# ---
+# initialize environment and wait indefinitely
+
+dev() {
+	init;
+	exec tail -f /dev/null;
+} 
 
 
 # _start:
 
 case "$1" in
 	"fetchdump") fetchdump;;
-	"createdb") createdb;;
+	"mkdb") mkdb;;
 	"loaddb") loaddb;;
+	"rotatedb") rotatedb;;
+	"alyxcfg") alyxcfg;;
+	"alyxprep") alyxprep;;
 	"alyxstart") alyxstart;;
+	"www") www;;
+	"dev") dev;;
 	"sh") exec /bin/sh -c "$*";;
-	*) run;;
+	*) ;; # ... sourceable
 esac
 
