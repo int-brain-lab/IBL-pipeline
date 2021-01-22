@@ -649,7 +649,7 @@ class SessionDelayAvailability(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    error_type:    enum("elapsed time not available", "raw task data not available")
+    error_type:    enum("elapsed time not available", "raw task data not available", "delay not available")
     """
 
 
