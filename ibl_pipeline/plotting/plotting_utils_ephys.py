@@ -637,9 +637,9 @@ def driftmap(
         ax = plt.Axes(fig, [0., 0., 1., 1.])
 
     ax.scatter(x, y, color=colorvec, edgecolors='none')
-    x_edge = (max(x) - min(x)) * 0.05
-    x_lim = [min(x) - x_edge, max(x) + x_edge]
-    y_lim = [min(y) - 50, max(y) + 100]
+    x_edge = (np.nanmax(x) - np.nanmin(x)) * 0.05
+    x_lim = [np.nanmin(x) - x_edge, np.nanmax(x) + x_edge]
+    y_lim = [np.nanmin(y) - 50, np.nanmax(y) + 100]
     ax.set_xlim(x_lim[0], x_lim[1])
     ax.set_ylim(y_lim[0], y_lim[1])
 
