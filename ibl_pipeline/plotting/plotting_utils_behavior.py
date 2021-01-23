@@ -146,6 +146,8 @@ def get_status(subj):
     first_trained_1b = subj.aggr(
         behavior.SessionTrainingStatus & 'training_status = "trained_1b"',
         first_session='DATE(min(session_start_time))')
+    first_ephysrig = subj.aggr(behavior_ingest.Settings & 'pybpod_board like "%ephys%"',
+        first_session='DATE(min(session_start_time))')
     first_ready4ephysrig = subj.aggr(
         behavior.SessionTrainingStatus & 'training_status = "ready4ephysrig"',
         first_session='DATE(min(session_start_time))')
@@ -186,6 +188,14 @@ def get_status(subj):
                       first_ready4ephysrig_date=first_ready4ephysrig_date)
     else:
         result.update(is_ready4ephysrig=False)
+
+    if len(first_ephysrig):
+        first_ephysrig_date = first_ephysrig.fetch1(
+            'first_session').strftime('%Y-%m-%d')
+        result.update(is_on_ephysrig=True,
+                      first_ephysrig_date=first_ephysrig_date)
+    else:
+        result.update(is_on_ephysrig=False)
 
     if len(first_ready4delay):
         first_ready4delay_date = first_ready4delay.fetch1(
@@ -550,6 +560,22 @@ def create_status_plot(data, yrange, status, xaxis='x1', yaxis='y1',
                mode="lines",
                marker=dict(color='rgba(28, 20, 255, 1)'),
                name='first day got ready4ephysrig',
+               xaxis=xaxis,
+               yaxis=yaxis,
+               showlegend=show_legend_external,
+               hoverinfo='x'
+            )
+        )
+
+    if status['is_on_ephysrig'] and (not public):
+        data.append(
+            go.Scatter(
+               x=[status['first_ephysrig_date'],
+                  status['first_ephysrig_date']],
+               y=yrange,
+               mode="lines",
+               marker=dict(color='rgba(116, 15, 170, 1)'),
+               name='first day on ephysrig',
                xaxis=xaxis,
                yaxis=yaxis,
                showlegend=show_legend_external,
