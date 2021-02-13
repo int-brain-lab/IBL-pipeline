@@ -649,7 +649,7 @@ class SessionDelayAvailability(dj.Imported):
     definition = """
     -> acquisition.Session
     ---
-    error_type:    enum("elapsed time not available", "raw task data not available")
+    error_type:    enum("elapsed time not available", "raw task data not available", "delay not available")
     """
 
 
@@ -669,25 +669,21 @@ class SessionDelay(dj.Imported):
             date.strftime('%Y-%m-%d')))
 
     def make(self, key):
-        eID = (acquisition.Session & key).fetch1('session_uuid')
-        data = one.load(str(eID), dataset_types=['_iblrig_taskData.raw'])
-        trial_start, trial_end = (TrialSet.Trial & key & 'trial_id=1').fetch1(
-            'trial_start_time', 'trial_end_time')
-        first_trial_duration = trial_end - trial_start
 
-        if data[0]:
-            if 'elapsed_time' in data[0][0].keys():
-                elapsed_time = data[0][0]['elapsed_time'].split(':')
-                key['session_delay_in_secs'] = float(elapsed_time[1])*60 + \
-                    float(elapsed_time[2]) - first_trial_duration
-                key['session_delay_in_mins'] = key['session_delay_in_secs']/60
-                self.insert1(key)
-            else:
-                key['error_type'] = 'raw task data not available'
-                SessionDelayAvailability.insert1(key, allow_direct_insert=True)
+        eID = (acquisition.Session & key).fetch1('session_uuid')
+        json = one.alyx.get(one.get_details(str(eID))['url'])['json']
+
+        if 'SESSION_START_DELAY_SEC' in json.keys():
+            self.insert1(dict(
+                **key,
+                session_delay_in_secs=json['SESSION_START_DELAY_SEC'],
+                session_delay_in_mins=json['SESSION_START_DELAY_SEC'] / 60
+            ))
         else:
-            key['error_type'] = 'elapsed time not available'
-            SessionDelayAvailability.insert1(key, allow_direct_insert=True)
+            key['error_type'] = 'delay not available'
+            SessionDelayAvailability.insert1(
+                key, allow_direct_insert=True,
+                skip_duplicates=True)
 
 
 @schema
