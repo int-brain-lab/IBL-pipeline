@@ -123,7 +123,7 @@ def delete_histology_alyx_shadow(verbose=False):
         keys = [{uuid_name: k['uuid']} for k in traj_keys]
         table = InsertBuffer(t)
         for k in tqdm(keys, position=0):
-            table.delete1(k)
+            table.insert1(k)
             if table.flush_delete(chunksz=1000, quick=True) and verbose:
                 print(f'Deleted 1000 entries from {t.__name__}')
         table.flush_delete(quick=True)

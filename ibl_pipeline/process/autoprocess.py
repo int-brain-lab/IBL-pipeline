@@ -198,6 +198,6 @@ def process_updates(pks, current_dump='/data/alyxfull.json'):
 
 if __name__ == '__main__':
 
-    process_new(previous_dump='/data/alyxfull.json.last',
-                latest_dump='/data/alyxfull_20201128_0400.json',
-                job_date='2020-11-28', timezone='European')
+    process_new(previous_dump='/data/alyxfull_20210212_0400.json',
+                latest_dump='/data/alyxfull.json',
+                job_date='2021-02-15', timezone='European')

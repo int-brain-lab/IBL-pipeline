@@ -1,0 +1,19 @@
+version: '3'
+services:
+  datajoint:
+    build: .
+    env_file: .env
+    volumes:
+      - ./notebooks:/home/dja
+      - ./images:/images
+      - .:/src/IBL-pipeline
+      - ./data:/data
+      - ./raster:/raster
+      - ./root/.one_params:/home/dja/.one_params
+    user: 1000:anaconda
+    ports:
+      - "8888:8888"
+    networks:
+      - ibl
+networks:
+  ibl:
