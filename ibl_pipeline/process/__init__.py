@@ -1,6 +1,7 @@
-from ibl_pipeline.ingest import alyxraw
+from ibl_pipeline.ingest import alyxraw, InsertBuffer
 from ibl_pipeline.utils import is_valid_uuid
 import datetime
+from tqdm import tqdm
 
 
 def get_timezone(t=datetime.datetime.now().time()):
@@ -26,9 +27,25 @@ def get_important_pks(pks, return_original_dict=False):
 
     pks = [pk for pk in pks if is_valid_uuid(pk)]
     pks_dict = [{'uuid': pk} for pk in pks]
-    pks_unimportant = [
-        str(pk['uuid'])
-        for pk in (alyxraw.AlyxRaw & 'model in ("data.filerecord", "jobs.task")' & pks_dict).fetch('KEY')]
+
+    models_ignored = '"data.dataset", "data.filerecord", "jobs.task", "actions.wateradministration", "experiments.trajectoryestimate", "experiments.channel"'
+
+    if len(pks) < 1000:
+        pks_unimportant = [
+            str(pk['uuid'])
+            for pk in (alyxraw.AlyxRaw &
+                       f'model in ({models_ignored})' &
+                       pks_dict).fetch('KEY')]
+    else:
+        buffer = InsertBuffer(
+            alyxraw.AlyxRaw & f'model in ({models_ignored})')
+        for pk in tqdm(pks_dict):
+            buffer.insert1(pk)
+            buffer.flush_fetch('KEY', chunksz=200)
+
+        buffer.flush_fetch('KEY')
+        pks_unimportant = [str(pk['uuid']) for pk in buffer.fetched_results]
+
     pks_important = list(set(pks) - set(pks_unimportant))
 
     if return_original_dict:
