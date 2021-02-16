@@ -522,6 +522,7 @@ class SessionTrainingStatus(dj.Computed):
                                 return
 
                             # also compute the median reaction time
+                            # to put into 
                             medRT = compute_reaction_time(trials)
 
                             # psych_unbiased = utils.compute_psych_pars(trials_unbiased)
