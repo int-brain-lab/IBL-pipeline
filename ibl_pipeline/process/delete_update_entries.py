@@ -5,7 +5,7 @@ import datajoint as dj
 from ibl_pipeline.process.ingest_membership import membership_tables
 from ibl_pipeline.common import *
 from ibl_pipeline.ingest.common import *
-from ibl_pipeline.ingest import job, InsertBuffer
+from ibl_pipeline.ingest import job, QueryBuffer
 from ibl_pipeline.ingest import ingest_utils
 from ibl_pipeline import update
 from uuid import UUID
@@ -44,21 +44,21 @@ def delete_entries_from_alyxraw(pks_to_be_deleted=[], modified_pks_important=[])
         if len(pk_list) > 1000:
 
             print('Long pk list, deleting from alyxraw.AlyxRaw ...')
-            alyxraw_buffer = InsertBuffer(alyxraw.AlyxRaw & 'model != "actions.session"')
+            alyxraw_buffer = QueryBuffer(alyxraw.AlyxRaw & 'model != "actions.session"')
             for pk in tqdm(pk_list):
-                alyxraw_buffer.insert1(pk)
+                alyxraw_buffer.add_to_queue1(pk)
                 alyxraw_buffer.flush_delete(chunksz=50, quick=False)
 
             alyxraw_buffer.flush_delete(quick=False)
 
             # delete session fields without deleting the primary keys.
             print('Long pk list, deleting from alyxraw.AlyxRaw.Field ...')
-            alyxraw_field_buffer = InsertBuffer(
+            alyxraw_field_buffer = QueryBuffer(
                 alyxraw.AlyxRaw.Field & 'fname!="start_time"' &
                 (alyxraw.AlyxRaw & 'model="actions.session"'))
 
             for pk in tqdm(pk_list):
-                alyxraw_field_buffer.insert1(pk)
+                alyxraw_field_buffer.add_to_queue1(pk)
                 alyxraw_field_buffer.flush_delete(chunksz=50, quick=True)
             alyxraw_field_buffer.flush_delete(quick=True)
 

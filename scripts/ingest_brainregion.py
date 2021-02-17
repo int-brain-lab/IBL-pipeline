@@ -2,7 +2,7 @@ import datajoint as dj
 import json
 import os.path as path
 import sys
-from ibl_pipeline.ingest import InsertBuffer
+from ibl_pipeline.ingest import QueryBuffer
 from ibl_pipeline.ingest import reference as reference_ingest
 from ibl_pipeline import reference
 from ingest_alyx_raw import get_alyx_entries
@@ -17,7 +17,7 @@ atlas = pd.read_csv('/data/allen_structure_tree.csv')
 
 def ingest_all():
 
-    ib_brainregion = InsertBuffer(reference_ingest.BrainRegion)
+    ib_brainregion = QueryBuffer(reference_ingest.BrainRegion)
 
     for key in tqdm(keys, position=0):
         fields = key['fields']
@@ -28,17 +28,17 @@ def ingest_all():
         else:
             graph_order = int(graph_order)
 
-        ib_brainregion.insert1(
+        ib_brainregion.add_to_queue1(
             dict(brain_region_pk=key['pk'],
                  acronym=fields['acronym'],
                  brain_region_name=fields['name'],
                  parent=fields['parent'],
                  brain_region_level=fields['level'],
                  graph_order=graph_order))
-        if ib_brainregion.flush(skip_duplicates=True, chunksz=1000):
+        if ib_brainregion.flush_insert(skip_duplicates=True, chunksz=1000):
             print('Inserted 1000 raw tuples.')
 
-    if ib_brainregion.flush(skip_duplicates=True):
+    if ib_brainregion.flush_insert(skip_duplicates=True):
         print('Inserted all remaining raw field tuples')
 
 
