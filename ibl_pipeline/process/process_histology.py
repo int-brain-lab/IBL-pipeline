@@ -89,7 +89,6 @@ def delete_histology_alyx_shadow(verbose=False):
 
     CHANNEL_TABLES = [
         histology_ingest.ChannelBrainLocationTemp,
-        histology_ingest.ChannelBrainLocation,
         alyxraw.AlyxRaw.Field,
         alyxraw.AlyxRaw
     ]
@@ -113,7 +112,6 @@ def delete_histology_alyx_shadow(verbose=False):
 
     TRAJ_TABLES = [
         histology_ingest.ProbeTrajectoryTemp,
-        histology_ingest.ProbeTrajectory,
         alyxraw.AlyxRaw.Field,
         alyxraw.AlyxRaw
     ]
