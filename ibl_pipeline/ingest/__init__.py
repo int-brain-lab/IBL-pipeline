@@ -176,7 +176,7 @@ def populate_batch(t, chunksz=1000, verbose=True):
     for key in tqdm(keys, position=0):
         entry = t.create_entry(key)
         if entry:
-            table.insert1(entry)
+            table.add_to_queue1(entry)
 
         if table.flush_insert(
                 skip_duplicates=True,
