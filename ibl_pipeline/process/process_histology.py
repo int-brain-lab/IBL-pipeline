@@ -1,6 +1,6 @@
 from ibl_pipeline.process import ingest_alyx_raw, ingest_real
 from ibl_pipeline.ingest.common import *
-from ibl_pipeline.ingest import populate_batch, InsertBuffer
+from ibl_pipeline.ingest import populate_batch, QueryBuffer
 from ibl_pipeline.common import *
 from ibl_pipeline.process import update_utils
 from tqdm import tqdm
@@ -89,7 +89,6 @@ def delete_histology_alyx_shadow(verbose=False):
 
     CHANNEL_TABLES = [
         histology_ingest.ChannelBrainLocationTemp,
-        histology_ingest.ChannelBrainLocation,
         alyxraw.AlyxRaw.Field,
         alyxraw.AlyxRaw
     ]
@@ -99,10 +98,10 @@ def delete_histology_alyx_shadow(verbose=False):
         print(f'Deleting from table {t.__name__}')
         uuid_name = t.heading.primary_key[0]
         keys = [{uuid_name: k['uuid']} for k in tqdm(channel_loc_keys)]
-        table = InsertBuffer(t)
+        table = QueryBuffer(t)
 
         for k in tqdm(keys, position=0):
-            table.delete1(k)
+            table.add_to_queue1(k)
             if table.flush_delete(chunksz=1000, quick=True) and verbose:
                 print(f'Deleted 1000 entries from {t.__name__}')
 
@@ -113,7 +112,6 @@ def delete_histology_alyx_shadow(verbose=False):
 
     TRAJ_TABLES = [
         histology_ingest.ProbeTrajectoryTemp,
-        histology_ingest.ProbeTrajectory,
         alyxraw.AlyxRaw.Field,
         alyxraw.AlyxRaw
     ]
@@ -121,9 +119,9 @@ def delete_histology_alyx_shadow(verbose=False):
     for t in TRAJ_TABLES:
         uuid_name = t.heading.primary_key[0]
         keys = [{uuid_name: k['uuid']} for k in traj_keys]
-        table = InsertBuffer(t)
+        table = QueryBuffer(t)
         for k in tqdm(keys, position=0):
-            table.insert1(k)
+            table.add_to_queue1(k)
             if table.flush_delete(chunksz=1000, quick=True) and verbose:
                 print(f'Deleted 1000 entries from {t.__name__}')
         table.flush_delete(quick=True)

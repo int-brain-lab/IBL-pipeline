@@ -7,7 +7,7 @@ import json
 import uuid
 from ibl_pipeline.ingest import (
     alyxraw, reference, subject, action,
-    acquisition, data, InsertBuffer)
+    acquisition, data, QueryBuffer)
 from ibl_pipeline.ingest import get_raw_field as grf
 from tqdm import tqdm
 
@@ -173,7 +173,7 @@ sessions_with_users = alyxraw.AlyxRaw.Field & sessions & \
 keys = (alyxraw.AlyxRaw & sessions_with_users).proj(
     session_uuid='uuid')
 
-session_user = InsertBuffer(acquisition.SessionUser)
+session_user = QueryBuffer(acquisition.SessionUser)
 
 for key in tqdm(keys, position=0):
 
@@ -198,12 +198,12 @@ for key in tqdm(keys, position=0):
                 'user_name')
         acquisition.SessionUser.insert1(key_su, skip_duplicates=True)
 
-        session_user.insert1(key_su)
-        if session_user.flush(
+        session_user.add_to_queue1(key_su)
+        if session_user.flush_insert(
                 skip_duplicates=True, chunksz=1000):
             print('Inserted 1000 session user tuples')
 
-if session_user.flush(skip_duplicates=True):
+if session_user.flush_insert(skip_duplicates=True):
     print('Inserted all remaining session user tuples')
 
 
@@ -215,7 +215,7 @@ sessions_with_procedures = alyxraw.AlyxRaw.Field & sessions & \
 keys = (alyxraw.AlyxRaw & sessions_with_procedures).proj(
     session_uuid='uuid')
 
-session_procedure = InsertBuffer(acquisition.SessionProcedure)
+session_procedure = QueryBuffer(acquisition.SessionProcedure)
 
 for key in tqdm(keys, position=0):
     key['uuid'] = key['session_uuid']
@@ -236,12 +236,12 @@ for key in tqdm(keys, position=0):
             (action.ProcedureType &
              dict(procedure_type_uuid=uuid.UUID(procedure))).fetch1(
                  'procedure_type_name')
-        session_procedure.insert1(key_sp)
-        if session_procedure.flush(
+        session_procedure.add_to_queue1(key_sp)
+        if session_procedure.flush_insert(
                 skip_duplicates=True, chunksz=1000):
             print('Inserted 1000 session procedure tuples')
 
-if session_procedure.flush(skip_duplicates=True):
+if session_procedure.flush_insert(skip_duplicates=True):
     print('Inserted all remaining session procedure tuples')
 
 # acquisition.SessionProject
@@ -252,7 +252,7 @@ sessions_with_projects = alyxraw.AlyxRaw.Field & sessions & \
 keys = (alyxraw.AlyxRaw & sessions_with_projects).proj(
     session_uuid='uuid')
 
-session_project = InsertBuffer(acquisition.SessionProject)
+session_project = QueryBuffer(acquisition.SessionProject)
 
 for key in tqdm(keys, position=0):
     key['uuid'] = key['session_uuid']
@@ -273,13 +273,13 @@ for key in tqdm(keys, position=0):
          dict(project_uuid=uuid.UUID(project))).fetch1(
         'project_name')
 
-    session_project.insert1(key_sp)
+    session_project.add_to_queue1(key_sp)
 
-    if session_project.flush(
+    if session_project.flush_insert(
             skip_duplicates=True, chunksz=1000):
         print('Inserted 1000 session procedure tuples')
 
-if session_project.flush(skip_duplicates=True):
+if session_project.flush_insert(skip_duplicates=True):
     print('Inserted all remaining session procedure tuples')
 
 

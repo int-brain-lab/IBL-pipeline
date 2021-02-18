@@ -139,12 +139,12 @@ def process_public():
         public=True)
 
     # delete non-releasing tables
-    from ibl_pipeline.ingest import InsertBuffer
+    from ibl_pipeline.ingest import QueryBuffer
 
-    table = InsertBuffer(acquisition.Session)
+    table = QueryBuffer(acquisition.Session)
     for key in tqdm(
             (acquisition.Session - public.PublicSession - behavior.TrialSet).fetch('KEY')):
-        table.delete1(key)
+        table.add_to_queque1(key)
         if table.flush_delete(chunksz=100):
             print('Deleted 100 sessions')
 

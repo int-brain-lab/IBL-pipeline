@@ -1,4 +1,4 @@
-from ibl_pipeline.ingest import alyxraw, InsertBuffer
+from ibl_pipeline.ingest import alyxraw, QueryBuffer
 from ibl_pipeline.utils import is_valid_uuid
 import datetime
 from tqdm import tqdm
@@ -37,10 +37,10 @@ def get_important_pks(pks, return_original_dict=False):
                        f'model in ({models_ignored})' &
                        pks_dict).fetch('KEY')]
     else:
-        buffer = InsertBuffer(
+        buffer = QueryBuffer(
             alyxraw.AlyxRaw & f'model in ({models_ignored})')
         for pk in tqdm(pks_dict):
-            buffer.insert1(pk)
+            buffer.add_to_queue1(pk)
             buffer.flush_fetch('KEY', chunksz=200)
 
         buffer.flush_fetch('KEY')

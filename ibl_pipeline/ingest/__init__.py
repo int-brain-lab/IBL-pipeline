@@ -76,9 +76,9 @@ def get_raw_field(key, field, multiple_entries=False, model=None):
         if not multiple_entries and len(query) else query.fetch('fvalue')
 
 
-class InsertBuffer(object):
+class QueryBuffer(object):
     '''
-    InsertBuffer: a utility class to help managed chunked inserts
+    QueryBuffer: a utility class to help managed chunked inserts
     Currently requires records do not have prerequisites.
     '''
     def __init__(self, rel):
@@ -87,13 +87,13 @@ class InsertBuffer(object):
         self._delete_queue = []
         self.fetched_results = []
 
-    def insert1(self, r):
+    def add_to_queue1(self, r):
         self._queue.append(r)
 
-    def insert(self, recs):
+    def add_to_queue(self, recs):
         self._queue += recs
 
-    def flush(self, replace=False, skip_duplicates=False,
+    def flush_insert(self, replace=False, skip_duplicates=False,
               ignore_extra_fields=False, allow_direct_insert=False, chunksz=1):
         '''
         flush the buffer
@@ -172,16 +172,16 @@ class InsertBuffer(object):
 def populate_batch(t, chunksz=1000, verbose=True):
 
     keys = (t.key_source - t.proj()).fetch('KEY')
-    table = InsertBuffer(t)
+    table = QueryBuffer(t)
     for key in tqdm(keys, position=0):
         entry = t.create_entry(key)
         if entry:
-            table.insert1(entry)
+            table.add_to_queue1(entry)
 
-        if table.flush(
+        if table.flush_insert(
                 skip_duplicates=True,
                 allow_direct_insert=True, chunksz=chunksz) and verbose:
             print(f'Inserted {chunksz} {t.__name__} tuples.')
 
-    if table.flush(skip_duplicates=True, allow_direct_insert=True) and verbose:
+    if table.flush_insert(skip_duplicates=True, allow_direct_insert=True) and verbose:
         print(f'Inserted all remaining {t.__name__} tuples.')

@@ -6,7 +6,8 @@ which cannot be inserted with auto-population.
 import datajoint as dj
 import json
 import uuid
-from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data
+from tqdm import tqdm
+from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data, QueryBuffer
 from ibl_pipeline.ingest import get_raw_field as grf
 from ibl_pipeline.utils import is_valid_uuid
 
@@ -194,14 +195,24 @@ def ingest_membership_table(dj_current_table,
     else:
         restr = {}
 
-    alyxraw_to_insert = (alyxraw.AlyxRaw & restr &
-                         {'model': alyx_parent_model}).fetch('KEY')
+    if len(restr) > 1000:
+        print('More than 1000 entries to insert, using buffer...')
+        buffer = QueryBuffer(alyxraw.AlyxRaw & {'model': alyx_parent_model})
+        for r in tqdm(restr):
+            buffer.add_to_queue1(r)
+            buffer.flush_fetch('KEY', chunksz=200)
+        buffer.flush_fetch('KEY')
+        alyxraw_to_insert = buffer.fetched_results
+
+    else:
+        alyxraw_to_insert = (alyxraw.AlyxRaw & restr &
+                             {'model': alyx_parent_model}).fetch('KEY')
 
     if not alyxraw_to_insert:
         return
 
     alyx_field_entries = alyxraw.AlyxRaw.Field & alyxraw_to_insert & \
-                         {'fname': alyx_field} & 'fvalue!="None"'
+        {'fname': alyx_field} & 'fvalue!="None"'
 
     keys = (alyxraw.AlyxRaw & alyx_field_entries).proj(**{dj_parent_uuid_name: 'uuid'})
 

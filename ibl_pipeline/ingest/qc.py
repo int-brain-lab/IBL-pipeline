@@ -6,6 +6,7 @@ from .. import acquisition as acquisition_real
 from .. import ephys as ephys_real
 from .. import qc
 from . import get_raw_field as grf
+from tqdm import tqdm
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_ingest_qc')
@@ -85,8 +86,8 @@ class SessionQC(dj.Manual):
     subject_uuid        : uuid
     session_start_time  : datetime
     ---
-    qc                  : tinyint unsigned
-    sessionqc_ts=CURRENT_TIMESTAMP:   timestamp
+    session_qc                  : tinyint unsigned
+    session_qc_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
@@ -104,11 +105,11 @@ class SessionExtendedQC(dj.Manual):
     class Field(dj.Part):
         definition = """
         -> master
-        session_qc_fname               : varchar(32)
+        session_qc_fname               : varchar(64)
         ---
         session_qc_fvalue_bool=null    : bool
         session_qc_fvalue_float=null   : float
-        session_qc_fvalue_str=null     : varchar(32)
+        session_qc_fvalue_str=null     : varchar(64)
         session_qc_fvalue_blob=null    : blob
         """
 
@@ -149,7 +150,7 @@ class SessionQCIngest(dj.Computed):
             session_key = (acquisition.Session & key).fetch1('KEY')
 
         SessionQC.insert1(
-            dict(**session_key, qc=int(qc))
+            dict(**session_key, session_qc=int(qc))
         )
 
         for qc_type in qc_types:
@@ -160,22 +161,22 @@ class SessionQCIngest(dj.Computed):
                 SessionExtendedQC.insert1(
                     dict(**session_key,
                          qc_type=qc_type,
-                         extended_qc=qc_choice)
+                         session_extended_qc=qc_choice)
                 )
                 for k, v in qc_extended.items():
                     if f'_{qc_type}' in k:
                         qc_field = dict(
                             **session_key,
                             qc_type=qc_type,
-                            qc_fname=k)
+                            session_qc_fname=k)
                         if type(v) == float:
-                            qc_fvalue_name = 'qc_fvalue_float'
+                            qc_fvalue_name = 'session_qc_fvalue_float'
                         elif v == "None":
-                            pass
+                            continue
                         elif type(v) == str:
-                            qc_fvalue_name = 'qc_fvalue_varchar'
+                            qc_fvalue_name = 'session_qc_fvalue_varchar'
                         else:
-                            qc_fvalue_name = 'qc_fvalue_blob'
+                            qc_fvalue_name = 'session_qc_fvalue_blob'
 
                         SessionExtendedQC.Field.insert1(
                                 {**qc_field,
@@ -270,5 +271,5 @@ class ProbeInsertionQCIngest(dj.Computed):
 
                     ProbeInsertionExtendedQC.insert1(
                         {**probe_insertion_key,
-                        'insertion_qc_fname': k,
-                        qc_fvalue_name: v})
+                         'insertion_qc_fname': k,
+                         qc_fvalue_name: v})

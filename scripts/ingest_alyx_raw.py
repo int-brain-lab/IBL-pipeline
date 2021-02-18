@@ -8,7 +8,7 @@ import logging
 import math
 import collections
 import os.path as path
-from ibl_pipeline.ingest import alyxraw, InsertBuffer
+from ibl_pipeline.ingest import alyxraw, QueryBuffer
 import sys
 import uuid
 import re
@@ -48,8 +48,8 @@ def get_alyx_entries(filename=None, models=None):
 def insert_to_alyxraw(keys):
 
     # use insert buffer to speed up the insertion process
-    ib_main = InsertBuffer(alyxraw.AlyxRaw)
-    ib_part = InsertBuffer(alyxraw.AlyxRaw.Field)
+    ib_main = QueryBuffer(alyxraw.AlyxRaw)
+    ib_part = QueryBuffer(alyxraw.AlyxRaw.Field)
 
     # insert into AlyxRaw table
     for key in tqdm(keys, position=0):
@@ -59,12 +59,12 @@ def insert_to_alyxraw(keys):
             print('Error for key: {}'.format(key))
             continue
 
-        ib_main.insert1(dict(uuid=pk, model=key['model']))
-        if ib_main.flush(skip_duplicates=True, chunksz=10000):
+        ib_main.add_to_queue1(dict(uuid=pk, model=key['model']))
+        if ib_main.flush_insert(skip_duplicates=True, chunksz=10000):
             logger.debug('Inserted 10000 raw tuples.')
             # print('Inserted 10000 raw tuples.')
 
-    if ib_main.flush(skip_duplicates=True):
+    if ib_main.flush_insert(skip_duplicates=True):
         logger.debug('Inserted remaining raw tuples')
         # print('Inserted remaining raw tuples')
 
@@ -86,7 +86,7 @@ def insert_to_alyxraw(keys):
                     key_field['value_idx'] = 0
                     key_field['fvalue'] = json.dumps(field_value)
                     if len(key_field['fvalue']) < 10000:
-                        ib_part.insert1(key_field)
+                        ib_part.add_to_queue1(key_field)
                     else:
                         continue
                 if field_name == 'narrative' and field_value is not None:
@@ -108,27 +108,27 @@ def insert_to_alyxraw(keys):
                         (isinstance(field_value, float) and math.isnan(field_value)):
                     key_field['value_idx'] = 0
                     key_field['fvalue'] = 'None'
-                    ib_part.insert1(key_field)
+                    ib_part.add_to_queue1(key_field)
 
                 elif type(field_value) is list and \
                         (type(field_value[0]) is dict or type(field_value[0]) is str):
                     for value_idx, value in enumerate(field_value):
                         key_field['value_idx'] = value_idx
                         key_field['fvalue'] = str(value)
-                        ib_part.insert1(key_field)
+                        ib_part.add_to_queue1(key_field)
                 else:
                     key_field['value_idx'] = 0
                     key_field['fvalue'] = str(field_value)
-                    ib_part.insert1(key_field)
+                    ib_part.add_to_queue1(key_field)
 
-                if ib_part.flush(skip_duplicates=True, chunksz=10000):
+                if ib_part.flush_insert(skip_duplicates=True, chunksz=10000):
                     logger.debug('Inserted 10000 raw field tuples')
                     # print('Inserted 10000 raw field tuples')
         except Exception as e:
             print('Problematic entry:{}'.format(ikey))
             raise
 
-    if ib_part.flush(skip_duplicates=True):
+    if ib_part.flush_insert(skip_duplicates=True):
         logger.debug('Inserted all remaining raw field tuples')
         # print('Inserted all remaining raw field tuples')
 

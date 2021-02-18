@@ -77,11 +77,11 @@ class SessionExtendedQC(dj.Manual):
         definition = """
         # Part table of SessionExtendedQC. For each entry of SessionExtendedQC, there may be multiple fields describing each value (e.g. 0.99) of a qc aspect (e.g. _task_stimOn_delays) that belongs to a QCType (e.g. task).
         -> master
-        session_qc_fname                 : varchar(32)
+        session_qc_fname                 : varchar(64)
         ---
         session_qc_fvalue_bool=null      : bool
         session_qc_fvalue_float=null     : float
-        session_qc_fvalue_str=null       : varchar(32)
+        session_qc_fvalue_str=null       : varchar(64)
         session_qc_fvalue_blob=null      : blob
         """
 
@@ -109,10 +109,10 @@ class ProbeInsertionExtendedQC(dj.Manual):
         definition = """
         # Part table of SessionExtendedQC. For each entry of ProbeInsertionExtendedQC.
         -> master
-        insertion_qc_fname                 : varchar(32)
+        insertion_qc_fname                 : varchar(64)
         ---
         insertion_qc_fvalue_bool=null      : tinyint
         insertion_qc_fvalue_float=null     : float
-        insertion_qc_fvalue_str=null       : varchar(32)
+        insertion_qc_fvalue_str=null       : varchar(64)
         insertion_qc_fvalue_blob=null      : blob
         """
