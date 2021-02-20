@@ -54,9 +54,9 @@ class CompleteClusterSession(dj.Computed):
         'clusters.amps.npy',
         'clusters.channels.npy',
         'clusters.depths.npy',
-        'clusters.metrics.csv',
         'clusters.peakToTrough.npy',
         'clusters.uuids.csv',
+        'clusters.metrics.pqt',
         'clusters.waveforms.npy',
         'clusters.waveformsChannels.npy',
         'spikes.amps.npy',
@@ -125,6 +125,17 @@ class ProbeInsertion(dj.Imported):
 
 
 @schema
+class ProbeInsertionMissingDataLog(dj.Manual):
+    definition = """
+    # probe insertion missing cluster data
+    -> ProbeInsertion
+    missing_data    : varchar(255)
+    ---
+    error_message   : varchar(1024)
+    """
+
+
+@schema
 class ChannelGroup(dj.Imported):
     definition = """
     # Raw index and local coordinates of each channel group, ingested from channels.rawInd and localCoordinates
@@ -137,7 +148,8 @@ class ChannelGroup(dj.Imported):
 
     key_source = ProbeInsertion \
         & (data.FileRecord & 'dataset_name="channels.rawInd.npy"') \
-        & (data.FileRecord & 'dataset_name="channels.localCoordinates.npy"')
+        & (data.FileRecord & 'dataset_name="channels.localCoordinates.npy"') - \
+            (ProbeInsertionMissingDataLog & 'missing_data="channels"')
 
     def make(self, key):
 
@@ -152,8 +164,13 @@ class ChannelGroup(dj.Imported):
         ses_path = alf.io.get_session_path(files[0])
 
         probe_name = (ProbeInsertion & key).fetch1('probe_label')
-        channels = alf.io.load_object(
-            ses_path.joinpath('alf', probe_name), 'channels')
+        try:
+            channels = alf.io.load_object(
+                ses_path.joinpath('alf', probe_name), 'channels')
+        except Exception as e:
+            ProbeInsertionMissingDataLog.insert1(
+                dict(**key, missing_data='channels', error_message=str(e)))
+            return
 
         self.insert1(
             dict(**key,
@@ -190,7 +207,8 @@ class DefaultCluster(dj.Imported):
     cluster_spikes_samples=null:     blob@ephys      # Time of spikes, measured in units of samples in their own electrophysiology binary file.
     cluster_ts=CURRENT_TIMESTAMP  :  timestamp
     """
-    key_source = ProbeInsertion & (CompleteClusterSession - ProblematicDataSet)
+    key_source = ProbeInsertion & (CompleteClusterSession - ProblematicDataSet) - \
+        (ProbeInsertionMissingDataLog & 'missing_data="clusters"')
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
@@ -217,8 +235,7 @@ class DefaultCluster(dj.Imported):
             spikes_times_dtype_name
         ]
 
-        files = one.load(eID, dataset_types=dtypes, download_only=True,
-                         clobber=True)
+        files = one.load(eID, dataset_types=dtypes, download_only=True, clobber=True)
         ses_path = alf.io.get_session_path(files[0])
 
         probe_name = (ProbeInsertion & key).fetch1('probe_label')
@@ -228,7 +245,9 @@ class DefaultCluster(dj.Imported):
                 ses_path.joinpath('alf', probe_name), 'clusters')
             spikes = alf.io.load_object(
                 ses_path.joinpath('alf', probe_name), 'spikes')
-        except:
+        except Exception as e:
+            ProbeInsertionMissingDataLog.insert1(
+                dict(**key, missing_data='clusters', error_message=str(e)))
             return
 
         time_fnames = [k for k in spikes.keys() if 'times' in k]
