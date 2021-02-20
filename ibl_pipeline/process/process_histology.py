@@ -53,6 +53,10 @@ HISTOLOGY_TABLES_FOR_DELETE = [
 HISTOLOGY_TABLES_FOR_POPULATE = [
     histology.ClusterBrainRegionTemp,
     histology.ProbeBrainRegionTemp,
+    histology.DepthBrainRegionTemp,
+    histology.ProbeTrajectory,
+    histology.ChannelBrainLocation,
+    histology.ClusterBrainRegion
 ]
 
 
