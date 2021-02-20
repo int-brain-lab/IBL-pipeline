@@ -63,9 +63,7 @@ SHADOW_TABLES = [
 if mode != 'public':
     SHADOW_TABLES = SHADOW_TABLES + [
         ephys.ProbeModel,
-        ephys.ProbeInsertion,
-        histology.ProbeTrajectory,
-        # histology.ChannelBrainLocation
+        ephys.ProbeInsertion
     ]
 
 
