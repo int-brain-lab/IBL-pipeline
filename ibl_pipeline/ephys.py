@@ -54,7 +54,7 @@ class CompleteClusterSession(dj.Computed):
         'clusters.amps.npy',
         'clusters.channels.npy',
         'clusters.depths.npy',
-        'clusters.metrics.csv',
+        'clusters.metrics.pqt',
         'clusters.peakToTrough.npy',
         'clusters.uuids.csv',
         'clusters.waveforms.npy',

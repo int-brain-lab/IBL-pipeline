@@ -133,8 +133,8 @@ class ClusterBrainRegion(dj.Imported):
     -> reference.BrainRegion
     """
     key_source = ProbeTrajectory & \
-        (data.FileRecord & 'dataset_name like "%channels.brainLocationIds%"') & \
-        (data.FileRecord & 'dataset_name like "%channels.mlapdv%"')
+        (data.FileRecord & 'dataset_name like "%clusters.brainLocationIds%"') & \
+        (data.FileRecord & 'dataset_name like "%clusters.mlapdv%"')
 
     def make(self, key):
 
