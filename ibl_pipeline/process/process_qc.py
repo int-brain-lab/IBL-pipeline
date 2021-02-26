@@ -60,6 +60,16 @@ def ingest_tables():
 
     qc_ingest.SessionQCIngest.populate(
         display_progress=True, suppress_errors=True)
+    qc_ingest.ProbeInsertionQCIngest.populate(
+        display_progress=True, suppress_errors=True)
+
+
+def cleanup_qc_ingest():
+    '''
+    clean up the ProbeInsertionQC table to trigger ingestion if there is no alignment resolved entry
+    '''
+
+    (qc_ingest.ProbeInsertionQCIngest - (qc.ProbeInsertionExtendedQC & 'qc_type="alignment_resolved"')).delete()
 
 
 def main(fpath='/data/alyxfull.json'):
@@ -77,6 +87,9 @@ def main(fpath='/data/alyxfull.json'):
 
     logger.log(25, 'Ingesting QC tables...')
     ingest_tables()
+
+    logger.log(25, 'Cleaning up ProbeInsertionQCIngest table...')
+    cleanup_qc_ingest()
 
 
 if __name__ == '__main__':
