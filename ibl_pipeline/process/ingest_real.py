@@ -160,13 +160,6 @@ def main(excluded_tables=[], public=False):
     print(table)
     copy_table(ephys, ephys_ingest, table, allow_direct_insert=True)
 
-    # histology tables
-    print('ProbeTrajectory')
-    histology.ProbeTrajectory.populate(suppress_errors=True, display_progress=True)
-
-    print('ChannelBrainLocation')
-    copy_table(histology, histology_ingest, 'ChannelBrainLocation',
-               allow_direct_insert=True)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
-
 # some unused files
+notebooks/notebooks_tutorial/202102_behavior_paper/one_data/*
 rasters/*
 notebooks/.*
 notebooks/notebooks_plotting/*
@@ -7,7 +7,7 @@ scripts/update_entries.py
 scripts/compare_tables.py
 scripts/delete_shadow_tables.py
 scripts/report_missing_trialset.py
-scripts/update_entries.py	
+scripts/update_entries.py
 
 # IDEA configs
 .idea/

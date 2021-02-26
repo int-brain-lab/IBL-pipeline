@@ -76,26 +76,24 @@ def get_raw_field(key, field, multiple_entries=False, model=None):
         if not multiple_entries and len(query) else query.fetch('fvalue')
 
 
-class InsertBuffer(object):
+class QueryBuffer(object):
     '''
-    InsertBuffer: a utility class to help managed chunked inserts
+    QueryBuffer: a utility class to help managed chunked inserts
     Currently requires records do not have prerequisites.
     '''
     def __init__(self, rel):
         self._rel = rel
         self._queue = []
         self._delete_queue = []
+        self.fetched_results = []
 
-    def insert1(self, r):
+    def add_to_queue1(self, r):
         self._queue.append(r)
 
-    def insert(self, recs):
+    def add_to_queue(self, recs):
         self._queue += recs
 
-    def delete1(self, r):
-        self._delete_queue.append(r)
-
-    def flush(self, replace=False, skip_duplicates=False,
+    def flush_insert(self, replace=False, skip_duplicates=False,
               ignore_extra_fields=False, allow_direct_insert=False, chunksz=1):
         '''
         flush the buffer
@@ -125,28 +123,47 @@ class InsertBuffer(object):
 
     def flush_delete(self, chunksz=1, quick=True):
         '''
-        flush the buffer
-        XXX: ignore_extra_fields na, requires .insert() support
+        flush the delete
         '''
 
-        qlen = len(self._delete_queue)
+        qlen = len(self._queue)
         if qlen > 0 and qlen % chunksz == 0:
             try:
                 if quick:
-                    (self._rel & self._delete_queue).delete_quick()
+                    (self._rel & self._queue).delete_quick()
                 else:
-                    (self._rel & self._delete_queue).delete()
+                    (self._rel & self._queue).delete()
             except Exception as e:
                 print('error in flush delete: {}, trying deletion one by one'.format(e))
-                for t in self._delete_queue:
+                for t in self._queue:
                     try:
                         if quick:
-                            (self._rel & self._delete_queue).delete_quick()
+                            (self._rel & t).delete_quick()
                         else:
-                            (self._rel & self._delete_queue).delete()
+                            (self._rel & t).delete()
                     except Exception as e:
                         print('error in flush delete: {}'.format(e))
-            self._delete_queue.clear()
+            self._queue.clear()
+            return qlen
+        else:
+            return 0
+
+    def flush_fetch(self, field, chunksz=1):
+        '''
+        flush the fetch
+        '''
+        qlen = len(self._queue)
+        if qlen > 0 and qlen % chunksz == 0:
+            try:
+                self.fetched_results += (self._rel & self._queue).fetch(field)
+            except Exception as e:
+                print('error in flush fetch: {}, trying fetch one by one'.format(e))
+                for t in self._queue:
+                    try:
+                        self.fetched_results.append((self._rel & self.__queue).fetch1(field))
+                    except Exception as e:
+                        print('error in flush fetch: {}'.format(e))
+            self._queue.clear()
             return qlen
         else:
             return 0
@@ -155,16 +172,16 @@ class InsertBuffer(object):
 def populate_batch(t, chunksz=1000, verbose=True):
 
     keys = (t.key_source - t.proj()).fetch('KEY')
-    table = InsertBuffer(t)
+    table = QueryBuffer(t)
     for key in tqdm(keys, position=0):
         entry = t.create_entry(key)
         if entry:
-            table.insert1(entry)
+            table.add_to_queue1(entry)
 
-        if table.flush(
+        if table.flush_insert(
                 skip_duplicates=True,
                 allow_direct_insert=True, chunksz=chunksz) and verbose:
             print(f'Inserted {chunksz} {t.__name__} tuples.')
 
-    if table.flush(skip_duplicates=True, allow_direct_insert=True) and verbose:
+    if table.flush_insert(skip_duplicates=True, allow_direct_insert=True) and verbose:
         print(f'Inserted all remaining {t.__name__} tuples.')

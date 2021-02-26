@@ -2,7 +2,6 @@ import datajoint as dj
 import numpy as np
 from os import path, environ
 from . import acquisition, reference, behavior, data
-from .ingest import ephys as ephys_ingest
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
@@ -55,7 +54,7 @@ class CompleteClusterSession(dj.Computed):
         'clusters.amps.npy',
         'clusters.channels.npy',
         'clusters.depths.npy',
-        'clusters.metrics.csv',
+        'clusters.metrics.pqt',
         'clusters.peakToTrough.npy',
         'clusters.uuids.csv',
         'clusters.waveforms.npy',
@@ -224,10 +223,13 @@ class DefaultCluster(dj.Imported):
 
         probe_name = (ProbeInsertion & key).fetch1('probe_label')
 
-        clusters = alf.io.load_object(
-            ses_path.joinpath('alf', probe_name), 'clusters')
-        spikes = alf.io.load_object(
-            ses_path.joinpath('alf', probe_name), 'spikes')
+        try:
+            clusters = alf.io.load_object(
+                ses_path.joinpath('alf', probe_name), 'clusters')
+            spikes = alf.io.load_object(
+                ses_path.joinpath('alf', probe_name), 'spikes')
+        except:
+            return
 
         time_fnames = [k for k in spikes.keys() if 'times' in k]
 
