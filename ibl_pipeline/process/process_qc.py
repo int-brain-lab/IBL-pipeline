@@ -56,18 +56,10 @@ def process_alyxraw_qc(
     )
 
 
-def ingest_shadow_tables():
+def ingest_tables():
 
     qc_ingest.SessionQCIngest.populate(
         display_progress=True, suppress_errors=True)
-
-
-def ingest_real_tables():
-
-    QC_TABLES = ['SessionQC', 'SessionExtendedQC', 'SessionExtendedQC.Field']
-
-    for t in QC_TABLES:
-        copy_table(qc, qc_ingest, t)
 
 
 def main(fpath='/data/alyxfull.json'):
@@ -83,11 +75,8 @@ def main(fpath='/data/alyxfull.json'):
     logger.log(25, 'Ingesting Alyxraw for QC...')
     process_alyxraw_qc()
 
-    logger.log(25, 'Ingesting QC shadow tables...')
-    ingest_shadow_tables()
-
-    logger.log(25, 'Copying real tables...')
-    ingest_real_tables()
+    logger.log(25, 'Ingesting QC tables...')
+    ingest_tables()
 
 
 if __name__ == '__main__':
