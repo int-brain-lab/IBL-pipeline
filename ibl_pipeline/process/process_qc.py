@@ -56,18 +56,20 @@ def process_alyxraw_qc(
     )
 
 
-def ingest_shadow_tables():
+def ingest_tables():
 
     qc_ingest.SessionQCIngest.populate(
         display_progress=True, suppress_errors=True)
+    qc_ingest.ProbeInsertionQCIngest.populate(
+        display_progress=True, suppress_errors=True)
 
 
-def ingest_real_tables():
+def cleanup_qc_ingest():
+    '''
+    clean up the ProbeInsertionQC table to trigger ingestion if there is no alignment resolved entry
+    '''
 
-    QC_TABLES = ['SessionQC', 'SessionExtendedQC', 'SessionExtendedQC.Field']
-
-    for t in QC_TABLES:
-        copy_table(qc, qc_ingest, t)
+    (qc_ingest.ProbeInsertionQCIngest - (qc.ProbeInsertionExtendedQC & 'qc_type="alignment_resolved"')).delete()
 
 
 def main(fpath='/data/alyxfull.json'):
@@ -83,11 +85,11 @@ def main(fpath='/data/alyxfull.json'):
     logger.log(25, 'Ingesting Alyxraw for QC...')
     process_alyxraw_qc()
 
-    logger.log(25, 'Ingesting QC shadow tables...')
-    ingest_shadow_tables()
+    logger.log(25, 'Ingesting QC tables...')
+    ingest_tables()
 
-    logger.log(25, 'Copying real tables...')
-    ingest_real_tables()
+    logger.log(25, 'Cleaning up ProbeInsertionQCIngest table...')
+    cleanup_qc_ingest()
 
 
 if __name__ == '__main__':

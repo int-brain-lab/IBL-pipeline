@@ -1,0 +1,22 @@
+version: '3'
+services:
+  datajoint_brain:
+    build:
+      context: .
+      dockerfile: Dockerfile.brain
+    container_name: ibl_datajoint_brain
+    env_file: .env
+    volumes:
+      - ./notebooks:/home/dja
+      - ./images:/images
+      - .:/src/IBL-pipeline
+      - ./data:/data
+      - ./raster:/raster
+      - ./root/.one_params:/home/dja/.one_params
+    user: 1000:anaconda
+    ports:
+      - "9003:8888"
+    networks:
+      - ibl_brain
+networks:
+  ibl_brain:

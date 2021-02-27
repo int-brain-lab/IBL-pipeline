@@ -1,5 +1,5 @@
 
-from ibl_pipeline.ingest import alyxraw, data, reference, acquisition, InsertBuffer
+from ibl_pipeline.ingest import alyxraw, data, reference, acquisition, QueryBuffer
 from ibl_pipeline.ingest import get_raw_field as grf
 import uuid
 from tqdm import tqdm
@@ -8,7 +8,7 @@ from tqdm import tqdm
 key_source = (alyxraw.AlyxRaw & 'model="data.dataset"').proj(
     dataset_uuid="uuid") - data.DataSet
 
-data_set = InsertBuffer(data.DataSet)
+data_set = QueryBuffer(data.DataSet)
 
 for key in tqdm(key_source.fetch('KEY'), position=0):
     key_ds = key.copy()
@@ -77,14 +77,14 @@ for key in tqdm(key_source.fetch('KEY'), position=0):
     else:
         key_ds['file_size'] = None
 
-    data_set.insert1(key_ds)
+    data_set.add_to_queue1(key_ds)
 
-    if data_set.flush(
+    if data_set.flush_insert(
             skip_duplicates=True,
             allow_direct_insert=True, chunksz=100):
         print('Inserted 100 dataset tuples')
 
-if data_set.flush(skip_duplicates=True, allow_direct_insert=True):
+if data_set.flush_insert(skip_duplicates=True, allow_direct_insert=True):
     print('Inserted all remaining dataset tuples')
 
 
@@ -99,7 +99,7 @@ record_exists = alyxraw.AlyxRaw.Field & records & \
 key_source = (alyxraw.AlyxRaw & record_exists & records_flatiron).proj(
     record_uuid='uuid') - data.FileRecord
 
-file_record = InsertBuffer(data.FileRecord)
+file_record = QueryBuffer(data.FileRecord)
 
 for key in tqdm(key_source.fetch('KEY'), position=0):
     key_fr = key.copy()
@@ -124,11 +124,11 @@ for key in tqdm(key_source.fetch('KEY'), position=0):
 
     key_fr['relative_path'] = grf(key, 'relative_path')
 
-    file_record.insert1(key_fr)
+    file_record.add_to_queue1(key_fr)
 
-    if file_record.flush(
+    if file_record.flush_insert(
             skip_duplicates=True, allow_direct_insert=True, chunksz=1000):
         print('Inserted 1000 raw field tuples')
 
-if file_record.flush(skip_duplicates=True, allow_direct_insert=True):
+if file_record.flush_insert(skip_duplicates=True, allow_direct_insert=True):
     print('Inserted all remaining file record tuples')

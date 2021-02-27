@@ -21,8 +21,8 @@ def get_modified_pks(data0, data1):
 
 def get_created_deleted_pks(data0, data1):
 
-    old_pks = {_['pk'] for _ in data0}
-    new_pks = {_['pk'] for _ in data1}
+    old_pks = {_['pk'] for _ in data0 if not isinstance(_['pk'], int)}
+    new_pks = {_['pk'] for _ in data1 if not isinstance(_['pk'], int)}
 
     return [pk for pk in sorted(new_pks - old_pks) if is_valid_uuid(pk)], \
         [pk for pk in sorted(old_pks - new_pks) if is_valid_uuid(pk)]

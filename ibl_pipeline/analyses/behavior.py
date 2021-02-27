@@ -109,12 +109,7 @@ class PsychResultsBlock(dj.Computed):
                 psych_results = {**key, **psych_results}
                 psych_results['prob_left'] = prob_left[
                     'trial_stim_prob_left']
-                if abs(p_left - 0.8) < 0.001:
-                    psych_results['prob_left_block'] = 80
-                elif abs(p_left - 0.2) < 0.001:
-                    psych_results['prob_left_block'] = 20
-                elif abs(p_left - 0.5) < 0.001:
-                    psych_results['prob_left_block'] = 50
+                psych_results['prob_left_block'] = round(p_left*10)*10
 
                 self.insert1(psych_results)
 
@@ -183,12 +178,7 @@ class ReactionTimeContrastBlock(dj.Computed):
                     rt['reaction_time_ci_high'] = utils.compute_reaction_time(
                         trials_sub, compute_ci=True)
 
-                if abs(p_left - 0.8) < 0.001:
-                    rt['prob_left_block'] = 80
-                elif abs(p_left - 0.2) < 0.001:
-                    rt['prob_left_block'] = 20
-                elif abs(p_left - 0.5) < 0.001:
-                    rt['prob_left_block'] = 50
+                rt['prob_left_block'] = round(p_left*10)*10
 
                 self.insert1(rt)
 
@@ -498,10 +488,9 @@ class SessionTrainingStatus(dj.Computed):
                 bpod_board = (behavior.Settings & sessions_rel).fetch('pybpod_board')
                 ephys_board = [True for i in list(bpod_board) if 'ephys' in i]
 
-                task_protocols = (acquisition.Session & sessions_rel).fetch('task_protocol')
                 delays = (behavior.SessionDelay & sessions_rel).fetch('session_delay_in_mins')
 
-                if len(ephys_board) == 3 and np.any(delays > 15):
+                if len(ephys_board) == 3 and np.any(delays >= 15):
 
                     n_trials = (behavior.TrialSet & sessions_rel).fetch('n_trials')
                     performance_easy = (PsychResults & sessions_rel).fetch(
@@ -533,6 +522,7 @@ class SessionTrainingStatus(dj.Computed):
                                 return
 
                             # also compute the median reaction time
+                            # to put into 
                             medRT = compute_reaction_time(trials)
 
                             # psych_unbiased = utils.compute_psych_pars(trials_unbiased)

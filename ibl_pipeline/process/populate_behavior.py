@@ -13,6 +13,7 @@ from os import environ
 mode = environ.get('MODE')
 
 BEHAVIOR_TABLES = [
+    behavior.CompleteWheelSession,
     behavior.CompleteWheelMoveSession,
     behavior.CompleteTrialSession,
     behavior.TrialSet,

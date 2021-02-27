@@ -1,6 +1,6 @@
 import datajoint as dj
 from ibl_pipeline.ingest import \
-    (alyxraw, InsertBuffer,
+    (alyxraw, QueryBuffer,
      reference, subject, action, acquisition, data)
 
 from os import environ
@@ -63,9 +63,7 @@ SHADOW_TABLES = [
 if mode != 'public':
     SHADOW_TABLES = SHADOW_TABLES + [
         ephys.ProbeModel,
-        ephys.ProbeInsertion,
-        histology.ProbeTrajectory,
-        # histology.ChannelBrainLocation
+        ephys.ProbeInsertion
     ]
 
 
@@ -104,7 +102,7 @@ def main(excluded_tables=[], modified_pks=None):
         key_source = (alyxraw.AlyxRaw & 'model="data.dataset"').proj(
             dataset_uuid="uuid") - data.DataSet
 
-        data_set = InsertBuffer(data.DataSet)
+        data_set = QueryBuffer(data.DataSet)
 
         for key in tqdm(key_source.fetch('KEY'), position=0):
             key_ds = key.copy()
@@ -173,14 +171,14 @@ def main(excluded_tables=[], modified_pks=None):
             else:
                 key_ds['file_size'] = None
 
-            data_set.insert1(key_ds)
+            data_set.add_to_queue1(key_ds)
 
-            if data_set.flush(
+            if data_set.flush_insert(
                     skip_duplicates=True,
                     allow_direct_insert=True, chunksz=100):
                 print('Inserted 100 dataset tuples')
 
-        if data_set.flush(skip_duplicates=True, allow_direct_insert=True):
+        if data_set.flush_insert(skip_duplicates=True, allow_direct_insert=True):
             print('Inserted all remaining dataset tuples')
 
     if 'FileRecord' not in excluded_tables:
@@ -195,7 +193,7 @@ def main(excluded_tables=[], modified_pks=None):
         key_source = (alyxraw.AlyxRaw & record_exists & records_flatiron).proj(
             record_uuid='uuid') - data.FileRecord
 
-        file_record = InsertBuffer(data.FileRecord)
+        file_record = QueryBuffer(data.FileRecord)
 
         for key in tqdm(key_source.fetch('KEY'), position=0):
             key_fr = key.copy()
@@ -220,13 +218,13 @@ def main(excluded_tables=[], modified_pks=None):
 
             key_fr['relative_path'] = grf(key, 'relative_path')
 
-            file_record.insert1(key_fr)
+            file_record.add_to_queue1(key_fr)
 
-            if file_record.flush(
+            if file_record.flush_insert(
                     skip_duplicates=True, allow_direct_insert=True, chunksz=1000):
                 print('Inserted 1000 raw field tuples')
 
-        if file_record.flush(skip_duplicates=True, allow_direct_insert=True):
+        if file_record.flush_insert(skip_duplicates=True, allow_direct_insert=True):
             print('Inserted all remaining file record tuples')
 
 

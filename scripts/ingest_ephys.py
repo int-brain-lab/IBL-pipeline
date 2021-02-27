@@ -22,8 +22,6 @@ EPHYS_TABLES = [
     ephys.GoodCluster,
     ephys_analyses.DepthPeth,
     ephys_analyses.NormedDepthPeth,
-    histology.ClusterBrainRegion,
-    histology.SessionBrainRegion,
     ephys_plotting.DepthRaster,
     ephys_plotting.DepthPeth,
     ephys_plotting.Raster,
