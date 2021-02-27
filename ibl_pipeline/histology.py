@@ -5,6 +5,7 @@ from .utils import atlas
 from tqdm import tqdm
 from ibllib.pipes.ephys_alignment import EphysAlignment
 import warnings
+from os import environ
 
 try:
     from oneibl.one import ONE
