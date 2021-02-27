@@ -1,14 +1,10 @@
 import datajoint as dj
-from . import reference, acquisition, data, ephys
-from .ingest import histology as histology_ingest
-
-from os import path, environ
+from . import reference, acquisition, data, ephys, qc
 import numpy as np
 from .utils import atlas
-import pdb
 from tqdm import tqdm
-
 from ibllib.pipes.ephys_alignment import EphysAlignment
+import warnings
 
 try:
     from oneibl.one import ONE
@@ -26,6 +22,156 @@ else:
     schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_histology')
 
 
+# ================= The temporary tables before the probe trajectories are finally resolved ===================
+
+@schema
+class Provenance(dj.Lookup):
+    definition = """
+    # Method to estimate the probe trajectory, including Ephys aligned histology track, Histology track, Micro-manipulator, and Planned
+    provenance       :    tinyint unsigned             # provenance code
+    ---
+    provenance_description       : varchar(128)     # type of trajectory
+    """
+    contents = [
+        (70, 'Ephys aligned histology track'),
+        (50, 'Histology track'),
+        (30, 'Micro-manipulator'),
+        (10, 'Planned'),
+    ]
+
+
+@schema
+class ProbeTrajectoryTemp(dj.Imported):
+    definition = """
+    # Probe trajectory estimated with each method, ingested from Alyx table experiments.trajectoryestimate
+    -> ephys.ProbeInsertion
+    -> Provenance
+    ---
+    -> [nullable] reference.CoordinateSystem
+    probe_trajectory_uuid: uuid
+    x:                  float           # (um) medio-lateral coordinate relative to Bregma, left negative
+    y:                  float           # (um) antero-posterior coordinate relative to Bregma, back negative
+    z:                  float           # (um) dorso-ventral coordinate relative to Bregma, ventral negative
+    phi:                float           # (degrees)[-180 180] azimuth
+    theta:              float           # (degrees)[0 180] polar angle
+    depth:              float           # (um) insertion depth
+    roll=null:          float           # (degrees) roll angle of the probe
+    trajectory_ts:      datetime
+    """
+    # this table rely on copying from the shadow table in ibl_pipeline.ingest.histology
+
+
+@schema
+class ChannelBrainLocationTemp(dj.Imported):
+    definition = """
+    # Brain coordinates and region assignment of each channel, ingested from Alyx table experiments.channel
+    -> ProbeTrajectoryTemp
+    channel_brain_location_uuid    : uuid
+    ---
+    channel_axial   : decimal(6, 1)
+    channel_lateral : decimal(6, 1)
+    channel_x       : decimal(6, 1)
+    channel_y       : decimal(6, 1)
+    channel_z       : decimal(6, 1)
+    -> reference.BrainRegion
+    """
+    # this table rely on copying from the shadow table in ibl_pipeline.ingest.histology
+
+
+@schema
+class DepthBrainRegionTemp(dj.Computed):
+    definition = """
+    # For each ProbeTrajectory, assign depth boundaries relative to the probe tip to each brain region covered by the trajectory
+    -> ProbeTrajectoryTemp
+    ---
+    region_boundaries   : blob
+    region_label        : blob
+    region_color        : blob
+    region_id           : blob
+    """
+    key_source = ProbeTrajectoryTemp & ChannelBrainLocationTemp
+
+    def make(self, key):
+
+        x, y, z, axial = (ChannelBrainLocationTemp & key).fetch(
+            'channel_x', 'channel_y', 'channel_z', 'channel_axial',
+            order_by='channel_axial')
+        xyz_channels = np.c_[x, y, z]
+        key['region_boundaries'], key['region_label'], \
+            key['region_color'], key['region_id'] = \
+            EphysAlignment.get_histology_regions(
+                xyz_channels.astype('float')/1e6, axial.astype('float'))
+
+        self.insert1(key)
+
+
+@schema
+class ClusterBrainRegionTemp(dj.Computed):
+    definition = """
+    # Brain region assignment to each cluster
+    -> ephys.DefaultCluster
+    -> ProbeTrajectoryTemp
+    -> ephys.ChannelGroup
+    ---
+    -> reference.BrainRegion
+    """
+    key_source = ephys.DefaultCluster * Provenance & \
+        ProbeTrajectoryTemp & ephys.ChannelGroup & ChannelBrainLocationTemp
+
+    def make(self, key):
+        # pdb.set_trace()
+        channel_raw_inds, channel_local_coordinates = \
+            (ephys.ChannelGroup & key).fetch1(
+                'channel_raw_inds', 'channel_local_coordinates')
+        channel = (ephys.DefaultCluster & key).fetch1('cluster_channel')
+        if channel in channel_raw_inds:
+            channel_coords = np.squeeze(
+                channel_local_coordinates[channel_raw_inds == channel])
+        else:
+            return
+
+        q = ChannelBrainLocationTemp & key & \
+            dict(channel_lateral=channel_coords[0],
+                 channel_axial=channel_coords[1])
+
+        if len(q) == 1:
+            key['ontology'], key['acronym'] = q.fetch1(
+                'ontology', 'acronym')
+
+            self.insert1(key)
+        elif len(q) > 1:
+            ontology, acronym = q.fetch('ontology', 'acronym')
+            if len(np.unique(acronym)) == 1:
+                key['ontology'] = 'CCF 2017'
+                key['acronym'] = acronym[0]
+                self.insert1(key)
+            else:
+                print('Conflict regions')
+        else:
+            return
+
+
+@schema
+class ProbeBrainRegionTemp(dj.Computed):
+    definition = """
+    # Brain regions assignment to each probe insertion, including the regions of finest granularity and their upper-level areas.
+    -> ProbeTrajectoryTemp
+    -> reference.BrainRegion
+    """
+    key_source = ProbeTrajectoryTemp & ClusterBrainRegionTemp
+
+    def make(self, key):
+
+        regions = (dj.U('acronym') & (ClusterBrainRegionTemp & key)).fetch('acronym')
+
+        associated_regions = [
+            atlas.BrainAtlas.get_parents(acronym)
+            for acronym in regions] + list(regions)
+
+        self.insert([dict(**key, ontology='CCF 2017', acronym=region)
+                     for region in np.unique(np.hstack(associated_regions))])
+
+
 @schema
 class ProbeTrajectory(dj.Imported):
     definition = """
@@ -33,38 +179,24 @@ class ProbeTrajectory(dj.Imported):
     -> ephys.ProbeInsertion
     ---
     -> [nullable] reference.CoordinateSystem
+    probe_trajectory_uuid: uuid
     x:                  float           # (um) medio-lateral coordinate relative to Bregma, left negative
     y:                  float           # (um) antero-posterior coordinate relative to Bregma, back negative
     z:                  float           # (um) dorso-ventral coordinate relative to Bregma, ventral negative
     phi:                float           # (degrees)[-180 180] azimuth
     theta:              float           # (degrees)[0 180] polar angle
     depth:              float           # (um) insertion depth
-    beta=null:          float           # (degrees) roll angle of the probe
+    roll=null:          float           # (degrees) roll angle of the probe
     trajectory_ts=CURRENT_TIMESTAMP:      timestamp
     """
-    key_source = (ephys.ProbeInsertion & \
-        (data.FileRecord & 'dataset_name like "%probes.trajectory%"')) - \
-            (ephys.ProbeInsertionMissingDataLog & 'missing_data="trajectory"')
-
+    key_source = ephys.ProbeInsertion & \
+        (qc.ProbeInsertionExtendedQC & 'qc_type="alignment_resolved"') & \
+        (ProbeTrajectoryTemp & 'provenance=70')
 
     def make(self, key):
-
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        probes_trajectories = one.load(eID, dataset_types=['probes.trajectory'])
-
-        probe_label = (ephys.ProbeInsertion & key).fetch1('probe_label')
-
-        if not probe_label:
-            probe_label = 'probe0' + str(key['probe_idx'])
-
-        data_missing = True
-        for probe_trajectory in probes_trajectories:
-            if type(probe_trajectory) == list:
-                probe_trajectory = probe_trajectory[0]
-            if probe_trajectory['label'] == probe_label:
-                data_missing = False
-                probe_trajectory.pop('label')
-                self.insert1(dict(**key, **probe_trajectory))
+        probe_trajectory = (ProbeTrajectoryTemp & 'provenance=70' & key).fetch1()
+        probe_trajectory.pop('provenance')
+        self.insert1(probe_trajectory)
 
         if data_missing:
             ephys.ProbeInsertionMissingDataLog.insert1(
@@ -244,152 +376,3 @@ class ClusterBrainRegion(dj.Imported):
 #                 xyz_channels.astype('float')/1e6, axial.astype('float'))
 
 #         self.insert1(key)
-
-
-# ================= Temporary histology tables ingested from Alyx ===================
-
-@schema
-class Provenance(dj.Lookup):
-    definition = """
-    # Method to estimate the probe trajectory, including Ephys aligned histology track, Histology track, Micro-manipulator, and Planned
-    provenance       :    tinyint unsigned             # provenance code
-    ---
-    provenance_description       : varchar(128)     # type of trajectory
-    """
-    contents = [
-        (70, 'Ephys aligned histology track'),
-        (50, 'Histology track'),
-        (30, 'Micro-manipulator'),
-        (10, 'Planned'),
-    ]
-
-
-@schema
-class ProbeTrajectoryTemp(dj.Imported):
-    definition = """
-    # Probe trajectory estimated with each method, ingested from Alyx table experiments.trajectoryestimate
-    -> ephys.ProbeInsertion
-    -> Provenance
-    ---
-    -> [nullable] reference.CoordinateSystem
-    probe_trajectory_uuid: uuid
-    x:                  float           # (um) medio-lateral coordinate relative to Bregma, left negative
-    y:                  float           # (um) antero-posterior coordinate relative to Bregma, back negative
-    z:                  float           # (um) dorso-ventral coordinate relative to Bregma, ventral negative
-    phi:                float           # (degrees)[-180 180] azimuth
-    theta:              float           # (degrees)[0 180] polar angle
-    depth:              float           # (um) insertion depth
-    roll=null:          float           # (degrees) roll angle of the probe
-    trajectory_ts:      datetime
-    """
-    # this table relies on copying from the shadow table in ibl_pipeline.ingest.histology
-
-
-@schema
-class ChannelBrainLocationTemp(dj.Imported):
-    definition = """
-    # Brain coordinates and region assignment of each channel, ingested from Alyx table experiments.channel
-    -> ProbeTrajectoryTemp
-    channel_brain_location_uuid    : uuid
-    ---
-    channel_axial   : decimal(6, 1)
-    channel_lateral : decimal(6, 1)
-    channel_x       : decimal(6, 1)
-    channel_y       : decimal(6, 1)
-    channel_z       : decimal(6, 1)
-    -> reference.BrainRegion
-    """
-    # this table relies on copying from the shadow table in ibl_pipeline.ingest.histology
-
-@schema
-class DepthBrainRegionTemp(dj.Computed):
-    definition = """
-    # For each ProbeTrajectory, assign depth boundaries relative to the probe tip to each brain region covered by the trajectory
-    -> ProbeTrajectoryTemp
-    ---
-    region_boundaries   : blob
-    region_label        : blob
-    region_color        : blob
-    region_id           : blob
-    """
-    key_source = ProbeTrajectoryTemp & ChannelBrainLocationTemp
-
-    def make(self, key):
-
-        x, y, z, axial = (ChannelBrainLocationTemp & key).fetch(
-            'channel_x', 'channel_y', 'channel_z', 'channel_axial',
-            order_by='channel_axial')
-        xyz_channels = np.c_[x, y, z]
-        key['region_boundaries'], key['region_label'], \
-            key['region_color'], key['region_id'] = \
-            EphysAlignment.get_histology_regions(
-                xyz_channels.astype('float')/1e6, axial.astype('float'))
-
-        self.insert1(key)
-
-
-@schema
-class ClusterBrainRegionTemp(dj.Computed):
-    definition = """
-    # Brain region assignment to each cluster
-    -> ephys.DefaultCluster
-    -> ProbeTrajectoryTemp
-    -> ephys.ChannelGroup
-    ---
-    -> reference.BrainRegion
-    """
-    key_source = ephys.DefaultCluster * Provenance & \
-        ProbeTrajectoryTemp & ephys.ChannelGroup & ChannelBrainLocationTemp
-
-    def make(self, key):
-        # pdb.set_trace()
-        channel_raw_inds, channel_local_coordinates = \
-            (ephys.ChannelGroup & key).fetch1(
-                'channel_raw_inds', 'channel_local_coordinates')
-        channel = (ephys.DefaultCluster & key).fetch1('cluster_channel')
-        if channel in channel_raw_inds:
-            channel_coords = np.squeeze(
-                channel_local_coordinates[channel_raw_inds == channel])
-        else:
-            return
-
-        q = ChannelBrainLocationTemp & key & \
-            dict(channel_lateral=channel_coords[0],
-                 channel_axial=channel_coords[1])
-
-        if len(q) == 1:
-            key['ontology'], key['acronym'] = q.fetch1(
-                'ontology', 'acronym')
-
-            self.insert1(key)
-        elif len(q) > 1:
-            ontology, acronym = q.fetch('ontology', 'acronym')
-            if len(np.unique(acronym)) == 1:
-                key['ontology'] = 'CCF 2017'
-                key['acronym'] = acronym[0]
-                self.insert1(key)
-            else:
-                print('Conflict regions')
-        else:
-            return
-
-
-@schema
-class ProbeBrainRegionTemp(dj.Computed):
-    definition = """
-    # Brain regions assignment to each probe insertion, including the regions of finest granularity and their upper-level areas.
-    -> ProbeTrajectoryTemp
-    -> reference.BrainRegion
-    """
-    key_source = ProbeTrajectoryTemp & ClusterBrainRegionTemp
-
-    def make(self, key):
-
-        regions = (dj.U('acronym') & (ClusterBrainRegionTemp & key)).fetch('acronym')
-
-        associated_regions = [
-            atlas.BrainAtlas.get_parents(acronym)
-            for acronym in regions] + list(regions)
-
-        self.insert([dict(**key, ontology='CCF 2017', acronym=region)
-                     for region in np.unique(np.hstack(associated_regions))])

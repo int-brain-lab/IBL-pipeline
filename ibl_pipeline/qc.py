@@ -40,23 +40,23 @@ class QCLevel(dj.Lookup):
 class QCType(dj.Lookup):
     definition = """
     # Aspect of a session for quality check. e.g. task, behavior, experimenter…
-    qc_type  : varchar(16)
+    qc_type  : varchar(32)
     ---
     -> QCLevel
     qc_type_description=''  : varchar(1000)
     """
 
-    # contents = [
-    #     ['experimenter', 'session', 'Manual labeling of a session by user'],
-    #     ['task', 'session', 'Quality check when running the task'],
-    #     ['behavior', 'session', 'Behavior criteria'],
-    #     ['videoBody', 'session', 'Quality check for video recording of body camera'],
-    #     ['videoLeft', 'session', 'Quality check for video recording of left camera'],
-    #     ['videoRight', 'session', 'Quality check for video recording of right camera'],
-    #     ['dlc', 'session', 'Deep lab cut on behavioral video data'],
-    #     ['tracing_exists', 'Histology tracing'],
-    #     ['alignment_resolved', 'Ephys alignment with histology']
-    # ]
+    contents = [
+        ['experimenter', 'session', 'Manual labeling of a session by user'],
+        ['task', 'session', 'Quality check when running the task'],
+        ['behavior', 'session', 'Behavior criteria'],
+        ['videoBody', 'session', 'Quality check for video recording of body camera'],
+        ['videoLeft', 'session', 'Quality check for video recording of left camera'],
+        ['videoRight', 'session', 'Quality check for video recording of right camera'],
+        ['dlc', 'session', 'Deep lab cut processing on behavioral video data'],
+        ['tracing_exists', 'probe_insertion', 'Histology tracing'],
+        ['alignment_resolved', 'probe_insertion', 'Ephys alignment with histology']
+    ]
 
 
 @schema

@@ -1,0 +1,32 @@
+FROM datajoint/djlab:py3.8-debian
+
+RUN pip install --upgrade pip
+RUN pip install --upgrade datajoint
+
+COPY --chown=dja:anaconda ./iblenv.yaml /tmp/iblenv.yaml
+USER root
+RUN . /root/.bashrc
+RUN conda init bash
+RUN conda install conda-build
+RUN conda update -n base -c defaults conda
+RUN conda update --all
+RUN conda config --set channel_priority false
+RUN conda env create --file /tmp/iblenv.yaml
+RUN conda activate iblenv
+RUN pip install importlib_resource imageio
+RUN pip install --no-dependencies git+https://github.com/int-brain-lab/ibllib
+RUN pip install --no-dependencies git+https://github.com/int-brain-lab/iblapps
+RUN pip install --no-dependencies git+https://github.com/cortex-lab/phylib
+
+USER dja:anaconda
+ADD . /src/IBL-pipeline
+
+USER root
+RUN pip install -e --no-dependencies /src/IBL-pipeline
+RUN conda install -c conda-forge opencv -y
+COPY --chown=dja:anaconda ./apt_requirements.txt /tmp/apt_requirements.txt
+RUN apt update
+USER dja:anaconda
+RUN \
+    /entrypoint.sh echo "Requirements updated..." && \
+    rm "${APT_REQUIREMENTS}"
