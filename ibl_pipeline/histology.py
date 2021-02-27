@@ -148,10 +148,9 @@ class ClusterBrainRegion(dj.Imported):
     cluster_dv      : decimal(6, 1)  # (um) dorso-ventral coordinate relative to Bregma, ventral negative
     -> reference.BrainRegion
     """
-    key_source = (ProbeTrajectory & \
+    key_source = ProbeTrajectory & \
         (data.FileRecord & 'dataset_name like "%clusters.brainLocationIds%"') & \
-        (data.FileRecord & 'dataset_name like "%clusters.mlapdv%"')) - \
-             (ephys.ProbeInsertionMissingDataLog & 'missing_data="clusters_brain_region"')
+        (data.FileRecord & 'dataset_name like "%clusters.mlapdv%"')
 
     def make(self, key):
 
