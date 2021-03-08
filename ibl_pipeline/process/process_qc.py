@@ -109,7 +109,6 @@ def main(fpath='/data/alyxfull.json'):
         ingest_tables(alyx_model)
 
 
-
 if __name__ == '__main__':
 
     main()
