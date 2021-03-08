@@ -288,7 +288,7 @@ class ClusterBrainRegion(dj.Imported):
             probe_label = 'probe0' + key['probe_idx']
 
         clusters = alf.io.load_object(
-            ses_path.joinpath('alf', probe_label), 'channels')
+            ses_path.joinpath('alf', probe_label), 'clusters')
 
         cluster_entries = []
         for icluster, (brain_loc_id, loc) in tqdm(
