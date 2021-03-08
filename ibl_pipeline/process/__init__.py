@@ -9,7 +9,7 @@ def get_timezone(t=datetime.datetime.now().time()):
         timezone = 'European'
     elif t > datetime.time(8, 30) and t < datetime.time(10, 30):
         timezone = 'EST'
-    elif t > datetime.time(10, 30) and t < datetime.time(14, 30):
+    elif t > datetime.time(10, 30) and t < datetime.time(16, 30):
         timezone = 'PST'
     else:
         timezone = 'other'
