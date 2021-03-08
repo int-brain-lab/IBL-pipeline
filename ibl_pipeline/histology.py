@@ -301,6 +301,7 @@ class ClusterBrainRegion(dj.Imported):
         if not probe_label:
             probe_label = 'probe0' + key['probe_idx']
 
+<<<<<<< HEAD
         try:
             clusters = alf.io.load_object(
                 ses_path.joinpath('alf', probe_label), 'clusters')
@@ -310,6 +311,10 @@ class ClusterBrainRegion(dj.Imported):
                      error_message=str(e))
             )
             return
+=======
+        clusters = alf.io.load_object(
+            ses_path.joinpath('alf', probe_label), 'clusters')
+>>>>>>> 7a5f687fb95ad49d98cf6c546f357bb843a0ddfb
 
         cluster_entries = []
         for icluster, (brain_loc_id, loc) in tqdm(
