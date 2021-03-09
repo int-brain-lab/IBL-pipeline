@@ -199,6 +199,12 @@ class ProbeTrajectory(dj.Imported):
         probe_trajectory.pop('provenance')
         self.insert1(probe_trajectory)
 
+        if data_missing:
+            ephys.ProbeInsertionMissingDataLog.insert1(
+                dict(**key, missing_data='trajectory',
+                     error_message='No probes.trajectory data for this probe insertion')
+            )
+
 
 @schema
 class ChannelBrainLocation(dj.Imported):
@@ -212,9 +218,10 @@ class ChannelBrainLocation(dj.Imported):
     channel_dv      : decimal(6, 1)  # (um) dorso-ventral coordinate relative to Bregma, ventral negative
     -> reference.BrainRegion
     """
-    key_source = ProbeTrajectory & \
+    key_source = (ProbeTrajectory & \
         (data.FileRecord & 'dataset_name like "%channels.brainLocationIds%"') & \
-        (data.FileRecord & 'dataset_name like "%channels.mlapdv%"')
+        (data.FileRecord & 'dataset_name like "%channels.mlapdv%"')) - \
+            (ephys.ProbeInsertionMissingDataLog & 'missing_data="channels_brain_region"')
 
     def make(self, key):
 
@@ -232,8 +239,15 @@ class ChannelBrainLocation(dj.Imported):
         if not probe_label:
             probe_label = 'probe0' + key['probe_idx']
 
-        channels = alf.io.load_object(
-            ses_path.joinpath('alf', probe_label), 'channels')
+        try:
+            channels = alf.io.load_object(
+                ses_path.joinpath('alf', probe_label), 'channels')
+        except Exception as e:
+            ephys.ProbeInsertionMissingDataLog.insert1(
+                dict(**key, missing_data='channels_brain_region',
+                     error_message=str(e))
+            )
+            return
 
         channel_entries = []
         for ichannel, (brain_loc_id, loc) in tqdm(
@@ -287,8 +301,15 @@ class ClusterBrainRegion(dj.Imported):
         if not probe_label:
             probe_label = 'probe0' + key['probe_idx']
 
-        clusters = alf.io.load_object(
-            ses_path.joinpath('alf', probe_label), 'channels')
+        try:
+            clusters = alf.io.load_object(
+                ses_path.joinpath('alf', probe_label), 'clusters')
+        except Exception as e:
+            ephys.ProbeInsertionMissingDataLog.insert1(
+                dict(**key, missing_data='clusters_brain_region',
+                     error_message=str(e))
+            )
+            return
 
         cluster_entries = []
         for icluster, (brain_loc_id, loc) in tqdm(
@@ -311,16 +332,16 @@ class ClusterBrainRegion(dj.Imported):
 
 
 # @schema
-# class SessionBrainRegion(dj.Computed):
+# class ProbeBrainRegion(dj.Computed):
 #     definition = """
-#     # Brain regions assignment to each session
-#     # including the regions of finest granularity and their upper-level areas.
-#     -> acquisition.Session
+#     # Brain regions assignment to each probe insertion, including the regions of finest granularity and their upper-level areas.
+#     -> ProbeTrajectory
 #     -> reference.BrainRegion
 #     """
-#     key_source = acquisition.Session & ClusterBrainRegion
+#     key_source = ProbeTrajectory & ClusterBrainRegion
 
 #     def make(self, key):
+
 #         regions = (dj.U('acronym') & (ClusterBrainRegion & key)).fetch('acronym')
 
 #         associated_regions = [

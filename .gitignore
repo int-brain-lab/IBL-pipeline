@@ -143,3 +143,4 @@ data/*
 # others
 notebooks/notebooks_dev/*
 clear_things_up.txt
+scripts/updates/problematic_keys.npy
