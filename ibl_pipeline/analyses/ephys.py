@@ -57,8 +57,8 @@ class DepthPeth(dj.Computed):
                   'trial_feedback_type=1').fetch()
 
         bin_size_depth = 80
-        min_depth = min(spikes_depths)
-        max_depth = max(spikes_depths)
+        min_depth = np.nanmin(spikes_depths)
+        max_depth = np.nanmax(spikes_depths)
         bin_edges = np.arange(min_depth, max_depth, bin_size_depth)
         spk_bin_ids = np.digitize(spikes_depths, bin_edges)
 
