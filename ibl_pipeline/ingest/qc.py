@@ -1,5 +1,6 @@
 import datajoint as dj
 import json
+from ..utils import str_to_dict
 
 from . import alyxraw, reference, subject, action, acquisition, ephys
 from .. import acquisition as acquisition_real
@@ -10,13 +11,6 @@ from tqdm import tqdm
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_ingest_qc')
-
-json_replace_map = {
-    "\'": "\"",
-    'None': '\"None\"',
-    'True': 'true',
-    'False': 'false'
-}
 
 
 # This function automatically get qc types from alyx
@@ -44,14 +38,7 @@ def get_extended_qc_fields_from_alyx(level='session'):
     eqc_fields = []
 
     for key in tqdm(key_source):
-        qc_extended = grf(key, fname)
-
-        try:
-            qc_extended = json.loads(qc_extended)
-        except json.decoder.JSONDecodeError:
-            for k, v in json_replace_map.items():
-                qc_extended = qc_extended.replace(k, v)
-            qc_extended = json.loads(qc_extended)
+        qc_extended = str_to_dict(grf(key, fname))
 
         if qc_extended != 'None':
             if level == 'probe' and 'extended_qc' in qc_extended:
@@ -82,15 +69,7 @@ class SessionQCIngest(dj.Computed):
 
         key['uuid'] = key['session_uuid']
         qc_alyx = grf(key, 'qc')
-        qc_extended_alyx = grf(key, 'extended_qc')
-
-        try:
-            qc_extended_alyx = json.loads(qc_extended_alyx)
-        except json.decoder.JSONDecodeError:
-            # fix the json field before decoding.
-            for k, v in json_replace_map.items():
-                qc_extended_alyx = qc_extended_alyx.replace(k, v)
-            qc_extended_alyx = json.loads(qc_extended_alyx)
+        qc_extended_alyx = str_to_dict(grf(key, 'extended_qc'))
 
         if len(acquisition_real.Session & key) == 1:
             session_key = (acquisition_real.Session & key).fetch1('KEY')
@@ -167,19 +146,10 @@ class ProbeInsertionQCIngest(dj.Computed):
     def make(self, key):
 
         key['uuid'] = key['probe_insertion_uuid']
-        json_field = grf(key, 'json')
-
-        try:
-            json_field = json.loads(json_field)
-        except json.decoder.JSONDecodeError:
-            # fix the json field before decoding.
-            for k, v in json_replace_map.items():
-                json_field = json_field.replace(k, v)
-            json_field = json.loads(json_field)
+        json_field = str_to_dict(grf(key, 'json'))
 
         if len(ephys_real.ProbeInsertion & key) == 1:
             probe_insertion_key = (ephys_real.ProbeInsertion & key).fetch1('KEY')
-            self.insert1(dict(**probe_insertion_key, probe_insertion_uuid=key['uuid']))
         else:
             return
 
@@ -220,6 +190,8 @@ class ProbeInsertionQCIngest(dj.Computed):
                     # Only ingest when alignment is resolved
                     if qc_type == 'alignment_resolved' and extended_qc_alyx[qc_type]:
 
+                        # only ingest into current table if alignment is resolved
+                        self.insert1(dict(**probe_insertion_key, probe_insertion_uuid=key['uuid']))
                         qc_real.ProbeInsertionExtendedQC.insert1(
                             dict(**probe_insertion_key, qc_type=qc_type,
                                  insertion_extended_qc=10),
