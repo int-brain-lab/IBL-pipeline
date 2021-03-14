@@ -1,13 +1,20 @@
 import datajoint as dj
+from .utils import str_to_dict
 from . import acquisition, ephys
-import os
 
+import os
+from oneibl.one import ONE
+one = ONE()
 
 mode = os.environ.get('MODE')
 if mode == 'update':
     schema = dj.schema('ibl_qc')
 else:
     schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_qc')
+
+if mode != 'public':
+    qc_ingest = dj.create_virtual_module('qc_ingest', 'ibl_ingest_qc')
+    alyxraw = dj.create_virtual_module('alyxraw', 'ibl_alyxraw')
 
 
 @schema
@@ -124,3 +131,47 @@ class ProbeInsertionExtendedQC(dj.Manual):
         insertion_qc_fvalue_str=null       : varchar(64)
         insertion_qc_fvalue_blob=null      : blob
         """
+
+    @classmethod
+    def validate_resolved(cls, deep=False):
+        """Compare the datasets in datajoint with datasets in alyx
+
+        Args:
+            deep (bool, optional): Check the dependent tables to figure out the problem. Defaults to False.
+
+        Returns:
+            [type]: [description]
+        """
+        resolved = one.alyx.rest(
+            'insertions', 'list',
+            django='json__extended_qc__alignment_resolved,True')
+
+        uuids_alyx = [r['id'] for r in resolved]
+        uuids = (ephys.ProbeInsertion &
+                 (cls & 'qc_type="alignment_resolved"')).fetch('probe_insertion_uuid')
+        uuids_dj = [str(uuid) for uuid in uuids]
+
+        missing_uuids = list(set(uuids_alyx) - set(uuids_dj))
+
+        if deep:
+            messages = []
+            for uuid in missing_uuids:
+                if not (alyxraw.AlyxRaw.Field & {'uuid': uuid} & 'fname="json"'):
+                    msg = 'No json entry in alyxraw'
+                else:
+                    json = str_to_dict((alyxraw.AlyxRaw.Field & {'uuid': uuid} & 'fname="json"').fetch1('fvalue'))
+                    if 'extended_qc' in json and \
+                            'alignment_resolved' in json['extended_qc'] and \
+                            json['extended_qc']['alignment_resolved']:
+
+                        if ephys.ProbeInsertion & {'probe_insertion_uuid': uuid}:
+                            if qc_ingest.ProbeInsertionQCIngest & {'probe_insertion_uuid': uuid}:
+                                msg = 'Entries exist in both ProbeInsertion and ProbeInsertionQCIngest'
+                            else:
+                                msg = 'Probe ingest did not run or alyx dump outdated.'
+                        else:
+                            msg = 'Missing entry in ephys.ProbeInsertion.'
+                messages.append((uuid, msg))
+            return messages
+        else:
+            return missing_uuids
