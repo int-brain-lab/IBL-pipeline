@@ -1,5 +1,5 @@
 import datajoint as dj
-from .. import behavior, ephys
+from .. import acquisition, behavior, ephys
 from ..analyses import ephys as ephys_analyses
 from . import plotting_utils_ephys as putils
 from . import utils
@@ -920,12 +920,21 @@ class DepthRaster(dj.Computed):
             spikes_data, dpi=10, fig_dir=fig_link_very_low,
             store_type='s3')
 
+        if trials:
+            first_start = trials[0]['trial_start_time']
+            last_end = trials[-1]['trial_end_time']
+        else:
+            first_start = 0
+            last_end = (acquisition.Session & key).proj(
+                session_end_relative_to_start='session_end_time - session_start_time').fetch1(
+                    'session_end_relative_to_start')
+
         key.update(
             plotting_data_link=fig_link_full,
             plotting_data_link_low_res=fig_link_low,
             plotting_data_link_very_low_res=fig_link_very_low,
-            first_start=trials[0]['trial_start_time'],
-            last_end=trials[-1]['trial_end_time'],
+            first_start=first_start,
+            last_end=last_end,
             depth_raster_template_idx=0
         )
 
