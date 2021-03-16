@@ -1,6 +1,6 @@
 from ibl_pipeline.process import update_utils, ingest_alyx_raw
 from ibl_pipeline.ingest import alyxraw
-from ibl_pipeline import acquisition, qc
+from ibl_pipeline import acquisition, ephys, qc
 from ibl_pipeline.ingest import qc as qc_ingest
 from ibl_pipeline.process.ingest_real import copy_table
 import logging
@@ -14,35 +14,60 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-alyx_model = 'actions.session'
+qc_update_models = {
+    'actions.session':
+    {
+        'ref_table': acquisition.Session,
+        'alyx_fields': ['qc', 'extended_qc'],
+        'uuid_name': 'session_uuid',
+        'ingest_tables': [qc_ingest.SessionQCIngest],
+        'real_tables': [
+            qc.SessionExtendedQC.Field,
+            qc.SessionExtendedQC,
+            qc.SessionQC
+        ],  # in the order of delete_quick()
+    },
+    'experiments.probeinsertion':
+    {
+        'ref_table': ephys.ProbeInsertion,
+        'alyx_fields': ['json'],
+        'uuid_name': 'probe_insertion_uuid',
+        'ingest_tables': [qc_ingest.ProbeInsertionQCIngest],
+        'real_tables': [
+            qc.ProbeInsertionExtendedQC.Field,
+            qc.ProbeInsertionExtendedQC,
+            qc.ProbeInsertionQC
+        ]  # in the order of delete_quick()
+    }
+}
 
 
-def delete_qc_entries():
+def delete_qc_entries(alyx_model):
+
+    model_info = qc_update_models[alyx_model]
 
     qc_keys = update_utils.get_deleted_keys(alyx_model) + \
         update_utils.get_updated_keys(alyx_model, fields=['qc', 'extended_qc'])
 
-    logger.log(25, 'Deleting updated qc and extended_qc from alyxraw...')
+    logger.log(25, f'Deleting updated entries for {alyx_model} from alyxraw fields...')
     (alyxraw.AlyxRaw.Field &
-     'fname in ("qc", "extended_qc")' & qc_keys).delete_quick()
+     [dict(fname=f) for f in model_info['alyx_fields']] & qc_keys).delete_quick()
 
-    logger.log(25, 'Deleting updated qc and extended_qc from shadow tables')
-    session_uuids = [{'session_uuid': k['uuid']} for k in qc_keys]
-    sessions = acquisition.Session & session_uuids
-    (qc_ingest.SessionQCIngest & session_uuids).delete_quick()
-    (qc_ingest.SessionQC & sessions).delete_quick()
-    (qc_ingest.SessionExtendedQC.Field & sessions).delete_quick()
-    (qc_ingest.SessionExtendedQC & sessions).delete_quick()
+    logger.log(25, f'Deleting updated qc and extended_qc for {alyx_model} from ingest tables...')
+    uuids_dict_list = [{model_info['uuid_name']: k['uuid']} for k in qc_keys]
+    q_real = model_info['ref_table'] & uuids_dict_list
 
-    logger.log(25, 'Deleting updated qc and extended_qc from real tables')
-    (qc.SessionExtendedQC.Field & sessions).delete_quick()
-    (qc.SessionExtendedQC & sessions).delete_quick()
-    (qc.SessionQC & sessions).delete_quick()
+    for m in model_info['ingest_tables']:
+        (m & uuids_dict_list).delete_quick()
+
+    logger.log(25, f'Deleting updated qc and extended_qc for {alyx_model} from real tables...')
+    for m in model_info['real_tables']:
+        (m & q_real).delete_quick()
 
 
 def process_alyxraw_qc(
         filename='/data/alyxfull.json',
-        models=['actions.session']):
+        models=['actions.session', 'experiments.probeinsertion']):
     '''
     Ingest all qc entries in a particular alyx dump, regardless of the current status.
     '''
@@ -56,40 +81,32 @@ def process_alyxraw_qc(
     )
 
 
-def ingest_tables():
+def ingest_tables(alyx_model):
 
-    qc_ingest.SessionQCIngest.populate(
-        display_progress=True, suppress_errors=True)
-    qc_ingest.ProbeInsertionQCIngest.populate(
-        display_progress=True, suppress_errors=True)
-
-
-def cleanup_qc_ingest():
-    '''
-    clean up the ProbeInsertionQC table to trigger ingestion if there is no alignment resolved entry
-    '''
-
-    (qc_ingest.ProbeInsertionQCIngest - (qc.ProbeInsertionExtendedQC & 'qc_type="alignment_resolved"')).delete()
+    for m in qc_update_models[alyx_model]['ingest_tables']:
+        m.populate(display_progress=True, suppress_errors=True)
 
 
 def main(fpath='/data/alyxfull.json'):
 
+    alyx_models = list(qc_update_models.keys())
+
     logger.log(25, 'Insert to update alyxraw...')
     update_utils.insert_to_update_alyxraw(
         filename=fpath, delete_tables=True,
-        models=['actions.session'])
+        models=alyx_models)
 
     logger.log(25, 'Deleting updated entries...')
-    delete_qc_entries()
+
+    for alyx_model in alyx_models:
+        delete_qc_entries(alyx_model)
 
     logger.log(25, 'Ingesting Alyxraw for QC...')
-    process_alyxraw_qc()
+    process_alyxraw_qc(models=alyx_models)
 
     logger.log(25, 'Ingesting QC tables...')
-    ingest_tables()
-
-    logger.log(25, 'Cleaning up ProbeInsertionQCIngest table...')
-    cleanup_qc_ingest()
+    for alyx_model in alyx_models:
+        ingest_tables(alyx_model)
 
 
 if __name__ == '__main__':

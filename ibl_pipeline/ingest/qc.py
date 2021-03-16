@@ -179,7 +179,6 @@ class ProbeInsertionQCIngest(dj.Computed):
 
         if len(ephys_real.ProbeInsertion & key) == 1:
             probe_insertion_key = (ephys_real.ProbeInsertion & key).fetch1('KEY')
-            self.insert1(dict(**probe_insertion_key, probe_insertion_uuid=key['uuid']))
         else:
             return
 
@@ -220,6 +219,8 @@ class ProbeInsertionQCIngest(dj.Computed):
                     # Only ingest when alignment is resolved
                     if qc_type == 'alignment_resolved' and extended_qc_alyx[qc_type]:
 
+                        # only ingest into current table if alignment is resolved
+                        self.insert1(dict(**probe_insertion_key, probe_insertion_uuid=key['uuid']))
                         qc_real.ProbeInsertionExtendedQC.insert1(
                             dict(**probe_insertion_key, qc_type=qc_type,
                                  insertion_extended_qc=10),
