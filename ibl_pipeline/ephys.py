@@ -69,8 +69,7 @@ class CompleteClusterSession(dj.Computed):
     key_source = acquisition.Session & \
         'task_protocol like "%ephysChoiceWorld%"' \
         & (data.FileRecord & 'dataset_name like "%spikes.times%.npy"') \
-        & (data.FileRecord & 'dataset_name="spikes.clusters.npy"') \
-        & (data.FileRecord & 'dataset_name="probes.description.json"')
+        & (data.FileRecord & 'dataset_name="spikes.clusters.npy"')
 
     def make(self, key):
 
@@ -123,6 +122,14 @@ class ProbeInsertion(dj.Imported):
     -> [nullable] ProbeModel
     probe_insertion_ts=CURRENT_TIMESTAMP  :  timestamp
     """
+
+    @classmethod
+    def validate(cls):
+        probe_insertions_alyx = one.alyx.rest('insertions', 'list')
+        uuids_alyx = {p['id'] for p in probe_insertions_alyx}
+        uuids_dj = (cls & 'probe_insertion_uuid is not null').fetch('probe_insertion_uuid')
+        uuids_dj = {str(uuid) for uuid in uuids_dj}
+        return list(uuids_alyx - uuids_dj)
 
 
 @schema
