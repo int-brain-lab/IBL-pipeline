@@ -920,7 +920,7 @@ class DepthRaster(dj.Computed):
             spikes_data, dpi=10, fig_dir=fig_link_very_low,
             store_type='s3')
 
-        if trials:
+        if len(trials):
             first_start = trials[0]['trial_start_time']
             last_end = trials[-1]['trial_end_time']
         else:
