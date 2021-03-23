@@ -1,22 +1,26 @@
-version: '3'
+version: "2.2"  # optional since v1.27.0
 services:
-  datajoint_brain:
+  dev:
     build:
       context: .
       dockerfile: Dockerfile.brain
-    container_name: ibl_datajoint_brain
     env_file: .env
     volumes:
-      - ./notebooks:/home/dja
-      - ./images:/images
+      - ./root/.one_params:/root/.one_params
       - .:/src/IBL-pipeline
       - ./data:/data
-      - ./raster:/raster
-      - ./root/.one_params:/home/dja/.one_params
-    user: 1000:anaconda
+    environment:
+      - QT_DEBUG_PLUGINS=1 # For debugging QT issues
     ports:
-      - "9003:8888"
+      - 8080:8080
+    working_dir: /src
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    # command: bash -c "cp .one_params ~/ && python3 generate_gif.py"
+    # If you want a note book then enable this along with the port block
+    #command: bash -c "cp .one_params ~/ && jupyter notebook --ip 0.0.0.0 --no-browser --port=8080 --allow-root"
+    command: bash -c  "jupyter notebook --ip 0.0.0.0 --no-browser --port=8080 --allow-root"
     networks:
-      - ibl_brain
+      - ibl-brain
 networks:
-  ibl_brain:
+  ibl-brain:
