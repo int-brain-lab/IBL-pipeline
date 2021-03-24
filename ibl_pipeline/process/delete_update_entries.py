@@ -51,7 +51,8 @@ def delete_entries_from_alyxraw(pks_to_be_deleted=[], modified_pks_important=[])
 
             alyxraw_buffer.flush_delete(quick=False)
 
-            # delete session fields without deleting the AlyxRaw entries and start time field.
+            # Delete session fields without deleting the AlyxRaw entries and start time field.
+            # This is to handle the case where uuid is not changed but start time changed for 1 sec.
             print('Long pk list, deleting from alyxraw.AlyxRaw.Field ...')
             alyxraw_field_buffer = QueryBuffer(
                 alyxraw.AlyxRaw.Field & 'fname!="start_time"' &
