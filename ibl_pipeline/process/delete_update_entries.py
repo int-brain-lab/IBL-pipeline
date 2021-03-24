@@ -33,7 +33,7 @@ def delete_entries_from_alyxraw(pks_to_be_deleted=[], modified_pks_important=[])
         else:
             file_record_fields = alyxraw.AlyxRaw.Field & \
                 'fname = "exists"' & 'fvalue = "false"' & \
-                    [{'uuid': pk} for pk in pks_to_be_deleted]
+                [{'uuid': pk} for pk in pks_to_be_deleted]
 
         for key in tqdm(file_record_fields):
             (alyxraw.AlyxRaw.Field & key).delete_quick()
@@ -51,7 +51,7 @@ def delete_entries_from_alyxraw(pks_to_be_deleted=[], modified_pks_important=[])
 
             alyxraw_buffer.flush_delete(quick=False)
 
-            # delete session fields without deleting the primary keys.
+            # delete session fields without deleting the AlyxRaw entries and start time field.
             print('Long pk list, deleting from alyxraw.AlyxRaw.Field ...')
             alyxraw_field_buffer = QueryBuffer(
                 alyxraw.AlyxRaw.Field & 'fname!="start_time"' &
@@ -85,35 +85,41 @@ def delete_entries_from_membership(pks_to_be_deleted):
 # =================================== functions for update ==========================================
 
 TABLES_TO_UPDATE = [
-    {'real_schema': reference,
-     'shadow_schema': reference_ingest,
-     'table_name': 'Project',
-     'members': []
+    {
+        'real_schema': reference,
+        'shadow_schema': reference_ingest,
+        'table_name': 'Project',
+        'members': []
     },
-    {'real_schema': subject,
-     'shadow_schema': subject_ingest,
-     'table_name': 'Subject',
-     'members': ['SubjectLab', 'SubjectUser', 'SubjectProject', 'Death']
+    {
+        'real_schema': subject,
+        'shadow_schema': subject_ingest,
+        'table_name': 'Subject',
+        'members': ['SubjectLab', 'SubjectUser', 'SubjectProject', 'Death']
     },
-    {'real_schema': action,
-     'shadow_schema': action_ingest,
-     'table_name': 'Weighing',
-     'members': []
+    {
+        'real_schema': action,
+        'shadow_schema': action_ingest,
+        'table_name': 'Weighing',
+        'members': []
     },
-    {'real_schema': action,
-     'shadow_schema': action_ingest,
-     'table_name': 'WaterRestriction',
-     'members': []
+    {
+        'real_schema': action,
+        'shadow_schema': action_ingest,
+        'table_name': 'WaterRestriction',
+        'members': []
     },
-    {'real_schema': action,
-     'shadow_schema': action_ingest,
-     'table_name': 'WaterAdministration',
-     'members': []
+    {
+        'real_schema': action,
+        'shadow_schema': action_ingest,
+        'table_name': 'WaterAdministration',
+        'members': []
     },
-    {'real_schema': acquisition,
-     'shadow_schema': acquisition_ingest,
-     'table_name': 'Session',
-     'members': ['SessionUser', 'SessionProject']
+    {
+        'real_schema': acquisition,
+        'shadow_schema': acquisition_ingest,
+        'table_name': 'Session',
+        'members': ['SessionUser', 'SessionProject']
     }
 ]
 
@@ -138,7 +144,7 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
 
     for r in (real_table & pks).fetch('KEY'):
 
-        pk_hash = UUID(dj.hash.hash_key_values(r))
+        pk_hash = UUID(dj.hash.key_hash(r))
 
         if not shadow_table & r:
             real_record = (real_table & r).fetch1()
