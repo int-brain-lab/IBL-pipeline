@@ -347,6 +347,8 @@ def generate_spinning_brain_frames(trajectories, nframes_per_cycle=30, figsize=[
             brain_atlas = ba_allen
         elif trj['coordinate_system'] == 'Needles-Allen':
             brain_atlas = ba_needles
+        else:
+            brain_atlas = ba_allen
         ins = atlas.Insertion.from_dict(trj, brain_atlas=brain_atlas)
         ins = atlas.Insertion.from_dict(trj, brain_atlas=ba_allen)
         mlapdv = brain_atlas.xyz2ccf(ins.xyz)
