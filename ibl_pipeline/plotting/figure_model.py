@@ -76,3 +76,24 @@ class PngFigure(Figure):
         self.clear()
         plt.close(self)
         gc.collect()
+
+
+class GifFigure():
+
+    def __init__(self, draw, trajectories,
+                 duration_per_cycle=5, nframes_per_cycle=30,
+                 figsize=[800, 700]):
+
+        frames = draw(
+            trajectories, nframes_per_cycle=nframes_per_cycle,
+            figsize=figsize)
+
+        self.buffer = io.BytesIO()
+        imageio.mimwrite(
+            self.buffer, frames, 'gif',
+            duration=duration_per_cycle/nframes_per_cycle)
+
+    def upload_to_s3(self, bucket, fig_link):
+        self.buffer.seek(0)
+        bucket.put_object(Body=self.buffer,
+                          Key=fig_link)

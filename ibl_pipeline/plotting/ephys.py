@@ -1,10 +1,10 @@
 import datajoint as dj
-from .. import acquisition, behavior, ephys
+from .. import subject, acquisition, behavior, ephys, histology
 from ..analyses import ephys as ephys_analyses
 from . import plotting_utils_ephys as putils
 from . import utils
 from . import ephys_plotting as eplt
-from .figure_model import PngFigure
+from .figure_model import PngFigure, GifFigure
 from .utils import RedBlueColorBar
 import numpy as np
 import pandas as pd
@@ -18,6 +18,8 @@ import brainbox as bb
 from matplotlib.axes import Axes
 import seaborn as sns
 import colorlover as cl
+from oneibl.one import ONE
+one = ONE()
 
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
@@ -1555,3 +1557,29 @@ class Waveform(dj.Computed):
             fig.cleanup()
 
         self.insert(entries)
+
+
+@schema
+class SubjectSpinningBrain(dj.Imported):
+    definition = """
+    -> subject.Subject
+    ---
+    subject_spinning_brain_link    : varchar(255)
+    """
+    # only populate those subject with resolved trajectories
+    key_source = subject.Subject & histology.ProbeTrajectory
+
+    def make(self, key):
+        subject_nickname = (subject.Subject & key).fetch1('subject_nickname')
+        trajs = one.alyx.rest('trajectories', 'list', subject=subject_nickname)
+
+        fig = GifFigure(
+            eplt.generate_spinning_brain_frames, trajs)
+
+        fig_link = path.join(
+            'subject_spinning_brain',
+            str(key['subject_uuid']) + '.gif'
+        )
+
+        fig.upload_to_s3(bucket, fig_link)
+        self.insert1(dict(**key, subject_spinning_brain_link=fig_link))
