@@ -11,9 +11,14 @@ from ibllib.io.extractors.training_wheel import extract_wheel_moves, extract_fir
 from ibllib.io.params import getfile
 
 
+logging.basicConfig(
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler("/src/IBL-pipeline/ibl_pipeline/process/logs/process_wheel.log"),
+        logging.StreamHandler()],
+    level=25)
+
 logger = logging.getLogger(__name__)
-fh = RotatingFileHandler(getfile('dj_wheelMoves.log'), maxBytes=(1048576 * 5))
-logger.addHandler(fh)
 logger.setLevel(logging.DEBUG)
 
 schema = dj.schema('group_shared_wheel')  # group_shared_wheel
