@@ -1566,7 +1566,7 @@ class SubjectSpinningBrain(dj.Imported):
     ---
     subject_spinning_brain_link    : varchar(255)
     """
-    # only populate those subject with resolved trajectories
+    # only populate those subjects with resolved trajectories
     key_source = subject.Subject & histology.ProbeTrajectory
 
     def make(self, key):

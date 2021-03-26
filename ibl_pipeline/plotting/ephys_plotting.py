@@ -15,6 +15,9 @@ import subprocess
 from pyvirtualdisplay import Display
 import os
 
+display = Display(visible=0, size=(1920, 1080))
+display.start()
+
 
 def driftmap_color(
         clusters_depths, spikes_times,
@@ -329,15 +332,9 @@ def generate_spinning_brain_frames(trajectories, nframes_per_cycle=30, figsize=[
     frames: list of numpy.darray
         image in rgb for each frame
     '''
-    import subprocess
-    from pyvirtualdisplay import Display
-    import os
-    display = Display(visible=0, size=(1920, 1080))
-    display.start()
     from mayavi import mlab
     from atlaselectrophysiology import rendering
     import ibllib.atlas as atlas
-    import imageio
 
     ba_allen = atlas.AllenAtlas(25)
     ba_needles = atlas.NeedlesAtlas(25)
@@ -369,7 +366,7 @@ def generate_spinning_brain_frames(trajectories, nframes_per_cycle=30, figsize=[
                     line_width=4, color=tuple(color), figure=fig, scale=150)
 
     frames = []
-    for i in range(nframes):
+    for i in range(nframes_per_cycle):
         mlab.view(azimuth=0, elevation=0 - i * (360 / nframes_per_cycle))
         mlab.roll(180)
         mlab.test_plot3d()
@@ -377,5 +374,4 @@ def generate_spinning_brain_frames(trajectories, nframes_per_cycle=30, figsize=[
         f.scene._lift()
         frames.append(mlab.screenshot(mode='rgb', antialiased=True))
 
-    display.stop()
     return frames

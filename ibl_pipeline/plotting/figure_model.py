@@ -5,6 +5,7 @@ import seaborn as sns
 import io
 import base64
 import gc
+import imageio
 
 
 class PngFigure(Figure):
