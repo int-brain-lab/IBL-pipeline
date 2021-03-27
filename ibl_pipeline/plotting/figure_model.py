@@ -17,10 +17,10 @@ class PngFigure(Figure):
         super().__init__(dpi=dpi, frameon=frameon, figsize=figsize)
         ax = Axes(self, [0., 0., 1., 1.])
         ax.set_axis_off()
-
         result = draw(**data, **ax_kwargs, ax=ax)
         (ax, self.x_lim, self.y_lim) = result[0:3]
 
+        # for raster plot sorted with contrast, return contrast values and tick positions
         if len(result) > 3:
             self.other_returns = result[3:]
 
