@@ -58,7 +58,7 @@ class ValidAlignSort(dj.Lookup):
     -> ephys.Event
     -> Sorting
     ---
-    condition_type='regular' : enum('regular', 'difference')
+    condition_type='regular' : enum('regular', 'difference') # sorting condition, regular for sorting by trial_id or contrast, difference for sorting on the diff between two time points.
     wheel_needed             : bool
     relevant_field=''        : varchar(64)
     sorting_variable=''      : varchar(64)  # sorting variable used in the query. e.g. 'trial_feedback_time - trial_stim_on_time'
@@ -301,7 +301,17 @@ class Raster(dj.Computed):
 
             if key['sort_by'] == 'contrast':
                 tick_positions = np.add(u_inds[1:], u_inds[:-1])/2
-                puor = cl.scales[str(len(values))]['div']['PuOr']
+                if len(values) == 1:
+                    if values[0] == 1.:
+                        puor = ['rgb(84, 39, 136)']
+                    if values[0] == -1.:
+                        puor = ['rgb(179, 88, 6)']
+                    else:
+                        puor = ['rgb(247, 247, 247)']
+                elif len(values) == 2:
+                    puor = ['rgb(179, 88, 6)', 'rgb(84, 39, 136)']
+                else:
+                    puor = cl.scales[str(len(values))]['div']['PuOr']
                 colors = np.divide(cl.to_numeric(puor), 255)
                 alpha = 0.8
             else:
@@ -311,7 +321,7 @@ class Raster(dj.Computed):
             for i, ind in enumerate(u_inds[:-1]):
                 ax.fill_between([-1, 1], u_inds[i], u_inds[i+1]-1,
                                 color=colors[i], alpha=alpha)
-        # set the limits
+
         ax.set_xlim(x_lim[0], x_lim[1])
 
         if len(spk_trial_ids):
@@ -426,8 +436,12 @@ class Raster(dj.Computed):
         fig = PngFigure(draw, arg, dpi=60, transparent=True)
 
         if key['sort_by'] == 'contrast':
-            key['plot_contrasts'] = fig.other_returns[0]
-            key['plot_contrast_tick_pos'] = fig.other_returns[1]
+            if len(trials):
+                key['plot_contrasts'] = fig.other_returns[0]
+                key['plot_contrast_tick_pos'] = fig.other_returns[1]
+            else:
+                key['plot_contrasts'] = [0]
+                key['plot_contrast_tick_pos'] = [0]
 
         fig_link = path.join(
             'raster',

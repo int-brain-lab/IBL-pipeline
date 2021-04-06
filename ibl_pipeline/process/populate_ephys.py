@@ -23,7 +23,7 @@ EPHYS_TABLES = [
     ephys.ChannelGroup,
     ephys_analyses.DepthPeth,
     ephys_analyses.NormedDepthPeth,
-    ephys_plotting.DepthRaster,
+    # ephys_plotting.DepthRaster,
     ephys_plotting.DepthPeth,
     ephys_plotting.Raster,
     ephys_plotting.Psth,
