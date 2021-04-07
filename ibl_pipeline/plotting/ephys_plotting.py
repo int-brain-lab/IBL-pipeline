@@ -10,14 +10,6 @@ from matplotlib.colors import Normalize
 from scipy.interpolate import interpn
 import colorlover as cl
 
-# libraries needed for spinning brain
-import subprocess
-from pyvirtualdisplay import Display
-import os
-
-display = Display(visible=0, size=(1920, 1080))
-display.start()
-
 
 def driftmap_color(
         clusters_depths, spikes_times,
@@ -347,66 +339,3 @@ def template_waveform(waveforms, coords,
         return ax, x_lim, y_lim
     else:
         return ax
-
-
-def generate_spinning_brain_frames(trajectories, nframes_per_cycle=30, figsize=[800, 700]):
-    '''
-    Plots spike amps versus the time
-
-    Parameters
-    -------------
-    trajectories: list of dicts
-        list of dictionaries of trajectories fetched from ONE
-    nframes_per_cycle: int, optional
-        number of frames per cycle of spinning, default 30.
-    figsize: list, [width, height], optional
-        size of the images, default [800, 700]
-
-    Return
-    ------------
-    frames: list of numpy.darray
-        image in rgb for each frame
-    '''
-    from mayavi import mlab
-    from atlaselectrophysiology import rendering
-    import ibllib.atlas as atlas
-
-    ba_allen = atlas.AllenAtlas(25)
-    ba_needles = atlas.NeedlesAtlas(25)
-    fig = rendering.figure()
-    for index, trj in enumerate(trajectories):
-        if trj['coordinate_system'] == 'IBL-Allen':
-            brain_atlas = ba_allen
-        elif trj['coordinate_system'] == 'Needles-Allen':
-            brain_atlas = ba_needles
-        else:
-            brain_atlas = ba_allen
-        ins = atlas.Insertion.from_dict(trj, brain_atlas=brain_atlas)
-        ins = atlas.Insertion.from_dict(trj, brain_atlas=ba_allen)
-        mlapdv = brain_atlas.xyz2ccf(ins.xyz)
-        if trj['provenance'] == 'Ephys aligned histology track':
-            color = (1., 0, 1.)  # Magenta
-        elif trj['provenance'] == 'Micro-manipulator':
-            color = (0., 1., 0.)  # Green
-        elif trj['provenance'] == 'Histology track':
-            color = (1., 0., 0.)  # Red
-        elif trj['provenance'] == 'Planned':
-            color = (0., 0., 1.)  # Blue
-        lab = f"{trj['session']['subject']}/{trj['session']['start_time'][:10]}/" \
-            f"{str(trj['session']['number']).zfill(3)}"
-        mlab.plot3d(mlapdv[:, 1], mlapdv[:, 2], mlapdv[:, 0],
-                    line_width=3, color=color, tube_radius=20)
-        # setup the labels at the top of the trajectories
-        mlab.text3d(mlapdv[0, 1], mlapdv[0, 2], mlapdv[0, 0] - 500, lab,
-                    line_width=4, color=tuple(color), figure=fig, scale=150)
-
-    frames = []
-    for i in range(nframes_per_cycle):
-        mlab.view(azimuth=0, elevation=0 - i * (360 / nframes_per_cycle))
-        mlab.roll(180)
-        mlab.test_plot3d()
-        f = mlab.gcf()
-        f.scene._lift()
-        frames.append(mlab.screenshot(mode='rgb', antialiased=True))
-
-    return frames

@@ -34,7 +34,8 @@ class SubjectSpinningBrain(dj.Imported):
 
     def make(self, key):
         subject_nickname = (subject.Subject & key).fetch1('subject_nickname')
-        trajs = one.alyx.rest('trajectories', 'list', subject=subject_nickname)
+        trajs = one.alyx.rest('trajectories', 'list', subject=subject_nickname,
+                              provenance='Ephys Aligned Histology Track')
 
         fig = GifFigure(
             hplt.generate_spinning_brain_frames, trajs)
