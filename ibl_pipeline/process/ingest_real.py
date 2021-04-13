@@ -6,6 +6,7 @@ import datajoint as dj
 from ibl_pipeline.ingest.common import *
 from ibl_pipeline.common import *
 import traceback
+import datetime
 
 REF_TABLES = (
     'Lab',
@@ -92,7 +93,7 @@ EPHYS_TABLES = (
 
 
 def copy_table(target_schema, src_schema, table_name,
-               fresh=False, use_uuid=True, **kwargs):
+               fresh=False, use_uuid=True, backtrack_days=None, **kwargs):
     if '.' in table_name:
         attrs = table_name.split('.')
 
@@ -108,14 +109,22 @@ def copy_table(target_schema, src_schema, table_name,
     if fresh:
         target_table.insert(src_table, **kwargs)
     else:
+        # only ingest entries within certain number of days
+        if backtrack_days and 'session_start_time' in src_table.heading.attributes:
+            date_cutoff = \
+                (datetime.datetime.now().date() -
+                 datetime.timedelta(days=backtrack_days)).strftime('%Y-%m-%d')
+            q_src_table = src_table & f'session_start_time > "{date_cutoff}"'
+        else:
+            q_src_table = src_table
         if use_uuid:
             pk = src_table.heading.primary_key
             if len(pk) == 1 and 'uuid' in pk[0]:
-                q_insert = src_table - (dj.U(pk[0]) & target_table & f'{pk[0]} is not null')
+                q_insert = q_src_table - (dj.U(pk[0]) & target_table & f'{pk[0]} is not null')
             else:
-                q_insert = src_table - target_table.proj()
+                q_insert = q_src_table - target_table.proj()
         else:
-            q_insert = src_table - target_table.proj()
+            q_insert = q_src_table - target_table.proj()
 
         try:
             target_table.insert(q_insert, skip_duplicates=True, **kwargs)
@@ -146,7 +155,7 @@ def main(excluded_tables=[], public=False):
             if table in excluded_tables:
                 continue
             print(table)
-            copy_table(target, source, table)
+            copy_table(target, source, table, backtrack_days=30)
 
     if public:
         return
@@ -159,7 +168,6 @@ def main(excluded_tables=[], public=False):
     table = 'ProbeInsertion'
     print(table)
     copy_table(ephys, ephys_ingest, table, allow_direct_insert=True)
-
 
 
 if __name__ == '__main__':

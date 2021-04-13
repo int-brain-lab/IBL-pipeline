@@ -1,10 +1,10 @@
 import datajoint as dj
-from .. import behavior, ephys
+from .. import subject, acquisition, behavior, ephys, histology
 from ..analyses import ephys as ephys_analyses
 from . import plotting_utils_ephys as putils
 from . import utils
 from . import ephys_plotting as eplt
-from .figure_model import PngFigure
+from .figure_model import PngFigure, GifFigure
 from .utils import RedBlueColorBar
 import numpy as np
 import pandas as pd
@@ -18,6 +18,8 @@ import brainbox as bb
 from matplotlib.axes import Axes
 import seaborn as sns
 import colorlover as cl
+from oneibl.one import ONE
+one = ONE()
 
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
@@ -56,7 +58,7 @@ class ValidAlignSort(dj.Lookup):
     -> ephys.Event
     -> Sorting
     ---
-    condition_type='regular' : enum('regular', 'difference')
+    condition_type='regular' : enum('regular', 'difference') # sorting condition, regular for sorting by trial_id or contrast, difference for sorting on the diff between two time points.
     wheel_needed             : bool
     relevant_field=''        : varchar(64)
     sorting_variable=''      : varchar(64)  # sorting variable used in the query. e.g. 'trial_feedback_time - trial_stim_on_time'
@@ -299,7 +301,17 @@ class Raster(dj.Computed):
 
             if key['sort_by'] == 'contrast':
                 tick_positions = np.add(u_inds[1:], u_inds[:-1])/2
-                puor = cl.scales[str(len(values))]['div']['PuOr']
+                if len(values) == 1:
+                    if values[0] == 1.:
+                        puor = ['rgb(84, 39, 136)']
+                    if values[0] == -1.:
+                        puor = ['rgb(179, 88, 6)']
+                    else:
+                        puor = ['rgb(247, 247, 247)']
+                elif len(values) == 2:
+                    puor = ['rgb(179, 88, 6)', 'rgb(84, 39, 136)']
+                else:
+                    puor = cl.scales[str(len(values))]['div']['PuOr']
                 colors = np.divide(cl.to_numeric(puor), 255)
                 alpha = 0.8
             else:
@@ -309,7 +321,7 @@ class Raster(dj.Computed):
             for i, ind in enumerate(u_inds[:-1]):
                 ax.fill_between([-1, 1], u_inds[i], u_inds[i+1]-1,
                                 color=colors[i], alpha=alpha)
-        # set the limits
+
         ax.set_xlim(x_lim[0], x_lim[1])
 
         if len(spk_trial_ids):
@@ -424,8 +436,12 @@ class Raster(dj.Computed):
         fig = PngFigure(draw, arg, dpi=60, transparent=True)
 
         if key['sort_by'] == 'contrast':
-            key['plot_contrasts'] = fig.other_returns[0]
-            key['plot_contrast_tick_pos'] = fig.other_returns[1]
+            if len(trials):
+                key['plot_contrasts'] = fig.other_returns[0]
+                key['plot_contrast_tick_pos'] = fig.other_returns[1]
+            else:
+                key['plot_contrasts'] = [0]
+                key['plot_contrast_tick_pos'] = [0]
 
         fig_link = path.join(
             'raster',
@@ -920,12 +936,21 @@ class DepthRaster(dj.Computed):
             spikes_data, dpi=10, fig_dir=fig_link_very_low,
             store_type='s3')
 
+        if len(trials):
+            first_start = trials[0]['trial_start_time']
+            last_end = trials[-1]['trial_end_time']
+        else:
+            first_start = 0
+            last_end = (acquisition.Session & key).proj(
+                session_end_relative_to_start='session_end_time - session_start_time').fetch1(
+                    'session_end_relative_to_start')
+
         key.update(
             plotting_data_link=fig_link_full,
             plotting_data_link_low_res=fig_link_low,
             plotting_data_link_very_low_res=fig_link_very_low,
-            first_start=trials[0]['trial_start_time'],
-            last_end=trials[-1]['trial_end_time'],
+            first_start=first_start,
+            last_end=last_end,
             depth_raster_template_idx=0
         )
 
@@ -1546,3 +1571,29 @@ class Waveform(dj.Computed):
             fig.cleanup()
 
         self.insert(entries)
+
+
+@schema
+class SubjectSpinningBrain(dj.Imported):
+    definition = """
+    -> subject.Subject
+    ---
+    subject_spinning_brain_link    : varchar(255)
+    """
+    # only populate those subjects with resolved trajectories
+    key_source = subject.Subject & histology.ProbeTrajectory
+
+    def make(self, key):
+        subject_nickname = (subject.Subject & key).fetch1('subject_nickname')
+        trajs = one.alyx.rest('trajectories', 'list', subject=subject_nickname)
+
+        fig = GifFigure(
+            eplt.generate_spinning_brain_frames, trajs)
+
+        fig_link = path.join(
+            'subject_spinning_brain',
+            str(key['subject_uuid']) + '.gif'
+        )
+
+        fig.upload_to_s3(bucket, fig_link)
+        self.insert1(dict(**key, subject_spinning_brain_link=fig_link))

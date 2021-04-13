@@ -251,7 +251,30 @@ def spike_amp_time(spike_times, spike_amps,
 
 def template_waveform(waveforms, coords,
                       ax=None, as_background=False, return_lims=False):
+    '''
+    Plots template waveform for a unit in different channels
 
+    Parameters
+    -------------
+    waveforms: ndarray
+        waveforms for a subset of channels, waveform_length x n_channels, in V
+    coords: ndarray
+        coordinates [x, y] of each channel, nchannels x 2, in um
+    ax: matplotlib.axes.Axes object (optional)
+        axis object to plot on
+    as_background: boolean
+        if True, return only the heatmap without layout and colorbar
+    return_lims: boolean
+        if True, return xlim and ylim
+
+    Return
+    ------------
+    ax: matplotlib.axes.Axes object
+    x_lim: list of two elements
+        range of x axis
+    y_lim: list of two elements
+        range of y axis
+    '''
     if ax is None:
         fig, ax = plt.subplots(1, 1, dpi=100, frameon=False, figsize=[5.8, 4])
 
@@ -267,35 +290,47 @@ def template_waveform(waveforms, coords,
     y_max = np.max(coords[:, 1])
     y_min = np.min(coords[:, 1])
 
-    n_channels = np.shape(waveforms)[1]
+    # number of unique x positions
+    n_xpos = len(set(coords[:, 0]))
+    # number of unique y positions
+    n_ypos = len(set(coords[:, 1]))
     time_len = np.shape(waveforms)[0]
 
-    dt = 1/30.  # in ms
+    # time (in ms) * x_scale (in um/ms) + x_start(coord[0]) = position
+    # the waveform takes 0.9 of each x interval between adjacent channels
+    dt = 1/30
+    x_scale = (x_max - x_min) / (n_xpos - 1) * 0.9 / (dt*time_len)
 
-    x_scale = (x_max - x_min) / n_channels / 10 / dt
-    y_scale = (y_max - y_min) / n_channels * 20
+    # y_scale adjusted with the amplitude of the waveforms
+    # waveform voltage in (uV) * y_scale (in um/uV) + y_start (coord[1]) = position
+    waveforms_in_uV = waveforms * 1e6
+    waveform_peak = np.max(abs(waveforms_in_uV))
+    # peak waveform takes 2 times of each y interval between adjacent channels
+    y_scale = (y_max - y_min) / (n_ypos - 1) / waveform_peak * 2
 
-    time = np.arange(time_len)*dt
+    time = np.arange(time_len) * dt
 
-    for wf, coord in zip(waveforms.T, coords):
+    for wf, coord in zip(waveforms_in_uV.T, coords):
         ax.plot(time*x_scale + coord[0],
-                wf*y_scale+coord[1], color=[0.2, 0.3, 0.8])
+                wf*y_scale + coord[1], color=[0.2, 0.3, 0.8])
 
     # plot scale bar
+    # um corresponding to 1 ms in time
     x_bar = x_scale
-    y_bar = y_scale
+    # um corresponding to 100 uV in waveform amplitude
+    y_bar = y_scale * 100
 
-    x0 = x_min - 8
-    y0 = y_min + 25
+    x0 = x_min - 6
+    y0 = y_min + 10
 
-    ax.text(x0-0.2*x_bar, y0-0.2*y_bar, '1 ms', fontdict=dict(family='serif'))
-    ax.text(x0-0.6*x_bar, y0+0.2*y_bar, '100 uV', fontdict=dict(family='serif'), rotation='vertical')
+    ax.text(x0, y0-20, '1ms', fontdict=dict(family='serif'))
+    ax.text(x0-3, y0, '100uV', fontdict=dict(family='serif'), rotation='vertical')
 
     ax.plot([x0, x0 + x_bar], [y0, y0], color='black')
     ax.plot([x0, x0], [y0, y0 + y_bar], color='black')
 
-    x_lim = [x_min - 3*x_bar, x_max + 15]
-    y_lim = [y_min - 0.2*y_bar, y_max + 20]
+    x_lim = [x_min - 10, x_max + 15]
+    y_lim = [y_min - 20, y_max + 20]
 
     ax.set_xlim(x_lim)
     ax.set_ylim(y_lim)

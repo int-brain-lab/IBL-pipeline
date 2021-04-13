@@ -1,32 +1,13 @@
-FROM datajoint/djlab:py3.8-debian
+FROM ubuntu:20.04
 
-RUN pip install --upgrade pip
-RUN pip install --upgrade datajoint
+WORKDIR /src
+ARG DEBIAN_FRONTEND=noninteractive
 
-COPY --chown=dja:anaconda ./iblenv.yaml /tmp/iblenv.yaml
-USER root
-RUN . /root/.bashrc
-RUN conda init bash
-RUN conda install conda-build
-RUN conda update -n base -c defaults conda
-RUN conda update --all
-RUN conda config --set channel_priority false
-RUN conda env create --file /tmp/iblenv.yaml
-RUN conda activate iblenv
-RUN pip install importlib_resource imageio
-RUN pip install --no-dependencies git+https://github.com/int-brain-lab/ibllib
-RUN pip install --no-dependencies git+https://github.com/int-brain-lab/iblapps
-RUN pip install --no-dependencies git+https://github.com/cortex-lab/phylib
-
-USER dja:anaconda
+# Get all apt packages needed
+RUN apt-get update && apt-get install -y git python3-pip python3-tk xvfb libglib2.0-0 libfontconfig libxcb-icccm4 libxcb-xinput0 libxcb-image0 libgl-dev libglu1-mesa-dev libxcb-keysyms1 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libxkbcommon0 libxkbcommon-x11-0 libdbus-1-3
+# Mayavi fails if it is install on the same command as numpy for some reason hence the &&
+RUN pip3 install numpy pyvirtualdisplay vtk imageio && pip3 install mayavi
+# Clone the iblapps.git and set it up
+RUN git clone --branch develop https://github.com/int-brain-lab/iblapps.git && pip3 install -e ./iblapps
 ADD . /src/IBL-pipeline
-
-USER root
-RUN pip install -e --no-dependencies /src/IBL-pipeline
-RUN conda install -c conda-forge opencv -y
-COPY --chown=dja:anaconda ./apt_requirements.txt /tmp/apt_requirements.txt
-RUN apt update
-USER dja:anaconda
-RUN \
-    /entrypoint.sh echo "Requirements updated..." && \
-    rm "${APT_REQUIREMENTS}"
+RUN pip3 install -e /src/IBL-pipeline
