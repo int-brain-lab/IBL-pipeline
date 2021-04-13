@@ -5,23 +5,29 @@ import seaborn as sns
 import io
 import base64
 import gc
+import imageio
 
 
 class PngFigure(Figure):
 
     def __init__(self, draw, data, ax_kwargs={},
                  dpi=50, frameon=False, figsize=[8, 6],
-                 transparent=False):
+                 transparent=False, axes_off=True):
 
         super().__init__(dpi=dpi, frameon=frameon, figsize=figsize)
         ax = Axes(self, [0., 0., 1., 1.])
-        ax.set_axis_off()
+        if axes_off:
+            ax.set_axis_off()
 
         result = draw(**data, **ax_kwargs, ax=ax)
-        (ax, self.x_lim, self.y_lim) = result[0:3]
 
-        if len(result) > 3:
-            self.other_returns = result[3:]
+        # if draw function only returns the axes
+        if isinstance(result, Axes):
+            ax = result
+        else:
+            (ax, self.x_lim, self.y_lim) = result[0:3]
+            if len(result) > 3:
+                self.other_returns = result[3:]
 
         self.add_axes(ax)
 
@@ -48,6 +54,9 @@ class PngFigure(Figure):
             source = 'data:image/png;base64, ' + self.encoded_string.decode()
         else:
             source = 'data:image/png;base64, '
+
+        if not (hasattr(self, 'x_lim') and hasattr(self, 'y_lim')):
+            raise AttributeError('Attributes x_lim or y_lim are not defined.')
 
         return dict(
             images=[dict(source=source,
@@ -76,3 +85,24 @@ class PngFigure(Figure):
         self.clear()
         plt.close(self)
         gc.collect()
+
+
+class GifFigure():
+
+    def __init__(self, draw, trajectories,
+                 duration_per_cycle=5, nframes_per_cycle=30,
+                 figsize=[800, 700]):
+
+        frames = draw(
+            trajectories, nframes_per_cycle=nframes_per_cycle,
+            figsize=figsize)
+
+        self.buffer = io.BytesIO()
+        imageio.mimwrite(
+            self.buffer, frames, 'gif',
+            duration=duration_per_cycle/nframes_per_cycle)
+
+    def upload_to_s3(self, bucket, fig_link):
+        self.buffer.seek(0)
+        bucket.put_object(Body=self.buffer,
+                          Key=fig_link)

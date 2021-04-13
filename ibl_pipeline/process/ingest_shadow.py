@@ -1,4 +1,5 @@
 import datajoint as dj
+from datajoint import DataJointError
 from ibl_pipeline.ingest import \
     (alyxraw, QueryBuffer,
      reference, subject, action, acquisition, data)
@@ -78,6 +79,9 @@ def main(excluded_tables=[], modified_pks=None):
             continue
         print(f'Ingesting shadow table {t.__name__}...')
 
+        # if a session entry is modified, replace the entry without deleting
+        # this is to keep the session entry when uuid is not changed but start time changed
+        # by one sec. We don't update start_time in alyxraw in this case.
         if t.__name__ == 'Session' and modified_pks:
             modified_session_keys = [
                 {'session_uuid': pk} for pk in modified_pks]
@@ -91,8 +95,13 @@ def main(excluded_tables=[], modified_pks=None):
                     except:
                         print("Error creating entry for key: {}".format(key))
                 if modified_session_entries:
-                    t.insert(modified_session_entries,
-                             allow_direct_insert=True, replace=True)
+                    try:
+                        t.insert(modified_session_entries,
+                                 allow_direct_insert=True, replace=True)
+                    except DataJointError:
+                        for entry in modified_session_entries:
+                            t.insert1(entry, allow_direct_insert=True,
+                                      replace=True)
 
         t.populate(**kwargs)
 
@@ -110,7 +119,7 @@ def main(excluded_tables=[], modified_pks=None):
 
             session = grf(key, 'session')
             if not len(acquisition.Session &
-                    dict(session_uuid=uuid.UUID(session))):
+                       dict(session_uuid=uuid.UUID(session))):
                 print('Session {} is not in the table acquisition.Session'.format(
                     session))
                 print('dataset_uuid: {}'.format(str(key['uuid'])))

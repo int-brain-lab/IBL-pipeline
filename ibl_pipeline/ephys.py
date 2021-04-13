@@ -395,7 +395,7 @@ class AlignedTrialSpikes(dj.Computed):
     """
     key_source = behavior.TrialSet * DefaultCluster * Event & \
         ['event in ("stim on", "feedback")',
-         wheel.MovementTimes & 'event="movement"']
+         dj.AndList([wheel.MovementTimes, 'event="movement"'])]
 
     def make(self, key):
 
