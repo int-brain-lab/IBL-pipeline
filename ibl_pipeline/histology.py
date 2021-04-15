@@ -381,18 +381,20 @@ class DepthBrainRegion(dj.Computed):
         self.insert1(key)
 
     @classmethod
-    def check_boundaries_duplicates(self, restrictor={}):
+    def check_boundaries_duplicates(cls, restrictor={}):
         """check the duplications of boundaries
 
         Args:
             restrictor: valid restrictor for current table
+        Returns:
+            keys_with_duplicated_boundaries (list of dicts): a list of keys that have duplicated boundaries.
         """
 
-        keys = (self & restrictor).fetch('KEY')
+        keys = (cls & restrictor).fetch('KEY')
 
         keys_with_duplicated_boundaries = []
         for key in keys:
-            region_labels = (self & key).fetch1('region_label')
+            region_labels = (cls & key).fetch1('region_label')
 
             if len(region_labels) != len(set(region_labels[:, 0])):
                 keys_with_duplicated_boundaries.append(key)
