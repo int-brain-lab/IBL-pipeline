@@ -218,10 +218,10 @@ class ChannelBrainLocation(dj.Imported):
     channel_dv      : decimal(6, 1)  # (um) dorso-ventral coordinate relative to Bregma, ventral negative
     -> reference.BrainRegion
     """
-    key_source = (ProbeTrajectory & \
-        (data.FileRecord & 'dataset_name like "%channels.brainLocationIds%"') & \
-        (data.FileRecord & 'dataset_name like "%channels.mlapdv%"')) - \
-            (ephys.ProbeInsertionMissingDataLog & 'missing_data="channels_brain_region"')
+    key_source = (ProbeTrajectory
+                  & (data.FileRecord & 'dataset_name like "%channels.brainLocationIds%"')
+                  & (data.FileRecord & 'dataset_name like "%channels.mlapdv%"')) - \
+        (ephys.ProbeInsertionMissingDataLog & 'missing_data="channels_brain_region"')
 
     def make(self, key):
 
@@ -331,49 +331,70 @@ class ClusterBrainRegion(dj.Imported):
         self.insert(cluster_entries)
 
 
-# @schema
-# class ProbeBrainRegion(dj.Computed):
-#     definition = """
-#     # Brain regions assignment to each probe insertion, including the regions of finest granularity and their upper-level areas.
-#     -> ProbeTrajectory
-#     -> reference.BrainRegion
-#     """
-#     key_source = ProbeTrajectory & ClusterBrainRegion
+@schema
+class ProbeBrainRegion(dj.Computed):
+    definition = """
+    # Brain regions assignment to each probe insertion, including the regions of finest granularity and their upper-level areas.
+    -> ProbeTrajectory
+    -> reference.BrainRegion
+    """
+    key_source = ProbeTrajectory & ClusterBrainRegion
 
-#     def make(self, key):
+    def make(self, key):
 
-#         regions = (dj.U('acronym') & (ClusterBrainRegion & key)).fetch('acronym')
+        regions = (dj.U('acronym') & (ClusterBrainRegion & key)).fetch('acronym')
 
-#         associated_regions = [
-#             atlas.BrainAtlas.get_parents(acronym)
-#             for acronym in regions] + list(regions)
+        associated_regions = [
+            atlas.BrainAtlas.get_parents(acronym)
+            for acronym in regions] + list(regions)
 
-#         self.insert([dict(**key, ontology='CCF 2017', acronym=region)
-#                      for region in np.unique(np.hstack(associated_regions))])
+        self.insert([dict(**key, ontology='CCF 2017', acronym=region)
+                     for region in np.unique(np.hstack(associated_regions))])
 
 
-# @schema
-# class DepthBrainRegion(dj.Computed):
-#     definition = """
-#     # For each ProbeTrajectory, assign depth boundaries relative to the probe tip to each brain region covered by the trajectory
-#     -> ProbeTrajectory
-#     ---
-#     region_boundaries   : blob
-#     region_label        : blob
-#     region_color        : blob
-#     region_id           : blob
-#     """
-#     key_source = ProbeTrajectory & ChannelBrainLocation
+@schema
+class DepthBrainRegion(dj.Computed):
+    definition = """
+    # For each ProbeTrajectory, assign depth boundaries relative to the probe tip to each brain region covered by the trajectory
+    -> ProbeTrajectory
+    ---
+    region_boundaries   : blob
+    region_label        : blob
+    region_color        : blob
+    region_id           : blob
+    """
+    key_source = ProbeTrajectory & ChannelBrainLocation
 
-#     def make(self, key):
+    def make(self, key):
 
-#         x, y, z, axial = (ChannelBrainLocation & key).fetch(
-#             'channel_x', 'channel_y', 'channel_z', 'channel_axial',
-#             order_by='channel_axial')
-#         xyz_channels = np.c_[x, y, z]
-#         key['region_boundaries'], key['region_label'], \
-#             key['region_color'], key['region_id'] = \
-#             EphysAlignment.get_histology_regions(
-#                 xyz_channels.astype('float')/1e6, axial.astype('float'))
+        x, y, z = (ChannelBrainLocation & key).fetch(
+            'channel_ml', 'channel_ap', 'channel_dv')
 
-#         self.insert1(key)
+        coords = (ephys.ChannelGroup & key).fetch1('channel_local_coordinates')
+
+        xyz_channels = np.c_[x, y, z]
+        key['region_boundaries'], key['region_label'], \
+            key['region_color'], key['region_id'] = \
+            EphysAlignment.get_histology_regions(
+                xyz_channels.astype('float')/1e6, coords[:, 1])
+
+        self.insert1(key)
+
+    @classmethod
+    def check_boundaries_duplicates(self, restrictor={}):
+        """check the duplications of boundaries
+
+        Args:
+            restrictor: valid restrictor for current table
+        """
+
+        keys = (self & restrictor).fetch('KEY')
+
+        keys_with_duplicated_boundaries = []
+        for key in keys:
+            region_labels = (self & key).fetch1('region_label')
+
+            if len(region_labels) != len(set(region_labels[:, 0])):
+                keys_with_duplicated_boundaries.append(key)
+
+        return keys_with_duplicated_boundaries
