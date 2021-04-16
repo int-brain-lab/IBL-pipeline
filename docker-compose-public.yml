@@ -1,19 +1,23 @@
-version: '3'
+version: "2.2"  # optional since v1.27.0
 services:
-  datajoint_public:
-    build: .
-    container_name: ibl_datajoint_public
+  public:
+    build:
+      context: .
+      dockerfile: Dockerfile.brain
     env_file: .env_public
     volumes:
-      - ./notebooks:/home/dja
-      - ./images:/images
+      - ./root/.one_params:/root/.one_params
       - .:/src/IBL-pipeline
       - ./data:/data
-      - ./root/.one_params:/root/.one_params
-    user: 1000:anaconda
+    environment:
+      - QT_DEBUG_PLUGINS=1 # For debugging QT issues
     ports:
-      - "8300:8888"
+      - 9000:9000
+    working_dir: /src
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    command: bash -c  "jupyter notebook --ip 0.0.0.0 --no-browser --port=9000 --allow-root"
     networks:
-      - ibl_public
+      - ibl-public
 networks:
-  ibl_public:
+  ibl-public:
