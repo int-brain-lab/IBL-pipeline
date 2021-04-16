@@ -14,6 +14,7 @@ scripts/update_entries.py
 
 # vscode settings
 .vscode/*
+*.code-workspace
 
 # macOS
 .DS_Store
