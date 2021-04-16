@@ -1,17 +1,6 @@
 import datajoint as dj
 import os
-
-
-# try to access parent schemas with virtual modules, if not created, import from package
-try:
-    reference = dj.create_virtual_module('reference', 'ibl_reference')
-except dj.DataJointError:
-    from . import reference
-
-try:
-    subject = dj.create_virtual_module('subject', 'ibl_subject')
-except dj.DataJointError:
-    from . import subject
+from . import reference, subject, action
 
 
 # Map to the correct schema based on mode.
