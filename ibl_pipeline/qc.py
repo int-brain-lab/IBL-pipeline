@@ -140,7 +140,7 @@ class ProbeInsertionExtendedQC(dj.Manual):
             deep (bool, optional): Check the dependent tables to figure out the problem. Defaults to False.
 
         Returns:
-            [type]: [description]
+            (list): list of either the problematic key (deep=False) or problematic key with the debugging message.
         """
         resolved = one.alyx.rest(
             'insertions', 'list',
