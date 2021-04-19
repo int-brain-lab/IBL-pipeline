@@ -4,9 +4,13 @@ This script copies tuples in the shadow tables into the real tables for alyx.
 
 import datajoint as dj
 from ibl_pipeline.ingest.common import *
-from ibl_pipeline.common import *
+from ibl_pipeline import reference, subject, action, acquisition, data, ephys
 import traceback
 import datetime
+import os
+
+
+mode = os.environ.get('MODE')
 
 REF_TABLES = (
     'Lab',
@@ -49,33 +53,50 @@ SUBJECT_TABLES = (
     'SubjectHousing'
 )
 
-ACTION_TABLES = (
-    'ProcedureType',
-    'Weighing',
-    'WaterType',
-    'WaterAdministration',
-    'WaterRestriction',
-    'WaterRestrictionUser',
-    'WaterRestrictionProcedure',
-    'Surgery',
-    'SurgeryUser',
-    'SurgeryProcedure',
-    'OtherAction',
-    'OtherActionUser',
-    'OtherActionProcedure',
-    'CullMethod',
-    'CullReason',
-    'Cull'
-)
+if mode != 'public':
+    ACTION_TABLES = (
+        'ProcedureType',
+        'Weighing',
+        'WaterType',
+        'WaterAdministration',
+        'WaterRestriction',
+        'WaterRestrictionUser',
+        'WaterRestrictionProcedure',
+        'Surgery',
+        'SurgeryUser',
+        'SurgeryProcedure',
+        'OtherAction',
+        'OtherActionUser',
+        'OtherActionProcedure',
+        'CullMethod',
+        'CullReason',
+        'Cull'
+    )
+else:
+    ACTION_TABLES = (
+        'ProcedureType',
+        'Surgery',
+        'SurgeryUser',
+        'SurgeryProcedure',
+    )
 
-ACQUISITION_TABLES = (
-    'Session',
-    'ChildSession',
-    'SessionUser',
-    'SessionProcedure',
-    'SessionProject',
-    'WaterAdministrationSession'
-)
+if mode != 'public':
+    ACQUISITION_TABLES = (
+        'Session',
+        'ChildSession',
+        'SessionUser',
+        'SessionProcedure',
+        'SessionProject',
+        'WaterAdministrationSession'
+    )
+else:
+    ACQUISITION_TABLES = (
+        'Session',
+        'ChildSession',
+        'SessionUser',
+        'SessionProcedure',
+        'SessionProject'
+    )
 
 DATA_TABLES = (
     'DataFormat',

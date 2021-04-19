@@ -49,7 +49,6 @@ def get_alyx_entries(filename=None, models=None,
     elif isinstance(models, str):
         if new_pks:
             return [key for key in keys_all if key['model'] == models and key['pk'] in new_pks]
-
         else:
             return [key for key in keys_all if key['model'] == models]
     elif isinstance(models, list):
