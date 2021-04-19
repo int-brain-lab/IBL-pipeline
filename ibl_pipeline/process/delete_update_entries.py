@@ -76,11 +76,12 @@ def delete_entries_from_membership(pks_to_be_deleted):
 
         print(f'Deleting from table {mem_table_name} ...')
         real_table = eval(ingest_mod.replace('ibl_pipeline.ingest.', '') + '.' + table_name)
-
+        dj.config['safemode'] = False
         (t['dj_current_table'] &
          (real_table &
           [{t['dj_parent_uuid_name']:pk}
            for pk in pks_to_be_deleted if is_valid_uuid(pk)]).fetch('KEY')).delete()
+        dj.config['safemode'] = True
 
 
 # =================================== functions for update ==========================================
