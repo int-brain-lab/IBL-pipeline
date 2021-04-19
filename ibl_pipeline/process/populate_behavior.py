@@ -1,7 +1,7 @@
 '''
 This script ingest behavioral data into tables in the ibl_behavior schema
 '''
-
+import datajoint as dj
 from ibl_pipeline import behavior
 from ibl_pipeline.analyses import behavior as behavior_analyses
 from ibl_pipeline.plotting import behavior as behavior_plotting
@@ -14,7 +14,6 @@ mode = environ.get('MODE')
 
 BEHAVIOR_TABLES = [
     behavior.CompleteWheelSession,
-    behavior.CompleteWheelMoveSession,
     behavior.CompleteTrialSession,
     behavior.TrialSet,
     behavior.AmbientSensorData,
@@ -32,8 +31,10 @@ BEHAVIOR_TABLES = [
     behavior_plotting.DatePsychCurve,
     behavior_plotting.DateReactionTimeContrast,
     behavior_plotting.DateReactionTimeTrialNumber,
-    behavior_plotting.WaterTypeColor
 ]
+
+if mode != 'public':
+    BEHAVIOR_TABLES.append(behavior_plotting.WaterTypeColor)
 
 
 def compute_latest_date():
@@ -82,7 +83,7 @@ def compute_latest_date():
         behavior_plotting.LatestDate.insert1(key)
 
 
-def main(backtrack_days=None, excluded_tables=[]):
+def main(backtrack_days=30, excluded_tables=[]):
 
     kwargs = dict(
         suppress_errors=True, display_progress=True)
@@ -109,7 +110,6 @@ def main(backtrack_days=None, excluded_tables=[]):
 
         table.populate(restrictor, **kwargs)
 
-
     print('Populating latest date...')
 
     compute_latest_date()
@@ -124,6 +124,7 @@ def main(backtrack_days=None, excluded_tables=[]):
     subj_keys = (subject.Subject & behavior_plotting.CumulativeSummary & latest).fetch('KEY')
 
     # delete and repopulate subject by subject
+    dj.config['safemode'] = False
     for subj_key in tqdm(subj_keys, position=0):
         (behavior_plotting.CumulativeSummary & subj_key & latest).delete()
         behavior_plotting.CumulativeSummary.populate(
@@ -148,6 +149,8 @@ def main(backtrack_days=None, excluded_tables=[]):
         last_session_time='max(last_session_time)')).fetch('KEY')
     (behavior_plotting.DailyLabSummary & last_sessions).delete()
     behavior_plotting.DailyLabSummary.populate(**kwargs)
+
+    dj.config['safemode'] = True
 
 
 if __name__ == '__main__':
