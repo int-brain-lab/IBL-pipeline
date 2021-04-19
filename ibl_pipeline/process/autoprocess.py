@@ -1,4 +1,5 @@
 
+import datajoint as dj
 from ibl_pipeline.process import (
     create_ingest_task,
     delete_update_entries,
@@ -116,10 +117,7 @@ def process_public():
         'Weighing',
         'WaterType',
         'WaterAdministration',
-        'WaterRestriction',
-        'ProbeModel',
-        'ProbeInsertion',
-        'ProbeTrajectory'
+        'WaterRestriction'
     ]
 
     ingest_shadow.main(excluded_tables=excluded_tables)
@@ -139,6 +137,7 @@ def process_public():
         public=True)
 
     # delete non-releasing tables
+    dj.config['safemode'] = False
     from ibl_pipeline.ingest import QueryBuffer
 
     table = QueryBuffer(acquisition.Session)
@@ -164,6 +163,7 @@ def process_public():
     ]
 
     populate_behavior.main(excluded_tables=excluded_behavior_tables)
+    dj.config['safemode'] = True
 
 
 def process_updates(pks, current_dump='/data/alyxfull.json'):
@@ -198,6 +198,6 @@ def process_updates(pks, current_dump='/data/alyxfull.json'):
 
 if __name__ == '__main__':
 
-    process_new(previous_dump='/data/alyxfull_20210212_0400.json',
+    process_new(previous_dump='/data/alyxfull_20210310_0400.json',
                 latest_dump='/data/alyxfull.json',
-                job_date='2021-02-15', timezone='European')
+                job_date='2021-03-17', timezone='European')
