@@ -4,13 +4,18 @@ This script ingest behavioral data into tables in the ibl_behavior schema
 import datajoint as dj
 from ibl_pipeline import behavior
 from ibl_pipeline.analyses import behavior as behavior_analyses
-from ibl_pipeline.plotting import behavior as behavior_plotting
+
 import datetime
 from ibl_pipeline import subject, reference, action
 from tqdm import tqdm
 from os import environ
 
 mode = environ.get('MODE')
+
+if mode == 'public':
+    from ibl_pipeline.plotting import behavior as behavior_plotting
+else:
+    from ibl_pipeline.plotting import behavior_backup as behavior_plotting
 
 BEHAVIOR_TABLES = [
     behavior.CompleteWheelSession,
@@ -41,24 +46,27 @@ def compute_latest_date():
 
     for key in tqdm(subject.Subject.fetch('KEY'), position=0):
         behavior_summary = behavior_analyses.BehavioralSummaryByDate & key
-        water_weight = action.Weighing * action.WaterAdministration & key
         if behavior_summary:
             latest_behavior = subject.Subject.aggr(
                 behavior_summary,
                 last_behavior_date='MAX(session_date)')
 
-        if water_weight:
-            latest_weight = subject.Subject.aggr(
-                action.Weighing & key,
-                last_weighing_date='DATE(MAX(weighing_time))')
-            latest_water = subject.Subject.aggr(
-                action.WaterAdministration & key,
-                last_water_date='DATE(MAX(administration_time))')
+        if mode != 'public':
+            water_weight = action.Weighing * action.WaterAdministration & key
 
-            latest_water_weight = (latest_water * latest_weight).proj(
-                last_water_weight_date='GREATEST(last_water_date, \
-                                                last_weighing_date)'
-            )
+            if water_weight:
+                latest_weight = subject.Subject.aggr(
+                    action.Weighing & key,
+                    last_weighing_date='DATE(MAX(weighing_time))')
+                latest_water = subject.Subject.aggr(
+                    action.WaterAdministration & key,
+                    last_water_date='DATE(MAX(administration_time))')
+
+                latest_water_weight = (latest_water * latest_weight).proj(
+                    last_water_weight_date='GREATEST(last_water_date, \
+                                                    last_weighing_date)')
+        else:
+            water_weight = None
 
         if not(behavior_summary or water_weight):
             continue
@@ -114,12 +122,18 @@ def main(backtrack_days=30, excluded_tables=[]):
 
     compute_latest_date()
 
-    latest = subject.Subject.aggr(
-        behavior_plotting.LatestDate,
-        checking_ts='MAX(checking_ts)') * behavior_plotting.LatestDate & \
-            ['latest_date between curdate() - interval 30 day and curdate()',
-            (subject.Subject - subject.Death)] & \
-            (subject.Subject & 'subject_nickname not like "%human%"').proj()
+    if mode != 'public':
+        latest = subject.Subject.aggr(
+            behavior_plotting.LatestDate,
+            checking_ts='MAX(checking_ts)') * behavior_plotting.LatestDate & \
+                ['latest_date between curdate() - interval 30 day and curdate()',
+                (subject.Subject - subject.Death)] & \
+                (subject.Subject & 'subject_nickname not like "%human%"').proj()
+    else:
+        latest = subject.Subject.aggr(
+            behavior_plotting.LatestDate,
+            checking_ts='MAX(checking_ts)') & \
+                (subject.Subject & 'subject_nickname not like "%human%"').proj()
 
     subj_keys = (subject.Subject & behavior_plotting.CumulativeSummary & latest).fetch('KEY')
 
@@ -133,22 +147,24 @@ def main(backtrack_days=30, excluded_tables=[]):
         # get the latest date of the CumulativeSummary of the subject
         subj_with_latest_date = (subject.Subject & subj_key).aggr(
             behavior_plotting.CumulativeSummary, latest_date='max(latest_date)')
-        new_date = subj_with_latest_date.fetch1('latest_date')
-        current_subj = behavior_plotting.SubjectLatestDate & subj_key
-        if len(current_subj):
-            current_subj._update('latest_date', new_date)
-        else:
-            behavior_plotting.SubjectLatestDate.insert1(
-                subj_with_latest_date.fetch1())
+        if len(subj_with_latest_date):
+            new_date = subj_with_latest_date.fetch1('latest_date')
+            current_subj = behavior_plotting.SubjectLatestDate & subj_key
+            if len(current_subj):
+                current_subj._update('latest_date', new_date)
+            else:
+                behavior_plotting.SubjectLatestDate.insert1(
+                    subj_with_latest_date.fetch1())
 
     behavior_plotting.CumulativeSummary.populate(**kwargs)
 
-    print('Populating plotting.DailyLabSummary...')
-    last_sessions = (reference.Lab.aggr(
-        behavior_plotting.DailyLabSummary,
-        last_session_time='max(last_session_time)')).fetch('KEY')
-    (behavior_plotting.DailyLabSummary & last_sessions).delete()
-    behavior_plotting.DailyLabSummary.populate(**kwargs)
+    if mode != 'public':
+        print('Populating plotting.DailyLabSummary...')
+        last_sessions = (reference.Lab.aggr(
+            behavior_plotting.DailyLabSummary,
+            last_session_time='max(last_session_time)')).fetch('KEY')
+        (behavior_plotting.DailyLabSummary & last_sessions).delete()
+        behavior_plotting.DailyLabSummary.populate(**kwargs)
 
     dj.config['safemode'] = True
 
