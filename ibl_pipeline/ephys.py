@@ -157,10 +157,11 @@ class ChannelGroup(dj.Imported):
     channel_group_ts=CURRENT_TIMESTAMP  :  timestamp
     """
 
-    key_source = ProbeInsertion \
-        & (data.FileRecord & 'dataset_name="channels.rawInd.npy"') \
-        & (data.FileRecord & 'dataset_name="channels.localCoordinates.npy"') - \
-            (ProbeInsertionMissingDataLog & 'missing_data="channels"')
+    if mode != 'public':
+        key_source = ProbeInsertion \
+            & (data.FileRecord & 'dataset_name="channels.rawInd.npy"') \
+            & (data.FileRecord & 'dataset_name="channels.localCoordinates.npy"') - \
+                (ProbeInsertionMissingDataLog & 'missing_data="channels"')
 
     def make(self, key):
 
@@ -218,8 +219,10 @@ class DefaultCluster(dj.Imported):
     cluster_spikes_samples=null:     blob@ephys      # Time of spikes, measured in units of samples in their own electrophysiology binary file.
     cluster_ts=CURRENT_TIMESTAMP  :  timestamp
     """
-    key_source = ProbeInsertion & (CompleteClusterSession - ProblematicDataSet) - \
-        (ProbeInsertionMissingDataLog & 'missing_data="clusters"')
+
+    if mode != 'public':
+        key_source = ProbeInsertion & (CompleteClusterSession - ProblematicDataSet) - \
+            (ProbeInsertionMissingDataLog & 'missing_data="clusters"')
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
