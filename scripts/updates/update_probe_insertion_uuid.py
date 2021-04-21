@@ -10,10 +10,18 @@ from ibl_pipeline.ingest import alyxraw
 
 
 ephys = dj.create_virtual_module('ephys', 'ibl_ephys')
+ephys_ingest = dj.create_virtual_module('ephys_ingest', 'ibl_ingest_ephys')
+
+# Get mismatching probe uuids
+mismatch_probe_insertions = \
+    (ephys.ProbeInsertion &
+     (dj.U('subject_uuid', 'session_start_time', 'probe_idx') & ephys_ingest.ProbeInsertion)) - \
+    ephys_ingest.ProbeInsertion.proj()
+
 
 alyx_keys = (alyxraw.AlyxRaw & 'model="experiments.probeinsertion"').fetch('KEY')
 
-for key in tqdm((ephys.ProbeInsertion & 'probe_insertion_uuid is null').fetch('KEY')):
+for key in tqdm(mismatch_probe_insertions.fetch('KEY')):
 
     # get corresponding entries in alyxraw
 
