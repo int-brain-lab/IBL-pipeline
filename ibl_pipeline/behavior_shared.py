@@ -194,7 +194,6 @@ class TrialSet(dj.Imported):
     """
 
     # Knowledge based hack to be formalized better later
-    # if not environ.get('MODE') == 'test':
     key_source = acquisition.Session & CompleteTrialSession
 
     def make(self, key):
