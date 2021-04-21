@@ -1,15 +1,26 @@
 from ibl_pipeline.group_shared import wheel
 import logging
 import datetime
+import os
+import pathlib
+
+mode = os.environ.get('MODE')
+
+logpath = pathlib.Path('/src/IBL-pipeline/ibl_pipeline/process/logs')
+if mode == 'public':
+    logfile = logpath / 'process_wheel_public.log'
+else:
+    logfile = logpath / 'process_wheel.log'
 
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
-        logging.FileHandler("/src/IBL-pipeline/ibl_pipeline/process/logs/process_wheel.log"),
+        logging.FileHandler(logfile),
         logging.StreamHandler()],
     level=25)
 
 logger = logging.getLogger(__name__)
+
 
 def main(backtrack_days=30):
 
@@ -20,10 +31,10 @@ def main(backtrack_days=30):
 
     kwargs = dict(display_progress=True, suppress_errors=True)
     logger.log(25, 'Populating WheelMoveSet...')
-    wheel.WheelMoveSet.populate(date_range, **kwargs)
+    wheel.WheelMoveSet.populate(date_range, ephys.ProbeInsertion, **kwargs)
 
     logger.log(25, 'Populating MovementTimes...')
-    wheel.MovementTimes.populate(date_range, **kwargs)
+    wheel.MovementTimes.populate(date_range, ephys.ProbeInsertion, **kwargs)
 
 
 if __name__ == '__main__':
