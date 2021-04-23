@@ -137,10 +137,12 @@ class QueryBuffer(object):
                 print('error in flush delete: {}, trying deletion one by one'.format(e))
                 for t in self._queue:
                     try:
+                        dj.config['safemode'] = False
                         if quick:
                             (self._rel & t).delete_quick()
                         else:
                             (self._rel & t).delete()
+
                     except Exception as e:
                         print('error in flush delete: {}'.format(e))
             self._queue.clear()
