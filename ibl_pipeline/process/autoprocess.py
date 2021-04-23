@@ -105,66 +105,6 @@ def process_new(previous_dump=None, latest_dump=None,
                   end=datetime.datetime.now())
 
 
-def process_public():
-
-    from ibl_pipeline import public
-    from ibl_pipeline.common import subject, acquisition
-
-    ingest_alyx_raw.insert_to_alyxraw(
-        ingest_alyx_raw.get_alyx_entries())
-
-    excluded_tables = [
-        'Weighing',
-        'WaterType',
-        'WaterAdministration',
-        'WaterRestriction'
-    ]
-
-    ingest_shadow.main(excluded_tables=excluded_tables)
-
-    excluded_membership_tables = [
-        'WaterRestrictionUser',
-        'WaterRestrictionProcedure',
-        'SurgeryUser',
-        'WaterAdministrationSession',
-    ]
-
-    ingest_membership.main(
-        excluded_tables=excluded_membership_tables)
-
-    ingest_real.main(
-        excluded_tables=excluded_tables+excluded_membership_tables,
-        public=True)
-
-    # delete non-releasing tables
-    dj.config['safemode'] = False
-    from ibl_pipeline.ingest import QueryBuffer
-
-    table = QueryBuffer(acquisition.Session)
-    for key in tqdm(
-            (acquisition.Session - public.PublicSession - behavior.TrialSet).fetch('KEY')):
-        table.add_to_queque1(key)
-        if table.flush_delete(chunksz=100):
-            print('Deleted 100 sessions')
-
-    table.flush_delete()
-    print('Deleted the rest of the sessions')
-
-    subjs = subject.Subject & acquisition.Session
-
-    for key in tqdm(
-            (subject.Subject - public.PublicSubjectUuid - subjs.proj()).fetch('KEY')):
-        (subject.Subject & key).delete()
-
-    excluded_behavior_tables = [
-        'AmbientSensorData',
-        'Settings',
-        'SessionDelay'
-    ]
-
-    populate_behavior.main(excluded_tables=excluded_behavior_tables)
-    dj.config['safemode'] = True
-
 
 def process_updates(pks, current_dump='/data/alyxfull.json'):
     '''
@@ -198,6 +138,6 @@ def process_updates(pks, current_dump='/data/alyxfull.json'):
 
 if __name__ == '__main__':
 
-    process_new(previous_dump='/data/alyxfull_20210310_0400.json',
+    process_new(previous_dump='/data/alyxfull.json.last',
                 latest_dump='/data/alyxfull.json',
-                job_date='2021-03-17', timezone='European')
+                job_date='2021-04-20', timezone='European')
