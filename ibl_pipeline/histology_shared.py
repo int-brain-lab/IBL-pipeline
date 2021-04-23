@@ -94,9 +94,11 @@ class ProbeTrajectory(dj.Imported):
             #     0.0017561732283464578,
             #     1.0978058600524505],
             #     'PASS: None']}}]
-            kept_fields = ['x', 'y', 'z', 'depth', 'theta', 'phi', 'roll', 'coonidate_system']
+            kept_fields = ['x', 'y', 'z', 'depth', 'theta', 'phi', 'roll']
             probe_trajectory = dict(
-                **key, **{f: traj[f] for f in kept_fields})
+                **key, **{f: traj[f] for f in kept_fields},
+                coordinate_system_name=traj['coordinate_system'],
+                probe_trajectory_uuid=traj['id'])
 
         self.insert1(probe_trajectory)
 
@@ -113,10 +115,12 @@ class ChannelBrainLocation(dj.Imported):
     channel_dv      : decimal(6, 1)  # (um) dorso-ventral coordinate relative to Bregma, ventral negative
     -> reference.BrainRegion
     """
-    key_source = (ProbeTrajectory
-                  & (data.FileRecord & 'dataset_name like "%channels.brainLocationIds%"')
-                  & (data.FileRecord & 'dataset_name like "%channels.mlapdv%"')) - \
-        (ephys.ProbeInsertionMissingDataLog & 'missing_data="channels_brain_region"')
+
+    if mode != 'public':
+        key_source = (ProbeTrajectory
+                    & (data.FileRecord & 'dataset_name like "%channels.brainLocationIds%"')
+                    & (data.FileRecord & 'dataset_name like "%channels.mlapdv%"')) - \
+            (ephys.ProbeInsertionMissingDataLog & 'missing_data="channels_brain_region"')
 
     def make(self, key):
 
