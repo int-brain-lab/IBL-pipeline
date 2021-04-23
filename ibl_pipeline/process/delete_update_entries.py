@@ -2,7 +2,7 @@
 This module delete the entries from alyxraw, shadow membership_tables and update real membership_tables
 '''
 import datajoint as dj
-from ibl_pipeline.process.ingest_membership import membership_tables
+from ibl_pipeline.process.ingest_membership import MEMBERSHIP_TABLES
 from ibl_pipeline.common import *
 from ibl_pipeline.ingest.common import *
 from ibl_pipeline.ingest import job, QueryBuffer
@@ -68,7 +68,7 @@ def delete_entries_from_membership(pks_to_be_deleted):
     '''
     Delete entries from shadow membership membership_tables
     '''
-    for t in membership_tables:
+    for t in MEMBERSHIP_TABLES:
         ingest_mod = t['dj_parent_table'].__module__
         table_name = t['dj_parent_table'].__name__
 

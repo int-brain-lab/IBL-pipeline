@@ -42,6 +42,10 @@ if mode != 'public':
     BEHAVIOR_TABLES.append(behavior_plotting.WaterTypeColor)
 
 
+kwargs = dict(
+        suppress_errors=True, display_progress=True)
+
+
 def compute_latest_date():
 
     for key in tqdm(subject.Subject.fetch('KEY'), position=0):
@@ -91,42 +95,16 @@ def compute_latest_date():
         behavior_plotting.LatestDate.insert1(key)
 
 
-def main(backtrack_days=30, excluded_tables=[]):
+def process_cumulative_plots(backtrack_days=30):
 
     kwargs = dict(
         suppress_errors=True, display_progress=True)
-
-    if backtrack_days:
-        date_cutoff = \
-            (datetime.datetime.now().date() -
-             datetime.timedelta(days=backtrack_days)).strftime('%Y-%m-%d')
-
-    for table in BEHAVIOR_TABLES:
-
-        if table.__name__ in excluded_tables:
-            continue
-        print(f'Populating {table.__name__}...')
-
-        if backtrack_days and table.__name__ != 'WaterTypeColor':
-            if 'Date' in table.__name__:
-                field = 'session_date'
-            else:
-                field = 'session_start_time'
-            restrictor = f'{field} > "{date_cutoff}"'
-        else:
-            restrictor = {}
-
-        table.populate(restrictor, **kwargs)
-
-    print('Populating latest date...')
-
-    compute_latest_date()
 
     if mode != 'public':
         latest = subject.Subject.aggr(
             behavior_plotting.LatestDate,
             checking_ts='MAX(checking_ts)') * behavior_plotting.LatestDate & \
-                ['latest_date between curdate() - interval 30 day and curdate()',
+                [f'latest_date between curdate() - interval {backtrack_days} day and curdate()',
                 (subject.Subject - subject.Death)] & \
                 (subject.Subject & 'subject_nickname not like "%human%"').proj()
     else:
@@ -157,6 +135,12 @@ def main(backtrack_days=30, excluded_tables=[]):
                     subj_with_latest_date.fetch1())
 
     behavior_plotting.CumulativeSummary.populate(**kwargs)
+    dj.config['safemode'] = True
+
+
+def process_daily_summary():
+
+    dj.config['safemode'] = False
 
     if mode != 'public':
         print('Populating plotting.DailyLabSummary...')
@@ -167,6 +151,41 @@ def main(backtrack_days=30, excluded_tables=[]):
         behavior_plotting.DailyLabSummary.populate(**kwargs)
 
     dj.config['safemode'] = True
+
+
+def main(backtrack_days=30, excluded_tables=[]):
+
+    if backtrack_days:
+        date_cutoff = \
+            (datetime.datetime.now().date() -
+             datetime.timedelta(days=backtrack_days)).strftime('%Y-%m-%d')
+
+    for table in BEHAVIOR_TABLES:
+
+        if table.__name__ in excluded_tables:
+            continue
+        print(f'Populating {table.__name__}...')
+
+        if backtrack_days and table.__name__ != 'WaterTypeColor':
+            if 'Date' in table.__name__:
+                field = 'session_date'
+            else:
+                field = 'session_start_time'
+            restrictor = f'{field} > "{date_cutoff}"'
+        else:
+            restrictor = {}
+
+        table.populate(restrictor, **kwargs)
+
+    print('Populating latest date...')
+
+    compute_latest_date()
+
+    print('Processing Cumulative plots...')
+    process_cumulative_plots()
+
+    print('Processing daily summary...')
+    process_daily_summary()
 
 
 if __name__ == '__main__':
