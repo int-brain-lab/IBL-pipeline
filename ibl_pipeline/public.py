@@ -59,6 +59,13 @@ class PublicSession(dj.Manual):
     """
 
 
+@schema
+class PublicProbeInsertion(dj.Manual):
+    definition = """
+    probe_insertion_uuid  : uuid
+    """
+
+
 def import_public_subjects():
 
     subject_lists = pd.read_csv('/data/list_of_subjects_behavior_paper.csv')
@@ -129,6 +136,7 @@ def import_public_subjects():
 
     PublicSubject.insert(subjs, skip_duplicates=True)
     PublicSubjectUuid.populate(display_progress=True)
+
 
 
 def import_public_sessions():
