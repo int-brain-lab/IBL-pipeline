@@ -162,7 +162,7 @@ def copy_table(target_schema, src_schema, table_name,
                     traceback.print_exc()
 
 
-def main(excluded_tables=[], public=False):
+def main(excluded_tables=[]):
     mods = [
         [reference, reference_ingest, REF_TABLES],
         [subject, subject_ingest, SUBJECT_TABLES],
@@ -170,16 +170,17 @@ def main(excluded_tables=[], public=False):
         [acquisition, acquisition_ingest, ACQUISITION_TABLES],
         [data, data_ingest, DATA_TABLES]
     ]
+    if mode == 'public':
+        backtrack_days = None
+    else:
+        backtrack_days = 30
 
     for (target, source, table_list) in mods:
         for table in table_list:
             if table in excluded_tables:
                 continue
             print(table)
-            copy_table(target, source, table, backtrack_days=30)
-
-    if public:
-        return
+            copy_table(target, source, table, backtrack_days=backtrack_days)
 
     # ephys tables
     table = 'ProbeModel'
