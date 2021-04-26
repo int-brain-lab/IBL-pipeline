@@ -349,7 +349,7 @@ class DailyLabSummary(dj.Computed):
                     Ingest error in BehavioralSummaryByDate for
                     data on {}
                     """.format(last_date)
-                elif not len(_master & last_session.proj(latest_session='session_date')):
+                elif not len(behavior_shared.CumulativeSummary & last_session.proj(latest_session='session_date')):
                     data_update_status = """
                     Error in creating cumulative plots for data on {}
                     """.format(last_date)
@@ -357,9 +357,6 @@ class DailyLabSummary(dj.Computed):
                     data_update_status = """
                     Data up to date
                     """.format(last_date)
-
-                # existence of plotting tuples
-                _master & last_session.proj(latest_session='')
 
             subject_summary = dict(
                 **key,
