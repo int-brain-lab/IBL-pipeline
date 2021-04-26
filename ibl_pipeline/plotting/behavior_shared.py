@@ -152,6 +152,16 @@ class LatestDate(dj.Manual):
 
 
 @schema
+class SubjectLatestDate(dj.Lookup):
+    # This table is only used by Navigator for fast fetching
+    definition = """
+    -> subject.Subject
+    ---
+    latest_date: date
+    """
+
+
+@schema
 class CumulativeSummary(dj.Computed):
     # This table contains four plots of the cumulative summary
     definition = """
@@ -191,13 +201,6 @@ class CumulativeSummary(dj.Computed):
         fit_pars: longblob  # dict for the plotting info
         """
 
-    class WaterWeight(dj.Part):
-        definition = """
-        -> master
-        ---
-        water_weight: longblob    # dict for the plotting info
-        """
-
     def make(self, key):
         self.insert1(key)
 
@@ -212,7 +215,7 @@ class CumulativeSummary(dj.Computed):
         # get the first date when animal became "trained" and "ready for ephys"
         status = putils.get_status(subj)
         # get date range and mondays
-        d = putils.get_date_range(subj)
+        d = putils.get_date_range(subj, include_water_weight=not public)
 
         if d['seven_months_date']:
             status['is_over_seven_months'] = True
@@ -334,10 +337,10 @@ class CumulativeSummary(dj.Computed):
                         'median_reaction_time').fetch(as_dict=True)
             session_info = pd.DataFrame(session_info)
             yrange = [0, 1.1]
-            perf_easy = [None if np.isnan(p) else p
+            perf_easy = [None if not p or np.isnan(p) else p
                          for p in session_info['performance_easy']]
 
-            median_rt = [None if np.isnan(p) else p
+            median_rt = [None if not p or np.isnan(p) else p
                          for p in session_info['median_reaction_time']]
 
             performance_easy = go.Scatter(
@@ -619,7 +622,7 @@ class CumulativeSummary(dj.Computed):
                 'session_date', 'signed_contrasts', 'prob_choose_right')
 
             # get date ranges and mondays
-            d = putils.get_date_range(subj)
+            d = putils.get_date_range(subj, include_water_weight=not public)
 
             # get contrast and p_prob_choose_right per day
             contrast_list = []
@@ -707,6 +710,6 @@ class CumulativeSummary(dj.Computed):
             self.ContrastHeatmap.insert1(con_hm)
 
         if mode != 'public':
-
             from .behavior_internal import WaterWeight
-            WaterWeight.make(key)
+            self.WaterWeight = WaterWeight
+            self.WaterWeight().make(key, d)

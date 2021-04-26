@@ -1,4 +1,5 @@
 import datajoint as dj
+import inspect
 from ..analyses import behavior
 from .. import behavior as behavior_ingest
 from .. import reference, subject, action, acquisition, data
@@ -56,7 +57,6 @@ behavior_shared = dj.create_virtual_module('behavior_shared', 'ibl_plotting_beha
 
 
 class WaterWeight(dj.Part):
-
     master = behavior_shared.CumulativeSummary
     definition = """
     -> master
@@ -64,8 +64,8 @@ class WaterWeight(dj.Part):
     water_weight: longblob    # dict for the plotting info
     """
 
-    @classmethod
-    def make(cls, key):
+    def make(self, key, d):
+        subj = subject.Subject & key
         # plot for water weight
         water_type_names, water_type_colors = WaterTypeColor.fetch(
             'watertype_name', 'water_type_color')
@@ -256,16 +256,23 @@ class WaterWeight(dj.Part):
             )
             fig = go.Figure(data=data, layout=layout)
             water_weight_entry['water_weight'] = fig.to_plotly_json()
-            cls.insert1(water_weight_entry)
+            print('inserting water weight ...')
+            self.insert1(water_weight_entry)
 
 
-@schema
-class SubjectLatestDate(dj.Lookup):
-    definition = """
-    -> subject.Subject
-    ---
-    latest_date: date
-    """
+# Manually decorate WaterWeight table class.
+context = dict(
+    inspect.currentframe().f_locals,
+    master=behavior_shared.CumulativeSummary,
+    self=WaterWeight,
+    CumulativeSummary=behavior_shared.CumulativeSummary)
+
+if '0.12' in dj.__version__:
+    schema.process_table_class(WaterWeight, context=context)
+elif '0.13' in dj.__version__:
+    schema._decorate_table(WaterWeight, context=context)
+else:
+    raise NotImplementedError('Cannot declare WaterWeight table without DataJoint 0.12 or 0.13.')
 
 
 ingested_sessions = acquisition.Session & 'task_protocol is not NULL' \
@@ -342,7 +349,7 @@ class DailyLabSummary(dj.Computed):
                     Ingest error in BehavioralSummaryByDate for
                     data on {}
                     """.format(last_date)
-                elif not len(CumulativeSummary & last_session.proj(latest_session='session_date')):
+                elif not len(_master & last_session.proj(latest_session='session_date')):
                     data_update_status = """
                     Error in creating cumulative plots for data on {}
                     """.format(last_date)
@@ -352,7 +359,7 @@ class DailyLabSummary(dj.Computed):
                     """.format(last_date)
 
                 # existence of plotting tuples
-                CumulativeSummary & last_session.proj(latest_session='')
+                _master & last_session.proj(latest_session='')
 
             subject_summary = dict(
                 **key,
