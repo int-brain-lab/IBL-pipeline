@@ -76,12 +76,11 @@ def delete_entries_from_membership(pks_to_be_deleted):
 
         print(f'Deleting from table {mem_table_name} ...')
         real_table = eval(ingest_mod.replace('ibl_pipeline.ingest.', '') + '.' + table_name)
-        dj.config['safemode'] = False
-        (t['dj_current_table'] &
-         (real_table &
-          [{t['dj_parent_uuid_name']:pk}
-           for pk in pks_to_be_deleted if is_valid_uuid(pk)]).fetch('KEY')).delete()
-        dj.config['safemode'] = True
+        with dj.config(safemode=False):
+            (t['dj_current_table'] &
+             (real_table &
+             [{t['dj_parent_uuid_name']:pk}
+              for pk in pks_to_be_deleted if is_valid_uuid(pk)]).fetch('KEY')).delete()
 
 
 # =================================== functions for update ==========================================
@@ -234,10 +233,10 @@ def update_entries_from_real_tables(modified_pks):
 
 if __name__ == '__main__':
 
-    dj.config['safemode'] = False
+    with dj.config(safemode=False):
 
-    deleted_pks, modified_pks, modified_pks_important = \
-        (job.Job & 'job_date="2020-09-04"').fetch1(
-            'deleted_pks', 'modified_pks', 'modified_pks_important')
+        deleted_pks, modified_pks, modified_pks_important = \
+            (job.Job & 'job_date="2020-09-04"').fetch1(
+                'deleted_pks', 'modified_pks', 'modified_pks_important')
 
-    delete_entries_from_alyxraw(deleted_pks+modified_pks, modified_pks_important)
+        delete_entries_from_alyxraw(deleted_pks+modified_pks, modified_pks_important)

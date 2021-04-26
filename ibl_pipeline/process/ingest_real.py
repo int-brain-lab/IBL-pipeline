@@ -194,5 +194,5 @@ def main(excluded_tables=[]):
 
 if __name__ == '__main__':
 
-    dj.config['safemode'] = False
-    main()
+    with dj.config(safemode=False):
+        main()

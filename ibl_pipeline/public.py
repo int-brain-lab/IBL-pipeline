@@ -8,7 +8,6 @@ from uuid import UUID
 from ibl_pipeline.ingest import alyxraw
 
 schema = dj.schema('ibl_public')
-dj.config['safemode'] = False
 
 
 @schema

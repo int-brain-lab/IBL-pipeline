@@ -82,9 +82,9 @@ class CompleteClusterSession(dj.Computed):
 
         if is_complete:
             self.insert1(key)
-            dj.config['safemode'] = False
-            (EphysMissingDataLog & key).delete_quick()
-            dj.config['safemode'] = True
+            with dj.config(safemode=False):
+                (EphysMissingDataLog & key).delete_quick()
+
         else:
             for req_ds in self.required_datasets:
                 if req_ds not in datasets:

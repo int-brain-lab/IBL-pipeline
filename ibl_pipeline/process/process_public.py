@@ -26,36 +26,37 @@ logger = logging.getLogger(__name__)
 
 
 def delete_non_published_records():
-    dj.config['safemode'] = False
 
-    logger.log(25, 'Deleting non-published probe insertions...')
-    probe_insertion_table = QueryBuffer(ephys.ProbeInsertion)
-    for key in tqdm(
-            (ephys.ProbeInsertion - public.PublicProbeInsertion - ephys.DefaultCluster).fetch('KEY')):
-        probe_insertion_table.add_to_queue1(key)
-        if probe_insertion_table.flush_delete(quick=False, chunksz=100):
-            logger.log(25, 'Deleted 100 probe insertions')
+    with dj.config(safemode=False):
 
-    probe_insertion_table.flush_delete(quick=False)
-    logger.log(25, 'Deleted the rest of the probe insertions')
+        logger.log(25, 'Deleting non-published probe insertions...')
+        probe_insertion_table = QueryBuffer(ephys.ProbeInsertion)
+        for key in tqdm(
+                (ephys.ProbeInsertion - public.PublicProbeInsertion - ephys.DefaultCluster).fetch('KEY')):
+            probe_insertion_table.add_to_queue1(key)
+            if probe_insertion_table.flush_delete(quick=False, chunksz=100):
+                logger.log(25, 'Deleted 100 probe insertions')
 
-    logger.log(25, 'Deleting non-published sessions...')
-    session_table = QueryBuffer(acquisition.Session)
-    for key in tqdm(
-            (acquisition.Session - public.PublicSession - behavior.TrialSet).fetch('KEY')):
-        session_table.add_to_queue1(key)
-        if session_table.flush_delete(quick=False, chunksz=100):
-            logger.log(25, 'Deleted 100 sessions')
+        probe_insertion_table.flush_delete(quick=False)
+        logger.log(25, 'Deleted the rest of the probe insertions')
 
-    session_table.flush_delete(quick=False)
-    logger.log(25, 'Deleted the rest of the sessions')
+        logger.log(25, 'Deleting non-published sessions...')
+        session_table = QueryBuffer(acquisition.Session)
+        for key in tqdm(
+                (acquisition.Session - public.PublicSession - behavior.TrialSet).fetch('KEY')):
+            session_table.add_to_queue1(key)
+            if session_table.flush_delete(quick=False, chunksz=100):
+                logger.log(25, 'Deleted 100 sessions')
 
-    logger.log(25, 'Deleting non-published subjects...')
-    subjs = subject.Subject & acquisition.Session
+        session_table.flush_delete(quick=False)
+        logger.log(25, 'Deleted the rest of the sessions')
 
-    for key in tqdm(
-            (subject.Subject - public.PublicSubjectUuid - subjs.proj()).fetch('KEY')):
-        (subject.Subject & key).delete()
+        logger.log(25, 'Deleting non-published subjects...')
+        subjs = subject.Subject & acquisition.Session
+
+        for key in tqdm(
+                (subject.Subject - public.PublicSubjectUuid - subjs.proj()).fetch('KEY')):
+            (subject.Subject & key).delete()
 
 
 def main(populate_only=False):
