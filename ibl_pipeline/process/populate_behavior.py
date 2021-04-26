@@ -4,6 +4,7 @@ This script ingest behavioral data into tables in the ibl_behavior schema
 import datajoint as dj
 from ibl_pipeline import behavior
 from ibl_pipeline.analyses import behavior as behavior_analyses
+from ibl_pipeline.plotting import behavior as behavior_plotting
 
 import datetime
 from ibl_pipeline import subject, reference, action
@@ -11,11 +12,6 @@ from tqdm import tqdm
 from os import environ
 
 mode = environ.get('MODE')
-
-if mode == 'public':
-    from ibl_pipeline.plotting import behavior as behavior_plotting
-else:
-    from ibl_pipeline.plotting import behavior_backup as behavior_plotting
 
 BEHAVIOR_TABLES = [
     behavior.CompleteWheelSession,
@@ -116,41 +112,37 @@ def process_cumulative_plots(backtrack_days=30):
     subj_keys = (subject.Subject & behavior_plotting.CumulativeSummary & latest).fetch('KEY')
 
     # delete and repopulate subject by subject
-    dj.config['safemode'] = False
-    for subj_key in tqdm(subj_keys, position=0):
-        (behavior_plotting.CumulativeSummary & subj_key & latest).delete()
-        behavior_plotting.CumulativeSummary.populate(
-            latest & subj_key, suppress_errors=True)
-        # --- update the latest date of the subject -----
-        # get the latest date of the CumulativeSummary of the subject
-        subj_with_latest_date = (subject.Subject & subj_key).aggr(
-            behavior_plotting.CumulativeSummary, latest_date='max(latest_date)')
-        if len(subj_with_latest_date):
-            new_date = subj_with_latest_date.fetch1('latest_date')
-            current_subj = behavior_plotting.SubjectLatestDate & subj_key
-            if len(current_subj):
-                current_subj._update('latest_date', new_date)
-            else:
-                behavior_plotting.SubjectLatestDate.insert1(
-                    subj_with_latest_date.fetch1())
+    with dj.config(safemode=False):
+        for subj_key in tqdm(subj_keys, position=0):
+            (behavior_plotting.CumulativeSummary & subj_key & latest).delete()
+            print('populating...')
+            behavior_plotting.CumulativeSummary.populate(
+                latest & subj_key, **kwargs)
+            # --- update the latest date of the subject -----
+            # get the latest date of the CumulativeSummary of the subject
+            subj_with_latest_date = (subject.Subject & subj_key).aggr(
+                behavior_plotting.CumulativeSummary, latest_date='max(latest_date)')
+            if len(subj_with_latest_date):
+                new_date = subj_with_latest_date.fetch1('latest_date')
+                current_subj = behavior_plotting.SubjectLatestDate & subj_key
+                if len(current_subj):
+                    current_subj._update('latest_date', new_date)
+                else:
+                    behavior_plotting.SubjectLatestDate.insert1(
+                        subj_with_latest_date.fetch1())
 
-    behavior_plotting.CumulativeSummary.populate(**kwargs)
-    dj.config['safemode'] = True
+        behavior_plotting.CumulativeSummary.populate(**kwargs)
 
 
 def process_daily_summary():
 
-    dj.config['safemode'] = False
-
-    if mode != 'public':
+    with dj.config(safemode=False):
         print('Populating plotting.DailyLabSummary...')
         last_sessions = (reference.Lab.aggr(
             behavior_plotting.DailyLabSummary,
             last_session_time='max(last_session_time)')).fetch('KEY')
         (behavior_plotting.DailyLabSummary & last_sessions).delete()
         behavior_plotting.DailyLabSummary.populate(**kwargs)
-
-    dj.config['safemode'] = True
 
 
 def main(backtrack_days=30, excluded_tables=[]):
@@ -178,14 +170,14 @@ def main(backtrack_days=30, excluded_tables=[]):
         table.populate(restrictor, **kwargs)
 
     print('Populating latest date...')
-
     compute_latest_date()
 
     print('Processing Cumulative plots...')
     process_cumulative_plots()
 
-    print('Processing daily summary...')
-    process_daily_summary()
+    if mode != 'public':
+        print('Processing daily summary...')
+        process_daily_summary()
 
 
 if __name__ == '__main__':
