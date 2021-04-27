@@ -20,7 +20,7 @@ import statsmodels.stats.proportion as smp
 import scipy.signal as signal
 
 
-def get_date_range(subj):
+def get_date_range(subj, include_water_weight=True):
 
     # get date range of session
     session_range = subj.aggr(
@@ -37,58 +37,66 @@ def get_date_range(subj):
         last_session_date = None
 
     # get date range of water restriction
-    water_res_range = subj.aggr(
-        action.WaterRestriction,
-        first_res_date='min(DATE(restriction_start_time))',
-        last_res_date='max(DATE(restriction_end_time))')
+    if include_water_weight:
+        water_res_range = subj.aggr(
+            action.WaterRestriction,
+            first_res_date='min(DATE(restriction_start_time))',
+            last_res_date='max(DATE(restriction_end_time))')
 
-    if water_res_range:
-        first_water_res_date, last_water_res_date = water_res_range.fetch1(
-            'first_res_date', 'last_res_date'
-        )
-    else:
-        first_water_res_date = None
-        last_water_res_date = None
-
-    # get date range of water administration
-    water_admin_range = subj.aggr(
-        action.WaterAdministration,
-        first_admin_date='min(DATE(administration_time))',
-        last_admin_date='max(DATE(administration_time))')
-
-    if water_admin_range:
-        first_water_admin_date, last_water_admin_date = \
-            water_admin_range.fetch1(
-                'first_admin_date', 'last_admin_date'
+        if water_res_range:
+            first_water_res_date, last_water_res_date = water_res_range.fetch1(
+                'first_res_date', 'last_res_date'
             )
-    else:
-        first_water_admin_date = None
-        last_water_admin_date = None
+        else:
+            first_water_res_date = None
+            last_water_res_date = None
 
-    # get date range of weighing
-    weighing_range = subj.aggr(
-        action.Weighing,
-        first_weighing_date='min(DATE(weighing_time))',
-        last_weighing_date='max(DATE(weighing_time))')
+        # get date range of water administration
+        water_admin_range = subj.aggr(
+            action.WaterAdministration,
+            first_admin_date='min(DATE(administration_time))',
+            last_admin_date='max(DATE(administration_time))')
 
-    if weighing_range:
-        first_weighing_date, last_weighing_date = weighing_range.fetch1(
-            'first_weighing_date', 'last_weighing_date'
-        )
-    else:
-        first_weighing_date = None
-        last_weighing_date = None
+        if water_admin_range:
+            first_water_admin_date, last_water_admin_date = \
+                water_admin_range.fetch1(
+                    'first_admin_date', 'last_admin_date'
+                )
+        else:
+            first_water_admin_date = None
+            last_water_admin_date = None
+
+        # get date range of weighing
+        weighing_range = subj.aggr(
+            action.Weighing,
+            first_weighing_date='min(DATE(weighing_time))',
+            last_weighing_date='max(DATE(weighing_time))')
+
+        if weighing_range:
+            first_weighing_date, last_weighing_date = weighing_range.fetch1(
+                'first_weighing_date', 'last_weighing_date'
+            )
+        else:
+            first_weighing_date = None
+            last_weighing_date = None
 
     # get overall date range
-    first_date_array = [first_session_date,
-                        first_water_res_date,
-                        first_water_admin_date,
-                        first_weighing_date]
+    if include_water_weight:
+        first_date_array = [first_session_date,
+                            first_water_res_date,
+                            first_water_admin_date,
+                            first_weighing_date]
+
+        last_date_array = [last_session_date,
+                           last_water_admin_date,
+                           last_weighing_date]
+    else:
+        first_date_array = [first_session_date]
+        last_date_array = [last_session_date]
+
     first_date_array = [x for x in first_date_array if x is not None]
-    last_date_array = [last_session_date,
-                       last_water_admin_date,
-                       last_weighing_date]
     last_date_array = [x for x in last_date_array if x is not None]
+
     first_date = np.min(first_date_array) \
         - datetime.timedelta(days=3)
 

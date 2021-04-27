@@ -1,6 +1,6 @@
 import datajoint as dj
-from . import reference, acquisition
 import os
+from . import reference, acquisition
 
 mode = os.environ.get('MODE')
 

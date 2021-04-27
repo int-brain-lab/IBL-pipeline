@@ -10,9 +10,13 @@ from tqdm import tqdm
 from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data, QueryBuffer
 from ibl_pipeline.ingest import get_raw_field as grf
 from ibl_pipeline.utils import is_valid_uuid
+import os
 
 
-membership_tables = [
+mode = os.environ.get('MODE')
+
+
+MEMBERSHIP_TABLES = [
     {'dj_current_table': reference.ProjectLabMember,
      'alyx_parent_model': 'subjects.project',
      'alyx_field': 'users',
@@ -40,33 +44,6 @@ membership_tables = [
      'dj_other_field': 'allele_name',
      'dj_parent_uuid_name': 'line_uuid',
      'dj_other_uuid_name': 'allele_uuid'},
-    {'dj_current_table': action.WaterRestrictionUser,
-     'alyx_parent_model': 'actions.waterrestriction',
-     'alyx_field': 'users',
-     'dj_parent_table': action.WaterRestriction,
-     'dj_other_table': reference.LabMember,
-     'dj_parent_fields': ['subject_uuid', 'restriction_start_time'],
-     'dj_other_field': 'user_name',
-     'dj_parent_uuid_name': 'restriction_uuid',
-     'dj_other_uuid_name': 'user_uuid'},
-    {'dj_current_table': action.WaterRestrictionProcedure,
-     'alyx_parent_model': 'actions.waterrestriction',
-     'alyx_field': 'procedures',
-     'dj_parent_table': action.WaterRestriction,
-     'dj_other_table': action.ProcedureType,
-     'dj_parent_fields': ['subject_uuid', 'restriction_start_time'],
-     'dj_other_field': 'procedure_type_name',
-     'dj_parent_uuid_name': 'restriction_uuid',
-     'dj_other_uuid_name': 'procedure_type_uuid'},
-    {'dj_current_table': action.SurgeryUser,
-     'alyx_parent_model': 'actions.surgery',
-     'alyx_field': 'users',
-     'dj_parent_table': action.Surgery,
-     'dj_other_table': reference.LabMember,
-     'dj_parent_fields': ['subject_uuid', 'surgery_start_time'],
-     'dj_other_field': 'user_name',
-     'dj_parent_uuid_name': 'surgery_uuid',
-     'dj_other_uuid_name': 'user_uuid'},
     {'dj_current_table': action.SurgeryProcedure,
      'alyx_parent_model': 'actions.surgery',
      'alyx_field': 'procedures',
@@ -75,24 +52,6 @@ membership_tables = [
      'dj_parent_fields': ['subject_uuid', 'surgery_start_time'],
      'dj_other_field': 'procedure_type_name',
      'dj_parent_uuid_name': 'surgery_uuid',
-     'dj_other_uuid_name': 'procedure_type_uuid'},
-    {'dj_current_table': action.OtherActionUser,
-     'alyx_parent_model': 'actions.otheractions',
-     'alyx_field': 'users',
-     'dj_parent_table': action.OtherAction,
-     'dj_other_table': reference.LabMember,
-     'dj_parent_fields': ['subject_uuid', 'other_action_start_time'],
-     'dj_other_field': 'user_name',
-     'dj_parent_uuid_name': 'other_action_uuid',
-     'dj_other_uuid_name': 'user_uuid'},
-    {'dj_current_table': action.OtherActionProcedure,
-     'alyx_parent_model': 'actions.otheractions',
-     'alyx_field': 'procedures',
-     'dj_parent_table': action.OtherAction,
-     'dj_other_table': action.ProcedureType,
-     'dj_parent_fields': ['subject_uuid', 'other_action_start_time'],
-     'dj_other_field': 'procedure_type_name',
-     'dj_parent_uuid_name': 'other_action_uuid',
      'dj_other_uuid_name': 'procedure_type_uuid'},
     {'dj_current_table': acquisition.ChildSession,
      'alyx_parent_model': 'actions.session',
@@ -132,15 +91,6 @@ membership_tables = [
      'dj_parent_uuid_name': 'session_uuid',
      'dj_other_uuid_name': 'project_uuid',
      'renamed_other_field_name': 'session_project'},
-    {'dj_current_table': acquisition.WaterAdministrationSession,
-     'alyx_parent_model': 'actions.wateradministration',
-     'alyx_field': 'session',
-     'dj_parent_table': action.WaterAdministration,
-     'dj_other_table': acquisition.Session,
-     'dj_parent_fields': ['subject_uuid', 'administration_time'],
-     'dj_other_field': 'session_start_time',
-     'dj_parent_uuid_name': 'wateradmin_uuid',
-     'dj_other_uuid_name': 'session_uuid'},
     {'dj_current_table': data.ProjectRepository,
      'alyx_parent_model': 'subjects.project',
      'alyx_field': 'repositories',
@@ -152,9 +102,49 @@ membership_tables = [
      'dj_other_uuid_name': 'repo_uuid'},
 ]
 
+if mode != 'public':
+    MEMBERSHIP_TABLES.extend([
+        {'dj_current_table': action.WaterRestrictionUser,
+         'alyx_parent_model': 'actions.waterrestriction',
+         'alyx_field': 'users',
+         'dj_parent_table': action.WaterRestriction,
+         'dj_other_table': reference.LabMember,
+         'dj_parent_fields': ['subject_uuid', 'restriction_start_time'],
+         'dj_other_field': 'user_name',
+         'dj_parent_uuid_name': 'restriction_uuid',
+         'dj_other_uuid_name': 'user_uuid'},
+        {'dj_current_table': action.WaterRestrictionProcedure,
+         'alyx_parent_model': 'actions.waterrestriction',
+         'alyx_field': 'procedures',
+         'dj_parent_table': action.WaterRestriction,
+         'dj_other_table': action.ProcedureType,
+         'dj_parent_fields': ['subject_uuid', 'restriction_start_time'],
+         'dj_other_field': 'procedure_type_name',
+         'dj_parent_uuid_name': 'restriction_uuid',
+         'dj_other_uuid_name': 'procedure_type_uuid'},
+        {'dj_current_table': action.SurgeryUser,
+         'alyx_parent_model': 'actions.surgery',
+         'alyx_field': 'users',
+         'dj_parent_table': action.Surgery,
+         'dj_other_table': reference.LabMember,
+         'dj_parent_fields': ['subject_uuid', 'surgery_start_time'],
+         'dj_other_field': 'user_name',
+         'dj_parent_uuid_name': 'surgery_uuid',
+         'dj_other_uuid_name': 'user_uuid'},
+        {'dj_current_table': acquisition.WaterAdministrationSession,
+         'alyx_parent_model': 'actions.wateradministration',
+         'alyx_field': 'session',
+         'dj_parent_table': action.WaterAdministration,
+         'dj_other_table': acquisition.Session,
+         'dj_parent_fields': ['subject_uuid', 'administration_time'],
+         'dj_other_field': 'session_start_time',
+         'dj_parent_uuid_name': 'wateradmin_uuid',
+         'dj_other_uuid_name': 'session_uuid'}]
+    )
+
 
 def main(new_pks=None, excluded_tables=[]):
-    for tab_args in membership_tables:
+    for tab_args in MEMBERSHIP_TABLES:
         table_name = tab_args['dj_current_table'].__name__
         if table_name in excluded_tables:
             continue
@@ -219,6 +209,9 @@ def ingest_membership_table(dj_current_table,
     if type(dj_parent_fields) == str:
         dj_parent_fields = [dj_parent_fields]
 
+
+    insert_buffer = QueryBuffer(dj_current_table)
+
     for key in keys:
 
         if not dj_parent_table & key:
@@ -245,7 +238,11 @@ def ingest_membership_table(dj_current_table,
                     else:
                         entry[dj_other_field] = field_value
 
-                    dj_current_table.insert1(entry, skip_duplicates=True)
+                    insert_buffer.add_to_queue1(entry)
+                    insert_buffer.flush_insert(skip_duplicates=True, chunksz=1000)
+
+    insert_buffer.flush_insert(skip_duplicates=True)
+
 
 
 if __name__ == '__main__':

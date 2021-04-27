@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 '''
-This script tests the ingestion of ephys pipeline.
+Ingestion routine of ephys pipeline.
 Shan Shen, 2019-11-20
 
 Added a number of plotting tables.
@@ -14,6 +14,19 @@ import time
 
 import datetime
 from uuid import UUID
+
+import os
+import pathlib
+
+
+mode = os.environ.get('MODE')
+logpath = pathlib.Path('/src/IBL-pipeline/ibl_pipeline/process/logs')
+
+if mode == 'public':
+    log_file = logpath / 'ephys_ingestion_public.log'
+else:
+    log_file = logpath / 'ephys_ingestion.log'
+
 
 EPHYS_TABLES = [
     ephys.CompleteClusterSession,
@@ -38,7 +51,7 @@ def main(exclude_plottings=False):
     logging.basicConfig(
         format='%(asctime)s - %(message)s',
         handlers=[
-            logging.FileHandler("ephys_ingestion.log"),
+            logging.FileHandler(log_file),
             logging.StreamHandler()],
         level=30)
 

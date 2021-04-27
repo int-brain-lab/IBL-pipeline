@@ -15,7 +15,6 @@ schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_ingest_histology')
 
 
-
 # Temporary probe trajectories and channel brain location based on methods
 @schema
 class Provenance(dj.Lookup):

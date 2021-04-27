@@ -3,7 +3,7 @@ import datajoint as dj
 from ibl_pipeline import reference, subject, action, acquisition
 import table_names as tables
 import inspect
-dj.config['safemode'] = False
+
 
 reference_tables = [m[0] for m in inspect.getmembers(reference,
                                                      inspect.isclass)]

@@ -13,8 +13,6 @@ from table_names import *
 
 if __name__ = '__main__':
 
-    dj.config['safemode'] = False
-
     mods = [
         [reference, reference_ingest, REF_TABLES],
         [subject, subject_ingest, SUBJECT_TABLES],

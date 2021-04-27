@@ -10,7 +10,6 @@ from tqdm import tqdm
 
 
 if __name__ == '__main__':
-    dj.config['safemode'] = False
 
     kargs = dict(
         suppress_errors=True, display_progress=True
@@ -41,26 +40,27 @@ if __name__ == '__main__':
 
     subj_keys = (subject.Subject & latest).fetch('KEY')
 
-    # delete and repopulate subject by subject
-    for subj_key in tqdm(subj_keys, position=0):
-        (behavior.CumulativeSummary & subj_key & latest).delete()
-        behavior.CumulativeSummary.populate(
-            latest & subj_key, suppress_errors=True)
-        # --- update the latest date of the subject -----
-        # get the latest date of the CumulativeSummary of the subject
-        subj_with_latest_date = (subject.Subject & subj_key).aggr(
-            behavior.CumulativeSummary, latest_date='max(latest_date)')
-        new_date = subj_with_latest_date.fetch1('latest_date')
-        current_subj = behavior.SubjectLatestDate & subj_key
-        if len(current_subj):
-            current_subj._update('latest_date', new_date)
-        else:
-            behavior.SubjectLatestDate.insert1(
-                subj_with_latest_date.fetch1())
+    with dj.config(safemode=False):
+        # delete and repopulate subject by subject
+        for subj_key in tqdm(subj_keys, position=0):
+            (behavior.CumulativeSummary & subj_key & latest).delete()
+            behavior.CumulativeSummary.populate(
+                latest & subj_key, suppress_errors=True)
+            # --- update the latest date of the subject -----
+            # get the latest date of the CumulativeSummary of the subject
+            subj_with_latest_date = (subject.Subject & subj_key).aggr(
+                behavior.CumulativeSummary, latest_date='max(latest_date)')
+            new_date = subj_with_latest_date.fetch1('latest_date')
+            current_subj = behavior.SubjectLatestDate & subj_key
+            if len(current_subj):
+                current_subj._update('latest_date', new_date)
+            else:
+                behavior.SubjectLatestDate.insert1(
+                    subj_with_latest_date.fetch1())
 
-    print('------ Populating plotting.DailyLabSummary ------')
-    last_sessions = (reference.Lab.aggr(
-        behavior.DailyLabSummary,
-        last_session_time='max(last_session_time)')).fetch('KEY')
-    (behavior.DailyLabSummary & last_sessions).delete()
-    behavior.DailyLabSummary.populate(**kargs)
+        print('------ Populating plotting.DailyLabSummary ------')
+        last_sessions = (reference.Lab.aggr(
+            behavior.DailyLabSummary,
+            last_session_time='max(last_session_time)')).fetch('KEY')
+        (behavior.DailyLabSummary & last_sessions).delete()
+        behavior.DailyLabSummary.populate(**kargs)
