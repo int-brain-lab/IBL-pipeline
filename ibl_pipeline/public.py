@@ -8,7 +8,6 @@ from uuid import UUID
 from ibl_pipeline.ingest import alyxraw
 
 schema = dj.schema('ibl_public')
-dj.config['safemode'] = False
 
 
 @schema
@@ -56,6 +55,13 @@ class PublicSession(dj.Manual):
     ---
     subject_uuid=null        : uuid
     session_start_time=null  : datetime
+    """
+
+
+@schema
+class PublicProbeInsertion(dj.Manual):
+    definition = """
+    probe_insertion_uuid  : uuid
     """
 
 
@@ -129,6 +135,7 @@ def import_public_subjects():
 
     PublicSubject.insert(subjs, skip_duplicates=True)
     PublicSubjectUuid.populate(display_progress=True)
+
 
 
 def import_public_sessions():

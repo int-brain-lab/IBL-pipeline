@@ -1,11 +1,18 @@
 import datajoint as dj
-from os import path
+from os import path, environ
 from .. import subject, acquisition, ephys, histology
 from . import histology_plotting as hplt
 from .figure_model import PngFigure, GifFigure
 import boto3
 from oneibl.one import ONE
 
+
+mode = environ.get('MODE')
+
+if mode == 'public':
+    root_path = 'public'
+else:
+    root_path = ''
 
 one = ONE()
 schema = dj.schema(dj.config.get('database.prefix', '') +
@@ -41,7 +48,7 @@ class SubjectSpinningBrain(dj.Imported):
             hplt.generate_spinning_brain_frames, trajs)
 
         fig_link = path.join(
-            'subject_spinning_brain',
+            root_path, 'subject_spinning_brain',
             str(key['subject_uuid']) + '.gif'
         )
 
@@ -70,7 +77,7 @@ class ProbeTrajectoryCoronal(dj.Imported):
             dpi=100, figsize=[6, 4], axes_off=False)
 
         fig_link = path.join(
-            'probe_trajectory_coronal',
+            root_path, 'probe_trajectory_coronal',
             str(key['subject_uuid']),
             key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
             str(key['probe_idx']) + '.png'

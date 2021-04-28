@@ -9,6 +9,15 @@ SESSION_FIELDS = [
     'end_time', 'parent_session', 'project', 'type',
     'task_protocol', 'users', 'procedures']
 
+EXCLUDED_MODELS = {'auth.group', 'sessions.session',
+                   'authtoken.token',
+                   'experiments.brainregion',
+                   'misc.note',
+                   'jobs.task',
+                   'actions.notificationrule',
+                   'actions.notification'
+                  }
+
 
 def get_modified_pks(data0, data1):
     d0 = {_['pk']: json.dumps(_['fields'], sort_keys=True) for _ in data0}
@@ -21,8 +30,8 @@ def get_modified_pks(data0, data1):
 
 def get_created_deleted_pks(data0, data1):
 
-    old_pks = {_['pk'] for _ in data0 if not isinstance(_['pk'], int)}
-    new_pks = {_['pk'] for _ in data1 if not isinstance(_['pk'], int)}
+    old_pks = {_['pk'] for _ in data0 if not isinstance(_['pk'], int) and _['model'] not in EXCLUDED_MODELS}
+    new_pks = {_['pk'] for _ in data1 if not isinstance(_['pk'], int) and _['model'] not in EXCLUDED_MODELS}
 
     return [pk for pk in sorted(new_pks - old_pks) if is_valid_uuid(pk)], \
         [pk for pk in sorted(old_pks - new_pks) if is_valid_uuid(pk)]

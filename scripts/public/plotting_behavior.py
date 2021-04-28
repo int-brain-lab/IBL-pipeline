@@ -6,7 +6,6 @@ import datajoint as dj
 from ibl_pipeline.plotting import behavior
 from ibl_pipeline import subject
 
-dj.config['safemode'] = False
 
 kargs = dict(
     suppress_errors=True, display_progress=True
@@ -28,5 +27,7 @@ print('------------ Populating plotting.CumulativeSummary -----------')
 latest = subject.Subject.aggr(
         behavior.LatestDate,
         checking_ts='MAX(checking_ts)') * behavior.LatestDate
-(behavior.CumulativeSummary & latest).delete()
+
+with dj.config(safemode=False):
+    (behavior.CumulativeSummary & latest).delete()
 behavior.CumulativeSummary.populate(**kargs)

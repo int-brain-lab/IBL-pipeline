@@ -10,12 +10,15 @@ import re
 import alf.io
 from ibl_pipeline.utils import atlas
 
-wheel = dj.create_virtual_module('wheel', 'group_shared_wheel')
+try:
+    wheel = dj.create_virtual_module('wheel', 'group_shared_wheel')
+except dj.DataJointError:
+    from .group_shared import wheel
 
 try:
     from oneibl.one import ONE
     one = ONE()
-except Exception:
+except ImportError:
     print('ONE not set up')
 
 mode = environ.get('MODE')
@@ -24,8 +27,6 @@ if mode == 'update':
     schema = dj.schema('ibl_ephys')
 else:
     schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
-
-dj.config['safemode'] = False
 
 
 @schema
@@ -81,7 +82,9 @@ class CompleteClusterSession(dj.Computed):
 
         if is_complete:
             self.insert1(key)
-            (EphysMissingDataLog & key).delete_quick()
+            with dj.config(safemode=False):
+                (EphysMissingDataLog & key).delete_quick()
+
         else:
             for req_ds in self.required_datasets:
                 if req_ds not in datasets:
@@ -154,10 +157,11 @@ class ChannelGroup(dj.Imported):
     channel_group_ts=CURRENT_TIMESTAMP  :  timestamp
     """
 
-    key_source = ProbeInsertion \
-        & (data.FileRecord & 'dataset_name="channels.rawInd.npy"') \
-        & (data.FileRecord & 'dataset_name="channels.localCoordinates.npy"') - \
-            (ProbeInsertionMissingDataLog & 'missing_data="channels"')
+    if mode != 'public':
+        key_source = ProbeInsertion \
+            & (data.FileRecord & 'dataset_name="channels.rawInd.npy"') \
+            & (data.FileRecord & 'dataset_name="channels.localCoordinates.npy"') - \
+                (ProbeInsertionMissingDataLog & 'missing_data="channels"')
 
     def make(self, key):
 
@@ -215,8 +219,10 @@ class DefaultCluster(dj.Imported):
     cluster_spikes_samples=null:     blob@ephys      # Time of spikes, measured in units of samples in their own electrophysiology binary file.
     cluster_ts=CURRENT_TIMESTAMP  :  timestamp
     """
-    key_source = ProbeInsertion & (CompleteClusterSession - ProblematicDataSet) - \
-        (ProbeInsertionMissingDataLog & 'missing_data="clusters"')
+
+    if mode != 'public':
+        key_source = ProbeInsertion & (CompleteClusterSession - ProblematicDataSet) - \
+            (ProbeInsertionMissingDataLog & 'missing_data="clusters"')
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))

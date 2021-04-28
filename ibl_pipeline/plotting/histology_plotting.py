@@ -12,8 +12,11 @@ import os
 display = Display(visible=0, size=(1920, 1080))
 display.start()
 
+# mlab has to be imported after setting up the virtual display
 from mayavi import mlab
 from atlaselectrophysiology import rendering
+
+
 import ibllib.atlas as atlas
 
 ba_allen = atlas.AllenAtlas(25)
@@ -94,7 +97,7 @@ def probe_trajectory_coronal(
     if ax is None:
         fig, ax = plt.subplots(1, 1, dpi=100, frameon=False)
 
-    ax = ba.plot_tilted_slice(xyz=picks, axis=1, volume='image', ax=ax)
+    ax = ba_allen.plot_tilted_slice(xyz=picks, axis=1, volume='image', ax=ax)
     ax.plot(picks[:, 0] * 1e6, picks[:, 2] * 1e6)
     ax.plot(channels[probe_label].x * 1e6, channels[probe_label].z * 1e6, 'g*')
 

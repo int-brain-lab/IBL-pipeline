@@ -18,8 +18,6 @@ class DeletionError(dj.Manual):
 
 if __name__ == 'main':
 
-    dj.config['safemode'] = False
-
     records_for_deletion = update.DeletionRecord & 'deleted=0' & \
                         [{'table': "ibl_pipeline.subject.Subject"}]
 
@@ -32,19 +30,20 @@ if __name__ == 'main':
 
         table = eval(table_name)
 
-        if not len(behavior.TrialSet & pk_dict):
-            try:
-                (table & pk_dict).delete()
-                dj.Table._update(current_record, 'deleted', True)
-                print(f'Deleted record {pk_dict}.')
+        with dj.config(safemode=False):
+            if not len(behavior.TrialSet & pk_dict):
+                try:
+                    (table & pk_dict).delete()
+                    dj.Table._update(current_record, 'deleted', True)
+                    print(f'Deleted record {pk_dict}.')
 
-            except BaseException as e:
-                if len(str(e)) > 255:
-                    error_msg = str(e)[0:250]
-                else:
-                    error_msg = str(e)
-                DeletionError.insert1(
-                    dict(**current_record.fetch1(),
-                        deletion_error_msg=error_msg))
-        else:
-            print(f'Skip deleting {pk_dict} because behavior data exists for this record')
+                except BaseException as e:
+                    if len(str(e)) > 255:
+                        error_msg = str(e)[0:250]
+                    else:
+                        error_msg = str(e)
+                    DeletionError.insert1(
+                        dict(**current_record.fetch1(),
+                            deletion_error_msg=error_msg))
+            else:
+                print(f'Skip deleting {pk_dict} because behavior data exists for this record')

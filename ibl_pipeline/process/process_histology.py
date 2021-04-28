@@ -5,6 +5,10 @@ from ibl_pipeline.common import *
 from ibl_pipeline.process import update_utils
 from tqdm import tqdm
 import inspect
+import os
+
+
+mode = os.environ.get('MODE')
 
 
 ALYX_HISTOLOGY_MODELS = [
@@ -35,29 +39,43 @@ HISTOLOGY_SHADOW_TABLES = [
     subject_ingest.SubjectLab,
     subject_ingest.UserHistory,
     action_ingest.ProcedureType,
-    action_ingest.WaterAdministration,
     acquisition_ingest.Session,
     ephys_ingest.ProbeModel,
-    ephys_ingest.ProbeInsertion,
-    histology_ingest.ProbeTrajectoryTemp,
-    histology_ingest.ChannelBrainLocationTemp
+    ephys_ingest.ProbeInsertion
 ]
 
-HISTOLOGY_TABLES_FOR_DELETE = [
-    histology.ProbeBrainRegionTemp,
-    histology.ClusterBrainRegionTemp,
-    histology.ChannelBrainLocationTemp,
-    histology.ProbeTrajectoryTemp,
-]
+if mode != 'public':
+    HISTOLOGY_SHADOW_TABLES.extend([
+        histology_ingest.ProbeTrajectoryTemp,
+        histology_ingest.ChannelBrainLocationTemp
+    ])
+
+
+if mode != 'public':
+    HISTOLOGY_TABLES_FOR_DELETE = [
+        histology.ProbeBrainRegionTemp,
+        histology.ClusterBrainRegionTemp,
+        histology.ChannelBrainLocationTemp,
+        histology.ProbeTrajectoryTemp,
+    ]
+else:
+    HISTOLOGY_TABLES_FOR_DELETE = []
+
 
 HISTOLOGY_TABLES_FOR_POPULATE = [
-    histology.ClusterBrainRegionTemp,
-    histology.ProbeBrainRegionTemp,
-    histology.DepthBrainRegionTemp,
     histology.ProbeTrajectory,
     histology.ChannelBrainLocation,
-    histology.ClusterBrainRegion
+    histology.ClusterBrainRegion,
+    histology_plotting.SubjectSpinningBrain,
+    histology_plotting.ProbeTrajectoryCoronal
 ]
+
+if mode != 'public':
+    HISTOLOGY_TABLES_FOR_POPULATE = [
+        histology.ClusterBrainRegionTemp,
+        histology.ProbeBrainRegionTemp,
+        histology.DepthBrainRegionTemp] + \
+            HISTOLOGY_TABLES_FOR_POPULATE
 
 
 def process_alyxraw_histology(
@@ -184,6 +202,20 @@ def main(fpath='/data/alyxfull.json'):
     copy_to_real_tables()
     print('Populating real tables...')
     populate_real_tables()
+
+
+def process_public(fpath='/data/alyxfull.json'):
+
+    from ibl_pipeline import public
+
+    print('Ingesting new alyxraw...')
+    process_alyxraw_histology(filename=fpath)
+    print('Populating new shadow...')
+    populate_shadow_tables()
+    print('Copying to real tables...')
+    copy_to_real_tables()
+    populate_real_tables()
+
 
 
 if __name__ == '__main__':

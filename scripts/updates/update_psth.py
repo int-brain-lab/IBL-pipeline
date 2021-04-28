@@ -6,9 +6,9 @@ from tqdm import tqdm
 
 if __name__ == '__main__':
 
-    dj.config['safemode'] = False
+    with dj.config(safemode=False):
 
-    for key in tqdm((ephys.Psth).fetch('KEY')):
-        (ephys.Psth & key).delete_quick()
-        ephys.Psth.populate(key, display_progress=True,
-                            suppress_errors=True)
+        for key in tqdm((ephys.Psth).fetch('KEY')):
+            (ephys.Psth & key).delete_quick()
+            ephys.Psth.populate(key, display_progress=True,
+                                suppress_errors=True)

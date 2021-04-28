@@ -11,24 +11,23 @@ alyxraw_update = dj.create_virtual_module(
 def insert_to_update_alyxraw(
         filename=None, delete_tables=False, models=None):
 
-    dj.config['safemode'] = False
+    with dj.config(safemode=False):
+        if not models:
+            raise ValueError('Argument models is required, \
+                str of an alyx model or a list of alyx models')
 
-    if not models:
-        raise ValueError('Argument models is required, \
-            str of an alyx model or a list of alyx models')
+        if delete_tables:
 
-    if delete_tables:
+            print('Deleting alyxraw update...')
+            alyxraw_update.AlyxRaw.Field.delete_quick()
+            alyxraw_update.AlyxRaw.delete_quick()
 
-        print('Deleting alyxraw update...')
-        alyxraw_update.AlyxRaw.Field.delete_quick()
-        alyxraw_update.AlyxRaw.delete_quick()
-
-    ingest_alyx_raw.insert_to_alyxraw(
-        ingest_alyx_raw.get_alyx_entries(
-            filename=filename,
-            models=models),
-        alyxraw_module=alyxraw_update
-    )
+        ingest_alyx_raw.insert_to_alyxraw(
+            ingest_alyx_raw.get_alyx_entries(
+                filename=filename,
+                models=models),
+            alyxraw_module=alyxraw_update
+        )
 
 
 def get_deleted_keys(model):
@@ -54,15 +53,15 @@ def get_updated_keys(model, fields=None):
 
 def delete_from_alyxraw(keys):
 
-    dj.config['safemode'] = False
+    with dj.config(safemode=False):
 
-    if len(keys) < 50:
-        (alyxraw.AlyxRaw.Field & keys).delete_quick()
-        (alyxraw.AlyxRaw & keys).delete()
-    else:
-        for key in tqdm(keys, position=0):
-            (alyxraw.AlyxRaw.Field & key).delete_quick()
-            (alyxraw.AlyxRaw & key).delete()
+        if len(keys) < 50:
+            (alyxraw.AlyxRaw.Field & keys).delete_quick()
+            (alyxraw.AlyxRaw & keys).delete()
+        else:
+            for key in tqdm(keys, position=0):
+                (alyxraw.AlyxRaw.Field & key).delete_quick()
+                (alyxraw.AlyxRaw & key).delete()
 
 
 if __name__ == '__main__':

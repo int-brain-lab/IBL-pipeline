@@ -16,8 +16,6 @@ from tqdm import tqdm
 
 if __name__ == '__main__':
 
-    dj.config['safemode'] = False
-
     kargs = dict(suppress_errors=True, display_progress=True)
 
     keys = [
@@ -123,33 +121,33 @@ if __name__ == '__main__':
 
     au_behavior = dj.create_virtual_module('au_behavior', 'user_anneurai_behavior')
 
+    with dj.config(safemode=False):
+        for key in tqdm(keys, position=0):
+            print('----------- Deleting AlignedTrialSpikes ---------')
+            (ephys.AlignedTrialSpikes & key).delete_quick()
 
-    for key in tqdm(keys, position=0):
-        print('----------- Deleting AlignedTrialSpikes ---------')
-        (ephys.AlignedTrialSpikes & key).delete_quick()
+            print('---- Deleting TrialSet downstream plotting tables ----')
+            (behavior_plotting.DateReactionTimeTrialNumber & key).delete_quick()
+            (behavior_plotting.DateReactionTimeContrast & key).delete_quick()
+            (behavior_plotting.DateReactionTimeContrast & key).delete_quick()
+            (behavior_plotting.DatePsychCurve & key).delete_quick()
+            (behavior_plotting.SessionReactionTimeTrialNumber & key).delete_quick()
+            (behavior_plotting.SessionReactionTimeContrast & key).delete_quick()
+            (behavior_plotting.SessionPsychCurve & key).delete_quick()
 
-        print('---- Deleting TrialSet downstream plotting tables ----')
-        (behavior_plotting.DateReactionTimeTrialNumber & key).delete_quick()
-        (behavior_plotting.DateReactionTimeContrast & key).delete_quick()
-        (behavior_plotting.DateReactionTimeContrast & key).delete_quick()
-        (behavior_plotting.DatePsychCurve & key).delete_quick()
-        (behavior_plotting.SessionReactionTimeTrialNumber & key).delete_quick()
-        (behavior_plotting.SessionReactionTimeContrast & key).delete_quick()
-        (behavior_plotting.SessionPsychCurve & key).delete_quick()
+            print('---- Deleting TrialSet downstream analyses tables ----')
+            (behavior_analyses.ReactionTimeContrastBlock & key).delete_quick()
+            (behavior_analyses.ReactionTime & key).delete_quick()
+            (behavior_analyses.BehavioralSummaryByDate & key).delete()
+            (behavior_analyses.SessionTrainingStatus & key).delete()
+            (behavior_analyses.PsychResultsBlock & key).delete_quick()
+            (behavior_analyses.PsychResults & key).delete_quick()
 
-        print('---- Deleting TrialSet downstream analyses tables ----')
-        (behavior_analyses.ReactionTimeContrastBlock & key).delete_quick()
-        (behavior_analyses.ReactionTime & key).delete_quick()
-        (behavior_analyses.BehavioralSummaryByDate & key).delete()
-        (behavior_analyses.SessionTrainingStatus & key).delete()
-        (behavior_analyses.PsychResultsBlock & key).delete_quick()
-        (behavior_analyses.PsychResults & key).delete_quick()
-
-        print('---- Deleting TrialSet main tables ----')
-        (behavior.AmbientSensorData & key).delete_quick()
-        (au_behavior.ChoiceHistory & key).delete_quick()
-        (behavior.TrialSet.Trial & key).delete_quick()
-        (behavior.TrialSet & key).delete_quick()
+            print('---- Deleting TrialSet main tables ----')
+            (behavior.AmbientSensorData & key).delete_quick()
+            (au_behavior.ChoiceHistory & key).delete_quick()
+            (behavior.TrialSet.Trial & key).delete_quick()
+            (behavior.TrialSet & key).delete_quick()
 
         print('----------- Populating TrialSet ------------')
         behavior.TrialSet.populate(key, **kargs)
