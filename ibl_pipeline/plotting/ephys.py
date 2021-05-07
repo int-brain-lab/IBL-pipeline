@@ -1549,7 +1549,7 @@ class Waveform(dj.Computed):
 
             fig = PngFigure(
                 eplt.template_waveform,
-                data=dict(waveforms=waveforms*1e6, coords=coords),
+                data=dict(waveforms=waveforms, coords=coords),
                 ax_kwargs=dict(as_background=True, return_lims=True),
                 dpi=100, figsize=[5.8, 4])
 
