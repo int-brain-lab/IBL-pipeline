@@ -43,12 +43,7 @@ SHADOW_TABLES = [
     subject.GenotypeTest,
     subject.Zygosity,
     action.ProcedureType,
-    action.Weighing,
-    action.WaterType,
-    action.WaterAdministration,
-    action.WaterRestriction,
     action.Surgery,
-    action.OtherAction,
     action.CullMethod,
     action.CullReason,
     action.Cull,
@@ -56,10 +51,18 @@ SHADOW_TABLES = [
     data.DataFormat,
     data.DataRepositoryType,
     data.DataRepository,
-    data.DataSetType,
-    # data.DataSet,
-    # data.FileRecord,
+    data.DataSetType
 ]
+
+if mode != 'public':
+    SHADOW_TABLES.extend([
+        action.Weighing,
+        action.WaterType,
+        action.WaterAdministration,
+        action.WaterRestriction,
+        action.OtherAction,
+    ])
+
 
 if mode != 'public':
     SHADOW_TABLES = SHADOW_TABLES + [

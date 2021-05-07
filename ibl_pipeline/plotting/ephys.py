@@ -1,5 +1,5 @@
 import datajoint as dj
-from .. import subject, acquisition, behavior, ephys, histology
+from .. import subject, acquisition
 from ..analyses import ephys as ephys_analyses
 from . import plotting_utils_ephys as putils
 from . import utils
@@ -11,21 +11,41 @@ import pandas as pd
 import plotly
 import plotly.graph_objs as go
 import json
-from os import path
+from os import path, environ
 from tqdm import tqdm
 import boto3
 import brainbox as bb
 from matplotlib.axes import Axes
 import seaborn as sns
 import colorlover as cl
-from oneibl.one import ONE
-one = ONE()
+
+
+mode = environ.get('MODE')
+
+if mode == 'public':
+    root_path = 'public'
+else:
+    root_path = ''
 
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_ephys')
 
-wheel = dj.create_virtual_module('wheel', 'group_shared_wheel')
+try:
+    wheel = dj.create_virtual_module('wheel', 'group_shared_wheel')
+except dj.DataJointError:
+    from ..group_shared import wheel
+
+try:
+    behavior = dj.create_virtual_module('behavior', 'ibl_behavior')
+except dj.DataJointError:
+    from .. import behavior
+
+try:
+    ephys = dj.create_virtual_module('ephys', 'ibl_ephys')
+except dj.DataJointError:
+    from .. import ephys
+
 
 # get external bucket
 store = dj.config['stores']['plotting']
@@ -444,6 +464,7 @@ class Raster(dj.Computed):
                 key['plot_contrast_tick_pos'] = [0]
 
         fig_link = path.join(
+            root_path,
             'raster',
             str(key['subject_uuid']),
             key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
@@ -912,6 +933,7 @@ class DepthRaster(dj.Computed):
         spikes_data = putils.prepare_spikes_data(key)
 
         link = path.join(
+            root_path,
             'depthraster_session',
             str(key['subject_uuid']),
             key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
@@ -1028,6 +1050,7 @@ class DepthRasterExampleTrial(dj.Computed):
         )
 
         fig_link = path.join(
+            root_path,
             'depthraster_session',
             str(key['subject_uuid']),
             key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
@@ -1216,6 +1239,7 @@ class DepthPeth(dj.Computed):
                              return_lims=True))
 
         fig_link = path.join(
+            root_path,
             'depthpeth_session',
             str(key['subject_uuid']),
             key['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
@@ -1325,6 +1349,7 @@ class SpikeAmpTime(dj.Computed):
                             dpi=100, figsize=[10, 5])
 
             fig_link = path.join(
+                root_path,
                 'raster',
                 str(ikey['subject_uuid']),
                 ikey['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
@@ -1554,6 +1579,7 @@ class Waveform(dj.Computed):
                 dpi=100, figsize=[5.8, 4])
 
             fig_link = path.join(
+                    root_path,
                     'waveform',
                     str(ikey['subject_uuid']),
                     ikey['session_start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
@@ -1571,29 +1597,3 @@ class Waveform(dj.Computed):
             fig.cleanup()
 
         self.insert(entries)
-
-
-@schema
-class SubjectSpinningBrain(dj.Imported):
-    definition = """
-    -> subject.Subject
-    ---
-    subject_spinning_brain_link    : varchar(255)
-    """
-    # only populate those subjects with resolved trajectories
-    key_source = subject.Subject & histology.ProbeTrajectory
-
-    def make(self, key):
-        subject_nickname = (subject.Subject & key).fetch1('subject_nickname')
-        trajs = one.alyx.rest('trajectories', 'list', subject=subject_nickname)
-
-        fig = GifFigure(
-            eplt.generate_spinning_brain_frames, trajs)
-
-        fig_link = path.join(
-            'subject_spinning_brain',
-            str(key['subject_uuid']) + '.gif'
-        )
-
-        fig.upload_to_s3(bucket, fig_link)
-        self.insert1(dict(**key, subject_spinning_brain_link=fig_link))

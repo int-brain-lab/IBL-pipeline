@@ -12,17 +12,22 @@ class PngFigure(Figure):
 
     def __init__(self, draw, data, ax_kwargs={},
                  dpi=50, frameon=False, figsize=[8, 6],
-                 transparent=False):
+                 transparent=False, axes_off=True):
 
         super().__init__(dpi=dpi, frameon=frameon, figsize=figsize)
         ax = Axes(self, [0., 0., 1., 1.])
-        ax.set_axis_off()
-        result = draw(**data, **ax_kwargs, ax=ax)
-        (ax, self.x_lim, self.y_lim) = result[0:3]
+        if axes_off:
+            ax.set_axis_off()
 
-        # for raster plot sorted with contrast, return contrast values and tick positions
-        if len(result) > 3:
-            self.other_returns = result[3:]
+        result = draw(**data, **ax_kwargs, ax=ax)
+
+        # if draw function only returns the axes
+        if isinstance(result, Axes):
+            ax = result
+        else:
+            (ax, self.x_lim, self.y_lim) = result[0:3]
+            if len(result) > 3:
+                self.other_returns = result[3:]
 
         self.add_axes(ax)
 
@@ -49,6 +54,9 @@ class PngFigure(Figure):
             source = 'data:image/png;base64, ' + self.encoded_string.decode()
         else:
             source = 'data:image/png;base64, '
+
+        if not (hasattr(self, 'x_lim') and hasattr(self, 'y_lim')):
+            raise AttributeError('Attributes x_lim or y_lim are not defined.')
 
         return dict(
             images=[dict(source=source,

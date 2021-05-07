@@ -19,7 +19,6 @@ logging.basicConfig(
     level=25)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 schema = dj.schema('group_shared_wheel')  # group_shared_wheel
 

@@ -163,19 +163,19 @@ class TrialSpikesLocal(dj.Computed):
 
 if __name__ == '__main__':
 
-    dj.config['safemode'] = False
+
     session = acquisition.Session & {'session_uuid': 'f8d5c8b0-b931-4151-b86c-c471e2e80e5d'}
     clusters = (ephys.DefaultCluster & session).fetch('KEY', limit=2)
     tables = [ephys.AlignedTrialSpikes, TrialSpikes, TrialSpikesExternal]
+    with dj.config(safemode=False):
+        for table in tables:
+            (table & clusters).delete()
+            start_time = time.time()
+            table.populate(clusters, display_progress=True, suppress_errors=True)
+            print('Populate time for {}: {}'.format(
+                table.__name__, time.time()-start_time))
 
-    for table in tables:
-        (table & clusters).delete()
-        start_time = time.time()
-        table.populate(clusters, display_progress=True, suppress_errors=True)
-        print('Populate time for {}: {}'.format(
-            table.__name__, time.time()-start_time))
-
-        start_time = time.time()
-        entries = (table & clusters).fetch()
-        print('Fetch time for {}: {}'.format(
-            table.__name__, time.time()-start_time))
+            start_time = time.time()
+            entries = (table & clusters).fetch()
+            print('Fetch time for {}: {}'.format(
+                table.__name__, time.time()-start_time))

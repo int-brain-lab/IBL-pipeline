@@ -25,11 +25,10 @@ def get_alyx_entries(filename=None, models=None,
     exclude_list = {'auth.group', 'sessions.session',
                     'authtoken.token',
                     'experiments.brainregion',
-                    'actions.notificationrule',
                     'misc.note',
                     'jobs.task',
                     'actions.notificationrule',
-                    'actions.notifications'
+                    'actions.notification'
                    }
     if exclude:
         exclude_list = exclude_list.union(set(exclude))
@@ -49,7 +48,6 @@ def get_alyx_entries(filename=None, models=None,
     elif isinstance(models, str):
         if new_pks:
             return [key for key in keys_all if key['model'] == models and key['pk'] in new_pks]
-
         else:
             return [key for key in keys_all if key['model'] == models]
     elif isinstance(models, list):

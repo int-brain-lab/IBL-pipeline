@@ -5,7 +5,7 @@ import sys
 from ibl_pipeline.ingest import QueryBuffer
 from ibl_pipeline.ingest import reference as reference_ingest
 from ibl_pipeline import reference
-from ingest_alyx_raw import get_alyx_entries
+from ibl_pipeline.process.ingest_alyx_raw import get_alyx_entries
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
