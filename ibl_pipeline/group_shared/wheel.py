@@ -190,7 +190,7 @@ class MovementTimes(dj.Computed):
             one = one or ONE()
             task_params = one.load_object(str(eid), '_iblrig_taskSettings.raw')
             min_qt = task_params['raw']['QUIESCENT_PERIOD']
-        except BaseException:
+        except Exception:
             logger.warning('failed to load min quiescent time')
             min_qt = None
 
@@ -198,12 +198,14 @@ class MovementTimes(dj.Computed):
         # closed-loop periods by taking the minimum of go_cue and stim_on, response and feedback.
         start = np.nanmin(np.c_[trial_data['trial_stim_on_time'], trial_data['trial_go_cue_time']], axis=1)
         end = np.nanmin(np.c_[trial_data['trial_response_time'], trial_data['trial_feedback_time']], axis=1)
-        assert np.all(start < end) and np.all(np.diff(start) > 0), 'timestamps not increasing'
-        go_trial = trial_data['trial_response_choice'] != 'No Go'
 
         # Check we have times for at least some trials
         nan_trial = np.isnan(np.c_[start, end]).any(axis=1)
         assert ~nan_trial.all(), 'no reliable trials times for session'
+
+        assert (((start < end) | nan_trial).all() and
+                (np.diff(start) > 0 | np.isnan(np.diff(start) > 0)).all()), 'timestamps not increasing'
+        go_trial = trial_data['trial_response_choice'] != 'No Go'
 
         # Rename data for the firstMovement_times extractor function
         wheel_move_data['intervals'] = np.c_[
