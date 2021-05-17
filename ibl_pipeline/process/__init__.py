@@ -1,10 +1,14 @@
 from ibl_pipeline.ingest import alyxraw, QueryBuffer
 from ibl_pipeline.utils import is_valid_uuid
 import datetime
+import pathlib
 from tqdm import tqdm
 
 
-def get_timezone(t=datetime.datetime.now().time()):
+def get_timezone(t=None):
+    if not t:
+        last_file = pathlib.Path('/data/alyxfull.json')
+        t = datetime.datetime.fromtimestamp(last_file.stat().st_mtime)
     if t < datetime.time(8, 30):
         timezone = 'European'
     elif t > datetime.time(8, 30) and t < datetime.time(10, 30):
