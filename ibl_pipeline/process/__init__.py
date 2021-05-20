@@ -8,7 +8,7 @@ from tqdm import tqdm
 def get_timezone(t=None):
     if not t:
         last_file = pathlib.Path('/data/alyxfull.json')
-        t = datetime.datetime.fromtimestamp(last_file.stat().st_mtime)
+        t = datetime.datetime.fromtimestamp(last_file.stat().st_mtime).time()
     if t < datetime.time(8, 30):
         timezone = 'European'
     elif t > datetime.time(8, 30) and t < datetime.time(10, 30):
