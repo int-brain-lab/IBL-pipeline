@@ -172,6 +172,15 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
             print(update_error_msg)
             continue
 
+        # if there are more than 1 record
+        elif len(shadow_table & r) > 1:
+            # delete the older record
+            ts_field = [f for f in shadow_table.heading.names if '_ts' in f][0]
+            lastest_record = dj.U().aggr(shadow_table & r, session_ts='max(session_ts)').fetch()
+
+            with dj.config(safemode=False):
+                ((shadow_table & r) - lastest_record).delete()
+
         shadow_record = (shadow_table & r).fetch1()
         real_record = (real_table & r).fetch1()
 
@@ -230,13 +239,12 @@ def update_entries_from_real_tables(modified_pks):
                                       insert_to_table=True)
 
 
-
 if __name__ == '__main__':
 
     with dj.config(safemode=False):
 
         deleted_pks, modified_pks, modified_pks_important = \
-            (job.Job & 'job_date="2020-09-04"').fetch1(
+            (job.Job & 'job_date="2021-05-18"' & 'job_timezone="European"').fetch1(
                 'deleted_pks', 'modified_pks', 'modified_pks_important')
 
         delete_entries_from_alyxraw(deleted_pks+modified_pks, modified_pks_important)

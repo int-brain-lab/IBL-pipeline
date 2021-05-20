@@ -34,8 +34,10 @@ if (access_key is None or secret_key is None) and len(S3Access.fetch()) > 0:
 
 
 if mode == 'public':
+    bucket = 'ibl-dj-external-public'
     root = '/public'
 else:
+    bucket = 'ibl-dj-external'
     root = ''
 
 dj.config['stores'] = {
@@ -44,7 +46,7 @@ dj.config['stores'] = {
         endpoint='s3.amazonaws.com',
         access_key=access_key,
         secret_key=secret_key,
-        bucket='ibl-dj-external',
+        bucket=bucket,
         location=root + '/ephys'
     ),
     'plotting': dict(
@@ -52,7 +54,7 @@ dj.config['stores'] = {
         endpoint='s3.amazonaws.com',
         access_key=access_key,
         secret_key=secret_key,
-        bucket='ibl-dj-external',
-        location=root +'/plotting'
+        bucket=bucket,
+        location=root + '/plotting'
     ),
 }

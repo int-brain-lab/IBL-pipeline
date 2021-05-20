@@ -38,8 +38,12 @@ RUN cd /src \
 	&& git clone https://github.com/cortex-lab/alyx.git \
 	&& cd alyx && pip install -r requirements.txt
 
+# alyx runtime env
+ENV PYTHONPATH=/src/alyx/alyx
+ENV DJANGO_SETTINGS_MODULE=alyx.settings
+
 EXPOSE 8000/tcp
 COPY ingest-entrypoint.sh /
 ENTRYPOINT ["/ingest-entrypoint.sh" ]
-CMD [ "run" ]
+CMD [ "www" ]
 
