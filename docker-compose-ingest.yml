@@ -35,11 +35,10 @@ services:
       - ./data:/data
       - ./root/.one_params:/home/dja/.one_params
     ports:
-      - "8888:8888"
+      - "9000:9000"
     networks:
       - ibl
     command: [ "dev" ]
 
 networks:
   ibl:
-

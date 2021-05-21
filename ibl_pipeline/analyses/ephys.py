@@ -38,7 +38,9 @@ class DepthPeth(dj.Computed):
     """
     key_source = ephys.ProbeInsertion * ephys.Event * \
         (TrialType & 'trial_type="Correct All"') & ephys.DefaultCluster & \
-        behavior.TrialSet & wheel.MovementTimes & 'event in ("stim on", "feedback", "movement")'
+        behavior.TrialSet & \
+        ['event in ("stim on", "feedback")',
+         dj.AndList([wheel.MovementTimes, 'event="movement"'])]
 
     def make(self, key):
 
