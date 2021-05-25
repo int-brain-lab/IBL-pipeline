@@ -348,15 +348,13 @@ def store_fig_external(fig, store_type, fig_dir):
                     raise
         fig.savefig(fig_dir, pad_inches=0)
     elif store_type == 's3':
-        access, secret = (ibl_pipeline.S3Access & 's3_id=1').fetch1(
-                'access_key', 'secret_key')
-
+        store = dj.config['stores']['plotting']
         s3 = boto3.resource(
             's3',
-            aws_access_key_id=access,
-            aws_secret_access_key=secret)
-        BUCKET_NAME = "ibl-dj-external"
-        bucket = s3.Bucket(BUCKET_NAME)
+            aws_access_key_id=store['access_key'],
+            aws_secret_access_key=store['secret_key'])
+
+        bucket = s3.Bucket(store['bucket'])
 
         # upload to s3
         img_data = io.BytesIO()

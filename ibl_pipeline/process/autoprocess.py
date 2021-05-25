@@ -47,8 +47,9 @@ def process_new(previous_dump=None, latest_dump=None,
     if latest_dump is None:
         latest_dump = path.join('/', 'data', 'alyxfull.json')
 
-    print('Comparing json dumps ...')
-    create_ingest_task.compare_json_dumps(previous_dump, latest_dump)
+    if not (job.Job & job_key):
+        print('Comparing json dumps ...')
+        create_ingest_task.compare_json_dumps(previous_dump, latest_dump)
 
     created_pks, modified_pks, deleted_pks, modified_pks_important = (
         job.Job & job_key).fetch1(
@@ -103,7 +104,6 @@ def process_new(previous_dump=None, latest_dump=None,
     populate_behavior.main(backtrack_days=30)
     ingest_status(job_key, 'Populate behavior', start,
                   end=datetime.datetime.now())
-
 
 
 def process_updates(pks, current_dump='/data/alyxfull.json'):

@@ -1,5 +1,6 @@
 # some unused files
 notebooks/notebooks_tutorial/202102_behavior_paper/one_data/*
+notebooks/notebooks_tutorial/202105_public_data_release/one_data/*
 rasters/*
 notebooks/.*
 notebooks/notebooks_plotting/*

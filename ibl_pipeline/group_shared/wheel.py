@@ -204,7 +204,7 @@ class MovementTimes(dj.Computed):
         assert ~nan_trial.all(), 'no reliable trials times for session'
 
         assert (((start < end) | nan_trial).all() and
-                (np.diff(start) > 0 | np.isnan(np.diff(start) > 0)).all()), 'timestamps not increasing'
+                ((np.diff(start) > 0) | np.isnan(np.diff(start))).all()), 'timestamps not increasing'
         go_trial = trial_data['trial_response_choice'] != 'No Go'
 
         # Rename data for the firstMovement_times extractor function
