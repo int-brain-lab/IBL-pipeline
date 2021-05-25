@@ -14,7 +14,7 @@ import json
 from os import path, environ
 from tqdm import tqdm
 import boto3
-import brainbox as bb
+from brainbox import population
 from matplotlib.axes import Axes
 import seaborn as sns
 import colorlover as cl
@@ -1448,7 +1448,7 @@ class AutoCorrelogram(dj.Computed):
         :type window_size: float
         Returns an `(winsize_samples,)` array with the auto-correlogram.
         """
-        xc = bb.population.xcorr(
+        xc = population.xcorr(
             spike_times, np.zeros_like(spike_times).astype('int'),
             bin_size=bin_size, window_size=window_size)
         return xc[0, 0, :]
