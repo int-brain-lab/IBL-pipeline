@@ -10,7 +10,13 @@ RUN pip3 install numpy pyvirtualdisplay vtk imageio && pip3 install mayavi
 # install an older version of pyqt5 to prevent crash
 RUN pip3 uninstall pyqt5
 RUN pip3 install pyqt5==5.14.2
+# taking care of the dependency issue
+RUN pip3 install 'cryptography<=3.3.2'
+RUN pip3 install 'decorator<5,>=4.3'
 # Clone the iblapps.git and set it up
 RUN git clone --branch develop https://github.com/int-brain-lab/iblapps.git && pip3 install -e ./iblapps
 ADD . /src/IBL-pipeline
 RUN pip3 install -e /src/IBL-pipeline
+# handle bug of ibllib 1.10.4
+RUN rm -rf /usr/local/lib/python3.8/dist-packages/brainbox/singlecell
+RUN rm -rf /usr/local/lib/python3.8/dist-packages/brainbox/processing

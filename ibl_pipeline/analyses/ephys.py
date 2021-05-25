@@ -2,7 +2,7 @@ import datajoint as dj
 from .. import behavior, ephys
 from datetime import datetime
 from tqdm import tqdm
-import brainbox as bb
+from brainbox import singlecell
 import numpy as np
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
@@ -55,8 +55,12 @@ class DepthPeth(dj.Computed):
              for (cluster_id, cluster_spk_depths) in zip(clusters_ids,
                                                          clusters_spk_depths)])
 
-        trials = (behavior.TrialSet.Trial * wheel.MovementTimes & key &
-                  'trial_feedback_type=1').fetch()
+        if key['event'] == 'movement':
+            q = behavior.TrialSet.Trial * wheel.MovementTimes & key & 'trial_feedback_type=1'
+        else:
+            q = behavior.TrialSet.Trial & key & 'trial_feedback_type=1'
+
+        trials = q.fetch()
 
         bin_size_depth = 80
         min_depth = np.nanmin(spikes_depths)
@@ -84,7 +88,7 @@ class DepthPeth(dj.Computed):
             spike_clusters = spikes_clusters[f]
             cluster_ids = np.unique(spike_clusters)
 
-            peths, binned_spikes = bb.singlecell.calculate_peths(
+            peths, binned_spikes = singlecell.calculate_peths(
                 spikes_ibin, spike_clusters, cluster_ids,
                 event_times, pre_time=0.3, post_time=1)
             if len(peths.means):

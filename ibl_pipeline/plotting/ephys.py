@@ -14,7 +14,7 @@ import json
 from os import path, environ
 from tqdm import tqdm
 import boto3
-import brainbox as bb
+from brainbox.population import population
 from matplotlib.axes import Axes
 import seaborn as sns
 import colorlover as cl
@@ -1448,7 +1448,7 @@ class AutoCorrelogram(dj.Computed):
         :type window_size: float
         Returns an `(winsize_samples,)` array with the auto-correlogram.
         """
-        xc = bb.population.xcorr(
+        xc = population.xcorr(
             spike_times, np.zeros_like(spike_times).astype('int'),
             bin_size=bin_size, window_size=window_size)
         return xc[0, 0, :]
@@ -1574,7 +1574,7 @@ class Waveform(dj.Computed):
 
             fig = PngFigure(
                 eplt.template_waveform,
-                data=dict(waveforms=waveforms*1e6, coords=coords),
+                data=dict(waveforms=waveforms, coords=coords),
                 ax_kwargs=dict(as_background=True, return_lims=True),
                 dpi=100, figsize=[5.8, 4])
 
