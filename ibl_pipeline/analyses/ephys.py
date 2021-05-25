@@ -55,7 +55,7 @@ class DepthPeth(dj.Computed):
              for (cluster_id, cluster_spk_depths) in zip(clusters_ids,
                                                          clusters_spk_depths)])
 
-        if key['event'] == 'wheel':
+        if key['event'] == 'movement':
             q = behavior.TrialSet.Trial * wheel.MovementTimes & key & 'trial_feedback_type=1'
         else:
             q = behavior.TrialSet.Trial & key & 'trial_feedback_type=1'
