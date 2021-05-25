@@ -14,7 +14,7 @@ import json
 from os import path, environ
 from tqdm import tqdm
 import boto3
-from brainbox import population
+from brainbox.population import population
 from matplotlib.axes import Axes
 import seaborn as sns
 import colorlover as cl
