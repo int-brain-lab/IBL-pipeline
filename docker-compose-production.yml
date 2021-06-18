@@ -12,12 +12,12 @@ services:
     environment:
       - QT_DEBUG_PLUGINS=1 # For debugging QT issues
     ports:
-      - 8888:8888
+      - 9200:9200
     working_dir: /src/IBL-pipeline
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     # If you want a note book then enable this along with the port block
-    command: bash -c  "jupyter notebook --ip 0.0.0.0 --no-browser --port=8888 --allow-root"
+    command: bash -c  "jupyter notebook --ip 0.0.0.0 --no-browser --port=9200 --allow-root"
     networks:
       - ibl-production
 networks:
