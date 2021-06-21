@@ -10,13 +10,16 @@ services:
       timeout: 5s
       retries: 60
       interval: 1s
+    volumes:
+      - /tmp/postgresql/data:/var/lib/postgresql/data
     networks:
-      - ibl
+      - ibl-dev
 
   datajoint-ingest:
     build:
       context: .
       dockerfile: Dockerfile.ingest
+    env_file: .env
     init: true
     depends_on:
       pg:
@@ -29,16 +32,18 @@ services:
       - ALYX_DL_USER=${ALYX_DL_USER?set ALYX_DL_USER in .env}
       - ALYX_DL_PASSWORD=${ALYX_DL_PASSWORD?set ALYX_DL_PASSWORD in .env}
     volumes:
-      - ./notebooks:/home/dja
+      - ./notebooks:/notebooks
       - ./images:/images
       - .:/src/IBL-pipeline
       - ./data:/data
-      - ./root/.one_params:/home/dja/.one_params
+      - ./root/.one_params:/root/.one_params
+      - /tmp/alyx_data:/tmp
     ports:
-      - "9000:9000"
+      - "8888:8888"
+      - "8889:8889"
     networks:
-      - ibl
-    command: [ "dev" ]
+      - ibl-dev
+    command: ["dev"]
 
 networks:
-  ibl:
+  ibl-dev:
