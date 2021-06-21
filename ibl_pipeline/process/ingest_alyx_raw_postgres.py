@@ -1,15 +1,10 @@
 '''
 This script loads the data from alyx postgres database and insert the entries into the alyxraw table.
 '''
-import json
-import logging
-import math
+import os, json, logging, math, datetime, re, django
 from ibl_pipeline.ingest import alyxraw, QueryBuffer
-import re
 from tqdm import tqdm
 import numpy as np
-import django
-
 
 django.setup()
 
@@ -21,7 +16,7 @@ logging.basicConfig(
     handlers=[
         logging.FileHandler("/src/IBL-pipeline/ibl_pipeline/process/logs/main_ingest.log"),
         logging.StreamHandler()],
-    level=25)
+    level=20)
 
 logger = logging.getLogger(__name__)
 
@@ -85,16 +80,33 @@ def get_tables_with_auto_datetime(tables=None):
             if 'auto_datetime' in get_field_names(t)])
 
 
-def insert_alyx_entries_model(alyx_model):
+def insert_alyx_entries_model(alyx_model, backtrack_days=None):
     """Insert alyx entries for a particular alyx model
 
     Args:
         alyx_model (django.model object): alyx model
     """
+    if backtrack_days:
+        # only ingest the latest data
+        date_cut = datetime.datetime.strptime(
+                os.getenv('ALYX_DL_DATE'), '%Y-%m-%d').date() - \
+            datetime.timedelta(days=3)
+        if alyx_model in get_tables_with_auto_datetime():
+            entries = alyx_model.objects.filter(
+                auto_datetime__date__gte=date_cut)
+        elif alyx_model == data.models.FileRecord:
+            entries = alyx_model.objects.filter(
+                dataset__auto_datetime__date__gte=date_cut, exists=True)
+        else:
+            entries = alyx_model.objects.all()
+    elif alyx_model == data.models.FileRecord:
+        entries = alyx_model.objects.filter(exists=True)
+    else:
+        entries = alyx_model.objects.all()
 
     # ingest into main table
     model_name = alyx_model._meta.db_table.replace('_', '.')
-    pk_list = alyx_model.objects.all().values_list('id', flat=True)
+    pk_list = entries.values_list('id', flat=True)
 
     alyxraw.AlyxRaw.insert(
         [dict(uuid=s, model=model_name) for s in pk_list],
@@ -102,7 +114,7 @@ def insert_alyx_entries_model(alyx_model):
 
     # ingest into part table
     ib_part = QueryBuffer(alyxraw.AlyxRaw.Field)
-    for r in tqdm(alyx_model.objects.all().values()):
+    for r in tqdm(entries.values()):
         try:
             field_entry = dict(uuid=r['id'])
             for field_name, field_value in r.items():
@@ -152,17 +164,16 @@ def insert_alyx_entries_model(alyx_model):
         except Exception as e:
             logger.info('Problematic entry {} of model {} with error {}'.format(
                 r['id'], model_name, str(e)))
-            continue
 
     if ib_part.flush_insert(skip_duplicates=True):
         logger.log(25, 'Inserted all remaining raw field tuples')
 
 
-def main():
+def main(backtrack_days=3):
 
     for t in TABLES_OF_INTEREST:
         logger.log(25, 'Processing table {}...'.format(t._meta.db_table))
-        insert_alyx_entries_model(t)
+        insert_alyx_entries_model(t, backtrack_days=backtrack_days)
 
 
 if __name__ == '__main__':
