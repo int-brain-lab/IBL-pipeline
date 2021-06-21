@@ -8,6 +8,7 @@ import numpy as np
 
 django.setup()
 
+# alyx models
 import misc, subjects, actions, data, experiments
 
 
