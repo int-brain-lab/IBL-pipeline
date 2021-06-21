@@ -11,12 +11,16 @@ django.setup()
 import misc, subjects, actions, data, experiments
 
 
+# logger does not work without this somehow
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
         logging.FileHandler("/src/IBL-pipeline/ibl_pipeline/process/logs/main_ingest.log"),
         logging.StreamHandler()],
-    level=20)
+    level=25)
 
 logger = logging.getLogger(__name__)
 
@@ -64,9 +68,6 @@ TABLES_OF_INTEREST = [
 ]
 
 
-logger = logging.getLogger(__name__)
-
-
 def get_field_names(alyx_model):
     return [field.name for field in alyx_model._meta.fields]
 
@@ -85,12 +86,13 @@ def insert_alyx_entries_model(alyx_model, backtrack_days=None):
 
     Args:
         alyx_model (django.model object): alyx model
+        backtrack_days (int, optional): number of days the data are within to backtrack and ingest.
     """
     if backtrack_days:
         # only ingest the latest data
         date_cut = datetime.datetime.strptime(
                 os.getenv('ALYX_DL_DATE'), '%Y-%m-%d').date() - \
-            datetime.timedelta(days=3)
+            datetime.timedelta(days=backtrack_days)
         if alyx_model in get_tables_with_auto_datetime():
             entries = alyx_model.objects.filter(
                 auto_datetime__date__gte=date_cut)
@@ -159,10 +161,10 @@ def insert_alyx_entries_model(alyx_model, backtrack_days=None):
                     ib_part.add_to_queue1(field_entry)
 
                 if ib_part.flush_insert(skip_duplicates=True, chunksz=10000):
-                    logger.info('Inserted 10000 raw field tuples')
+                    logger.log(25, 'Inserted 10000 raw field tuples')
 
         except Exception as e:
-            logger.info('Problematic entry {} of model {} with error {}'.format(
+            logger.log(25, 'Problematic entry {} of model {} with error {}'.format(
                 r['id'], model_name, str(e)))
 
     if ib_part.flush_insert(skip_duplicates=True):
@@ -172,7 +174,7 @@ def insert_alyx_entries_model(alyx_model, backtrack_days=None):
 def main(backtrack_days=3):
 
     for t in TABLES_OF_INTEREST:
-        logger.log(25, 'Processing table {}...'.format(t._meta.db_table))
+        logger.log(25, 'Ingesting alyx table {} into datajoint alyxraw...'.format(t._meta.db_table))
         insert_alyx_entries_model(t, backtrack_days=backtrack_days)
 
 
