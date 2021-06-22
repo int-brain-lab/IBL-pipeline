@@ -19,6 +19,7 @@ for handler in logging.root.handlers[:]:
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
+        # write info into both the log file and console
         logging.FileHandler("/src/IBL-pipeline/ibl_pipeline/process/logs/main_ingest.log"),
         logging.StreamHandler()],
     level=25)
@@ -150,8 +151,8 @@ def insert_alyx_entries_model(alyx_model, backtrack_days=None):
                     field_entry['value_idx'] = 0
                     field_entry['fvalue'] = 'None'
                     ib_part.add_to_queue1(field_entry)
-                elif type(field_value) is list and \
-                        (type(field_value[0]) is dict or type(field_value[0]) is str):
+                elif isinstance(field_value, list) and \
+                        (isinstance(field_value[0], dict) or isinstance(field_value[0], str)):
                     for value_idx, value in enumerate(field_value):
                         field_entry['value_idx'] = value_idx
                         field_entry['fvalue'] = str(value)
