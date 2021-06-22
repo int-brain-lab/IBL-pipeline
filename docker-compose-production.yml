@@ -1,0 +1,24 @@
+version: "2.2"  # optional since v1.27.0
+services:
+  production:
+    build:
+      context: .
+      dockerfile: Dockerfile.brain
+    env_file: .env
+    volumes:
+      - ./root/.one_params:/root/.one_params
+      - .:/src/IBL-pipeline
+      - ./data:/data
+    environment:
+      - QT_DEBUG_PLUGINS=1 # For debugging QT issues
+    ports:
+      - 9200:9200
+    working_dir: /src/IBL-pipeline
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    # If you want a note book then enable this along with the port block
+    command: bash -c  "jupyter notebook --ip 0.0.0.0 --no-browser --port=9200 --allow-root"
+    networks:
+      - ibl-production
+networks:
+  ibl-production:
