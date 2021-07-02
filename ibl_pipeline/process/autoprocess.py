@@ -34,7 +34,7 @@ def ingest_status(job_key, task, start, end):
 
 def process_new(previous_dump=None, latest_dump=None,
                 job_date=datetime.date.today().strftime('%Y-%m-%d'),
-                timezone='other'):
+                timezone='other', perform_updates=False):
 
     job_key = dict(
         job_date=job_date,
@@ -55,20 +55,21 @@ def process_new(previous_dump=None, latest_dump=None,
         job.Job & job_key).fetch1(
             'created_pks', 'modified_pks', 'deleted_pks', 'modified_pks_important')
 
-    print('Deleting modified entries from alyxraw and shadow tables...')
-    start = datetime.datetime.now()
+    if perform_updates:
+        print('Deleting modified entries from alyxraw and shadow tables...')
+        start = datetime.datetime.now()
 
-    delete_update_entries.delete_entries_from_alyxraw(
-        modified_pks, modified_pks_important)
+        delete_update_entries.delete_entries_from_alyxraw(
+            modified_pks, modified_pks_important)
 
-    ingest_status(job_key, 'Delete alyxraw', start, end=datetime.datetime.now())
+        ingest_status(job_key, 'Delete alyxraw', start, end=datetime.datetime.now())
 
-    print('Deleting modified entries from membership tables...')
-    start = datetime.datetime.now()
-    delete_update_entries.delete_entries_from_membership(
-        modified_pks_important)
-    ingest_status(job_key, 'Delete shadow membership', start,
-                  end=datetime.datetime.now())
+        print('Deleting modified entries from membership tables...')
+        start = datetime.datetime.now()
+        delete_update_entries.delete_entries_from_membership(
+            modified_pks_important)
+        ingest_status(job_key, 'Delete shadow membership', start,
+                    end=datetime.datetime.now())
 
     print('Ingesting into alyxraw...')
     start = datetime.datetime.now()
@@ -93,11 +94,12 @@ def process_new(previous_dump=None, latest_dump=None,
     ingest_real.main()
     ingest_status(job_key, 'Ingest real', start, end=datetime.datetime.now())
 
-    print('Updating fields...')
-    start = datetime.datetime.now()
-    delete_update_entries.update_entries_from_real_tables(
-        modified_pks_important)
-    ingest_status(job_key, 'Update fields', start, end=datetime.datetime.now())
+    if perform_updates:
+        print('Updating fields...')
+        start = datetime.datetime.now()
+        delete_update_entries.update_entries_from_real_tables(
+            modified_pks_important)
+        ingest_status(job_key, 'Update fields', start, end=datetime.datetime.now())
 
     print('Ingesting behavior...')
     start = datetime.datetime.now()
