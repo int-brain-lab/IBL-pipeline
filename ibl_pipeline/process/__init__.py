@@ -5,7 +5,7 @@ import pathlib
 from tqdm import tqdm
 
 
-def get_timestamp(t=None, filepath=None, filetype='json'):
+def get_timestamp(filepath=None, filetype='json'):
     if not filepath:
         if filetype == 'json':
             filepath = pathlib.Path('/data/alyxfull.json')
@@ -33,6 +33,10 @@ def get_timezone(t=None, filetype='json'):
     else:
         timezone = 'other'
     return timezone
+
+
+def get_date(filepath=None, filetype='json'):
+    return get_timestamp(filepath, filetype).date()
 
 
 def get_important_pks(pks, return_original_dict=False):
