@@ -5,10 +5,25 @@ import pathlib
 from tqdm import tqdm
 
 
-def get_timezone(t=None):
+def get_timestamp(t=None, filepath=None, filetype='json'):
+    if not filepath:
+        if filetype == 'json':
+            filepath = pathlib.Path('/data/alyxfull.json')
+        elif filetype == 'sql':
+            filepath = pathlib.Path('/tmp/dump.sql.gz')
+        else:
+            raise ValueError('Unknown filetype, has to be either json or sql')
+
+    return datetime.datetime.fromtimestamp(filepath.stat().st_mtime)
+
+
+def get_timezone(t=None, filetype='json'):
     if not t:
-        last_file = pathlib.Path('/data/alyxfull.json')
-        t = datetime.datetime.fromtimestamp(last_file.stat().st_mtime).time()
+        if not filetype:
+            raise ValueError('filetype is required if t is not specified')
+        else:
+            t = get_timestamp(filetype=filetype).time()
+
     if t < datetime.time(8, 30):
         timezone = 'European'
     elif t > datetime.time(8, 30) and t < datetime.time(10, 30):
