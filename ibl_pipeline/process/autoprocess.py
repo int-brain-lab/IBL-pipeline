@@ -34,7 +34,7 @@ def ingest_status(job_key, task, start, end):
 
 def process_new(previous_dump=None, latest_dump=None,
                 job_date=datetime.date.today().strftime('%Y-%m-%d'),
-                timezone='other', perform_updates=False):
+                timezone='other', perform_updates=True):
 
     job_key = dict(
         job_date=job_date,
