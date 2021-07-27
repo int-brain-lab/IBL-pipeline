@@ -4,18 +4,36 @@ from ibl_pipeline.process import (
     create_ingest_task,
     delete_update_entries,
     ingest_alyx_raw,
+    ingest_alyx_raw_postgres,
     ingest_membership,
     ingest_shadow,
     ingest_real,
     populate_behavior,
     get_timezone,
-    process_histology
+    get_date,
+    get_timestamp,
+    update_utils
 )
 from ibl_pipeline.ingest import job
 from os import path
 import datetime
-import time
+import logging
 from tqdm import tqdm
+
+
+# logger does not work without this somehow
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
+logging.basicConfig(
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        # write info into both the log file and console
+        logging.FileHandler("/src/IBL-pipeline/ibl_pipeline/process/logs/main_ingest.log"),
+        logging.StreamHandler()],
+    level=25)
+
+logger = logging.getLogger(__name__)
 
 
 def ingest_status(job_key, task, start, end):
@@ -48,7 +66,7 @@ def process_new(previous_dump=None, latest_dump=None,
         latest_dump = path.join('/', 'data', 'alyxfull.json')
 
     if not (job.Job & job_key):
-        print('Comparing json dumps ...')
+        logger.log(25, 'Comparing json dumps ...')
         create_ingest_task.compare_json_dumps(previous_dump, latest_dump)
 
     created_pks, modified_pks, deleted_pks, modified_pks_important = (
@@ -56,7 +74,7 @@ def process_new(previous_dump=None, latest_dump=None,
             'created_pks', 'modified_pks', 'deleted_pks', 'modified_pks_important')
 
     if perform_updates:
-        print('Deleting modified entries from alyxraw and shadow tables...')
+        logger.log(25, 'Deleting modified entries from alyxraw and shadow tables...')
         start = datetime.datetime.now()
 
         delete_update_entries.delete_entries_from_alyxraw(
@@ -64,44 +82,44 @@ def process_new(previous_dump=None, latest_dump=None,
 
         ingest_status(job_key, 'Delete alyxraw', start, end=datetime.datetime.now())
 
-        print('Deleting modified entries from membership tables...')
+        logger.log(25, 'Deleting modified entries from membership tables...')
         start = datetime.datetime.now()
         delete_update_entries.delete_entries_from_membership(
             modified_pks_important)
         ingest_status(job_key, 'Delete shadow membership', start,
-                    end=datetime.datetime.now())
+                      end=datetime.datetime.now())
 
-    print('Ingesting into alyxraw...')
+    logger.log(25, 'Ingesting into alyxraw...')
     start = datetime.datetime.now()
     ingest_alyx_raw.insert_to_alyxraw(
         ingest_alyx_raw.get_alyx_entries(
             latest_dump, new_pks=created_pks+modified_pks))
     ingest_status(job_key, 'Ingest alyxraw', start, end=datetime.datetime.now())
 
-    print('Ingesting into shadow tables...')
+    logger.log(25, 'Ingesting into shadow tables...')
     start = datetime.datetime.now()
     ingest_shadow.main(modified_pks=modified_pks_important)
     ingest_status(job_key, 'Ingest shadow', start, end=datetime.datetime.now())
 
-    print('Ingesting into shadow membership tables...')
+    logger.log(25, 'Ingesting into shadow membership tables...')
     start = datetime.datetime.now()
     ingest_membership.main(created_pks+modified_pks_important)
     ingest_status(job_key, 'Ingest shadow membership', start,
                   end=datetime.datetime.now())
 
-    print('Ingesting alyx real...')
+    logger.log(25, 'Ingesting alyx real...')
     start = datetime.datetime.now()
     ingest_real.main()
     ingest_status(job_key, 'Ingest real', start, end=datetime.datetime.now())
 
     if perform_updates:
-        print('Updating fields...')
+        logger.log(25, 'Updating fields...')
         start = datetime.datetime.now()
         delete_update_entries.update_entries_from_real_tables(
             modified_pks_important)
         ingest_status(job_key, 'Update fields', start, end=datetime.datetime.now())
 
-    print('Ingesting behavior...')
+    logger.log(25, 'Ingesting behavior...')
     start = datetime.datetime.now()
     populate_behavior.main(backtrack_days=30)
     ingest_status(job_key, 'Populate behavior', start,
@@ -114,29 +132,178 @@ def process_updates(pks, current_dump='/data/alyxfull.json'):
     :param pks: uuids where an update is needed
     :param current_dump: the latest
     '''
-    print('Deleting from alyxraw...')
+    logger.log(25, 'Deleting from alyxraw...')
     delete_update_entries.delete_entries_from_alyxraw(
         modified_pks_important=pks)
-    print('Deleting from shadow membership...')
+    logger.log(25, 'Deleting from shadow membership...')
     delete_update_entries.delete_entries_from_membership(pks)
 
-    print('Ingesting alyxraw...')
+    logger.log(25, 'Ingesting alyxraw...')
     ingest_alyx_raw.insert_to_alyxraw(
         ingest_alyx_raw.get_alyx_entries(
             current_dump, new_pks=pks))
 
-    print('Ingesting into shadow tables...')
+    logger.log(25, 'Ingesting into shadow tables...')
     ingest_shadow.main(excluded_tables=['DataSet', 'FileRecord'])
 
-    print('Ingesting into shadow membership tables...')
+    logger.log(25, 'Ingesting into shadow membership tables...')
     ingest_membership.main(pks)
 
-    print('Ingesting alyx real...')
+    logger.log(25, 'Ingesting alyx real...')
     ingest_real.main(excluded_tables=['DataSet', 'FileRecord'])
 
-    print('Updating field...')
+    logger.log(25, 'Updating field...')
     delete_update_entries.update_entries_from_real_tables(pks)
 
+
+# ============================== processes based on local alyx postgres instance ===================================
+
+    """
+    General flow for daily ingestion with updates
+    + create update_ibl_alyxraw from scratch
+    + compare f_values for certain alyx models between update_ibl_alyxraw and ibl_alyxraw,
+        get the keys that are updated and deleted, ingest or update entries in job.Job
+    + delete ibl_alyxraw and shawdow tables entries that are deleted and updated
+    + delete shadow membership entries that are deleted and updated
+    + ingest entries into ibl_alyxraw, shadow, and shadow membership tables
+    + update real tables by comparing with shadow and shadow membership tables
+    + populate behavior
+
+    General flow for daily ingestion without updates
+    + create job.Job entry without filling modified_pks_important
+    + ingest into alyxraw tables with alyx django model classes
+    + ingest into shadow tables with populate
+    + ingest into shadow tables with ingestion script
+    + populate behavior
+    """
+
+
+def get_created_modified_deleted_pks():
+    """compare tables AlyxRaw in schemas 'ibl_alyxraw' and 'update_alyxraw' to get
+    created_pks, modified_pks and deleted_pks
+
+    Returns:
+        created_pks [list]: list of uuids for newly created entries
+        modified_pks [list]: list of uuids for modified entries
+        delete_pks [list]: list of uuids for deleted entries
+    """
+
+    # check the existence of update schemas
+    schemas = dj.list_schemas()
+
+    update_schema_name = dj.config.get('database.prefix', '') + 'update_ibl_alyxraw'
+    if update_schema_name not in schemas:
+        raise RuntimeError('update_alyxraw was not created')
+    else:
+        update_alyxraw = dj.create_virtual_module('update_alyxraw', update_schema_name)
+        if not update_alyxraw.AlyxRaw():
+            raise RuntimeError('update AlyxRaw table is empty')
+
+    created_pks = []
+    modified_pks = []
+    deleted_pks = []
+
+    # all the models
+    for t in ingest_alyx_raw_postgres.TABLES_OF_INTEREST:
+        model_name = ingest_alyx_raw_postgres.get_alyx_model_name(t)
+        created_pks.extend(update_utils.get_created_keys(model_name))
+
+    # only models that need an update
+    for t in delete_update_entries.TABLES_TO_UPDATE:
+        model_name = ingest_alyx_raw_postgres.get_alyx_model_name(t['alyx_model'])
+        modified_pks.extend(update_utils.get_updated_keys(model_name))
+        deleted_pks.extend(update_utils.get_deleted_keys(model_name))
+
+    return created_pks, modified_pks, deleted_pks
+
+
+def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
+    """function that process daily ingestion routine based on alyx postgres instance set up with sql dump
+
+    Args:
+        sql_dump_path (str, optional): file path to the current sql dump. Defaults to '/tmp/dump.sql.gz'
+        perform_updates (bool, optional): whether to perform entry updates. Defaults to False.
+    """
+
+    # ingest into table job.Job
+
+    job_key = dict(job_date=get_date(sql_dump_path),
+                   job_timezone=get_timezone(sql_dump_path))
+
+    job_entry = dict(job_key, alyx_current_time_stamp=get_timestamp(sql_dump_path))
+
+    logger.log(25, 'Ingesting into update_ibl_alyxraw...')
+
+    ingest_alyx_raw_postgres.insert_to_update_alyxraw_postgres(
+        delete_update_tables_first=False)
+
+    # compare the same tables between update_ibl_alyxraw and ibl_alyxraw,
+    # get the created, modified, and deleted uuids
+    logger.log(25, 'Getting created, modified and deleted uuids...')
+    start = datetime.datetime.now()
+    created_pks, modified_pks, deleted_pks = get_created_modified_deleted_pks()
+    job.Job.insert1(
+        dict(job_entry,
+             create_pks=created_pks,
+             modified_pks_important=modified_pks,
+             deleted_pks=deleted_pks), replace=True)
+
+    ingest_status(job_key, 'Get created modified deleted pks', start, end=datetime.datetime.now())
+    logger.log(25, 'Job entry created!')
+
+    if perform_updates:
+        logger.log(25, 'Deleting modified and deleted entries from alyxraw and shadow tables ...')
+        start = datetime.datetime.now()
+        delete_update_entries.delete_entries_from_alyxraw(
+            [], modified_pks + deleted_pks)
+        ingest_status(job_key, 'Delete alyxraw', start, end=datetime.datetime.now())
+
+        logger.log(25, 'Deleting modified and deleted entries from shadow membership tables ...')
+        start = datetime.datetime.now()
+        delete_update_entries.delete_entries_from_membership(modified_pks + deleted_pks)
+        ingest_status(job_key, 'Delete shadow membership', start, end=datetime.datetime.now())
+
+    logger.log(25, 'Ingesting alyxraw...')
+    start = datetime.datetime.now()
+    ingest_alyx_raw_postgres.main()
+    ingest_status(job_key, 'Ingest alyxraw', start, end=datetime.datetime.now())
+
+    logger.log(25, 'Ingesting into shadow tables...')
+    start = datetime.datetime.now()
+    ingest_shadow.main()
+    ingest_status(job_key, 'Ingest shadow', start, end=datetime.datetime.now())
+
+    logger.log(25, 'Ingesting into shadow membership tables...')
+    start = datetime.datetime.now()
+    ingest_membership.main()
+    ingest_status(job_key, 'Ingest shadow membership', start, end=datetime.datetime.now())
+
+    logger.log(25, 'Ingesting alyx real...')
+    start = datetime.datetime.now()
+    ingest_real.main(excluded_tables=['DataSet', 'FileRecord'])
+    ingest_status(job_key, 'Ingest real', start, end=datetime.datetime.now())
+
+    if perform_updates:
+        logger.log(25, 'Updating field...')
+        start = datetime.datetime.now()
+        delete_update_entries.update_entries_from_real_tables()
+        ingest_status(job_key, 'Update fields', start, end=datetime.datetime.now())
+
+    logger.log(25, 'Populating behavior...')
+    start = datetime.datetime.now()
+    populate_behavior.main(backtrack_days=30)
+    ingest_status(job_key, 'Populate behavior', start,
+                  end=datetime.datetime.now())
+
+
+    """General flow for updates only (similar to procedures in process_histology and process_qc)
+    + create update_ibl_alyxraw from scratch
+    + compare f_values for certain alyx models between update_ibl_alyxraw and ibl_alyxraw, get the keys that are deleted and updated
+    + delete ibl_alyxraw and shawdow tables entries that are deleted and updated
+    + delete shadow membership entries that are deleted and updated
+    + ingest entries again into ibl_alyxraw, shadow, and shadow membership tables
+    + update real tables by comparing with shadow and shadow membership tables
+    """
 
 if __name__ == '__main__':
 
