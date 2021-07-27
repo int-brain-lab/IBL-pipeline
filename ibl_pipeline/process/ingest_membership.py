@@ -4,8 +4,6 @@ which cannot be inserted with auto-population.
 '''
 
 import datajoint as dj
-import json
-import uuid
 from tqdm import tqdm
 from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data, QueryBuffer
 from ibl_pipeline.ingest import get_raw_field as grf
@@ -208,7 +206,6 @@ def ingest_membership_table(dj_current_table,
 
     if type(dj_parent_fields) == str:
         dj_parent_fields = [dj_parent_fields]
-
 
     insert_buffer = QueryBuffer(dj_current_table)
 
