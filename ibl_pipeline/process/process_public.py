@@ -31,6 +31,12 @@ logging.basicConfig(
         logging.StreamHandler()],
     level=25)
 
+
+# logger does not work without this somehow
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -63,7 +69,7 @@ def ingest_uuid_into_public_tables(uuid_datapath):
 
     # public schema in the internal database
     public_schema_internal = dj.create_virtual_module('public_internal', 'ibl_public', connection=conn_internal)
-    public_schema_public = dj.create_virual_module('public_public', 'ibl_public', connection=conn_public)
+    public_schema_public = dj.create_virtual_module('public_public', 'ibl_public', connection=conn_public)
 
     # internal subject schema
     subject = dj.create_virtual_module('subject', 'ibl_subject', connection=conn_internal)
@@ -76,18 +82,20 @@ def ingest_uuid_into_public_tables(uuid_datapath):
         warnings.warn('subject_eids file does not exist')
     else:
         for f in subject_eid_files:
-            subject_uuids = np.load(f, allow_pickles=True)
+            subject_uuids = np.load(f, allow_pickle=True)
             # fetch subject information from subject.Subject table in internal database
-            subjects_to_release = (subject.Subject &
+            subjects_to_release = (subject.Subject * subject.SubjectLab &
                                    [{'subject_uuid': uuid} for uuid in subject_uuids]).proj(
                                        'lab_name', 'subject_nickname').fetch(as_dict=True)
             # ingest into internal PublicSubjectUuid
+            public_schema_internal.PublicSubject.insert(
+                subjects_to_release, skip_duplicates=True, ignore_extra_fields=True)
             public_schema_internal.PublicSubjectUuid.insert(
-                subjects_to_release, skip_duplicates=True)
+                subjects_to_release, skip_duplicates=True, allow_direct_insert=True)
 
             # ingest into public PublicSubjectUuid
             public_schema_public.PublicSubjectUuid.insert(
-                subjects_to_release, skip_duplicates=True)
+                subjects_to_release, skip_duplicates=True, allow_direct_insert=True)
 
     # ingest into public.PublicSession
     session_eid_files = list(Path(uuid_datapath).glob('*session_eids*'))
@@ -95,7 +103,7 @@ def ingest_uuid_into_public_tables(uuid_datapath):
         warnings.warn('session_eids file does not exist')
     else:
         for f in session_eid_files:
-            session_uuids = np.load(f, allow_pickles=True)
+            session_uuids = np.load(f, allow_pickle=True)
             # fetch session information from acquisition.Session table in the internal database
             sessions_to_release = (acquisition.Session &
                                    [{'session_uuid': uuid} for uuid in session_uuids]).proj(
@@ -114,7 +122,7 @@ def ingest_uuid_into_public_tables(uuid_datapath):
         warnings.warn('probe_insertion_eids file does not exist')
     else:
         for f in probe_insertion_eid_files:
-            probe_insertion_uuids = np.load(f, allow_pickles=True)
+            probe_insertion_uuids = np.load(f, allow_pickle=True)
             probe_insertions_to_release = [{'probe_insertion_uuid': uuid}
                                            for uuid in probe_insertion_uuids]
             # ingest into internal PublicProbeInsertion
@@ -172,9 +180,9 @@ def main(populate_only=False, populate_wheel=False, populate_ephys_histology=Fal
     """
 
     if not populate_only:
-        logger.log(25, 'Ingesting alyxraw...')
-        ingest_alyx_raw.insert_to_alyxraw(
-            ingest_alyx_raw.get_alyx_entries())
+        # logger.log(25, 'Ingesting alyxraw...')
+        # ingest_alyx_raw.insert_to_alyxraw(
+        #     ingest_alyx_raw.get_alyx_entries())
         logger.log(25, 'Ingesting shadow tables...')
         ingest_shadow.main()
         logger.log(25, 'Ingesting shadow membership...')
