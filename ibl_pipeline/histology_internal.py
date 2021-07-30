@@ -6,6 +6,13 @@ from tqdm import tqdm
 from ibllib.pipes.ephys_alignment import EphysAlignment
 import warnings
 from os import environ
+import warnings
+
+try:
+    from oneibl.one import ONE
+    one = ONE()
+except:
+    print('ONE not set up!')
 
 # avoid importing ONE when importing the ephys module if possible
 try:
@@ -76,6 +83,17 @@ class ChannelBrainLocationTemp(dj.Imported):
     """
     # this table rely on copying from the shadow table in ibl_pipeline.ingest.histology
 
+    @classmethod
+    def detect_outdated_entries(cls):
+        """Detect outdated entries by comparing with alyx
+
+        Returns:
+            list of str: list of channel_brain_location_uuids that are deleted from alyx
+        """
+        dj_uuids = [str(uuid) for uuid in cls.fetch('channel_brain_location_uuid')]
+        alyx_uuids = [c['id'] for c in one.alyx.rest('channels', 'list')]
+        return list(set(dj_uuids) - set(alyx_uuids))
+
 
 @schema
 class DepthBrainRegionTemp(dj.Computed):
@@ -145,7 +163,23 @@ class ClusterBrainRegionTemp(dj.Computed):
                 key['acronym'] = acronym[0]
                 self.insert1(key)
             else:
-                print('Conflict regions')
+                # check which one is in alyx
+                uuids = q.fetch('channel_brain_location_uuid')
+                channel_detected = 0
+                for uuid in uuids:
+                    channel = one.alyx.rest('channels', 'list', id=str(uuid))
+                    if channel:
+                        if channel_detected:
+                            warnings.warn('Duplicated Channel entries detected in alyx')
+                        else:
+                            ontology, acronym = (ChannelBrainLocationTemp & {'channel_brain_location_uuid': uuid}).fetch1('ontology', 'acronym')
+                            key['ontology'] = 'CCF 2017'
+                            key['acronym'] = acronym
+                            self.insert1(key)
+
+                        channel_detected = 1
+
+                warnings.warn('Detect duplicated channel brain location entries in table ChannelBrainLocationTemp')
         else:
             return
 

@@ -1,3 +1,9 @@
+'''
+This module process public data release to the public server.
+It should be run in the docker container set up with docker-compose-public.yml
+'''
+
+from os import get_blocking
 import datajoint as dj
 from ibl_pipeline.common import *
 from ibl_pipeline import public
@@ -13,7 +19,10 @@ from ibl_pipeline.process import (
     process_histology,
     populate_wheel
 )
-import logging
+import logging, warnings
+import numpy as np
+from pathlib import Path
+
 
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
@@ -23,6 +32,98 @@ logging.basicConfig(
     level=25)
 
 logger = logging.getLogger(__name__)
+
+
+def get_env_data_as_dict(env_path: str) -> dict:
+    with open(env_path, 'r') as f:
+        return dict(tuple(line.replace('\n', '').split('='))
+                    for line in f.readlines() if not line.startswith('#') and line != '\n')
+
+
+def ingest_uuid_into_public_tables(uuid_datapath):
+    """This function ingests uuids for subjects (public.PublicSubjectUuid),
+        sessions (public.PublicSession), and probe insertions (public.PublicProbeInsertion)
+        into public tables, in both internal and public databases
+
+    Args:
+        uuid_datapath (str): datapath storing uuids for subjects and sessions
+            ready for publishing, looking for files subject_eids, session_eids,
+            probeinsertion_eids. An example of uuid_datapath inside docker container:
+            /src/IBL-pipeline/public_data_release/202106_data_paper_ines
+    """
+
+    # set up connections for both internal and public databases
+    # credentials configured in .env_public
+    conn_public = dj.conn()
+
+    # load credentials for internal database instance
+    internal_env = get_env_data_as_dict('/src/IBL-pipeline/.env')
+    conn_internal = dj.conn(
+        internal_env['DJ_HOST'], internal_env['DJ_USER'], internal_env['DJ_PASS'])
+
+    # public schema in the internal database
+    public_schema_internal = dj.create_virtual_module('public_internal', 'ibl_public', connection=conn_internal)
+    public_schema_public = dj.create_virual_module('public_public', 'ibl_public', connection=conn_public)
+
+    # internal subject schema
+    subject = dj.create_virtual_module('subject', 'ibl_subject', connection=conn_internal)
+    # internal acquisition schema
+    acquisition = dj.create_virtual_module('acquisition', 'ibl_acquisition', connection=conn_internal)
+
+    # ingest into public.PublicSubjectUuid
+    subject_eid_files = list(Path(uuid_datapath).glob('*subject_eids*'))
+    if not subject_eid_files:
+        warnings.warn('subject_eids file does not exist')
+    else:
+        for f in subject_eid_files:
+            subject_uuids = np.load(f, allow_pickles=True)
+            # fetch subject information from subject.Subject table in internal database
+            subjects_to_release = (subject.Subject &
+                                   [{'subject_uuid': uuid} for uuid in subject_uuids]).proj(
+                                       'lab_name', 'subject_nickname').fetch(as_dict=True)
+            # ingest into internal PublicSubjectUuid
+            public_schema_internal.PublicSubjectUuid.insert(
+                subjects_to_release, skip_duplicates=True)
+
+            # ingest into public PublicSubjectUuid
+            public_schema_public.PublicSubjectUuid.insert(
+                subjects_to_release, skip_duplicates=True)
+
+    # ingest into public.PublicSession
+    session_eid_files = list(Path(uuid_datapath).glob('*session_eids*'))
+    if not session_eid_files:
+        warnings.warn('session_eids file does not exist')
+    else:
+        for f in session_eid_files:
+            session_uuids = np.load(f, allow_pickles=True)
+            # fetch session information from acquisition.Session table in the internal database
+            sessions_to_release = (acquisition.Session &
+                                   [{'session_uuid': uuid} for uuid in session_uuids]).proj(
+                                       'session_uuid').fetch(as_dict=True)
+            # ingest into internal PublicSession
+            public_schema_internal.PublicSession.insert(
+                sessions_to_release, skip_duplicates=True)
+
+            # ingest into public PublicSession
+            public_schema_public.PublicSession.insert(
+                sessions_to_release, skip_duplicates=True)
+
+    # ingest into public.PublicProbeInsertion
+    probe_insertion_eid_files = list(Path(uuid_datapath).glob('*probe_insertion_eids*'))
+    if not probe_insertion_eid_files:
+        warnings.warn('probe_insertion_eids file does not exist')
+    else:
+        for f in probe_insertion_eid_files:
+            probe_insertion_uuids = np.load(f, allow_pickles=True)
+            probe_insertions_to_release = [{'probe_insertion_uuid': uuid}
+                                           for uuid in probe_insertion_uuids]
+            # ingest into internal PublicProbeInsertion
+            public_schema_internal.PublicProbeInsertion.insert(
+               probe_insertions_to_release, skip_duplicates=True)
+
+            # ingest into public PublicProbeInsertion
+            public_schema_public.PublicProbeInsertion.insert(
+                probe_insertions_to_release, skip_duplicates=True)
 
 
 def delete_non_published_records():
@@ -59,7 +160,16 @@ def delete_non_published_records():
             (subject.Subject & key).delete()
 
 
-def main(populate_only=False):
+def main(populate_only=False, populate_wheel=False, populate_ephys_histology=False):
+    """This function process the all the steps to get data ingested into the public database, needs rewriting
+        to load data from sql dump instead.
+
+    Args:
+        populate_only (bool, optional): If True, only populate table; if False, start from the beginning
+            and load entries from alyx dump in the folder /data. Defaults to False.
+        populate_wheel (bool, optional): If True, populate wheel
+        populate_ephys_histology (bool, optional): If True, populate ephys and histology tables
+    """
 
     if not populate_only:
         logger.log(25, 'Ingesting alyxraw...')
@@ -78,11 +188,13 @@ def main(populate_only=False):
     logger.log(25, 'Processing behavior...')
     populate_behavior.main(backtrack_days=1000)
 
-    logger.log(25, 'Processing wheel...')
-    populate_wheel.main(backtrack_days=1000)
+    if populate_wheel:
+        logger.log(25, 'Processing wheel...')
+        populate_wheel.main(backtrack_days=1000)
 
-    # logger.log(25, 'Processing ephys...')
-    # populate_ephys.main()
+    if populate_ephys_histology:
+        logger.log(25, 'Processing ephys...')
+        populate_ephys.main()
 
-    # logger.log(25, 'Processing histology...')
-    # process_histology.populate_real_tables()
+        logger.log(25, 'Processing histology...')
+        process_histology.populate_real_tables()

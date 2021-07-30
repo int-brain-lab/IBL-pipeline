@@ -110,6 +110,16 @@ class CompleteTrialSession(dj.Computed):
                          "_ibl_trials.contrastLeft.npy",
                          "_ibl_trials.contrastRight.npy",
                          "_ibl_trials.probabilityLeft.npy"]
+    other_datasets = ["_ibl_trials.stimOn_times.npy",
+                      "_ibl_trials.repNum.npy",
+                      "_ibl_trials.repNum.npy",
+                      "_ibl_trials.included.npy",
+                      "_iblrig_ambientSensorData.raw.jsonable",
+                      "_ibl_trials.goCue_times.npy",
+                      "_ibl_trials.goCueTrigger_times.npy",
+                      "_ibl_trials.rewardVolume.npy",
+                      "_ibl_trials.itiDuration.npy"
+                      ]
 
     def make(self, key):
         datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
@@ -142,13 +152,12 @@ class CompleteTrialSession(dj.Computed):
                 else:
                     key['stim_on_times_status'] = 'Missing'
 
-
             if '_ibl_trials.repNum.npy' not in datasets:
                 key['rep_num_status'] = 'Missing'
             else:
                 key['rep_num_status'] = 'Complete'
 
-            if 'ibl_trials.included.npy' not in datasets:
+            if '_ibl_trials.included.npy' not in datasets:
                 key['included_status'] = 'Missing'
             else:
                 key['included_status'] = 'Complete'

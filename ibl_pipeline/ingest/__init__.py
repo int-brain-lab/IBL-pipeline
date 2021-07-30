@@ -158,12 +158,12 @@ class QueryBuffer(object):
         qlen = len(self._queue)
         if qlen > 0 and qlen % chunksz == 0:
             try:
-                self.fetched_results += (self._rel & self._queue).fetch(field)
+                self.fetched_results.extend((self._rel & self._queue).fetch(field))
             except Exception as e:
                 print('error in flush fetch: {}, trying fetch one by one'.format(e))
                 for t in self._queue:
                     try:
-                        self.fetched_results.append((self._rel & self.__queue).fetch1(field))
+                        self.fetched_results.append((self._rel & self._queue).fetch1(field))
                     except Exception as e:
                         print('error in flush fetch: {}'.format(e))
             self._queue.clear()
