@@ -235,7 +235,7 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
     logger.log(25, 'Ingesting into update_ibl_alyxraw...')
 
     ingest_alyx_raw_postgres.insert_to_update_alyxraw_postgres(
-        delete_update_tables_first=False)
+        delete_update_tables_first=True)
 
     # compare the same tables between update_ibl_alyxraw and ibl_alyxraw,
     # get the created, modified, and deleted uuids
