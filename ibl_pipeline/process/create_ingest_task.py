@@ -20,8 +20,8 @@ EXCLUDED_MODELS = {'auth.group', 'sessions.session',
 
 
 def get_modified_pks(data0, data1):
-    d0 = {_['pk']: json.dumps(_['fields'], sort_keys=True) for _ in data0}
-    d1 = {_['pk']: json.dumps(_['fields'], sort_keys=True) for _ in data1}
+    d0 = {_['pk']: json.dumps(_['fields'], sort_keys=True) for _ in data0 if _['model'] not in EXCLUDED_MODELS}
+    d1 = {_['pk']: json.dumps(_['fields'], sort_keys=True) for _ in data1 if _['model'] not in EXCLUDED_MODELS}
     d0 = {k: v for k, v in d0.items() if k in d1.keys()}
     d1 = {k: v for k, v in d1.items() if k in d0.keys()}
 
