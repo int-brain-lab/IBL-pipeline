@@ -43,7 +43,7 @@ services:
       - "8889:8889"
     networks:
       - ibl-dev
-    command: ["dev"]
+    command: ["www"]
 
 networks:
   ibl-dev:
