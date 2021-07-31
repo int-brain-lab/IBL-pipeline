@@ -10,8 +10,9 @@ from ibl_pipeline.process import (
     ingest_real,
     populate_behavior,
     get_timezone,
-    get_date,
-    get_timestamp,
+    get_file_timezone,
+    get_file_date,
+    get_file_timestamp,
     update_utils
 )
 from ibl_pipeline.ingest import job
@@ -227,10 +228,10 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
 
     # ingest into table job.Job
 
-    job_key = dict(job_date=get_date(sql_dump_path),
-                   job_timezone=get_timezone(sql_dump_path))
+    job_key = dict(job_date=get_file_date(sql_dump_path),
+                   job_timezone=get_file_timezone(sql_dump_path))
 
-    job_entry = dict(job_key, alyx_current_time_stamp=get_timestamp(sql_dump_path))
+    job_entry = dict(job_key, alyx_current_time_stamp=get_file_timestamp(sql_dump_path))
 
     logger.log(25, 'Ingesting into update_ibl_alyxraw...')
 
