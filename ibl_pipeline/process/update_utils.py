@@ -14,7 +14,7 @@ def get_created_keys(model):
     get keys that exist in update_ibl_alyxraw but not ibl_alyxraw
 
     Args:
-        model [str]: alyx model name in table alyxraw.AlyxRaw
+        model [str]: alyx model name in table alyxraw.AlyxRaw, e.g. subjects.subject
 
     Returns:
         created_pks [list]: list of created uuids, existing in update_ibl_alyxraw but not ibl_alyxraw

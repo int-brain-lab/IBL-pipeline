@@ -137,6 +137,7 @@ def insert_alyx_entries_model(
                 os.getenv('ALYX_DL_DATE'), '%Y-%m-%d').date() - \
             datetime.timedelta(days=backtrack_days)
         if alyx_model in get_tables_with_auto_datetime():
+            # actions.models.Session, data.models.Dataset, experiments.models.ProbeInsertion
             entries = alyx_model.objects.filter(
                 auto_datetime__date__gte=date_cut)
         elif alyx_model == data.models.FileRecord:
@@ -165,6 +166,8 @@ def insert_alyx_entries_model(
     field_names = get_field_names(alyx_model)
 
     for r in tqdm(entries):
+        # e.g. for table subjects.models.Subject, each r is a subject queryset
+        # for one subject
         try:
 
             for field_name in field_names:
@@ -200,8 +203,9 @@ def insert_alyx_entries_model(
                     field_entry['fvalue'] = emoji_pattern.sub(r'', field_value)
                     ib_part.add_to_queue1(field_entry)
 
-                elif (not isinstance(field_value, float) and not field_value) or \
-                        (isinstance(field_value, float) and math.isnan(field_value)):
+                # handle nones
+                elif (not isinstance(field_value, (float, int)) and not field_value) or \
+                        (isinstance(field_value, (float, int)) and math.isnan(field_value)):
                     field_entry['value_idx'] = 0
                     field_entry['fvalue'] = 'None'
                     ib_part.add_to_queue1(field_entry)
@@ -211,7 +215,8 @@ def insert_alyx_entries_model(
                     field_entry['fvalue'] = field_value
                     ib_part.add_to_queue1(field_entry)
 
-                elif isinstance(field_value, (bool, float, datetime.datetime)):
+                elif isinstance(field_value, (bool, float, int,
+                                              datetime.datetime, datetime.date)):
                     field_entry['value_idx'] = 0
                     field_entry['fvalue'] = str(field_value)
                     ib_part.add_to_queue1(field_entry)
