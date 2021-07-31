@@ -5,7 +5,7 @@ import pathlib
 from tqdm import tqdm
 
 
-def get_timestamp(filepath=None, filetype='json'):
+def get_file_timestamp(filepath=None, filetype='json'):
     if not filepath:
         if filetype == 'json':
             filepath = pathlib.Path('/data/alyxfull.json')
@@ -13,6 +13,8 @@ def get_timestamp(filepath=None, filetype='json'):
             filepath = pathlib.Path('/tmp/dump.sql.gz')
         else:
             raise ValueError('Unknown filetype, has to be either json or sql')
+    else:
+        filepath = pathlib.Path(filepath)
 
     return datetime.datetime.fromtimestamp(filepath.stat().st_mtime)
 
@@ -22,7 +24,7 @@ def get_timezone(t=None, filetype='json'):
         if not filetype:
             raise ValueError('filetype is required if t is not specified')
         else:
-            t = get_timestamp(filetype=filetype).time()
+            t = get_file_timestamp(filetype=filetype).time()
 
     if t < datetime.time(8, 30):
         timezone = 'European'
@@ -35,8 +37,12 @@ def get_timezone(t=None, filetype='json'):
     return timezone
 
 
-def get_date(filepath=None, filetype='json'):
-    return get_timestamp(filepath, filetype).date()
+def get_file_date(filepath=None, filetype='json'):
+    return get_file_timestamp(filepath, filetype).date()
+
+
+def get_file_timezone(filepath=None, filetype='json'):
+    return get_timezone(get_file_timestamp(filepath, filetype).time())
 
 
 def get_important_pks(pks, return_original_dict=False):
