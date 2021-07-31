@@ -1,7 +1,7 @@
 #! /bin/sh
 
 # ingest entrypoint script
-# ======================== 
+# ========================
 
 # globals
 # -------
@@ -73,7 +73,7 @@ alyxcfg() {
 	echo '# => configuring alyx'
 
 	if [ ! -f "$sucreated" ]; then
-	
+
 		echo '# ==> configuring settings_secret.py'
 
 		# custom settings_secret for multiple DBs
@@ -108,35 +108,35 @@ alyxcfg() {
 		        'PORT': '5432',
 		    }
 		}
-		
+
 		EMAIL_HOST = 'mail.superserver.net'
 		EMAIL_HOST_USER = 'alyx@awesomedomain.org'
 		EMAIL_HOST_PASSWORD = 'UnbreakablePassword'
 		EMAIL_PORT = 587
 		EMAIL_USE_TLS = True
-		
+
 EOF
-	
+
 		echo '# ==> creating alyx superuser'
-	
+
 		/src/alyx/alyx/manage.py createsuperuser \
 			--no-input \
 			--username admin \
 			--email admin@localhost
-	
+
 		echo '# ==> setting alyx superuser password'
-	
-		# note on superuser create: 
+
+		# note on superuser create:
 		#
 		# - no-input 'createsuperuser' creates without password
 		# - cant set password from cli here or in setpassword command
 		# - so script reset via manage.py shell
-		# - see also: 
+		# - see also:
 		#   https://stackoverflow.com/questions/6358030/\
 		#     how-to-reset-django-admin-password
-	
+
 		/src/alyx/alyx/manage.py shell <<-EOF
-	
+
 		from django.contrib.auth import get_user_model
 		User = get_user_model()
 		admin = User.objects.get(username='admin')
@@ -173,15 +173,15 @@ alyxstart() {
 renamedb() {
 	echo "# => renaming databases:";
 
-	echo "# ==> ... dropping alyx_old"; 
+	echo "# ==> ... dropping alyx_old";
 	dropdb alyx_old || err_exit "couldn't drop alyx_old";
 
-	echo "# ==> ... renaming alyx to alyx_old"; 
+	echo "# ==> ... renaming alyx to alyx_old";
 	psql -c 'alter database alyx rename to alyx_old;' \
 			> /dev/null \
 		|| err_exit "couldn't rename alyx to alyx_old";
 
-	echo "# ==> ... creating new alyx"; 
+	echo "# ==> ... creating new alyx";
 	createdb alyx || err_exit "couldn't rename alyx to alyx_old";
 
 	rm -f ${dbloaded};
@@ -204,9 +204,9 @@ init() {
 }
 
 
-# www 
+# www
 # ---
-# initialize environment and run alyx web 
+# initialize environment and run alyx web
 
 www() {
 	init;
@@ -219,8 +219,9 @@ www() {
 
 dev() {
 	init;
+	echo "starting dev env...";
 	exec tail -f /dev/null;
-} 
+}
 
 # _start:
 
@@ -239,4 +240,3 @@ case "$1" in
 		echo "usage: `basename $0` [fetchdump|mkdb|loaddb|alyxcfg|alyxprep|alyxstart|renamedb|www|dev|sh]";;
 	*) ;; # ... sourceable
 esac
-
