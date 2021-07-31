@@ -111,6 +111,7 @@ class DataSet(dj.Manual):
         for uuid in tqdm(uuids):
 
             for dataset_name in tqdm(dataset_names):
+
                 try:
                     dataset = one.alyx.rest('datasets', 'list', session=uuid, name=dataset_name)
                     if not dataset:
@@ -124,7 +125,7 @@ class DataSet(dj.Manual):
                         dataset_name=dataset_name,
                         dataset_uuid=dataset['hash'],
                         dataset_created_by=dataset['created_by'],
-                        dataset_type_name=dataset['dataset_type'],
+                        dataset_type_name='_ibl_' + dataset['dataset_type'],
                         format_name=dataset['data_format'],
                         created_datetime=dataset['created_datetime'],
                         file_size=dataset['file_size'])
