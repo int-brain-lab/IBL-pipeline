@@ -11,6 +11,6 @@ setup(
     author='Vathes',
     author_email='support@vathes.com',
     packages=find_packages(exclude=[]),
-    install_requires=['datajoint~=0.12', 'ibllib>=1.4.11', 'numpy>=1.18.1', 'seaborn>=0.10.0', 'globus_sdk', 'boto3', 'colorlover', 'scikits.bootstrap', 'statsmodels>=0.10.1', 'plotly>=4.1.0'],
+    install_requires=['datajoint==0.12.9', 'ibllib>=1.4.11', 'numpy>=1.18.1', 'seaborn>=0.10.0', 'globus_sdk', 'boto3', 'colorlover', 'scikits.bootstrap', 'statsmodels>=0.10.1', 'plotly>=4.1.0'],
     scripts=['scripts/ibl-shell.py'],
 )
