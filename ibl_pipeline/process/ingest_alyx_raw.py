@@ -149,6 +149,36 @@ def insert_to_alyxraw(
             logger.debug('Inserted all remaining raw field tuples')
 
 
+def insert_to_update_alyxraw(
+        models, filename=None, delete_tables=False):
+    """Ingest data to alyxraw datajoint tables, json dump based
+
+    Args:
+        models (str or list of str): alyx model names, str or a list of str.
+        filename (str, optional): filename of alyx json dump. Defaults to None.
+        delete_tables (bool, optional): whether to delete the update module alyx raw tables first. Defaults to False.
+    """
+
+    alyxraw_update = dj.create_virtual_module(
+        'alyxraw', dj.config.get('database.prefix', '') + 'update_ibl_alyxraw',
+        create_schema=True)
+
+    with dj.config(safemode=False):
+
+        if delete_tables:
+
+            print('Deleting alyxraw update...')
+            alyxraw_update.AlyxRaw.Field.delete_quick()
+            alyxraw_update.AlyxRaw.delete_quick()
+
+    insert_to_alyxraw(
+        get_alyx_entries(
+            filename=filename,
+            models=models),
+        alyxraw_module=alyxraw_update
+    )
+
+
 if __name__ == '__main__':
 
     if len(sys.argv) < 2:  # no arguments given

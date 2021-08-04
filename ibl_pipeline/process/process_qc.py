@@ -2,7 +2,7 @@ from ibl_pipeline.process import update_utils, ingest_alyx_raw
 from ibl_pipeline.ingest import alyxraw
 from ibl_pipeline import acquisition, ephys, qc
 from ibl_pipeline.ingest import qc as qc_ingest
-from ibl_pipeline.process.ingest_real import copy_table
+
 import logging
 
 logging.basicConfig(
@@ -92,9 +92,8 @@ def main(fpath='/data/alyxfull.json'):
     alyx_models = list(qc_update_models.keys())
 
     logger.log(25, 'Insert to update alyxraw...')
-    update_utils.insert_to_update_alyxraw(
-        filename=fpath, delete_tables=True,
-        models=alyx_models)
+    ingest_alyx_raw.insert_to_update_alyxraw(
+        models=alyx_models, filename=fpath, delete_tables=True)
 
     logger.log(25, 'Deleting updated entries...')
 

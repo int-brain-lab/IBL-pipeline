@@ -1,3 +1,6 @@
+'''
+Production docker compose file
+'''
 version: "2.2"  # optional since v1.27.0
 services:
   production:
