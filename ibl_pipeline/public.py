@@ -26,8 +26,8 @@ class PublicSubject(dj.Manual):
     lab_name            : varchar(32)
     subject_nickname    : varchar(32)
     ---
-    session_start_date  : date
-    session_end_date    : date
+    session_start_date=null  : date
+    session_end_date=null    : date
     """
 
 

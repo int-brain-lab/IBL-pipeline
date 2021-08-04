@@ -187,9 +187,9 @@ def populate_real_tables():
 def main(fpath='/data/alyxfull.json'):
 
     print('Insert to update alyxraw...')
-    update_utils.insert_to_update_alyxraw(
-        filename=fpath, delete_tables=True,
-        models=['experiments.trajectoryestimate', 'experiments.channel'])
+    ingest_alyx_raw.insert_to_update_alyxraw(
+        models=['experiments.trajectoryestimate', 'experiments.channel'],
+        filename=fpath, delete_tables=True)
     print('Deleting from alyx and shadow...')
     delete_histology_alyx_shadow()
     print('Ingesting new alyxraw...')

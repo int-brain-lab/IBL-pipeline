@@ -2,7 +2,7 @@
 This script ingest behavioral data into tables in the ibl_behavior schema
 '''
 import datajoint as dj
-from ibl_pipeline import behavior
+from ibl_pipeline import acquisition, data, behavior
 from ibl_pipeline.analyses import behavior as behavior_analyses
 from ibl_pipeline.plotting import behavior as behavior_plotting
 
@@ -151,6 +151,18 @@ def main(backtrack_days=30, excluded_tables=[]):
         date_cutoff = \
             (datetime.datetime.now().date() -
              datetime.timedelta(days=backtrack_days)).strftime('%Y-%m-%d')
+
+    # ingest those dataset and file records where exists=False when json gets dumped
+    # only check those sessions where required datasets are missing.
+    # populate CompleteTrialSession first with existing file records
+    behavior.CompleteTrialSession.populate(f'session_start_time > "{date_cutoff}"', **kwargs)
+    sessions_missing = (acquisition.Session - behavior.CompleteTrialSession) & \
+            f'session_start_time > "{(datetime.datetime.now().date() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")}"'
+
+    uuids = [str(u) for u in sessions_missing.fetch('session_uuid')]
+
+    data.DataSet.insert_with_alyx_rest(
+        uuids, behavior.CompleteTrialSession.required_datasets + behavior.CompleteTrialSession.other_datasets)
 
     for table in BEHAVIOR_TABLES:
 

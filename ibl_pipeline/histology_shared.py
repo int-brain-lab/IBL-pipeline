@@ -227,7 +227,7 @@ class ClusterBrainRegion(dj.Imported):
                 )
             )
 
-        self.insert(cluster_entries)
+        self.insert(cluster_entries, skip_duplicates=True)
 
 
 @schema
@@ -257,8 +257,8 @@ class DepthBrainRegion(dj.Computed):
     # For each ProbeTrajectory, assign depth boundaries relative to the probe tip to each brain region covered by the trajectory
     -> ProbeTrajectory
     ---
-    region_boundaries   : blob
-    region_label        : blob
+    region_boundaries   : blob  # 2d numpy array for depths of the boundaries [[20, 40], [40, 60], [60, 120]]
+    region_label        : blob  # ['VISa', 'LGN' ...]
     region_color        : blob
     region_id           : blob
     """

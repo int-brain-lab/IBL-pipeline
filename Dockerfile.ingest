@@ -21,18 +21,20 @@ RUN apt-get update && apt-get install -y wget\
     && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 RUN apt-get update && apt-get -y install postgresql-client-13
 
+# install alyx
 RUN cd /src \
 	&& git clone https://github.com/cortex-lab/alyx.git \
 	&& cd alyx && pip3 install -r requirements.txt
+
+# alyx runtime env
+ENV PYTHONPATH=/src/alyx/alyx
+ENV DJANGO_SETTINGS_MODULE=alyx.settings
 
 # Clone the iblapps.git and set it up
 RUN git clone --branch develop https://github.com/int-brain-lab/iblapps.git && pip3 install -e ./iblapps
 ADD . /src/IBL-pipeline
 RUN pip3 install -e /src/IBL-pipeline
 
-# alyx runtime env
-ENV PYTHONPATH=/src/alyx/alyx
-ENV DJANGO_SETTINGS_MODULE=alyx.settings
 
 EXPOSE 8888/tcp
 COPY ingest-entrypoint.sh /

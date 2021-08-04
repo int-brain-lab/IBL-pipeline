@@ -10,10 +10,30 @@ from ibl_pipeline.ingest import ingest_utils
 from ibl_pipeline import update
 from uuid import UUID
 from tqdm import tqdm
-import pdb
 from ibl_pipeline.utils import is_valid_uuid
 from ibl_pipeline.process import get_important_pks
-import datetime
+
+import datetime, django, logging
+
+django.setup()
+
+# alyx models
+import subjects, actions
+
+
+# logger does not work without this somehow
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
+logging.basicConfig(
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        # write info into both the log file and console
+        logging.FileHandler("/src/IBL-pipeline/ibl_pipeline/process/logs/main_ingest.log"),
+        logging.StreamHandler()],
+    level=25)
+
+logger = logging.getLogger(__name__)
 
 
 # ====================================== functions for deletion ==================================
@@ -21,12 +41,13 @@ import datetime
 def delete_entries_from_alyxraw(pks_to_be_deleted=[], modified_pks_important=[]):
 
     '''
-    Delete entries from alyxraw and shadow membership_tables, excluding the membership table.
+    Delete entries from alyxraw and shadow tables, excluding the membership table.
     '''
 
-    print('Deleting alyxraw entries corresponding to file records...')
-
     if pks_to_be_deleted:
+
+        logger.log(25, 'Deleting alyxraw entries corresponding to file records...')
+
         if len(pks_to_be_deleted) > 5000:
             file_record_fields = alyxraw.AlyxRaw.Field & \
                 'fname = "exists"' & 'fvalue = "false"'
@@ -38,12 +59,14 @@ def delete_entries_from_alyxraw(pks_to_be_deleted=[], modified_pks_important=[])
         for key in tqdm(file_record_fields):
             (alyxraw.AlyxRaw.Field & key).delete_quick()
 
+    logger.log(25, 'Deleting modified entries...')
+
     if modified_pks_important:
         pk_list = [{'uuid': pk} for pk in modified_pks_important
                    if is_valid_uuid(pk)]
         if len(pk_list) > 1000:
 
-            print('Long pk list, deleting from alyxraw.AlyxRaw ...')
+            logger.log(25, 'Long pk list, deleting from alyxraw.AlyxRaw using QueryBuffer ...')
             alyxraw_buffer = QueryBuffer(alyxraw.AlyxRaw & 'model != "actions.session"')
             for pk in tqdm(pk_list):
                 alyxraw_buffer.add_to_queue1(pk)
@@ -53,7 +76,7 @@ def delete_entries_from_alyxraw(pks_to_be_deleted=[], modified_pks_important=[])
 
             # Delete session fields without deleting the AlyxRaw entries and start time field.
             # This is to handle the case where uuid is not changed but start time changed for 1 sec.
-            print('Long pk list, deleting from alyxraw.AlyxRaw.Field ...')
+            logger.log(25, 'Long pk list, deleting from alyxraw.AlyxRaw.Field ...')
             alyxraw_field_buffer = QueryBuffer(
                 alyxraw.AlyxRaw.Field & 'fname!="start_time"' &
                 (alyxraw.AlyxRaw & 'model="actions.session"'))
@@ -74,7 +97,7 @@ def delete_entries_from_membership(pks_to_be_deleted):
 
         mem_table_name = t['dj_current_table'].__name__
 
-        print(f'Deleting from table {mem_table_name} ...')
+        logger.log(25, f'Deleting from membership table {mem_table_name} ...')
         real_table = eval(ingest_mod.replace('ibl_pipeline.ingest.', '') + '.' + table_name)
         with dj.config(safemode=False):
             (t['dj_current_table'] &
@@ -83,47 +106,53 @@ def delete_entries_from_membership(pks_to_be_deleted):
               for pk in pks_to_be_deleted if is_valid_uuid(pk)]).fetch('KEY')).delete()
 
 
-# =================================== functions for update ==========================================
-
 TABLES_TO_UPDATE = [
     {
         'real_schema': reference,
         'shadow_schema': reference_ingest,
-        'table_name': 'Project',
-        'members': []
+        'table_name': 'Project',        # datajoint table name
+        'members': [],
+        'alyx_model': subjects.models.Project,
     },
     {
         'real_schema': subject,
         'shadow_schema': subject_ingest,
         'table_name': 'Subject',
-        'members': ['SubjectLab', 'SubjectUser', 'SubjectProject', 'Death']
+        'members': ['SubjectLab', 'SubjectUser', 'SubjectProject', 'Death'],
+        'alyx_model': subjects.models.Subject
     },
     {
         'real_schema': action,
         'shadow_schema': action_ingest,
         'table_name': 'Weighing',
-        'members': []
+        'members': [],
+        'alyx_model': actions.models.Weighing
     },
     {
         'real_schema': action,
         'shadow_schema': action_ingest,
         'table_name': 'WaterRestriction',
-        'members': []
+        'members': [],
+        'alyx_model': actions.models.WaterRestriction
     },
     {
         'real_schema': action,
         'shadow_schema': action_ingest,
         'table_name': 'WaterAdministration',
-        'members': []
+        'members': [],
+        'alyx_model': actions.models.WaterAdministration
     },
     {
         'real_schema': acquisition,
         'shadow_schema': acquisition_ingest,
         'table_name': 'Session',
-        'members': ['SessionUser', 'SessionProject']
+        'members': ['SessionUser', 'SessionProject'],
+        'alyx_model': actions.models.Session
     }
 ]
 
+
+# =================================== functions for update ==========================================
 
 def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=False):
     '''
@@ -169,7 +198,7 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
                 )
                 update.UpdateError.insert1(update_record_error)
 
-            print(update_error_msg)
+            logger.log(25, f'Error updating entry: {update_error_msg}')
             continue
 
         # if there are more than 1 record
@@ -189,7 +218,6 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
                 try:
                     (real_table & r)._update(f, shadow_record[f])
                     update_narrative = f'{table_name}.{f}: {shadow_record[f]} != {real_record[f]}'
-                    print(update_narrative)
                     if insert_to_table:
                         update_record = dict(
                             table=real_table.__module__ + '.' + real_table.__name__,
@@ -205,14 +233,14 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
                         update.UpdateRecord.insert1(update_record)
 
                 except BaseException as e:
-                    print(f'Error while updating record {r}: {str(e)}')
+                    logger.log(25, f'Error while updating record {r}: {str(e)}')
 
 
 def update_entries_from_real_tables(modified_pks):
 
     for table in TABLES_TO_UPDATE:
 
-        print('Updating {}...'.format(table['table_name']))
+        logger.log(25, 'Updating {}...'.format(table['table_name']))
         t = table.copy()
         table = getattr(t['real_schema'], t['table_name'])
 

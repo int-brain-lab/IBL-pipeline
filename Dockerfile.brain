@@ -17,6 +17,3 @@ RUN pip3 install 'decorator<5,>=4.3'
 RUN git clone --branch develop https://github.com/int-brain-lab/iblapps.git && pip3 install -e ./iblapps
 ADD . /src/IBL-pipeline
 RUN pip3 install -e /src/IBL-pipeline
-# handle bug of ibllib 1.10.4
-RUN rm -rf /usr/local/lib/python3.8/dist-packages/brainbox/singlecell
-RUN rm -rf /usr/local/lib/python3.8/dist-packages/brainbox/processing
