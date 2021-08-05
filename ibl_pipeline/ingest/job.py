@@ -64,3 +64,12 @@ class TaskStatus(dj.Manual):
     task_duration           :  float     # in mins
     task_status_comments='' :  varchar(1000)
     """
+
+    @classmethod
+    def insert_task_status(cls, job_key, task, start, end):
+        cls.insert1(dict(**job_key,
+                         task=task,
+                         task_start_time=start,
+                         task_end_time=end,
+                         task_duration=(end - start).total_seconds() / 60.),
+                    skip_duplicates=True)

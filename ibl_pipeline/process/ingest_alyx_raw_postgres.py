@@ -132,7 +132,8 @@ def insert_alyx_entries_model(
             just applicable to tables with auto_datetime field
     """
     if backtrack_days:
-        # only ingest the latest data
+        # filtering the alyx table - get more recent entries within the backtrack_days
+        # only applicable to alyx models having "auto_datetime" and FileRecord alyx model
         date_cut = datetime.datetime.strptime(
                 os.getenv('ALYX_DL_DATE'), '%Y-%m-%d').date() - \
             datetime.timedelta(days=backtrack_days)
@@ -146,21 +147,21 @@ def insert_alyx_entries_model(
         else:
             entries = alyx_model.objects.all()
     elif alyx_model == data.models.FileRecord:
+        # for FileRecord alyx model, restrict to only the entries where the file does exist
         entries = alyx_model.objects.filter(exists=True)
     else:
         entries = alyx_model.objects.all()
 
     # ingest into main table
     model_name = get_alyx_model_name(alyx_model)
-    pk_list = entries.values_list('id', flat=True)
 
     # This is not very slow, if too slow, use QueryBuffer instead
     alyxraw_dj_module.AlyxRaw.insert(
-        [dict(uuid=s, model=model_name) for s in pk_list],
+        [dict(uuid=s, model=model_name) for s in entries.values_list('id', flat=True)],
         skip_duplicates=True)
 
-    # ingest into part table
-    ib_part = QueryBuffer(alyxraw_dj_module.AlyxRaw.Field)
+    # ingest into part table AlyxRaw.Field
+    alyxraw_field_buffer = QueryBuffer(alyxraw_dj_module.AlyxRaw.Field)
 
     # ingest fields and single foreign key references in alyxraw.AlyxRaw.Field
     field_names = get_field_names(alyx_model)
@@ -169,9 +170,7 @@ def insert_alyx_entries_model(
         # e.g. for table subjects.models.Subject, each r is a subject queryset
         # for one subject
         try:
-
             for field_name in field_names:
-
                 if field_name == 'id':
                     continue
 
@@ -179,16 +178,17 @@ def insert_alyx_entries_model(
                 field_entry['fname'] = field_name
                 field_value = getattr(r, field_name)
 
-                # dump the json field
                 if field_name == 'json' and field_value:
+                    # handles the 'json' field - store the json dump
                     field_entry['fvalue'] = json.dumps(field_value)
                     if len(field_entry['fvalue']) < 10000:
+                        # if the json dump is too large, skip
                         field_entry['value_idx'] = 0
-                        ib_part.add_to_queue1(field_entry)
+                        alyxraw_field_buffer.add_to_queue1(field_entry)
                     else:
                         continue
                 elif field_name == 'narrative' and field_value is not None:
-                    # filter out emoji
+                    # handles 'narrative' field with emoji - filter out emoji
                     emoji_pattern = re.compile(
                         "["
                         u"\U0001F600-\U0001F64F"  # emoticons
@@ -201,53 +201,47 @@ def insert_alyx_entries_model(
 
                     field_entry['value_idx'] = 0
                     field_entry['fvalue'] = emoji_pattern.sub(r'', field_value)
-                    ib_part.add_to_queue1(field_entry)
-
-                # handle nones
+                    alyxraw_field_buffer.add_to_queue1(field_entry)
                 elif (not isinstance(field_value, (float, int)) and not field_value) or \
                         (isinstance(field_value, (float, int)) and math.isnan(field_value)):
+                    # handle "falsy" field value - store as string 'None'
                     field_entry['value_idx'] = 0
                     field_entry['fvalue'] = 'None'
-                    ib_part.add_to_queue1(field_entry)
-
+                    alyxraw_field_buffer.add_to_queue1(field_entry)
                 elif isinstance(field_value, str):
                     field_entry['value_idx'] = 0
                     field_entry['fvalue'] = field_value
-                    ib_part.add_to_queue1(field_entry)
-
+                    alyxraw_field_buffer.add_to_queue1(field_entry)
                 elif isinstance(field_value, (bool, float, int,
                                               datetime.datetime, datetime.date)):
                     field_entry['value_idx'] = 0
                     field_entry['fvalue'] = str(field_value)
-                    ib_part.add_to_queue1(field_entry)
-
-                # an foreign key object
+                    alyxraw_field_buffer.add_to_queue1(field_entry)
                 else:
+                    # special handling for foreign key object
                     field_entry['value_idx'] = 0
-                    field_id = field_name + '_id'
-                    if field_id in r.__dict__.keys():
-                        field_entry['fvalue'] = str(r.__dict__[field_name + '_id'])
-                        ib_part.add_to_queue1(field_entry)
+                    fk_id = field_name + '_id'
+                    if hasattr(r, fk_id):
+                        field_entry['fvalue'] = str(getattr(r, fk_id))
+                        alyxraw_field_buffer.add_to_queue1(field_entry)
 
-                if ib_part.flush_insert(skip_duplicates=True, chunksz=10000):
+                if alyxraw_field_buffer.flush_insert(skip_duplicates=True, chunksz=10000):
                     logger.log(25, 'Inserted 10000 raw field tuples')
 
             # ingest many to many fields into alyxraw.AlyxRaw.Field
             for field_name in many_to_many_fields:
-                for iobj, obj in enumerate(getattr(r, field_name).all()):
-                    field_entry = dict(uuid=r.id)
-                    field_entry['fname'] = field_name
-                    field_entry['value_idx'] = iobj
-                    field_entry['fvalue'] = str(obj.id)
-                    ib_part.add_to_queue1(field_entry)
-                    if ib_part.flush_insert(skip_duplicates=True, chunksz=10000):
-                        logger.log(25, 'Inserted 10000 raw field tuples')
+                for obj_idx, obj in enumerate(getattr(r, field_name).all()):
+                    alyxraw_field_buffer.add_to_queue1(
+                        dict(uuid=r.id, fname=field_name,
+                             value_idx=obj_idx, fvalue=str(obj.id)))
+                    if alyxraw_field_buffer.flush_insert(skip_duplicates=True, chunksz=10000):
+                        logger.log(25, 'Inserted 10000 AlyxRaw.Field entries')
 
         except Exception as e:
             logger.log(25, 'Problematic entry {} of model {} with error {}'.format(
                 r.id, model_name, str(e)))
 
-    if ib_part.flush_insert(skip_duplicates=True):
+    if alyxraw_field_buffer.flush_insert(skip_duplicates=True):
         logger.log(25, 'Inserted all remaining raw field tuples')
 
 
@@ -304,8 +298,9 @@ def insert_to_update_alyxraw_postgres(
         # skip big tables DataSet and FileRecord for updates
         if model['alyx_model'] not in [data.models.Dataset, data.models.FileRecord]:
             logger.log(25, 'Ingesting alyx table {} into datajoint update_alyxraw...'.format(get_alyx_model_name(model['alyx_model'])))
-            insert_alyx_entries_model(
-                model['alyx_model'], model['many_to_many_fields'], alyxraw_dj_module=alyxraw_update)
+            insert_alyx_entries_model(model['alyx_model'],
+                                      model['many_to_many_fields'],
+                                      alyxraw_dj_module=alyxraw_update)
 
 
 def main(backtrack_days=3):

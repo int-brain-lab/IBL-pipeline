@@ -38,53 +38,56 @@ logger = logging.getLogger(__name__)
 
 # ====================================== functions for deletion ==================================
 
-def delete_entries_from_alyxraw(pks_to_be_deleted=[], modified_pks_important=[]):
-
-    '''
+def delete_entries_from_alyxraw(file_record_uuids=[], alyxraw_uuids=[]):
+    """
     Delete entries from alyxraw and shadow tables, excluding the membership table.
-    '''
+    Args:
+        file_record_uuids: a list of the AlyxRaw uuid where the entries in AlyxRaw.Field
+         of type FileRecord are to be deleted
+        alyxraw_uuids: a list of the AlyxRaw uuid where the entries in AlyxRaw
+         are to be deleted, except for entries related to the Session table (actions.session)
+    Returns:
+    """
 
-    if pks_to_be_deleted:
-
+    if file_record_uuids:
         logger.log(25, 'Deleting alyxraw entries corresponding to file records...')
 
-        if len(pks_to_be_deleted) > 5000:
+        if len(file_record_uuids) > 5000:
             file_record_fields = alyxraw.AlyxRaw.Field & \
                 'fname = "exists"' & 'fvalue = "false"'
         else:
             file_record_fields = alyxraw.AlyxRaw.Field & \
                 'fname = "exists"' & 'fvalue = "false"' & \
-                [{'uuid': pk} for pk in pks_to_be_deleted]
+                [{'uuid': pk} for pk in file_record_uuids]
 
         for key in tqdm(file_record_fields):
             (alyxraw.AlyxRaw.Field & key).delete_quick()
 
-    logger.log(25, 'Deleting modified entries...')
+    if alyxraw_uuids:
+        logger.log(25, 'Deleting modified entries...')
 
-    if modified_pks_important:
-        pk_list = [{'uuid': pk} for pk in modified_pks_important
+        pk_list = [{'uuid': pk} for pk in alyxraw_uuids
                    if is_valid_uuid(pk)]
-        if len(pk_list) > 1000:
 
-            logger.log(25, 'Long pk list, deleting from alyxraw.AlyxRaw using QueryBuffer ...')
-            alyxraw_buffer = QueryBuffer(alyxraw.AlyxRaw & 'model != "actions.session"')
-            for pk in tqdm(pk_list):
-                alyxraw_buffer.add_to_queue1(pk)
-                alyxraw_buffer.flush_delete(chunksz=50, quick=False)
+        # Delete from alyxraw.AlyxRaw (except for entries related to the Session table)
+        alyxraw_buffer = QueryBuffer(alyxraw.AlyxRaw & 'model != "actions.session"')
+        for pk in tqdm(pk_list):
+            alyxraw_buffer.add_to_queue1(pk)
+            alyxraw_buffer.flush_delete(chunksz=50, quick=False)
+        alyxraw_buffer.flush_delete(quick=False)
 
-            alyxraw_buffer.flush_delete(quick=False)
+        # Special handling to the AlyxRaw corresponding to the Session table
+        #   i.e. the case where uuid is not changed but start time changed for 1 sec
+        #   delete only entries in the AlyxRaw.Field, except for the "start time" field.
 
-            # Delete session fields without deleting the AlyxRaw entries and start time field.
-            # This is to handle the case where uuid is not changed but start time changed for 1 sec.
-            logger.log(25, 'Long pk list, deleting from alyxraw.AlyxRaw.Field ...')
-            alyxraw_field_buffer = QueryBuffer(
-                alyxraw.AlyxRaw.Field & 'fname!="start_time"' &
-                (alyxraw.AlyxRaw & 'model="actions.session"'))
+        alyxraw_field_buffer = QueryBuffer(
+            alyxraw.AlyxRaw.Field & 'fname!="start_time"' &
+            (alyxraw.AlyxRaw & 'model="actions.session"'))
 
-            for pk in tqdm(pk_list):
-                alyxraw_field_buffer.add_to_queue1(pk)
-                alyxraw_field_buffer.flush_delete(chunksz=50, quick=True)
-            alyxraw_field_buffer.flush_delete(quick=True)
+        for pk in tqdm(pk_list):
+            alyxraw_field_buffer.add_to_queue1(pk)
+            alyxraw_field_buffer.flush_delete(chunksz=50, quick=True)
+        alyxraw_field_buffer.flush_delete(quick=True)
 
 
 def delete_entries_from_membership(pks_to_be_deleted):
