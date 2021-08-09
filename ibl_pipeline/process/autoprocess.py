@@ -266,7 +266,7 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
 
     # ---- Step 5: ingestion of AlyxRaw, shadow tables and shadown membership tables ----
 
-    logger.log(25, 'Ingesting alyxraw...')
+    logger.log(25, 'Ingesting from Postgres Alyx to AlyxRaw...')
     start = datetime.datetime.now()
     ingest_alyx_raw_postgres.main()
     job.TaskStatus.insert_task_status(job_key, 'Ingest alyxraw',
@@ -295,7 +295,7 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
     if perform_updates:
         logger.log(25, 'Updating field...')
         start = datetime.datetime.now()
-        delete_update_entries.update_entries_from_real_tables()
+        delete_update_entries.update_entries_from_real_tables(modified_pks)
         job.TaskStatus.insert_task_status(job_key, 'Update fields',
                                           start, end=datetime.datetime.now())
 

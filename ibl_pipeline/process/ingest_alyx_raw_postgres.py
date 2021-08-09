@@ -259,9 +259,8 @@ def insert_to_update_alyxraw_postgres(
 
     alyxraw_schema_name = dj.config.get('database.prefix', '') + 'update_ibl_alyxraw'
 
-    with dj.config(safemode=False):
-
-        if delete_update_tables_first:
+    if delete_update_tables_first:
+        with dj.config(safemode=False):
             logger.log(25, 'Deleting update ibl alyxraw tables...')
             # check existence of update_alyxraw
             if alyxraw_schema_name in dj.list_schemas():

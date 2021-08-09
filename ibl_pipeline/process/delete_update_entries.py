@@ -157,43 +157,52 @@ TABLES_TO_UPDATE = [
 
 # =================================== functions for update ==========================================
 
-def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=False):
-    '''
-    Given a table and the primary key of real table, update all the fields that have discrepancy.
+def update_fields(real_schema, shadow_schema, table_name, pks, log_to_UpdateRecord=False):
+    """
+    Given a table and the primary key of real table,
+        update the real table all the fields that have discrepancy from the shadown table
     Inputs: real_schema     : real schema module, e.g. reference
             shadow_schema   : shadow schema module, e.g. reference_ingest
             table_name      : string, name of a table, e.g. Subject
             pks             : list of dictionaries, primary keys of real table that contains modification
-            insert_to_table : boolean, if True, log the update histolory in the table ibl_update.UpdateRecord
-    '''
+            log_to_UpdateRecord : boolean, if True, log the update history in the table ibl_update.UpdateRecord
+    """
 
-    real_table = getattr(real_schema, table_name)
-    shadow_table = getattr(shadow_schema, table_name)
+    if '.' in table_name:
+        # handling part-table
+        master_name, part_name = table_name.split('.')
+        real_table = getattr(getattr(real_schema, master_name), part_name)
+        shadow_table = getattr(getattr(shadow_schema, master_name), part_name)
+    else:
+        real_table = getattr(real_schema, table_name)
+        shadow_table = getattr(shadow_schema, table_name)
 
     secondary_fields = set(real_table.heading.secondary_attributes)
+
+    # don't update "_ts" fields
     ts_field = [f for f in secondary_fields
                 if f.endswith('_ts')][0]
     fields_to_update = secondary_fields - {ts_field}
 
-    for r in (real_table & pks).fetch('KEY'):
+    # do the updating
+    for key in (real_table & pks).fetch('KEY'):
+        pk_hash = UUID(dj.hash.key_hash(key))
 
-        pk_hash = UUID(dj.hash.key_hash(r))
-
-        if not shadow_table & r:
-            real_record = (real_table & r).fetch1()
-            if insert_to_table:
+        if not shadow_table & key:
+            real_record = (real_table & key).fetch1()
+            if log_to_UpdateRecord:
                 update_record = dict(
                     table=real_table.__module__ + '.' + real_table.__name__,
                     attribute='unknown',
                     pk_hash=pk_hash,
                     original_ts=real_record[ts_field],
                     update_ts=datetime.datetime.now(),
-                    pk_dict=r,
+                    pk_dict=key,
                 )
                 update.UpdateRecord.insert1(update_record)
                 update_record.pop('pk_dict')
 
-                update_error_msg = 'Record does not exist in the shadow {}'.format(r)
+                update_error_msg = 'Record does not exist in the shadow {}'.format(key)
                 update_record_error = dict(
                     **update_record,
                     update_action_ts=datetime.datetime.now(),
@@ -203,51 +212,48 @@ def update_fields(real_schema, shadow_schema, table_name, pks, insert_to_table=F
 
             logger.log(25, f'Error updating entry: {update_error_msg}')
             continue
-
         # if there are more than 1 record
-        elif len(shadow_table & r) > 1:
+        elif len(shadow_table & key) > 1:
             # delete the older record
             ts_field = [f for f in shadow_table.heading.names if '_ts' in f][0]
-            lastest_record = dj.U().aggr(shadow_table & r, session_ts='max(session_ts)').fetch()
+            lastest_record = dj.U().aggr(shadow_table & key, session_ts='max(session_ts)').fetch()
 
             with dj.config(safemode=False):
-                ((shadow_table & r) - lastest_record).delete()
+                ((shadow_table & key) - lastest_record).delete()
 
-        shadow_record = (shadow_table & r).fetch1()
-        real_record = (real_table & r).fetch1()
+        shadow_record = (shadow_table & key).fetch1()
+        real_record = (real_table & key).fetch1()
 
         for f in fields_to_update:
             if real_record[f] != shadow_record[f]:
                 try:
-                    (real_table & r)._update(f, shadow_record[f])
+                    (real_table & key)._update(f, shadow_record[f])
                     update_narrative = f'{table_name}.{f}: {shadow_record[f]} != {real_record[f]}'
-                    if insert_to_table:
+                except BaseException as e:
+                    logger.log(25, f'Error while updating record {key}: {str(e)}')
+                else:
+                    if log_to_UpdateRecord:
                         update_record = dict(
                             table=real_table.__module__ + '.' + real_table.__name__,
                             attribute=f,
                             pk_hash=pk_hash,
                             original_ts=real_record[ts_field],
                             update_ts=shadow_record[ts_field],
-                            pk_dict=r,
+                            pk_dict=key,
                             original_value=real_record[f],
                             updated_value=shadow_record[f],
                             update_narrative=update_narrative
                         )
                         update.UpdateRecord.insert1(update_record)
 
-                except BaseException as e:
-                    logger.log(25, f'Error while updating record {r}: {str(e)}')
-
 
 def update_entries_from_real_tables(modified_pks):
+    for table_specs in TABLES_TO_UPDATE:
 
-    for table in TABLES_TO_UPDATE:
+        logger.log(25, 'Updating {}...'.format(table_specs['table_name']))
+        table = getattr(table_specs['real_schema'], table_specs['table_name'])
 
-        logger.log(25, 'Updating {}...'.format(table['table_name']))
-        t = table.copy()
-        table = getattr(t['real_schema'], t['table_name'])
-
-        if t['table_name'] == 'Subject':
+        if table_specs['table_name'] == 'Subject':
             uuid_field = 'subject_uuid'
         else:
             uuid_field = next(f for f in table.heading.secondary_attributes
@@ -258,16 +264,21 @@ def update_entries_from_real_tables(modified_pks):
         query = table & [{uuid_field: pk} for pk in pks_important]
 
         if query:
-            members = t.pop('members')
-            update_fields(**t, pks=query.fetch('KEY'), insert_to_table=True)
+            update_fields(table_specs['real_schema'],
+                          table_specs['shadow_schema'],
+                          table_specs['table_name'],
+                          pks=query.fetch('KEY'),
+                          log_to_UpdateRecord=True)
 
-            if members:
-                for m in members:
-                    sub_t = getattr(t['real_schema'], m)
-                    if sub_t & query:
-                        update_fields(t['real_schema'], t['shadow_schema'],
-                                      m, (sub_t & query).fetch('KEY'),
-                                      insert_to_table=True)
+            if table_specs['members']:
+                for member_table_name in table_specs['members']:
+                    member_table = getattr(table_specs['real_schema'], member_table_name)
+                    if member_table & query:
+                        update_fields(table_specs['real_schema'],
+                                      table_specs['shadow_schema'],
+                                      member_table_name,
+                                      pks=(member_table & query).fetch('KEY'),
+                                      log_to_UpdateRecord=True)
 
 
 if __name__ == '__main__':
