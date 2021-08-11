@@ -3,7 +3,6 @@ from . import reference, subject, acquisition, data, ephys, qc
 import numpy as np
 from .utils import atlas
 from tqdm import tqdm
-from ibllib.pipes.ephys_alignment import EphysAlignment
 import warnings
 from os import environ
 
@@ -265,6 +264,7 @@ class DepthBrainRegion(dj.Computed):
     key_source = ProbeTrajectory & ChannelBrainLocation
 
     def make(self, key):
+        from ibllib.pipes.ephys_alignment import EphysAlignment
 
         x, y, z = (ChannelBrainLocation & key).fetch(
             'channel_ml', 'channel_ap', 'channel_dv')

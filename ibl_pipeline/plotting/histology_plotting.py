@@ -1,26 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import ibllib.atlas as atlas
-import brainbox.io.one as bbone
-
-# libraries needed for spinning brain
-import subprocess
-from pyvirtualdisplay import Display
-import os
-
-# create a virtual display before importing mlab
-display = Display(visible=0, size=(1920, 1080))
-display.start()
-
-# mlab has to be imported after setting up the virtual display
-from mayavi import mlab
-from atlaselectrophysiology import rendering
-
-
-import ibllib.atlas as atlas
-
-ba_allen = atlas.AllenAtlas(25)
-ba_needles = atlas.NeedlesAtlas(25)
 
 
 def generate_spinning_brain_frames(trajectories, nframes_per_cycle=30, figsize=[800, 700]):
@@ -42,6 +22,22 @@ def generate_spinning_brain_frames(trajectories, nframes_per_cycle=30, figsize=[
         image in rgb for each frame
     '''
 
+    # libraries needed for spinning brain
+    import subprocess
+    from pyvirtualdisplay import Display
+    import os
+
+    # create a virtual display before importing mlab
+    display = Display(visible=0, size=(1920, 1080))
+    display.start()
+
+    # mlab has to be imported after setting up the virtual display
+    from mayavi import mlab
+    from atlaselectrophysiology import rendering
+
+    ba_allen = atlas.AllenAtlas(25)
+    ba_needles = atlas.NeedlesAtlas(25)
+
     fig = rendering.figure()
     for index, trj in enumerate(trajectories):
         if trj['coordinate_system'] == 'IBL-Allen':
@@ -51,7 +47,6 @@ def generate_spinning_brain_frames(trajectories, nframes_per_cycle=30, figsize=[
         else:
             brain_atlas = ba_allen
         ins = atlas.Insertion.from_dict(trj, brain_atlas=brain_atlas)
-        ins = atlas.Insertion.from_dict(trj, brain_atlas=ba_allen)
         mlapdv = brain_atlas.xyz2ccf(ins.xyz)
         if trj['provenance'] == 'Ephys aligned histology track':
             color = (0, 0, 1.)  # Blue
@@ -83,6 +78,9 @@ def probe_trajectory_coronal(
     Returns:
         ax (matplotlib.axes.Axes object): Axes with coronal section plotted
     """
+    import brainbox.io.one as bbone
+
+    ba_allen = atlas.AllenAtlas(25)
 
     one.path_from_eid(eid)
     traj = one.alyx.rest(
