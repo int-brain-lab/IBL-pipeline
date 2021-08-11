@@ -100,13 +100,19 @@ def delete_entries_from_membership(pks_to_be_deleted):
 
         mem_table_name = t['dj_current_table'].__name__
 
-        logger.log(25, f'Deleting from membership table {mem_table_name} ...')
         real_table = eval(ingest_mod.replace('ibl_pipeline.ingest.', '') + '.' + table_name)
-        with dj.config(safemode=False):
-            (t['dj_current_table'] &
-             (real_table &
-             [{t['dj_parent_uuid_name']:pk}
-              for pk in pks_to_be_deleted if is_valid_uuid(pk)]).fetch('KEY')).delete()
+
+        entries_to_delete = (real_table &
+                             [{t['dj_parent_uuid_name']:pk}
+                              for pk in pks_to_be_deleted if is_valid_uuid(pk)]).fetch('KEY')
+
+        logger.log(25, f'Deleting {len(entries_to_delete)} records from membership table {mem_table_name} ...')
+
+        if entries_to_delete:
+            with dj.config(safemode=False):
+                (t['dj_current_table'] & entries_to_delete).delete()
+
+# =================================== Alyx models to be updated ========================
 
 
 TABLES_TO_UPDATE = [

@@ -1,9 +1,11 @@
-
 from uuid import UUID
 import json
 
 
 def is_valid_uuid(uuid):
+    if isinstance(uuid, UUID):
+        return True
+
     try:
         UUID(uuid)
         return True

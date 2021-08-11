@@ -41,53 +41,53 @@ logger = logging.getLogger(__name__)
 # TODO: for public database, there are some tables that do not get released
 # for a list, check the internal v.s. shared modules
 
-TABLES_OF_INTEREST = [
+ALYX_MODELS_OF_INTEREST = (
     # misc.models
-    {'alyx_model': misc.models.Lab, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.LabLocation, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.LabMember, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.LabMembership, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.CageType, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.Enrichment, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.Food, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.Housing, 'many_to_many_fields': ['subjects']},
+    misc.models.Lab,
+    misc.models.LabLocation,
+    misc.models.LabMember,
+    misc.models.LabMembership,
+    misc.models.CageType,
+    misc.models.Enrichment,
+    misc.models.Food,
+    misc.models.Housing,
     # subjects.models
-    {'alyx_model': subjects.models.Project, 'many_to_many_fields': ['users']},
-    {'alyx_model': subjects.models.Source, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.Species, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.Strain, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.Sequence, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.Allele, 'many_to_many_fields': ['sequences']},
-    {'alyx_model': subjects.models.Line, 'many_to_many_fields': ['alleles']},
-    {'alyx_model': subjects.models.Subject, 'many_to_many_fields': ['projects']},
-    {'alyx_model': subjects.models.BreedingPair, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.Litter, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.GenotypeTest, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.Zygosity, 'many_to_many_fields': []},
+    subjects.models.Project,
+    subjects.models.Source,
+    subjects.models.Species,
+    subjects.models.Strain,
+    subjects.models.Sequence,
+    subjects.models.Allele,
+    subjects.models.Line,
+    subjects.models.Subject,
+    subjects.models.BreedingPair,
+    subjects.models.Litter,
+    subjects.models.GenotypeTest,
+    subjects.models.Zygosity,
     # actions.models
-    {'alyx_model': actions.models.ProcedureType, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.Surgery, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.CullMethod, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.CullReason, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.Cull, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.Weighing, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.WaterType, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.WaterRestriction, 'many_to_many_fields': ['users', 'procedures']},
-    {'alyx_model': actions.models.WaterAdministration, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.Session, 'many_to_many_fields': ['users', 'procedures']},
+    actions.models.ProcedureType,
+    actions.models.Surgery,
+    actions.models.CullMethod,
+    actions.models.CullReason,
+    actions.models.Cull,
+    actions.models.Weighing,
+    actions.models.WaterType,
+    actions.models.WaterRestriction,
+    actions.models.WaterAdministration,
+    actions.models.Session,
     # data.models
-    {'alyx_model': data.models.DataFormat, 'many_to_many_fields': []},
-    {'alyx_model': data.models.DataRepositoryType, 'many_to_many_fields': []},
-    {'alyx_model': data.models.DataRepository, 'many_to_many_fields': []},
-    {'alyx_model': data.models.DatasetType, 'many_to_many_fields': []},
-    {'alyx_model': data.models.Dataset, 'many_to_many_fields': []}, # very big table, usually handled separately
-    {'alyx_model': data.models.FileRecord, 'many_to_many_fields': []}, # very big table, usually handled separately
+    data.models.DataFormat,
+    data.models.DataRepositoryType,
+    data.models.DataRepository,
+    data.models.DatasetType,
+    data.models.Dataset,       # very big table, usually handled separately
+    data.models.FileRecord,    # very big table, usually handled separately
     # experiments.models
-    {'alyx_model': experiments.models.CoordinateSystem, 'many_to_many_fields': []},
-    {'alyx_model': experiments.models.ProbeModel, 'many_to_many_fields': []},
-    {'alyx_model': experiments.models.ProbeInsertion, 'many_to_many_fields': []},
-    {'alyx_model': experiments.models.TrajectoryEstimate, 'many_to_many_fields': []}
-]
+    experiments.models.CoordinateSystem,
+    experiments.models.ProbeModel,
+    experiments.models.ProbeInsertion,
+    experiments.models.TrajectoryEstimate
+)
 
 
 def get_alyx_model_name(alyx_model):
@@ -139,22 +139,21 @@ def get_many_to_many_field_names(alyx_model):
 
 def get_tables_with_auto_datetime(tables=None):
 
-    if not tables:
-        tables = [t['alyx_model'] for t in TABLES_OF_INTEREST]
+    if tables is None:
+        tables = ALYX_MODELS_OF_INTEREST
 
     return([t for t in tables
             if 'auto_datetime' in get_field_names(t)])
 
 
 def insert_alyx_entries_model(
-        alyx_model, many_to_many_fields=[],
+        alyx_model,
         alyxraw_dj_module=alyxraw,
         backtrack_days=None):
     """Insert alyx entries into alyxraw tables for a particular alyx model
 
     Args:
         alyx_model (django.model object): alyx model
-        many_to_many_fields (list): list of str for many to many fields that need to be ingested into datajoint tables.
         alyxraw_dj_module (datajoint module): datajoint module containing AlyxRaw tables, either alyxraw or alyxraw update
         backtrack_days (int, optional): number of days the data are within to backtrack and ingest,
             just applicable to tables with auto_datetime field
@@ -193,6 +192,7 @@ def insert_alyx_entries_model(
 
     # ingest fields and single foreign key references in alyxraw.AlyxRaw.Field
     field_names = get_field_names(alyx_model)
+    many_to_many_field_names = get_many_to_many_field_names(alyx_model)
 
     for r in tqdm(entries):
         # e.g. for table subjects.models.Subject, each r is a subject queryset
@@ -257,7 +257,7 @@ def insert_alyx_entries_model(
                     logger.log(25, 'Inserted 10000 raw field tuples')
 
             # ingest many to many fields into alyxraw.AlyxRaw.Field
-            for field_name in many_to_many_fields:
+            for field_name in many_to_many_field_names:
                 for obj_idx, obj in enumerate(getattr(r, field_name).all()):
                     alyxraw_field_buffer.add_to_queue1(
                         dict(uuid=r.id, fname=field_name,
@@ -283,7 +283,7 @@ def insert_to_update_alyxraw_postgres(
         delete_update_tables_first (bool, optional): whether to delete the update module alyx raw tables first. Defaults to False.
     """
     if not alyx_models:
-        alyx_models = TABLES_OF_INTEREST
+        alyx_models = ALYX_MODELS_OF_INTEREST
 
     alyxraw_schema_name = dj.config.get('database.prefix', '') + 'update_ibl_alyxraw'
 
@@ -319,22 +319,21 @@ def insert_to_update_alyxraw_postgres(
             fvalue=null: varchar(40000)  # field value in the position of value_idx
             index (fname)
             '''
+
     alyxraw_update = dj.create_virtual_module('alyx_raw', alyxraw_schema_name)
 
-    for model in alyx_models:
+    for alyx_model in alyx_models:
         # skip big tables DataSet and FileRecord for updates
-        if model['alyx_model'] not in [data.models.Dataset, data.models.FileRecord]:
-            logger.log(25, 'Ingesting alyx table {} into datajoint update_alyxraw...'.format(get_alyx_model_name(model['alyx_model'])))
-            insert_alyx_entries_model(model['alyx_model'],
-                                      model['many_to_many_fields'],
-                                      alyxraw_dj_module=alyxraw_update)
+        if alyx_model not in (data.models.Dataset, data.models.FileRecord):
+            logger.log(25, 'Ingesting alyx table {} into datajoint update_alyxraw...'.format(get_alyx_model_name(alyx_model)))
+            insert_alyx_entries_model(alyx_model, alyxraw_dj_module=alyxraw_update)
 
 
 def main(backtrack_days=3):
 
-    for t in TABLES_OF_INTEREST:
-        logger.log(25, 'Ingesting alyx table {} into datajoint alyxraw...'.format(get_alyx_model_name(t['alyx_model'])))
-        insert_alyx_entries_model(t['alyx_model'], t['many_to_many_fields'], backtrack_days=backtrack_days)
+    for alyx_model in ALYX_MODELS_OF_INTEREST:
+        logger.log(25, 'Ingesting alyx table {} into datajoint alyxraw...'.format(get_alyx_model_name(alyx_model)))
+        insert_alyx_entries_model(alyx_model, backtrack_days=backtrack_days)
 
 
 if __name__ == '__main__':

@@ -191,18 +191,16 @@ def get_created_modified_deleted_pks():
         if not update_alyxraw.AlyxRaw():
             raise RuntimeError('update AlyxRaw table is empty')
 
-    created_pks = []
-    modified_pks = []
-    deleted_pks = []
+    created_pks, modified_pks, deleted_pks = [], [], []
 
     # all the models
-    for t in ingest_alyx_raw_postgres.TABLES_OF_INTEREST:
-        model_name = ingest_alyx_raw_postgres.get_alyx_model_name(t)
+    for alyx_model in ingest_alyx_raw_postgres.ALYX_MODELS_OF_INTEREST:
+        model_name = ingest_alyx_raw_postgres.get_alyx_model_name(alyx_model)
         created_pks.extend(update_utils.get_created_keys(model_name))
 
     # only models that need an update
-    for t in delete_update_entries.TABLES_TO_UPDATE:
-        model_name = ingest_alyx_raw_postgres.get_alyx_model_name(t['alyx_model'])
+    for table in delete_update_entries.TABLES_TO_UPDATE:
+        model_name = ingest_alyx_raw_postgres.get_alyx_model_name(table['alyx_model'])
         modified_pks.extend(update_utils.get_updated_keys(model_name))
         deleted_pks.extend(update_utils.get_deleted_keys(model_name))
 

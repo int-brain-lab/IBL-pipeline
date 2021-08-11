@@ -20,7 +20,7 @@ def get_created_keys(model):
         created_pks [list]: list of created uuids, existing in update_ibl_alyxraw but not ibl_alyxraw
     """
     return ((alyxraw_update.AlyxRaw - alyxraw.AlyxRaw.proj()) &
-            f'model="{model}"').fetch('KEY')
+            f'model="{model}"').fetch('uuid')
 
 
 def get_deleted_keys(model):
@@ -34,7 +34,7 @@ def get_deleted_keys(model):
         deleted_pks [list]: list of deleted uuids, existing in the current ibl_alyxraw but not update_ibl_alyxraw
     """
     return ((alyxraw.AlyxRaw - alyxraw_update.AlyxRaw.proj()) &
-            f'model="{model}"').fetch('KEY')
+            f'model="{model}"').fetch('uuid')
 
 
 def get_updated_keys(model, fields=None):
@@ -59,7 +59,7 @@ def get_updated_keys(model, fields=None):
 
     return (alyxraw.AlyxRaw &
             (fields_update.proj(fvalue_new='fvalue') * fields_original &
-             'fvalue_new != fvalue' & 'fname not in ("json")' & fields_restr)).fetch('KEY')
+             'fvalue_new != fvalue' & 'fname not in ("json")' & fields_restr)).fetch('uuid')
 
 
 def delete_from_alyxraw(keys):
