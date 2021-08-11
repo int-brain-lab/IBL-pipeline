@@ -24,6 +24,7 @@ err_exit() { echo "error: $*"; exit 1; }
 # ---------
 
 fetchdump() {
+  echo "---- fetchdump() ----"
 	echo "=> fetching dbdump for ${ALYX_DL_DATE}";
 
 	mv -f ${dbdump} ${dbdump}.prev >/dev/null 2>&1;
@@ -38,6 +39,7 @@ fetchdump() {
 # ----
 
 mkdb() {
+  echo "---- mkdb() ----"
 	if [ -f "${dbcreated}" ]; then
 		echo '# => using existing database';
 	else
@@ -57,6 +59,7 @@ mkdb() {
 # ------
 
 loaddb() {
+  echo "---- loaddb() ----"
 	if [ -f "${dbloaded}" ]; then
 		echo '# => database loaded - skipping load.';
 	else
@@ -70,6 +73,7 @@ loaddb() {
 # ---------------------
 
 alyxcfg() {
+	echo '---- alyxcfg() ----'
 	echo '# => configuring alyx'
 
 	if [ ! -f "$sucreated" ]; then
@@ -154,8 +158,10 @@ EOF
 # --------
 
 alyxprep() {
-	echo "# => alyxprep"
+  echo "---- alyxprep() ----"
+	echo "# => makemigrations"
 	/src/alyx/alyx/manage.py makemigrations;
+	echo "# => migrate"
 	/src/alyx/alyx/manage.py migrate;
 }
 
@@ -163,6 +169,7 @@ alyxprep() {
 # ---------
 
 alyxstart() {
+  echo "---- alyxstart() ----"
 	echo '# => starting alyx'
 	/src/alyx/alyx/manage.py runserver --insecure 0.0.0.0:8888;
 }
@@ -171,6 +178,7 @@ alyxstart() {
 # --------
 
 renamedb() {
+  echo "---- renamedb() ----"
 	echo "# => renaming databases:";
 
 	echo "# ==> ... dropping alyx_old";

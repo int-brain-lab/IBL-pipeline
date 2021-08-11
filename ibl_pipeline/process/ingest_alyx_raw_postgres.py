@@ -5,6 +5,7 @@ import os, json, logging, math, datetime, re, django, warnings
 from ibl_pipeline.ingest import alyxraw, QueryBuffer
 from tqdm import tqdm
 import datajoint as dj
+import pathlib
 
 
 mode = os.getenv('MODE')
@@ -19,11 +20,15 @@ import misc, subjects, actions, data, experiments
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
+log_file = pathlib.Path(__file__).parent / 'logs/main_ingest.log'
+log_file.parent.mkdir(parents=True, exist_ok=True)
+log_file.touch(exist_ok=True)
+
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
         # write info into both the log file and console
-        logging.FileHandler("/src/IBL-pipeline/ibl_pipeline/process/logs/main_ingest.log"),
+        logging.FileHandler(log_file),
         logging.StreamHandler()],
     level=25)
 
@@ -107,6 +112,29 @@ def get_field_names(alyx_model):
         [list]: list of field names (property name), including foreign key references, not ManyToMany fields
     """
     return [field.name for field in alyx_model._meta.fields]
+
+
+def get_many_to_many_field_names(alyx_model):
+    """Get all ManyToMany field names of an alyx modelinclude
+
+    Args:
+        alyx_model (django.model object): alyx model
+
+    Returns:
+        [list]: list of ManyToMany field names (property name), including foreign key references
+    """
+    one_entry = next(alyx_model.objects.iterator())
+    many_to_many_field_names = []
+    for field_name in dir(one_entry):
+        try:
+            obj = getattr(one_entry, field_name)
+        except:
+            pass
+        else:
+            if obj.__class__.__name__ == 'ManyRelatedManager':
+                many_to_many_field_names.append(field_name)
+
+    return many_to_many_field_names
 
 
 def get_tables_with_auto_datetime(tables=None):
