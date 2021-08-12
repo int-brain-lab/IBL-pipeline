@@ -126,7 +126,7 @@ def process_updates(pks, current_dump='/data/alyxfull.json'):
     '''
     logger.log(25, 'Deleting from alyxraw...')
     delete_update_entries.delete_entries_from_alyxraw(
-        alyxraw_uuids=pks)
+        alyxraw_keys=pks)
     logger.log(25, 'Deleting from shadow membership...')
     delete_update_entries.delete_entries_from_membership(pks)
 
@@ -222,9 +222,7 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
     job_entry = dict(job_key, alyx_current_time_stamp=get_file_timestamp(sql_dump_path))
 
     # ---- Step 2: from postgres-db with the latest sql-dump, ingest into AlyxRaw(schema=update) ----
-
     logger.log(25, 'Ingesting into update_ibl_alyxraw...')
-
     ingest_alyx_raw_postgres.insert_to_update_alyxraw_postgres(
         delete_update_tables_first=True)
 
@@ -260,7 +258,6 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
         delete_update_entries.delete_entries_from_membership(modified_pks + deleted_pks)
         job.TaskStatus.insert_task_status(job_key, 'Delete shadow membership',
                                           start, end=datetime.datetime.now())
-
 
     # ---- Step 5: ingestion of AlyxRaw, shadow tables and shadown membership tables ----
 

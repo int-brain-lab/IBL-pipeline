@@ -330,7 +330,6 @@ def insert_to_update_alyxraw_postgres(
 
 
 def main(backtrack_days=3):
-
     for alyx_model in ALYX_MODELS_OF_INTEREST:
         logger.log(25, 'Ingesting alyx table {} into datajoint alyxraw...'.format(get_alyx_model_name(alyx_model)))
         insert_alyx_entries_model(alyx_model, backtrack_days=backtrack_days)

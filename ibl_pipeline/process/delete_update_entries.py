@@ -38,36 +38,34 @@ logger = logging.getLogger(__name__)
 
 # ====================================== functions for deletion ==================================
 
-def delete_entries_from_alyxraw(file_record_uuids=[], alyxraw_uuids=[]):
+def delete_entries_from_alyxraw(file_record_keys=[], alyxraw_keys=[]):
     """
     Delete entries from alyxraw and shadow tables, excluding the membership table.
     Args:
-        file_record_uuids: a list of the AlyxRaw uuid where the entries in AlyxRaw.Field
+        file_record_keys: a list of the AlyxRaw keys where the entries in AlyxRaw.Field
          of type FileRecord are to be deleted
-        alyxraw_uuids: a list of the AlyxRaw uuid where the entries in AlyxRaw
+        alyxraw_keys: a list of the AlyxRaw keys where the entries in AlyxRaw
          are to be deleted, except for entries related to the Session table (actions.session)
     Returns:
     """
 
-    if file_record_uuids:
+    if file_record_keys:
         logger.log(25, 'Deleting alyxraw entries corresponding to file records...')
 
-        if len(file_record_uuids) > 5000:
-            file_record_fields = alyxraw.AlyxRaw.Field & \
-                'fname = "exists"' & 'fvalue = "false"'
+        if len(file_record_keys) > 5000:
+            file_record_fields = alyxraw.AlyxRaw.Field & {'fname': 'exists', 'fvalue': 'false'}
         else:
-            file_record_fields = alyxraw.AlyxRaw.Field & \
-                'fname = "exists"' & 'fvalue = "false"' & \
-                [{'uuid': pk} for pk in file_record_uuids]
+            file_record_fields = (alyxraw.AlyxRaw.Field
+                                  & {'fname': 'exists', 'fvalue': 'false'}
+                                  & file_record_keys)
 
         for key in tqdm(file_record_fields):
             (alyxraw.AlyxRaw.Field & key).delete_quick()
 
-    if alyxraw_uuids:
+    if alyxraw_keys:
         logger.log(25, 'Deleting modified entries...')
 
-        pk_list = [{'uuid': pk} for pk in alyxraw_uuids
-                   if is_valid_uuid(pk)]
+        pk_list = [k for k in alyxraw_keys if is_valid_uuid(k['uuid'])]
 
         # Delete from alyxraw.AlyxRaw (except for entries related to the Session table)
         alyxraw_buffer = QueryBuffer(alyxraw.AlyxRaw & 'model != "actions.session"')
@@ -254,12 +252,12 @@ def update_fields(real_schema, shadow_schema, table_name, pks, log_to_UpdateReco
 
 
 def update_entries_from_real_tables(modified_pks):
-    for table_specs in TABLES_TO_UPDATE:
+    for table_info in TABLES_TO_UPDATE:
 
-        logger.log(25, 'Updating {}...'.format(table_specs['table_name']))
-        table = getattr(table_specs['real_schema'], table_specs['table_name'])
+        logger.log(25, 'Updating {}...'.format(table_info['table_name']))
+        table = getattr(table_info['real_schema'], table_info['table_name'])
 
-        if table_specs['table_name'] == 'Subject':
+        if table_info['table_name'] == 'Subject':
             uuid_field = 'subject_uuid'
         else:
             uuid_field = next(f for f in table.heading.secondary_attributes
@@ -270,18 +268,18 @@ def update_entries_from_real_tables(modified_pks):
         query = table & [{uuid_field: pk} for pk in pks_important]
 
         if query:
-            update_fields(table_specs['real_schema'],
-                          table_specs['shadow_schema'],
-                          table_specs['table_name'],
+            update_fields(table_info['real_schema'],
+                          table_info['shadow_schema'],
+                          table_info['table_name'],
                           pks=query.fetch('KEY'),
                           log_to_UpdateRecord=True)
 
-            if table_specs['members']:
-                for member_table_name in table_specs['members']:
-                    member_table = getattr(table_specs['real_schema'], member_table_name)
+            if table_info['members']:
+                for member_table_name in table_info['members']:
+                    member_table = getattr(table_info['real_schema'], member_table_name)
                     if member_table & query:
-                        update_fields(table_specs['real_schema'],
-                                      table_specs['shadow_schema'],
+                        update_fields(table_info['real_schema'],
+                                      table_info['shadow_schema'],
                                       member_table_name,
                                       pks=(member_table & query).fetch('KEY'),
                                       log_to_UpdateRecord=True)
