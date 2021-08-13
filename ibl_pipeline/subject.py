@@ -1,7 +1,6 @@
-import os
 from .subject_shared import *
+from . import mode
 
-mode = os.environ.get('MODE')
 
 if mode != 'public':
     from .subject_internal import *

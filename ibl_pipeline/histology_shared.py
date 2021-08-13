@@ -1,20 +1,12 @@
 import datajoint as dj
-from . import reference, subject, acquisition, data, ephys, qc
 import numpy as np
 from .utils import atlas
 from tqdm import tqdm
 import warnings
-from os import environ
 
-try:
-    from oneibl.one import ONE
-    import alf.io
-    one = ONE(silent=True)
-except ImportError:
-    warnings.warn('ONE not installed, cannot use populate')
-    pass
+from . import reference, subject, acquisition, data, ephys, qc
+from . import mode, one
 
-mode = environ.get('MODE')
 
 if mode == 'update':
     schema = dj.schema('ibl_histology')

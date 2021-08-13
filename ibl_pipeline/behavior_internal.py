@@ -6,17 +6,10 @@ import datetime
 import logging
 import warnings
 from . import reference, subject, acquisition, data
+from . import mode, one
 
-try:
-    from oneibl.one import ONE
-    import alf.io
-    one = ONE(silent=True)
-except ImportError:
-    warnings.warn('ONE not installed, cannot use populate')
-    pass
 
 logger = logging.getLogger(__name__)
-mode = environ.get('MODE')
 
 if mode == 'update':
     schema = dj.schema('ibl_behavior')

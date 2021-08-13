@@ -1,6 +1,9 @@
 import datajoint as dj
 import os
 
+
+_one = None
+
 dj.config['enable_python_native_blobs'] = True
 
 mode = os.environ.get('MODE')
@@ -58,3 +61,12 @@ dj.config['stores'] = {
         location=root + '/plotting'
     ),
 }
+
+
+try:
+    from oneibl.one import ONE
+except ImportError:
+    print('ONE not set up')
+    one = False
+else:
+    one = ONE()

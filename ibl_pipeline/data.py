@@ -1,16 +1,8 @@
 import datajoint as dj
-import os
 from tqdm import tqdm
 from . import reference, acquisition
+from . import mode, one
 
-try:
-    from oneibl.one import ONE
-    one = ONE()
-except Exception:
-    print('ONE does not get setup properly')
-
-
-mode = os.environ.get('MODE')
 
 if mode == 'update':
     schema = dj.schema('ibl_data')

@@ -1,17 +1,10 @@
 import datajoint as dj
-from . import reference, acquisition, data, qc
 import numpy as np
 from .utils import atlas
-from tqdm import tqdm
 import warnings
-from os import environ
-import warnings
+from . import reference, acquisition, data, qc
+from . import mode, one
 
-try:
-    from oneibl.one import ONE
-    one = ONE()
-except:
-    print('ONE not set up!')
 
 # avoid importing ONE when importing the ephys module if possible
 try:
@@ -19,7 +12,6 @@ try:
 except dj.DataJointError:
     from . import ephys
 
-mode = environ.get('MODE')
 
 if mode == 'update':
     schema = dj.schema('ibl_histology')
