@@ -131,7 +131,7 @@ def get_many_to_many_field_names(alyx_model):
         except:
             pass
         else:
-            if obj.__class__.__name__ == 'ManyRelatedManager':
+            if obj.__class__.__name__ == 'ManyRelatedManager' and not field_name.endswith('_set'):
                 many_to_many_field_names.append(field_name)
 
     return many_to_many_field_names
@@ -258,7 +258,11 @@ def insert_alyx_entries_model(
 
             # ingest many to many fields into alyxraw.AlyxRaw.Field
             for field_name in many_to_many_field_names:
-                for obj_idx, obj in enumerate(getattr(r, field_name).all()):
+                many_to_many_entries = getattr(r, field_name).all()
+                if len(many_to_many_entries) > 200:
+                    print(f'\tmany-to-many field {field_name} with {len(many_to_many_entries)} entries - skipping...')
+                    continue
+                for obj_idx, obj in enumerate(many_to_many_entries):
                     alyxraw_field_buffer.add_to_queue1(
                         dict(uuid=r.id, fname=field_name,
                              value_idx=obj_idx, fvalue=str(obj.id)))

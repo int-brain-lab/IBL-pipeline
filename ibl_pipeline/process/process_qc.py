@@ -30,7 +30,7 @@ QC_MODELS_TO_UPDATE = {
         'ref_table': acquisition.Session,
         'alyx_fields': ['qc', 'extended_qc'],
         'uuid_name': 'session_uuid',
-        'shadow_tables': [qc_ingest.SessionQCIngest],
+        'ingestion_tables': [qc_ingest.SessionQCIngest],
         'real_tables': [
             qc.SessionExtendedQC.Field,
             qc.SessionExtendedQC,
@@ -43,7 +43,7 @@ QC_MODELS_TO_UPDATE = {
         'ref_table': ephys.ProbeInsertion,
         'alyx_fields': ['json'],
         'uuid_name': 'probe_insertion_uuid',
-        'shadow_tables': [qc_ingest.ProbeInsertionQCIngest],
+        'ingestion_tables': [qc_ingest.ProbeInsertionQCIngest],
         'real_tables': [
             qc.ProbeInsertionExtendedQC.Field,
             qc.ProbeInsertionExtendedQC,
@@ -54,7 +54,9 @@ QC_MODELS_TO_UPDATE = {
 
 
 def delete_qc_entries(alyx_model_name):
-
+    """
+    Deleting updated/deleted entries so they can be reingest
+    """
     model_info = QC_MODELS_TO_UPDATE[alyx_model_name]
 
     qc_keys = update_utils.get_deleted_keys(alyx_model_name) + \
@@ -67,15 +69,13 @@ def delete_qc_entries(alyx_model_name):
 
     logger.log(25, f'Deleting updated qc and extended_qc for {alyx_model_name} from shadow tables...')
     uuids_dict_list = [{model_info['uuid_name']: k['uuid']} for k in qc_keys]
-    for shadow_table in model_info['shadow_tables']:
-        (shadow_table & uuids_dict_list).delete_quick()
+    for ingestion_table in model_info['ingestion_tables']:
+        (ingestion_table & uuids_dict_list).delete_quick()
 
     logger.log(25, f'Deleting updated qc and extended_qc for {alyx_model_name} from real tables...')
     q_real = model_info['ref_table'] & uuids_dict_list
     for real_table in model_info['real_tables']:
         (real_table & q_real).delete_quick()
-
-    # TODO: what about copying data from shadow tables to real tables for QC?
 
 
 def main():
@@ -97,10 +97,10 @@ def main():
     for alyx_model_name in alyx_models:
         ingest_alyx_raw_postgres.insert_alyx_entries_model(alyx_model_name)
 
-    logger.log(25, 'QC - Ingesting into shadow tables...')
+    logger.log(25, 'QC - Calling the populate on the QC-ingestion table...')
     for alyx_model_name in alyx_model_names:
-        for shadow_table in QC_MODELS_TO_UPDATE[alyx_model_name]['shadow_tables']:
-            shadow_table.populate(display_progress=True, suppress_errors=True)
+        for ingestion_table in QC_MODELS_TO_UPDATE[alyx_model_name]['ingestion_tables']:
+            ingestion_table.populate(display_progress=True, suppress_errors=True)
 
 
 if __name__ == '__main__':
