@@ -86,7 +86,7 @@ def main():
     logger.log(25, 'QC - Ingesting into update_ibl_alyxraw...')
     ingest_alyx_raw_postgres.insert_to_update_alyxraw_postgres(
         alyx_models=alyx_models,
-        delete_update_tables_first=False)
+        delete_UpdateAlyxRaw_first=True, skip_existing_alyxraw=True)
 
     # ---- Step 4: delete updated/deleted qc entries ----
     logger.log(25, 'QC - Deleting updated/deleted entries...')

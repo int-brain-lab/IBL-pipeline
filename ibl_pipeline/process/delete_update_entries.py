@@ -110,7 +110,7 @@ def delete_entries_from_membership(pks_to_be_deleted):
             with dj.config(safemode=False):
                 (t['dj_current_table'] & entries_to_delete).delete()
 
-# =================================== Alyx models to be updated ========================
+# =================================== Tables to be updated ========================
 
 
 TABLES_TO_UPDATE = [
@@ -164,7 +164,7 @@ TABLES_TO_UPDATE = [
 def update_fields(real_schema, shadow_schema, table_name, pks, log_to_UpdateRecord=False):
     """
     Given a table and the primary key of real table,
-        update the real table all the fields that have discrepancy from the shadown table
+        update the real table all the fields that have discrepancy from the shadow table
     Inputs: real_schema     : real schema module, e.g. reference
             shadow_schema   : shadow schema module, e.g. reference_ingest
             table_name      : string, name of a table, e.g. Subject

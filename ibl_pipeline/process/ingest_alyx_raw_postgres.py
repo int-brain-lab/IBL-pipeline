@@ -149,14 +149,14 @@ def get_tables_with_auto_datetime(tables=None):
 
 def insert_alyx_entries_model(
         alyx_model,
-        alyxraw_dj_module=alyxraw,
+        AlyxRawTable=alyxraw.AlyxRaw,
         backtrack_days=None,
         skip_existing_alyxraw=False):
     """Insert alyx entries into alyxraw tables for a particular alyx model
 
     Args:
         alyx_model (django.model object): alyx model
-        alyxraw_dj_module (datajoint module): datajoint module containing AlyxRaw tables, either alyxraw or alyxraw update
+        AlyxRawTable (datajoint module): datajoint module containing AlyxRaw tables, either alyxraw or alyxraw update
         backtrack_days (int, optional): number of days the data are within to backtrack and ingest,
             just applicable to tables with auto_datetime field
         skip_existing_alyxraw: if True, skip over the entries already existed in the AlyxRaw table,
@@ -187,21 +187,26 @@ def insert_alyx_entries_model(
     else:
         entries = alyx_model.objects.all()
 
-    # ingest into main table
-    if skip_existing_alyxraw:
-        existing_uuids = (alyxraw_dj_module.AlyxRaw & {'model': model_name}).fetch('uuid')
+    # Ingest into main table
+    if skip_existing_alyxraw and model_name != 'actions.session':
+        existing_uuids = (AlyxRawTable & {'model': model_name}).fetch('uuid')
         new_uuids = np.setxor1d(list(entries.values_list('id', flat=True)), existing_uuids)
         entries = [e for e in entries if e.id in new_uuids]
     else:
         new_uuids = list(entries.values_list('id', flat=True))
 
-    # This is not very slow, if too slow, use QueryBuffer instead
-    alyxraw_dj_module.AlyxRaw.insert(
-        [dict(uuid=s, model=model_name) for s in new_uuids],
-        skip_duplicates=True)
+    if not new_uuids:
+        return
 
-    # ingest into part table AlyxRaw.Field
-    alyxraw_field_buffer = QueryBuffer(alyxraw_dj_module.AlyxRaw.Field, verbose=True)
+    # using QueryBuffer, ingest into table AlyxRaw
+    alyxraw_buffer = QueryBuffer(AlyxRawTable & {'model': model_name}, verbose=True)
+    alyxraw_buffer.add_to_queue([{'uuid': u, 'model': model_name} for u in new_uuids])
+
+    alyxraw_buffer.flush_insert(skip_duplicates=True, chunksz=7500)
+    alyxraw_buffer.flush_insert(skip_duplicates=True)
+
+    # using QueryBuffer, ingest into part table AlyxRaw.Field
+    alyxraw_field_buffer = QueryBuffer(AlyxRawTable.Field, verbose=True)
 
     # ingest fields and single foreign key references in alyxraw.AlyxRaw.Field
     for r in tqdm(entries):
@@ -269,6 +274,8 @@ def insert_alyx_entries_model(
                     for obj_idx, obj in enumerate(many_to_many_entries)])
 
             alyxraw_field_buffer.add_to_queue(field_entries)
+            dj.conn().ping()
+            del field_entries  # to be cleaned by garbage collector, improve memory management
 
         except Exception as e:
             logger.log(25, 'Problematic entry {} of model {} with error {}'.format(
@@ -280,67 +287,38 @@ def insert_alyx_entries_model(
 
 
 def insert_to_update_alyxraw_postgres(alyx_models=None, excluded_models=[],
-                                      delete_update_tables_first=False,
+                                      delete_UpdateAlyxRaw_first=False,
                                       skip_existing_alyxraw=False):
 
     """Ingest entries into update_ibl_alyxraw from postgres alyx instance
 
     Args:
         alyx_models (list of alyx model django objects): list of alyx django models
-        delete_update_tables_first (bool, optional): whether to delete the update module alyx raw tables first. Defaults to False.
+        delete_UpdateAlyxRaw_first (bool, optional): whether to delete the update module alyx raw tables first. Defaults to False.
     """
     if not alyx_models:
         alyx_models = ALYX_MODELS_OF_INTEREST
 
-    alyxraw_schema_name = dj.config.get('database.prefix', '') + 'update_ibl_alyxraw'
-
-    if delete_update_tables_first:
+    if delete_UpdateAlyxRaw_first:
         with dj.config(safemode=False):
             logger.log(25, 'Deleting update ibl alyxraw tables...')
-            # check existence of update_alyxraw
-            if alyxraw_schema_name in dj.list_schemas():
-                alyxraw_update = dj.create_virtual_module(
-                    'alyxraw', alyxraw_schema_name)
-                if hasattr(alyxraw_update, 'AlyxRaw') and alyxraw_update.AlyxRaw:
-                    alyxraw_update.AlyxRaw.Field.delete_quick()
-                    alyxraw_update.AlyxRaw.delete_quick()
-            else:
-                warnings.warn(f'{alyxraw_schema_name} does not exist, create alyxraw_module')
-
-    schema = dj.schema(alyxraw_schema_name)
-
-    @schema
-    class AlyxRaw(dj.Manual):
-        definition = '''
-        uuid: uuid  # pk field (uuid string repr)
-        ---
-        model: varchar(255)  # alyx 'model'
-        '''
-
-        class Field(dj.Part):
-            definition = '''
-            -> master
-            fname: varchar(255)  # field name
-            value_idx: tinyint
-            ---
-            fvalue=null: varchar(40000)  # field value in the position of value_idx
-            index (fname)
-            '''
-
-    alyxraw_update = dj.create_virtual_module('alyx_raw', alyxraw_schema_name)
+            models_res = [{'model': get_alyx_model_name(m) for m in alyx_models}]
+            (alyxraw.UpdateAlyxRaw.Field & models_res).delete_quick()
+            (alyxraw.UpdateAlyxRaw & models_res).delete_quick()
 
     for alyx_model in alyx_models:
         if alyx_model.__name__ in excluded_models:
             continue
-        logger.log(25, 'Ingesting alyx table {} into datajoint update_alyxraw...'.format(get_alyx_model_name(alyx_model)))
-        insert_alyx_entries_model(alyx_model, alyxraw_dj_module=alyxraw_update,
+        logger.log(25, 'Ingesting alyx table {} into datajoint UpdateAlyxRaw...'.format(get_alyx_model_name(alyx_model)))
+        insert_alyx_entries_model(alyx_model, AlyxRawTable=alyxraw.UpdateAlyxRaw,
                                   skip_existing_alyxraw=skip_existing_alyxraw)
 
 
 def main(backtrack_days=3, skip_existing_alyxraw=False):
     for alyx_model in ALYX_MODELS_OF_INTEREST:
         logger.log(25, 'Ingesting alyx table {} into datajoint alyxraw...'.format(get_alyx_model_name(alyx_model)))
-        insert_alyx_entries_model(alyx_model, backtrack_days=backtrack_days,
+        insert_alyx_entries_model(alyx_model, AlyxRawTable=alyxraw.AlyxRaw,
+                                  backtrack_days=backtrack_days,
                                   skip_existing_alyxraw=skip_existing_alyxraw)
 
 

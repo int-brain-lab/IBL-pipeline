@@ -1,4 +1,3 @@
-
 import datajoint as dj
 from ibl_pipeline.process import (
     create_ingest_task,
@@ -207,7 +206,7 @@ def get_created_modified_deleted_pks():
     return created_pks, modified_pks, deleted_pks
 
 
-def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
+def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=True):
     """function that process daily ingestion routine based on alyx postgres instance set up with sql dump
 
     Args:
@@ -216,20 +215,19 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
     """
 
     # ---- Step 1: new job entry in the job.Job table ----
-
     job_key = dict(job_date=get_file_date(sql_dump_path),
                    job_timezone=get_file_timezone(sql_dump_path))
     job_entry = dict(job_key, alyx_current_time_stamp=get_file_timestamp(sql_dump_path))
 
-    # ---- Step 2: from postgres-db with the latest sql-dump, ingest into AlyxRaw(schema=update) ----
+    # ---- Step 2: from postgres-db with the latest sql-dump, ingest into UpdateAlyxRaw ----
     # this step skips `Dataset` and `FileRecord` models
-    logger.log(25, 'Ingesting into update_ibl_alyxraw...')
+    logger.log(25, 'Ingesting into UpdateAlyxRaw...')
     ingest_alyx_raw_postgres.insert_to_update_alyxraw_postgres(
         excluded_models=['Dataset', 'FileRecord'],
-        delete_update_tables_first=True, skip_existing_alyxraw=True)
+        delete_UpdateAlyxRaw_first=True, skip_existing_alyxraw=True)
 
-    # ---- Step 3: compare AlyxRaw vs. AlyxRaw(schema=update) ----
-    # compare the same tables between update_ibl_alyxraw and ibl_alyxraw,
+    # ---- Step 3: compare UpdateAlyxRaw vs. AlyxRaw ----
+    # compare the same tables between UpdateAlyxRaw and AlyxRaw,
     # get the created, modified, and deleted uuids
     logger.log(25, 'Getting created, modified and deleted uuids...')
     start = datetime.datetime.now()
@@ -265,13 +263,13 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
 
     logger.log(25, 'Ingesting from Postgres Alyx to AlyxRaw...')
     start = datetime.datetime.now()
-    ingest_alyx_raw_postgres.main(backtrack_days=3, skip_existing_alyxraw=False)
+    ingest_alyx_raw_postgres.main(backtrack_days=3, skip_existing_alyxraw=True)
     job.TaskStatus.insert_task_status(job_key, 'Ingest alyxraw',
                                       start, end=datetime.datetime.now())
 
     logger.log(25, 'Ingesting into shadow tables...')
     start = datetime.datetime.now()
-    ingest_shadow.main()
+    ingest_shadow.main(modified_pks=modified_pks)
     job.TaskStatus.insert_task_status(job_key, 'Ingest shadow',
                                       start, end=datetime.datetime.now())
 
@@ -305,12 +303,14 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
                                       start, end=datetime.datetime.now())
 
 
-    """General flow for updates only (similar to procedures in process_histology and process_qc)
-    + create update_ibl_alyxraw from scratch
-    + compare f_values for certain alyx models between update_ibl_alyxraw and ibl_alyxraw, get the keys that are deleted and updated
-    + delete ibl_alyxraw and shawdow tables entries that are deleted and updated
-    + delete shadow membership entries that are deleted and updated
-    + ingest entries again into ibl_alyxraw, shadow, and shadow membership tables
+    """ General flow for updates only (similar to procedures in process_histology and process_qc)
+    + create UpdateAlyxRaw from scratch
+    + compare f_values for certain alyx models between UpdateAlyxRaw and AlyxRaw, get the keys that are deleted and updated
+    + delete from AlyxRaw and shadow tables: entries that are deleted and updated
+        + for Session table - only delete the AlyxRaw.Field, not AlyxRaw
+    + delete from shadow membership tables: entries that are deleted and updated
+    + ingest entries again into AlyxRaw, shadow, and shadow membership tables
+        + for Session table - update the attributes values for "updated/modified" entries
     + update real tables by comparing with shadow and shadow membership tables
     """
 

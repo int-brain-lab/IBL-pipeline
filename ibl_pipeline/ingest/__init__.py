@@ -110,20 +110,22 @@ class QueryBuffer(object):
         while qlen >= chunksz:
             entries = self._queue[:chunksz]
             del self._queue[:chunksz]
-            qlen = len(self._queue)
+            qlen = len(self._queue)  # new queue size for the next loop-iteration
             try:
                 self._rel.insert(entries, **kwargs)
             except Exception as e:
-                print('error in flush-insert: {}, trying ingestion one by one'.format(e))
+                logger.info('error in flush-insert: {}'
+                            ' - Trying ingestion one by one ({} records)'.format(e, len(entries)))
                 for entry in entries:
                     try:
                         self._rel.insert1(entry, **kwargs)
                     except Exception as e:
                         failed_insertions.append(entry)
-                        print('error in flush-insert: {}'.format(e))
+                        logger.debug('error in flush-insert: {}'.format(e))
             if self.verbose:
                 logger.log(25, 'Inserted {}/{} raw field tuples'.format(
                     chunksz - len(failed_insertions), chunksz))
+            del entries
 
         return failed_insertions
 
