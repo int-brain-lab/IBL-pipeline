@@ -6,6 +6,7 @@ from ibl_pipeline.ingest import alyxraw, QueryBuffer
 from tqdm import tqdm
 import datajoint as dj
 import pathlib
+import numpy as np
 
 
 mode = os.getenv('MODE')
@@ -149,7 +150,8 @@ def get_tables_with_auto_datetime(tables=None):
 def insert_alyx_entries_model(
         alyx_model,
         alyxraw_dj_module=alyxraw,
-        backtrack_days=None):
+        backtrack_days=None,
+        skip_existing_alyxraw=False):
     """Insert alyx entries into alyxraw tables for a particular alyx model
 
     Args:
@@ -157,6 +159,8 @@ def insert_alyx_entries_model(
         alyxraw_dj_module (datajoint module): datajoint module containing AlyxRaw tables, either alyxraw or alyxraw update
         backtrack_days (int, optional): number of days the data are within to backtrack and ingest,
             just applicable to tables with auto_datetime field
+        skip_existing_alyxraw: if True, skip over the entries already existed in the AlyxRaw table,
+            else, load and insert everything again (but still with `skip_duplicates=True`)
     """
     model_name = get_alyx_model_name(alyx_model)
     field_names = get_field_names(alyx_model)
@@ -184,10 +188,16 @@ def insert_alyx_entries_model(
         entries = alyx_model.objects.all()
 
     # ingest into main table
+    if skip_existing_alyxraw:
+        existing_uuids = (alyxraw_dj_module.AlyxRaw & {'model': model_name}).fetch('uuid')
+        new_uuids = np.setxor1d(list(entries.values_list('id', flat=True)), existing_uuids)
+        entries = [e for e in entries if e.id in new_uuids]
+    else:
+        new_uuids = list(entries.values_list('id', flat=True))
 
     # This is not very slow, if too slow, use QueryBuffer instead
     alyxraw_dj_module.AlyxRaw.insert(
-        [dict(uuid=s, model=model_name) for s in entries.values_list('id', flat=True)],
+        [dict(uuid=s, model=model_name) for s in new_uuids],
         skip_duplicates=True)
 
     # ingest into part table AlyxRaw.Field
@@ -264,13 +274,14 @@ def insert_alyx_entries_model(
             logger.log(25, 'Problematic entry {} of model {} with error {}'.format(
                 r.id, model_name, str(e)))
 
-        alyxraw_field_buffer.flush_insert(skip_duplicates=True, chunksz=10000)
+        alyxraw_field_buffer.flush_insert(skip_duplicates=True, chunksz=7500)
 
     alyxraw_field_buffer.flush_insert(skip_duplicates=True)
 
 
 def insert_to_update_alyxraw_postgres(alyx_models=None, excluded_models=[],
-                                      delete_update_tables_first=False):
+                                      delete_update_tables_first=False,
+                                      skip_existing_alyxraw=False):
 
     """Ingest entries into update_ibl_alyxraw from postgres alyx instance
 
@@ -322,13 +333,15 @@ def insert_to_update_alyxraw_postgres(alyx_models=None, excluded_models=[],
         if alyx_model.__name__ in excluded_models:
             continue
         logger.log(25, 'Ingesting alyx table {} into datajoint update_alyxraw...'.format(get_alyx_model_name(alyx_model)))
-        insert_alyx_entries_model(alyx_model, alyxraw_dj_module=alyxraw_update)
+        insert_alyx_entries_model(alyx_model, alyxraw_dj_module=alyxraw_update,
+                                  skip_existing_alyxraw=skip_existing_alyxraw)
 
 
-def main(backtrack_days=3):
+def main(backtrack_days=3, skip_existing_alyxraw=False):
     for alyx_model in ALYX_MODELS_OF_INTEREST:
         logger.log(25, 'Ingesting alyx table {} into datajoint alyxraw...'.format(get_alyx_model_name(alyx_model)))
-        insert_alyx_entries_model(alyx_model, backtrack_days=backtrack_days)
+        insert_alyx_entries_model(alyx_model, backtrack_days=backtrack_days,
+                                  skip_existing_alyxraw=skip_existing_alyxraw)
 
 
 if __name__ == '__main__':

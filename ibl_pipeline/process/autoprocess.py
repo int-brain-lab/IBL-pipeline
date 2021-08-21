@@ -226,7 +226,7 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
     logger.log(25, 'Ingesting into update_ibl_alyxraw...')
     ingest_alyx_raw_postgres.insert_to_update_alyxraw_postgres(
         excluded_models=['Dataset', 'FileRecord'],
-        delete_update_tables_first=True)
+        delete_update_tables_first=True, skip_existing_alyxraw=True)
 
     # ---- Step 3: compare AlyxRaw vs. AlyxRaw(schema=update) ----
     # compare the same tables between update_ibl_alyxraw and ibl_alyxraw,
@@ -265,7 +265,7 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
 
     logger.log(25, 'Ingesting from Postgres Alyx to AlyxRaw...')
     start = datetime.datetime.now()
-    ingest_alyx_raw_postgres.main()
+    ingest_alyx_raw_postgres.main(backtrack_days=3, skip_existing_alyxraw=False)
     job.TaskStatus.insert_task_status(job_key, 'Ingest alyxraw',
                                       start, end=datetime.datetime.now())
 
