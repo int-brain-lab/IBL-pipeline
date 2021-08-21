@@ -211,33 +211,8 @@ def ingest_membership_table(dj_current_table,
                    renamed_other_field_name or dj_other_field: dj_other_field}))
     # join
     joined_tables = parent_table_query * other_table_query
-    
-    if isinstance(dj_parent_fields, str):
-        dj_parent_fields = [dj_parent_fields]
-
-    insert_buffer = QueryBuffer(dj_current_table)
-
-    for key in tqdm((alyxraw_query & dj_parent_table).fetch('KEY')):
-        entry_base = (dj_parent_table.proj(*dj_parent_fields) & key).fetch1()
-
-        alyx_key = {'uuid': entry_base.pop(dj_parent_uuid_name)}
-        uuids = grf(alyx_key, alyx_field, multiple_entries=True,
-                    model=alyx_parent_model)
-
-        other_table_query = dj_other_table & [{dj_other_uuid_name: uuid}
-                                              for uuid in uuids if uuid != 'None']
-
-        if not other_table_query:
-            return
-
-        insert_buffer.add_to_queue([{
-            **entry_base,
-            renamed_other_field_name or dj_other_field: field_value}
-            for field_value in other_table_query.fetch(dj_other_field)])
-
-        insert_buffer.flush_insert(skip_duplicates=True, chunksz=1000)
-
-    insert_buffer.flush_insert(skip_duplicates=True)
+    # insert
+    dj_current_table.insert(joined_tables, ignore_extra_fields=True, skip_duplicates=True)
 
 
 if __name__ == '__main__':
