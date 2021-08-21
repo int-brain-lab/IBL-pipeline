@@ -61,7 +61,7 @@ import os
 if os.environ.get('MODE') == 'test':
     dj.config['database.prefix'] = 'test_'
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def get_raw_field(key, field, multiple_entries=False, model=None):
@@ -72,8 +72,12 @@ def get_raw_field(key, field, multiple_entries=False, model=None):
     else:
         query = alyxraw.AlyxRaw.Field & key & 'fname="{}"'.format(field)
 
-    return query.fetch1('fvalue') \
-        if not multiple_entries and len(query) else query.fetch('fvalue')
+    if not query:
+        raise KeyError(f'No "{field}" field in AlyxRaw.Field for key: {key}')
+
+    return (query.fetch1('fvalue')
+            if not multiple_entries and len(query)
+            else query.fetch('fvalue'))
 
 
 class QueryBuffer(object):
@@ -81,45 +85,47 @@ class QueryBuffer(object):
     QueryBuffer: a utility class to help managed chunked inserts
     Currently requires records do not have prerequisites.
     '''
-    def __init__(self, rel):
+    def __init__(self, rel, verbose=False):
         self._rel = rel
         self._queue = []
         self._delete_queue = []
         self.fetched_results = []
+        self.verbose = verbose
 
     def add_to_queue1(self, r):
         self._queue.append(r)
 
     def add_to_queue(self, recs):
-        self._queue += recs
+        self._queue.extend(recs)
 
-    def flush_insert(self, replace=False, skip_duplicates=False,
-              ignore_extra_fields=False, allow_direct_insert=False, chunksz=1):
+    def flush_insert(self, chunksz=None, **kwargs):
         '''
         flush the buffer
         XXX: ignore_extra_fields na, requires .insert() support
         '''
-        kwargs = dict(skip_duplicates=skip_duplicates,
-                      ignore_extra_fields=ignore_extra_fields)
-        if allow_direct_insert:
-            kwargs.update(allow_direct_insert=True)
-
         qlen = len(self._queue)
-        if qlen > 0 and qlen % chunksz == 0:
+        chunksz = chunksz or qlen
+
+        failed_insertions = []
+        while qlen >= chunksz:
+            entries = self._queue[:chunksz]
+            del self._queue[:chunksz]
+            qlen = len(self._queue)
             try:
-                self._rel.insert(
-                    self._queue, **kwargs)
+                self._rel.insert(entries, **kwargs)
             except Exception as e:
-                print('error in flush: {}, trying ingestion one by one'.format(e))
-                for t in self._queue:
+                print('error in flush-insert: {}, trying ingestion one by one'.format(e))
+                for entry in entries:
                     try:
-                        self._rel.insert1(t, **kwargs)
+                        self._rel.insert1(entry, **kwargs)
                     except Exception as e:
-                        print('error in flush: {}'.format(e))
-            self._queue.clear()
-            return qlen
-        else:
-            return 0
+                        failed_insertions.append(entry)
+                        print('error in flush-insert: {}'.format(e))
+            if self.verbose:
+                logger.log(25, 'Inserted {}/{} raw field tuples'.format(
+                    chunksz - len(failed_insertions), chunksz))
+
+        return failed_insertions
 
     def flush_delete(self, chunksz=1, quick=True):
         '''

@@ -107,8 +107,8 @@ class WaterAdministration(dj.Computed):
     adlib:                          boolean
     wateradministration_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw &
-                  'model = "actions.wateradministration"').proj(
+    key_source = (alyxraw.AlyxRaw & alyxraw.AlyxRaw.Field
+                  & 'model = "actions.wateradministration"').proj(
         wateradmin_uuid='uuid')
 
     def make(self, key):

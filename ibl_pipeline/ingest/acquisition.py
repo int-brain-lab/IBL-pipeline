@@ -26,11 +26,14 @@ class Session(dj.Computed):
     task_protocol=null:         varchar(255)
     session_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(
-        session_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & alyxraw.AlyxRaw.Field
+                  & 'model="actions.session"').proj(session_uuid='uuid')
 
     @staticmethod
     def create_entry(key):
+        if not (alyxraw.AlyxRaw.Field & key):
+            return
+
         key_session = key.copy()
         key['uuid'] = key['session_uuid']
         key_session['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
