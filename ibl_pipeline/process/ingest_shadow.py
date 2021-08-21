@@ -108,71 +108,15 @@ def main(excluded_tables=[], modified_pks=None):
 
         t.populate(**kwargs)
 
-    # populate `DataSet`
+    # ---- populate `DataSet` and `FileRecord` ----
+    # essentially calling their respective `.make()`
+    # but using the QueryBuffer to do batch insertion
+
     if 'DataSet' not in excluded_tables:
-
         print('Ingesting dataset entries...')
-        key_source = (alyxraw.AlyxRaw & 'model="data.dataset"').proj(
-            dataset_uuid="uuid") - data.DataSet
-
         data_set_buffer = QueryBuffer(data.DataSet)
-
-        for key in tqdm(key_source.fetch('KEY'), position=0):
-            key_ds = key.copy()
-            key['uuid'] = key['dataset_uuid']
-
-            session = grf(key, 'session')
-            if not len(acquisition.Session &
-                       dict(session_uuid=uuid.UUID(session))):
-                print('Session {} is not in the table acquisition.Session'.format(
-                    session))
-                print('dataset_uuid: {}'.format(str(key['uuid'])))
-                continue
-
-            key_ds['subject_uuid'], key_ds['session_start_time'] = \
-                (acquisition.Session &
-                    dict(session_uuid=uuid.UUID(session))).fetch1(
-                    'subject_uuid', 'session_start_time')
-
-            key_ds['dataset_name'] = grf(key, 'name')
-
-            dt = grf(key, 'dataset_type')
-            key_ds['dataset_type_name'] = \
-                (data.DataSetType & dict(dataset_type_uuid=uuid.UUID(dt))).fetch1(
-                    'dataset_type_name')
-
-            user = grf(key, 'created_by')
-
-            if user != 'None':
-                try:
-                    key_ds['dataset_created_by'] = \
-                        (reference.LabMember & dict(user_uuid=uuid.UUID(user))).fetch1(
-                            'user_name')
-                except:
-                    print(user)
-            else:
-                key_ds['dataset_created_by'] = None
-
-            format = grf(key, 'data_format')
-            key_ds['format_name'] = \
-                (data.DataFormat & dict(format_uuid=uuid.UUID(format))).fetch1(
-                    'format_name')
-
-            key_ds['created_datetime'] = grf(key, 'created_datetime')
-
-            software = grf(key, 'generating_software')
-            key_ds['generating_software'] = software if software != 'None' else None
-
-            directory = grf(key, 'provenance_directory')
-            key_ds['provenance_directory'] = directory if directory != 'None' else None
-
-            md5 = grf(key, 'md5')
-            key_ds['md5'] = md5 if md5 != 'None' else None
-
-            file_size = grf(key, 'file_size')
-            key_ds['file_size'] = file_size if file_size != 'None' else None
-
-            data_set_buffer.add_to_queue1(key_ds)
+        for key in tqdm((data.DataSet.key_source - data.DataSet).fetch('KEY'), position=0):
+            data_set_buffer.add_to_queue1(data.DataSet.create_entry(key))
 
             if data_set_buffer.flush_insert(
                     skip_duplicates=True,
@@ -182,44 +126,11 @@ def main(excluded_tables=[], modified_pks=None):
         if data_set_buffer.flush_insert(skip_duplicates=True, allow_direct_insert=True):
             print('Inserted all remaining dataset tuples')
 
-    # populate `FileRecord`
     if 'FileRecord' not in excluded_tables:
         print('Ingesting file record entries...')
-        records = alyxraw.AlyxRaw & 'model="data.filerecord"'
-        repos = (data.DataRepository & 'repo_name LIKE "flatiron%"').fetch('repo_uuid')
-        records_flatiron = alyxraw.AlyxRaw.Field & records & \
-            'fname = "data_repository"' & [{'fvalue': str(repo)} for repo in repos]
-        record_exists = alyxraw.AlyxRaw.Field & records & \
-            'fname = "exists"' & 'fvalue="True"'
-        key_source = (alyxraw.AlyxRaw & record_exists & records_flatiron).proj(
-            record_uuid='uuid') - data.FileRecord
-
         file_record_buffer = QueryBuffer(data.FileRecord)
-
-        for key in tqdm(key_source.fetch('KEY'), position=0):
-            key_fr = key.copy()
-            key['uuid'] = key['record_uuid']
-            key_fr['exists'] = True
-
-            dataset = grf(key, 'dataset')
-            if not len(data.DataSet & dict(dataset_uuid=uuid.UUID(dataset))):
-                print('Dataset {} is not in the table data.DataSet')
-                print('Record_uuid: {}'.format(str(key['uuid'])))
-                continue
-
-            key_fr['subject_uuid'], key_fr['session_start_time'], \
-                key_fr['dataset_name'] = \
-                (data.DataSet & dict(dataset_uuid=uuid.UUID(dataset))).fetch1(
-                    'subject_uuid', 'session_start_time', 'dataset_name')
-
-            repo = grf(key, 'data_repository')
-            key_fr['repo_name'] = \
-                (data.DataRepository & dict(repo_uuid=uuid.UUID(repo))).fetch1(
-                    'repo_name')
-
-            key_fr['relative_path'] = grf(key, 'relative_path')
-
-            file_record_buffer.add_to_queue1(key_fr)
+        for key in tqdm((data.FileRecord.key_source - data.FileRecord).fetch('KEY'), position=0):
+            file_record_buffer.add_to_queue1(data.FileRecord.create_entry(key))
 
             if file_record_buffer.flush_insert(
                     skip_duplicates=True, allow_direct_insert=True, chunksz=1000):

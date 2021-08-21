@@ -101,9 +101,7 @@ class DataSet(dj.Manual):
             dataset_name (list of str): list of the dataset names
         """
         for uuid in tqdm(uuids):
-
             for dataset_name in tqdm(dataset_names):
-
                 try:
                     dataset = one.alyx.rest('datasets', 'list', session=uuid, name=dataset_name)
                     if not dataset:

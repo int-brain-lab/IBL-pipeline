@@ -181,12 +181,9 @@ def update_fields(real_schema, shadow_schema, table_name, pks, log_to_UpdateReco
         real_table = getattr(real_schema, table_name)
         shadow_table = getattr(shadow_schema, table_name)
 
-    secondary_fields = set(real_table.heading.secondary_attributes)
-
     # don't update "_ts" fields
-    ts_field = [f for f in secondary_fields
-                if f.endswith('_ts')][0]
-    fields_to_update = secondary_fields - {ts_field}
+    fields_to_update = [f for f in real_table.heading.secondary_attributes
+                        if not f.endswith('_ts')]
 
     # do the updating
     for key in (real_table & pks).fetch('KEY'):

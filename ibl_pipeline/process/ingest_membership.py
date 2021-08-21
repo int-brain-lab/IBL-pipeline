@@ -95,7 +95,7 @@ MEMBERSHIP_TABLES = [
      'dj_parent_table': reference.Project,
      'dj_other_table': data.DataRepository,
      'dj_parent_fields': 'project_name',
-     'dj_other_field': 'session_start_time',
+     'dj_other_field': 'repo_name',
      'dj_parent_uuid_name': 'project_uuid',
      'dj_other_uuid_name': 'repo_uuid'},
 ]
@@ -188,27 +188,29 @@ def ingest_membership_table(dj_current_table,
     if not alyxraw_to_insert:
         return
 
-    alyxraw_query = (alyxraw.AlyxRaw
-                     & (alyxraw.AlyxRaw.Field & alyxraw_to_insert
-                        & {'fname': alyx_field} & 'fvalue!="None"')).proj(
-        **{dj_parent_uuid_name: 'uuid'})
-
-    # parent-table
-    parent_table_query = (dj_parent_table.proj(*dj_parent_fields)
-                          * (alyxraw.AlyxRaw.Field & alyxraw_to_insert
-                             & {'fname': alyx_field} & 'fvalue!="None"').proj(
-                ..., **{dj_parent_uuid_name: 'uuid', dj_other_uuid_name: 'fvalue'}))
-    # other table
     uuid_to_str_mysql = f"CONVERT(LOWER(CONCAT(" \
                         f"SUBSTR(HEX({dj_other_uuid_name}), 1, 8), '-'," \
                         f"SUBSTR(HEX({dj_other_uuid_name}), 9, 4), '-'," \
                         f"SUBSTR(HEX({dj_other_uuid_name}), 13, 4), '-'," \
                         f"SUBSTR(HEX({dj_other_uuid_name}), 17, 4), '-'," \
                         f"SUBSTR(HEX({dj_other_uuid_name}), 21))) USING utf8)"
-    other_table_query = (dj.U(dj_other_uuid_name, dj_other_field)
+
+    if dj_other_uuid_name == dj_parent_uuid_name:
+        dj_other_uuid_name = 'other_' + dj_other_uuid_name
+
+    # other table
+    other_table_query = (dj.U(dj_other_uuid_name, renamed_other_field_name or dj_other_field)
                          & dj_other_table.proj(
                 **{dj_other_uuid_name: uuid_to_str_mysql,
                    renamed_other_field_name or dj_other_field: dj_other_field}))
+    # parent-table
+    if isinstance(dj_parent_fields, str):
+        dj_parent_fields = [dj_parent_fields]
+
+    parent_table_query = (dj_parent_table.proj(*dj_parent_fields)
+                          * (alyxraw.AlyxRaw.Field & alyxraw_to_insert
+                             & {'fname': alyx_field} & 'fvalue!="None"').proj(
+                ..., **{dj_parent_uuid_name: 'uuid', dj_other_uuid_name: 'fvalue'}))
     # join
     joined_tables = parent_table_query * other_table_query
     # insert

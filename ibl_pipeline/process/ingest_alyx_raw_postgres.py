@@ -269,8 +269,8 @@ def insert_alyx_entries_model(
     alyxraw_field_buffer.flush_insert(skip_duplicates=True)
 
 
-def insert_to_update_alyxraw_postgres(
-        alyx_models=None, delete_update_tables_first=False):
+def insert_to_update_alyxraw_postgres(alyx_models=None, excluded_models=[],
+                                      delete_update_tables_first=False):
 
     """Ingest entries into update_ibl_alyxraw from postgres alyx instance
 
@@ -319,10 +319,10 @@ def insert_to_update_alyxraw_postgres(
     alyxraw_update = dj.create_virtual_module('alyx_raw', alyxraw_schema_name)
 
     for alyx_model in alyx_models:
-        # skip big tables DataSet and FileRecord for updates
-        if alyx_model not in (data.models.Dataset, data.models.FileRecord):
-            logger.log(25, 'Ingesting alyx table {} into datajoint update_alyxraw...'.format(get_alyx_model_name(alyx_model)))
-            insert_alyx_entries_model(alyx_model, alyxraw_dj_module=alyxraw_update)
+        if alyx_model.__name__ in excluded_models:
+            continue
+        logger.log(25, 'Ingesting alyx table {} into datajoint update_alyxraw...'.format(get_alyx_model_name(alyx_model)))
+        insert_alyx_entries_model(alyx_model, alyxraw_dj_module=alyxraw_update)
 
 
 def main(backtrack_days=3):

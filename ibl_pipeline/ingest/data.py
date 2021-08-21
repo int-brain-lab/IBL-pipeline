@@ -174,6 +174,10 @@ class DataSet(dj.Computed):
         dataset_uuid="uuid")
 
     def make(self, key):
+        self.insert1(self.create_entry(key))
+
+    @staticmethod
+    def create_entry(key):
         key_ds = key.copy()
         key['uuid'] = key['dataset_uuid']
 
@@ -200,9 +204,14 @@ class DataSet(dj.Computed):
         user = grf(key, 'created_by')
 
         if user != 'None':
-            key_ds['dataset_created_by'] = \
-                (reference.LabMember & dict(user_uuid=uuid.UUID(user))).fetch1(
-                    'user_name')
+            try:
+                key_ds['dataset_created_by'] = \
+                    (reference.LabMember & dict(user_uuid=uuid.UUID(user))).fetch1(
+                        'user_name')
+            except:
+                print(user)
+        else:
+            key_ds['dataset_created_by'] = None
 
         format = grf(key, 'data_format')
         key_ds['format_name'] = \
@@ -212,22 +221,18 @@ class DataSet(dj.Computed):
         key_ds['created_datetime'] = grf(key, 'created_datetime')
 
         software = grf(key, 'generating_software')
-        if software != 'None':
-            key_ds['generating_software'] = software
+        key_ds['generating_software'] = software if software != 'None' else None
 
         directory = grf(key, 'provenance_directory')
-        if directory != 'None':
-            key_ds['provenance_directory'] = directory
+        key_ds['provenance_directory'] = directory if directory != 'None' else None
 
         md5 = grf(key, 'md5')
-        if md5 != 'None':
-            key_ds['md5'] = md5
+        key_ds['md5'] = md5 if md5 != 'None' else None
 
         file_size = grf(key, 'file_size')
-        if file_size != 'None':
-            key_ds['file_size'] = file_size
+        key_ds['file_size'] = file_size if file_size != 'None' else None
 
-        self.insert1(key_ds)
+        return key_ds
 
 
 @schema
@@ -253,6 +258,10 @@ class FileRecord(dj.Computed):
         record_uuid='uuid')
 
     def make(self, key):
+        self.insert1(self.create_entry(key))
+
+    @staticmethod
+    def create_entry(key):
         key_fr = key.copy()
         key['uuid'] = key['record_uuid']
         key_fr['exists'] = True
@@ -274,4 +283,4 @@ class FileRecord(dj.Computed):
                 'repo_name')
 
         key_fr['relative_path'] = grf(key, 'relative_path')
-        self.insert1(key_fr)
+        return key_fr

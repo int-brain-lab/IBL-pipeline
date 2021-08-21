@@ -222,8 +222,10 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
     job_entry = dict(job_key, alyx_current_time_stamp=get_file_timestamp(sql_dump_path))
 
     # ---- Step 2: from postgres-db with the latest sql-dump, ingest into AlyxRaw(schema=update) ----
+    # this step skips `Dataset` and `FileRecord` models
     logger.log(25, 'Ingesting into update_ibl_alyxraw...')
     ingest_alyx_raw_postgres.insert_to_update_alyxraw_postgres(
+        excluded_models=['Dataset', 'FileRecord'],
         delete_update_tables_first=True)
 
     # ---- Step 3: compare AlyxRaw vs. AlyxRaw(schema=update) ----
@@ -259,7 +261,7 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=False):
         job.TaskStatus.insert_task_status(job_key, 'Delete shadow membership',
                                           start, end=datetime.datetime.now())
 
-    # ---- Step 5: ingestion of AlyxRaw, shadow tables and shadown membership tables ----
+    # ---- Step 5: ingestion of AlyxRaw, shadow tables and shadow membership tables ----
 
     logger.log(25, 'Ingesting from Postgres Alyx to AlyxRaw...')
     start = datetime.datetime.now()
