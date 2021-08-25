@@ -38,15 +38,17 @@ def shell(*args):
              .format(m='\n  - '.join(
                  '.'.join(m.__name__.split('.')[1:]) for m in __all__)),
              local=globals())
+    return 0
 
 
 def ingest(*args):
     # local import so db is only created created/accessed if/when ingesting
-    from ibl_pipeline.ingest import (reference as ingest_reference,
-                                    subject as ingest_subject,
-                                    acquisition as ingest_acquisition)
-    for mod in [ingest_reference, ingest_subject, ingest_acquisition]:
-        pass
+    #from ibl_pipeline.ingest import (reference as ingest_reference,
+    #                                subject as ingest_subject,
+    #                                acquisition as ingest_acquisition)
+    #for mod in [ingest_reference, ingest_subject, ingest_acquisition]:
+    #    pass
+    return os.system('ingest_alyx.sh')
 
 
 actions = {
@@ -63,4 +65,4 @@ if __name__ == '__main__':
     logsetup()
 
     action = sys.argv[1]
-    actions[action](sys.argv[2:])
+    sys.exit(actions[action](sys.argv[2:]))

@@ -1,0 +1,23 @@
+version: "2.2"  # optional since v1.27.0
+services:
+  public:
+    build:
+      context: .
+      dockerfile: Dockerfile.brain
+    env_file: .env_public
+    volumes:
+      - ./root/.one_params:/root/.one_params
+      - .:/src/IBL-pipeline
+      - ./data:/data
+    environment:
+      - QT_DEBUG_PLUGINS=1 # For debugging QT issues
+    ports:
+      - 9000:9000
+    working_dir: /src
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    command: bash -c  "jupyter notebook --ip 0.0.0.0 --no-browser --port=9000 --allow-root"
+    networks:
+      - ibl-public
+networks:
+  ibl-public:

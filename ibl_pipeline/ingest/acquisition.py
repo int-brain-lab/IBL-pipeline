@@ -1,43 +1,48 @@
 import datajoint as dj
 import json
+import uuid
 
-from . import alyxraw, reference, acquisition
+from . import alyxraw, reference, subject, action
+from .. import acquisition
 from . import get_raw_field as grf
 
-schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_acquisition')
+schema = dj.schema(dj.config.get('database.prefix', '') +
+                   'ibl_ingest_acquisition')
 
 
 @schema
 class Session(dj.Computed):
     definition = """
-    (session_uuid) -> alyxraw.AlyxRaw
+    -> alyxraw.AlyxRaw.proj(session_uuid='uuid')
     ---
     session_number=null:        int
-    subject_uuid:               varchar(64)
-    project_name=null:          varchar(255)
+    subject_uuid:               uuid
     session_start_time:         datetime
     session_end_time=null:      datetime
-    lab_name=null:              varchar(255)
-    location_name=null:         varchar(255)
+    session_lab=null:           varchar(255)
+    session_location=null:      varchar(255)
     session_type=null:          varchar(255)
-    session_narrative=null:     varchar(1024)
-    task_protocol=null:         int
+    session_narrative=null:     varchar(2048)
+    task_protocol=null:         varchar(255)
+    session_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(session_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(
+        session_uuid='uuid')
 
-    def make(self, key):
+    @staticmethod
+    def create_entry(key):
         key_session = key.copy()
         key['uuid'] = key['session_uuid']
+        key_session['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
+
+        if not len(subject.Subject & key_session):
+            print('Subject {} is not in the table subject.Subject'.format(
+                key_session['subject_uuid']))
+            return
 
         session_number = grf(key, 'number')
         if session_number != 'None':
             key_session['session_number'] = session_number
-
-        key_session['subject_uuid'] = grf(key, 'subject')
-
-        proj_uuid = grf(key, 'project')
-        if proj_uuid != 'None':
-            key_session['project_name'] = (reference.Project & 'project_uuid="{}"'.format(proj_uuid)).fetch1('project_name')
 
         key_session['session_start_time'] = grf(key, 'start_time')
 
@@ -45,13 +50,12 @@ class Session(dj.Computed):
         if end_time != 'None':
             key_session['session_end_time'] = end_time
 
-        lab_uuid = grf(key, 'lab')
-        if lab_uuid != 'None':
-            key_session['lab_name'] = (reference.Lab & 'lab_uuid="{}"'.format(lab_uuid)).fetch1('lab_name')
-
         location_uuid = grf(key, 'location')
         if location_uuid != 'None':
-            key_session['location_name'] = (reference.LabLocation & 'location_uuid="{}"'.format(location_uuid)).fetch1('location_name')
+            key_session['session_lab'], key_session['session_location'] = \
+                (reference.LabLocation &
+                 dict(location_uuid=uuid.UUID(location_uuid))).fetch1(
+                     'lab_name', 'location_name')
 
         session_type = grf(key, 'type')
         if session_type != 'None':
@@ -65,32 +69,97 @@ class Session(dj.Computed):
         if protocol != 'None':
             key_session['task_protocol'] = protocol
 
-        self.insert1(key_session)
+        return key_session
+
+    def make(self, key):
+
+        self.insert1(
+            Session.create_entry(key))
 
 
 @schema
 class ChildSession(dj.Manual):
     definition = """
-    subject_uuid:               varchar(64)
+    subject_uuid:               uuid
     session_start_time:         datetime
     ---
     parent_session_start_time:  datetime
+    childsession_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
 @schema
-class SessionLabMember(dj.Manual):
+class SessionUser(dj.Manual):
     definition = """
-    subject_uuid:           varchar(64)
+    subject_uuid:           uuid
     session_start_time:     datetime
     user_name:              varchar(255)
+    ---
+    sessionuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
 
 @schema
-class SessionProcedureType(dj.Manual):  
+class SessionProcedure(dj.Manual):
     definition = """
-    subject_uuid:           varchar(64)
+    subject_uuid:           uuid
     session_start_time:     datetime
     procedure_type_name:    varchar(255)
+    ---
+    sessionprocedure_ts=CURRENT_TIMESTAMP:   timestamp
     """
+
+
+@schema
+class SessionProject(dj.Manual):
+    definition = """
+    subject_uuid:         uuid
+    session_start_time:   datetime
+    ---
+    session_project:      varchar(255)
+    sessionproject_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+
+@schema
+class WaterAdministrationSession(dj.Manual):
+    definition = """
+    subject_uuid:           uuid
+    administration_time:    datetime
+    ---
+    session_start_time:     datetime
+    wateradministrationsession_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+
+@schema
+class SessionQC(dj.Manual):
+    definition = """
+    subject_uuid        : uuid
+    session_start_time  : datetime
+    ---
+    qc                  : tinyint unsigned
+    sessionqc_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+
+@schema
+class SessionExtendedQC(dj.Manual):
+    definition = """
+    subject_uuid             : uuid
+    session_start_time       : datetime
+    qc_type                  : varchar(16)
+    ---
+    extended_qc              : tinyint unsigned
+    session_extended_qc_ts=CURRENT_TIMESTAMP:   timestamp
+    """
+
+    class Field(dj.Part):
+        definition = """
+        -> master
+        qc_fname               : varchar(32)
+        ---
+        qc_fvalue_float=null   : float
+        qc_fvalue_str=null     : varchar(32)
+        qc_fvalue_blob=null    : blob
+        """

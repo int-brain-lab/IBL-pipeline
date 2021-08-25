@@ -1,5 +1,5 @@
 '''
-This script copies tuples in the shadow tables into the real tables for alyx, for fresh ingestion.
+This script copies tuples in the shadow tables into the real tables for alyx.
 '''
 
 import datajoint as dj
@@ -8,85 +8,41 @@ from ibl_pipeline.ingest import subject as subject_ingest
 from ibl_pipeline.ingest import action as action_ingest
 from ibl_pipeline.ingest import acquisition as acquisition_ingest
 from ibl_pipeline.ingest import data as data_ingest
-from ibl_pipeline import reference, subject, action, acquisition, data
+from ibl_pipeline.ingest import ephys as ephys_ingest
+from ibl_pipeline.ingest import histology as histology_ingest
+from ibl_pipeline import reference, subject, action, acquisition, data, ephys, histology
 from ingest_utils import copy_table
+from table_names import *
 
 
-REF_TABLES = (
-    'Lab',
-    'LabMember',
-    'LabMembership',
-    'LabLocation',
-    'Project',
-    'ProjectLabMember'
-)
+if __name__ == '__main__':
 
-for table in REF_TABLES:
+    mods = [
+        [reference, reference_ingest, REF_TABLES],
+        [subject, subject_ingest, SUBJECT_TABLES],
+        [action, action_ingest, ACTION_TABLES],
+        [acquisition, acquisition_ingest, ACQUISITION_TABLES],
+        [data, data_ingest, DATA_TABLES]
+    ]
+
+    for (target, source, table_list) in mods:
+        for table in table_list:
+            print(table)
+            copy_table(target, source, table)
+
+    # ephys tables
+    table = 'ProbeModel'
     print(table)
-    copy_table(reference, reference_ingest, table)
+    copy_table(ephys, ephys_ingest, table)
 
-SUBJECT_TABLES = (
-    'Species',
-    'Strain',
-    'Source',
-    'Sequence',
-    'Allele',
-    'AlleleSequence',
-    'Line',
-    'LineAllele',
-    'Subject',
-    'BreedingPair',
-    'Litter',
-    'LitterSubject',
-    'Weaning',
-    'Death',
-    'GenotypeTest',
-    'Zygosity',
-    'Implant'
-)
-
-for table in SUBJECT_TABLES:
+    table = 'ProbeInsertion'
     print(table)
-    copy_table(subject, subject_ingest, table)
+    copy_table(ephys, ephys_ingest, table, allow_direct_insert=True)
 
+    # histology tables
+    print('ProbeTrajectory')
+    histology.ProbeTrajectory.populate(suppress_errors=True, display_progress=True)
 
-ACTION_TABLES = (
-    'ProcedureType',
-    'Weighing',
-    'WaterType',
-    'WaterAdministration',
-    'WaterRestriction',
-    'Surgery',
-    'SurgeryLabMember',
-    'SurgeryProcedure'
-)
-
-for table in ACTION_TABLES:
-    print(table)
-    copy_table(action, action_ingest, table)
-
-ACQUISITION_TABLES = (
-    'Session',
-    'ChildSession',
-    'SessionLabMember',
-    'SessionProcedureType'
-)
-
-for table in ACQUISITION_TABLES:
-    print(table)
-    copy_table(acquisition, acquisition_ingest, table)
-
-
-DATA_TABLES = (
-    'DataFormat',
-    'DataRepositoryType',
-    'DataRepository',
-    'ProjectRepository',
-    'DataSetType',
-    'DataSet',
-    'FileRecord'
-)
-
-for table in DATA_TABLES:
-    print(table)
-    copy_table(data, data_ingest, table)
+    print('ChannelBrainLocation')
+    copy_table(histology, histology_ingest, 'ChannelBrainLocation',
+               allow_direct_insert=True)
