@@ -32,10 +32,10 @@ def main(backtrack_days=30):
 
     kwargs = dict(display_progress=True, suppress_errors=True)
     logger.log(25, 'Populating WheelMoveSet...')
-    wheel.WheelMoveSet.populate(date_range, ephys.ProbeInsertion, **kwargs)
+    wheel.WheelMoveSet.populate(date_range, **kwargs)
 
     logger.log(25, 'Populating MovementTimes...')
-    wheel.MovementTimes.populate(date_range, ephys.ProbeInsertion, **kwargs)
+    wheel.MovementTimes.populate(date_range, **kwargs)
 
 
 if __name__ == '__main__':
