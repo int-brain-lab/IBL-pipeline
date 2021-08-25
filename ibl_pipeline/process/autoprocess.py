@@ -237,8 +237,8 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=True):
     logger.log(25, 'Job entry created!')
 
     # ---- Step 4: perform updates ----
-    #   delete from AlyxRaw and shadow Membership tables those entries
-    #   found in "modified_pks" and "deleted_pks" so they can be re-ingested
+    #   delete from AlyxRaw, shadow tables and shadow Membership tables
+    #   those entries found in "modified_pks" and "deleted_pks" so they can be re-ingested
     if perform_updates:
         logger.log(25, 'Deleting modified and deleted entries from alyxraw and shadow tables ...')
         start = datetime.datetime.now()

@@ -55,7 +55,10 @@ QC_MODELS_TO_UPDATE = {
 
 def delete_qc_entries(alyx_model_name):
     """
-    Deleting updated/deleted entries so they can be reingest
+    Deleting updated/deleted entries so they can be reingest, from:
+    + AlyxRaw.Field
+    + Ingestion tables (shadow tables)
+    + Real tables
     """
     model_info = QC_MODELS_TO_UPDATE[alyx_model_name]
 
@@ -82,20 +85,19 @@ def main():
     alyx_model_names = list(QC_MODELS_TO_UPDATE.keys())
     alyx_models = [v['alyx_model'] for v in QC_MODELS_TO_UPDATE.values()]
 
-    # ---- Step 2: from postgres-db with the latest sql-dump, ingest into UpdateAlyxRaw ----
-    logger.log(25, 'QC - Ingesting into update_ibl_alyxraw...')
+    logger.log(25, 'QC - Ingesting into UpdateAlyxRaw...')
     ingest_alyx_raw_postgres.insert_to_update_alyxraw_postgres(
         alyx_models=alyx_models,
         delete_UpdateAlyxRaw_first=True, skip_existing_alyxraw=True)
 
-    # ---- Step 4: delete updated/deleted qc entries ----
     logger.log(25, 'QC - Deleting updated/deleted entries...')
     for alyx_model_name in alyx_model_names:
         delete_qc_entries(alyx_model_name)
 
     logger.log(25, 'QC - Ingesting from Postgres Alyx to AlyxRaw...')
-    for alyx_model_name in alyx_models:
-        ingest_alyx_raw_postgres.insert_alyx_entries_model(alyx_model_name)
+    for alyx_model in alyx_models:
+        ingest_alyx_raw_postgres.insert_alyx_entries_model(alyx_model,
+                                                           skip_existing_alyxraw=False)
 
     logger.log(25, 'QC - Calling the populate on the QC-ingestion table...')
     for alyx_model_name in alyx_model_names:
