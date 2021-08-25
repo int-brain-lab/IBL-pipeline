@@ -75,7 +75,6 @@ class CompleteClusterSession(dj.Computed):
             self.insert1(key)
             with dj.config(safemode=False):
                 (EphysMissingDataLog & key).delete_quick()
-
         else:
             for req_ds in self.required_datasets:
                 if req_ds not in datasets:

@@ -75,7 +75,6 @@ class Session(dj.Computed):
         return key_session
 
     def make(self, key):
-
         self.insert1(
             Session.create_entry(key))
 

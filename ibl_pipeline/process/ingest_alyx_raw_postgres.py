@@ -166,6 +166,10 @@ def insert_alyx_entries_model(
     field_names = get_field_names(alyx_model)
     many_to_many_field_names = get_many_to_many_field_names(alyx_model)
 
+    if model_name == 'actions.session':
+        backtrack_days = backtrack_days or 30
+        skip_existing_alyxraw = False
+
     if backtrack_days:
         # filtering the alyx table - get more recent entries within the backtrack_days
         # only applicable to alyx models having "auto_datetime" and FileRecord alyx model
@@ -188,18 +192,18 @@ def insert_alyx_entries_model(
         entries = alyx_model.objects.all()
 
     # Ingest into main table
-    if skip_existing_alyxraw and model_name != 'actions.session':
+    if skip_existing_alyxraw:
         existing_uuids = (AlyxRawTable & {'model': model_name}).fetch('uuid')
         new_uuids = np.setxor1d(list(entries.values_list('id', flat=True)), existing_uuids)
         entries = [e for e in entries if e.id in new_uuids]
     else:
         new_uuids = list(entries.values_list('id', flat=True))
 
-    if not new_uuids:
+    if not len(new_uuids):
         return
 
     # using QueryBuffer, ingest into table AlyxRaw
-    alyxraw_buffer = QueryBuffer(AlyxRawTable & {'model': model_name}, verbose=True)
+    alyxraw_buffer = QueryBuffer(AlyxRawTable & {'model': model_name}, verbose=False)
     alyxraw_buffer.add_to_queue([{'uuid': u, 'model': model_name} for u in new_uuids])
 
     alyxraw_buffer.flush_insert(skip_duplicates=True, chunksz=7500)

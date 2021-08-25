@@ -1,6 +1,6 @@
 import pathlib
 
-from ibl_pipeline.process import update_utils, ingest_alyx_raw, ingest_alyx_raw_postgres
+from ibl_pipeline.process import update_utils, ingest_alyx_raw_postgres
 from ibl_pipeline.ingest import alyxraw
 from ibl_pipeline import acquisition, ephys, qc
 from ibl_pipeline.ingest import qc as qc_ingest
@@ -82,7 +82,7 @@ def main():
     alyx_model_names = list(QC_MODELS_TO_UPDATE.keys())
     alyx_models = [v['alyx_model'] for v in QC_MODELS_TO_UPDATE.values()]
 
-    # ---- Step 2: from postgres-db with the latest sql-dump, ingest into AlyxRaw(schema=update) ----
+    # ---- Step 2: from postgres-db with the latest sql-dump, ingest into UpdateAlyxRaw ----
     logger.log(25, 'QC - Ingesting into update_ibl_alyxraw...')
     ingest_alyx_raw_postgres.insert_to_update_alyxraw_postgres(
         alyx_models=alyx_models,

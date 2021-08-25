@@ -104,13 +104,14 @@ class QueryBuffer(object):
         XXX: ignore_extra_fields na, requires .insert() support
         '''
         qlen = len(self._queue)
-        chunksz = chunksz or qlen
+        if not qlen:
+            return
 
+        chunksz = chunksz or qlen
         failed_insertions = []
         while qlen >= chunksz:
             entries = self._queue[:chunksz]
             del self._queue[:chunksz]
-            qlen = len(self._queue)  # new queue size for the next loop-iteration
             try:
                 self._rel.insert(entries, **kwargs)
             except Exception as e:
@@ -125,7 +126,9 @@ class QueryBuffer(object):
             if self.verbose:
                 logger.log(25, 'Inserted {}/{} raw field tuples'.format(
                     chunksz - len(failed_insertions), chunksz))
+
             del entries
+            qlen = len(self._queue)  # new queue size for the next loop-iteration
 
         return failed_insertions
 

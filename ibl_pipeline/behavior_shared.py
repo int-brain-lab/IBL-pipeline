@@ -196,6 +196,7 @@ class TrialSet(dj.Imported):
     key_source = acquisition.Session & CompleteTrialSession
 
     def make(self, key):
+        import alf.io
 
         trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))

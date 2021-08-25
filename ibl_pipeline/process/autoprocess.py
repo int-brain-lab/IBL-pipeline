@@ -1,4 +1,5 @@
 import datajoint as dj
+import pathlib
 from ibl_pipeline.process import (
     create_ingest_task,
     delete_update_entries,
@@ -25,11 +26,15 @@ from tqdm import tqdm
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
+log_file = pathlib.Path(__file__).parent / 'logs/main_ingest.log'
+log_file.parent.mkdir(parents=True, exist_ok=True)
+log_file.touch(exist_ok=True)
+
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
         # write info into both the log file and console
-        logging.FileHandler("/src/IBL-pipeline/ibl_pipeline/process/logs/main_ingest.log"),
+        logging.FileHandler(log_file),
         logging.StreamHandler()],
     level=25)
 
@@ -86,7 +91,7 @@ def process_new(previous_dump=None, latest_dump=None,
 
     logger.log(25, 'Ingesting into shadow tables...')
     start = datetime.datetime.now()
-    ingest_shadow.main(modified_pks=modified_pks_important)
+    ingest_shadow.main(modified_sessions_pks=modified_pks_important)
     job.TaskStatus.insert_task_status(job_key, 'Ingest shadow',
                                       start, end=datetime.datetime.now())
 
@@ -170,7 +175,7 @@ def process_updates(pks, current_dump='/data/alyxfull.json'):
 
 
 def get_created_modified_deleted_pks():
-    """compare tables AlyxRaw in schemas 'ibl_alyxraw' and 'update_alyxraw' to get
+    """compare tables AlyxRaw and UpdateAlyxRaw to get
     created_pks, modified_pks and deleted_pks
 
     Returns:
@@ -178,17 +183,6 @@ def get_created_modified_deleted_pks():
         modified_pks [list]: list of uuids for modified entries
         delete_pks [list]: list of uuids for deleted entries
     """
-
-    # check the existence of update schemas
-    schemas = dj.list_schemas()
-
-    update_schema_name = dj.config.get('database.prefix', '') + 'update_ibl_alyxraw'
-    if update_schema_name not in schemas:
-        raise RuntimeError('update_alyxraw was not created')
-    else:
-        update_alyxraw = dj.create_virtual_module('update_alyxraw', update_schema_name)
-        if not update_alyxraw.AlyxRaw():
-            raise RuntimeError('update AlyxRaw table is empty')
 
     created_pks, modified_pks, deleted_pks = [], [], []
 
@@ -269,7 +263,7 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=True):
 
     logger.log(25, 'Ingesting into shadow tables...')
     start = datetime.datetime.now()
-    ingest_shadow.main(modified_pks=modified_pks)
+    ingest_shadow.main(modified_sessions_pks=modified_pks)
     job.TaskStatus.insert_task_status(job_key, 'Ingest shadow',
                                       start, end=datetime.datetime.now())
 

@@ -71,8 +71,7 @@ if mode != 'public':
     ]
 
 
-def main(excluded_tables=[], modified_pks=None):
-
+def main(excluded_tables=[], modified_sessions_pks=None):
     kwargs = dict(
         display_progress=True,
         suppress_errors=True)
@@ -85,9 +84,9 @@ def main(excluded_tables=[], modified_pks=None):
         # if a session entry is modified, replace the entry without deleting
         # this is to keep the session entry when uuid is not changed but start time changed
         # by one sec. We don't update start_time in alyxraw in this case.
-        if t.__name__ == 'Session' and modified_pks:
+        if t.__name__ == 'Session' and modified_sessions_pks:
             modified_session_keys = [
-                {'session_uuid': pk} for pk in modified_pks]
+                {'session_uuid': pk} for pk in modified_sessions_pks]
             sessions = acquisition.Session & modified_session_keys
             if sessions:
                 modified_session_entries = []
