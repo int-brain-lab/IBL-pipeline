@@ -86,7 +86,8 @@ import data as alyx_data
 import experiments as alyx_experiments
 
 from ibl_pipeline.ingest import QueryBuffer, alyxraw
-from ibl_pipeline.process import ingest_alyx_raw_postgres, ingest_membership, ingest_real
+from ibl_pipeline.process import (ingest_alyx_raw_postgres, ingest_membership,
+                                  ingest_real, delete_update_entries)
 
 from ibl_pipeline.ingest import reference as shadow_reference
 from ibl_pipeline.ingest import subject as shadow_subject
@@ -405,6 +406,33 @@ DJ_SHADOW_MEMBERSHIP = {
         'dj_other_field': 'session_start_time',
         'dj_parent_uuid_name': 'wateradmin_uuid',
         'dj_other_uuid_name': 'session_uuid'}}
+
+DJ_UPDATES = {
+    'reference.Project': {
+        'members': [],
+        'alyx_model': alyx_subjects.models.Project,
+    },
+    'subject.Subject': {
+        'members': ['SubjectLab', 'SubjectUser', 'SubjectProject', 'Death'],
+        'alyx_model': alyx_subjects.models.Subject,
+    },
+    'action.Weighing': {
+        'members': [],
+        'alyx_model': alyx_actions.models.Weighing,
+    },
+    'action.WaterRestriction': {
+        'members': [],
+        'alyx_model': alyx_actions.models.WaterRestriction,
+    },
+    'action.WaterAdministration': {
+        'members': [],
+        'alyx_model': alyx_actions.models.WaterAdministration,
+    },
+    'acquisition.Session': {
+        'members': ['SessionUser', 'SessionProject'],
+        'alyx_model': alyx_actions.models.Session,
+    }
+}
 
 
 @schema
@@ -726,7 +754,45 @@ class UpdateRealTable(dj.Computed):
     -> CopyRealTable
     """
 
-    key_source = CopyRealTable * IngestionJob & 'job_status = "on-going"'
+    key_source = (CopyRealTable * IngestionJob & 'job_status = "on-going"'
+                  & [f'table_name = "{table_name}"' for table_name in DJ_UPDATES])
 
     def make(self, key):
-        pass
+        alyx_model_name = DJ_UPDATES[key['table_name']]['alyx_model']
+
+        real_table = DJ_TABLES[key['table_name']]['real']
+        shadow_table = DJ_TABLES[key['table_name']]['shadow']
+        target_module = inspect.getmodule(real_table)
+        source_module = inspect.getmodule(shadow_table)
+
+        modified_uuids = (AlyxRawDiff.ModifiedEntry & key
+                          & {'alyx_model_name': alyx_model_name}).fetch('uuid')
+
+        uuid_attr = next((attr for attr in real_table.heading.names
+                          if attr.endswith('uuid')))
+
+        query = real_table & [{uuid_attr: u} for u in modified_uuids]
+
+        if query:
+            delete_update_entries.update_fields(target_module,
+                                                source_module,
+                                                real_table.__name__,
+                                                pks=query.fetch('KEY'),
+                                                log_to_UpdateRecord=False)
+            member_tables = DJ_UPDATES[key['table_name']]['members']
+            for member_table_name in member_tables:
+                member_table = getattr(source_module, member_table_name)
+                if member_table & query:
+                    delete_update_entries.update_fields(
+                        target_module, source_module, member_table_name,
+                        pks=(member_table & query).fetch('KEY'),
+                        log_to_UpdateRecord=True)
+
+        self.insert1(key)
+
+# what's next
+"""
+    populate_behavior.main(backtrack_days=30)
+    populate_wheel.main(backtrack_days=30)
+    populate_ephys.main()
+"""
