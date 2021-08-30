@@ -492,9 +492,13 @@ class IngestUpdateAlyxRawModel(dj.Computed):
     def make(self, key):
         alyx_model = ALYX_MODELS[key['alyx_model_name']]
 
+        # break transaction here, allowing for partial completion
+        self.connection.cancel_transaction()
+
         start_time = time.time()
         ingest_alyx_raw_postgres.insert_alyx_entries_model(alyx_model,
                                                            AlyxRawTable=alyxraw.UpdateAlyxRaw,
+                                                           backtrack_days=90,
                                                            skip_existing_alyxraw=True)
         end_time = time.time()
 
@@ -538,7 +542,7 @@ class AlyxRawDiff(dj.Computed):
                            & {'model': key['alyx_model_name']})
         self.CreatedEntry.insert(created_entries.proj(
             ..., alyx_model_name=f'"{key["alyx_model_name"]}"',
-            job_datetime=f'"{key["job_datetime"]}"'))
+            job_datetime=f'"{key["job_datetime"]}"'), ignore_extra_fields=True)
 
         if key['alyx_model_name'] in ('subjects.project',
                                       'subjects.subject',
@@ -551,7 +555,7 @@ class AlyxRawDiff(dj.Computed):
                                {'model': key['alyx_model_name']})
             self.DeletedEntry.insert(deleted_entries.proj(
                 ..., alyx_model_name=f'"{key["alyx_model_name"]}"',
-                job_datetime=f'"{key["job_datetime"]}"'))
+                job_datetime=f'"{key["job_datetime"]}"'), ignore_extra_fields=True)
 
             # updated
             fields_original = (alyxraw.AlyxRaw.Field
@@ -567,7 +571,7 @@ class AlyxRawDiff(dj.Computed):
                                  & fields_restriction))
             self.ModifiedEntry.insert(modified_entries.proj(
                 ..., alyx_model_name=f'"{key["alyx_model_name"]}"',
-                job_datetime=f'"{key["job_datetime"]}"'))
+                job_datetime=f'"{key["job_datetime"]}"'), ignore_extra_fields=True)
 
 
 @schema
@@ -632,7 +636,7 @@ class IngestAlyxRawModel(dj.Computed):
         key_source = (AlyxRawDiff * IngestionJob
                       & [AlyxRawDiff.CreatedEntry, AlyxRawDiff.ModifiedEntry]
                       & 'job_status = "on-going"')
-        return (key_source - DeleteModifiedAlyxRaw.key_source) + DeleteModifiedAlyxRaw
+        return (key_source.proj() - DeleteModifiedAlyxRaw.key_source.proj()) + DeleteModifiedAlyxRaw
 
     def make(self, key):
         entries_to_ingest = AlyxRawDiff.CreatedEntry + AlyxRawDiff.ModifiedEntry & key
