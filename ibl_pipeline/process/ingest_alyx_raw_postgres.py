@@ -5,6 +5,8 @@ import os, json, logging, math, datetime, re, django, warnings
 from ibl_pipeline.ingest import alyxraw, QueryBuffer
 from tqdm import tqdm
 import datajoint as dj
+import pathlib
+import numpy as np
 
 
 mode = os.getenv('MODE')
@@ -19,11 +21,15 @@ import misc, subjects, actions, data, experiments
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
+log_file = pathlib.Path(__file__).parent / 'logs/main_ingest.log'
+log_file.parent.mkdir(parents=True, exist_ok=True)
+log_file.touch(exist_ok=True)
+
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
         # write info into both the log file and console
-        logging.FileHandler("/src/IBL-pipeline/ibl_pipeline/process/logs/main_ingest.log"),
+        logging.FileHandler(log_file),
         logging.StreamHandler()],
     level=25)
 
@@ -36,53 +42,53 @@ logger = logging.getLogger(__name__)
 # TODO: for public database, there are some tables that do not get released
 # for a list, check the internal v.s. shared modules
 
-TABLES_OF_INTEREST = [
+ALYX_MODELS_OF_INTEREST = (
     # misc.models
-    {'alyx_model': misc.models.Lab, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.LabLocation, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.LabMember, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.LabMembership, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.CageType, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.Enrichment, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.Food, 'many_to_many_fields': []},
-    {'alyx_model': misc.models.Housing, 'many_to_many_fields': ['subjects']},
+    misc.models.Lab,
+    misc.models.LabLocation,
+    misc.models.LabMember,
+    misc.models.LabMembership,
+    misc.models.CageType,
+    misc.models.Enrichment,
+    misc.models.Food,
+    misc.models.Housing,
     # subjects.models
-    {'alyx_model': subjects.models.Project, 'many_to_many_fields': ['users']},
-    {'alyx_model': subjects.models.Source, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.Species, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.Strain, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.Sequence, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.Allele, 'many_to_many_fields': ['sequences']},
-    {'alyx_model': subjects.models.Line, 'many_to_many_fields': ['alleles']},
-    {'alyx_model': subjects.models.Subject, 'many_to_many_fields': ['projects']},
-    {'alyx_model': subjects.models.BreedingPair, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.Litter, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.GenotypeTest, 'many_to_many_fields': []},
-    {'alyx_model': subjects.models.Zygosity, 'many_to_many_fields': []},
+    subjects.models.Project,
+    subjects.models.Source,
+    subjects.models.Species,
+    subjects.models.Strain,
+    subjects.models.Sequence,
+    subjects.models.Allele,
+    subjects.models.Line,
+    subjects.models.Subject,
+    subjects.models.BreedingPair,
+    subjects.models.Litter,
+    subjects.models.GenotypeTest,
+    subjects.models.Zygosity,
     # actions.models
-    {'alyx_model': actions.models.ProcedureType, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.Surgery, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.CullMethod, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.CullReason, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.Cull, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.Weighing, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.WaterType, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.WaterRestriction, 'many_to_many_fields': ['users', 'procedures']},
-    {'alyx_model': actions.models.WaterAdministration, 'many_to_many_fields': []},
-    {'alyx_model': actions.models.Session, 'many_to_many_fields': ['users', 'procedures']},
+    actions.models.ProcedureType,
+    actions.models.Surgery,
+    actions.models.CullMethod,
+    actions.models.CullReason,
+    actions.models.Cull,
+    actions.models.Weighing,
+    actions.models.WaterType,
+    actions.models.WaterRestriction,
+    actions.models.WaterAdministration,
+    actions.models.Session,
     # data.models
-    {'alyx_model': data.models.DataFormat, 'many_to_many_fields': []},
-    {'alyx_model': data.models.DataRepositoryType, 'many_to_many_fields': []},
-    {'alyx_model': data.models.DataRepository, 'many_to_many_fields': []},
-    {'alyx_model': data.models.DatasetType, 'many_to_many_fields': []},
-    {'alyx_model': data.models.Dataset, 'many_to_many_fields': []}, # very big table, usually handled separately
-    {'alyx_model': data.models.FileRecord, 'many_to_many_fields': []}, # very big table, usually handled separately
+    data.models.DataFormat,
+    data.models.DataRepositoryType,
+    data.models.DataRepository,
+    data.models.DatasetType,
+    data.models.Dataset,       # very big table, usually handled separately
+    data.models.FileRecord,    # very big table, usually handled separately
     # experiments.models
-    {'alyx_model': experiments.models.CoordinateSystem, 'many_to_many_fields': []},
-    {'alyx_model': experiments.models.ProbeModel, 'many_to_many_fields': []},
-    {'alyx_model': experiments.models.ProbeInsertion, 'many_to_many_fields': []},
-    {'alyx_model': experiments.models.TrajectoryEstimate, 'many_to_many_fields': []}
-]
+    experiments.models.CoordinateSystem,
+    experiments.models.ProbeModel,
+    experiments.models.ProbeInsertion,
+    experiments.models.TrajectoryEstimate
+)
 
 
 def get_alyx_model_name(alyx_model):
@@ -109,30 +115,64 @@ def get_field_names(alyx_model):
     return [field.name for field in alyx_model._meta.fields]
 
 
+def get_many_to_many_field_names(alyx_model):
+    """Get all ManyToMany field names of an alyx modelinclude
+
+    Args:
+        alyx_model (django.model object): alyx model
+
+    Returns:
+        [list]: list of ManyToMany field names (property name), including foreign key references
+    """
+    one_entry = next(alyx_model.objects.iterator())
+    many_to_many_field_names = []
+    for field_name in dir(one_entry):
+        try:
+            obj = getattr(one_entry, field_name)
+        except:
+            pass
+        else:
+            if obj.__class__.__name__ == 'ManyRelatedManager' and not field_name.endswith('_set'):
+                many_to_many_field_names.append(field_name)
+
+    return many_to_many_field_names
+
+
 def get_tables_with_auto_datetime(tables=None):
 
-    if not tables:
-        tables = [t['alyx_model'] for t in TABLES_OF_INTEREST]
+    if tables is None:
+        tables = ALYX_MODELS_OF_INTEREST
 
     return([t for t in tables
             if 'auto_datetime' in get_field_names(t)])
 
 
 def insert_alyx_entries_model(
-        alyx_model, many_to_many_fields=[],
-        alyxraw_dj_module=alyxraw,
-        backtrack_days=None):
+        alyx_model,
+        AlyxRawTable=alyxraw.AlyxRaw,
+        backtrack_days=None,
+        skip_existing_alyxraw=False):
     """Insert alyx entries into alyxraw tables for a particular alyx model
 
     Args:
         alyx_model (django.model object): alyx model
-        many_to_many_fields (list): list of str for many to many fields that need to be ingested into datajoint tables.
-        alyxraw_dj_module (datajoint module): datajoint module containing AlyxRaw tables, either alyxraw or alyxraw update
+        AlyxRawTable (datajoint module): datajoint module containing AlyxRaw tables, either alyxraw or alyxraw update
         backtrack_days (int, optional): number of days the data are within to backtrack and ingest,
             just applicable to tables with auto_datetime field
+        skip_existing_alyxraw: if True, skip over the entries already existed in the AlyxRaw table,
+            else, load and insert everything again (but still with `skip_duplicates=True`)
     """
+    model_name = get_alyx_model_name(alyx_model)
+    field_names = get_field_names(alyx_model)
+    many_to_many_field_names = get_many_to_many_field_names(alyx_model)
+
+    if model_name == 'actions.session':
+        backtrack_days = backtrack_days or 30
+        skip_existing_alyxraw = False
+
     if backtrack_days:
-        # only ingest the latest data
+        # filtering the alyx table - get more recent entries within the backtrack_days
+        # only applicable to alyx models having "auto_datetime" and FileRecord alyx model
         date_cut = datetime.datetime.strptime(
                 os.getenv('ALYX_DL_DATE'), '%Y-%m-%d').date() - \
             datetime.timedelta(days=backtrack_days)
@@ -146,49 +186,54 @@ def insert_alyx_entries_model(
         else:
             entries = alyx_model.objects.all()
     elif alyx_model == data.models.FileRecord:
+        # for FileRecord alyx model, restrict to only the entries where the file does exist
         entries = alyx_model.objects.filter(exists=True)
     else:
         entries = alyx_model.objects.all()
 
-    # ingest into main table
-    model_name = get_alyx_model_name(alyx_model)
-    pk_list = entries.values_list('id', flat=True)
+    # Ingest into main table
+    if skip_existing_alyxraw:
+        existing_uuids = (AlyxRawTable & {'model': model_name}).fetch('uuid')
+        new_uuids = np.setxor1d(list(entries.values_list('id', flat=True)), existing_uuids)
+        entries = [e for e in entries if e.id in new_uuids]
+    else:
+        new_uuids = list(entries.values_list('id', flat=True))
 
-    # This is not very slow, if too slow, use QueryBuffer instead
-    alyxraw_dj_module.AlyxRaw.insert(
-        [dict(uuid=s, model=model_name) for s in pk_list],
-        skip_duplicates=True)
+    if not len(new_uuids):
+        return
 
-    # ingest into part table
-    ib_part = QueryBuffer(alyxraw_dj_module.AlyxRaw.Field)
+    # using QueryBuffer, ingest into table AlyxRaw
+    alyxraw_buffer = QueryBuffer(AlyxRawTable & {'model': model_name}, verbose=False)
+    alyxraw_buffer.add_to_queue([{'uuid': u, 'model': model_name} for u in new_uuids])
+
+    alyxraw_buffer.flush_insert(skip_duplicates=True, chunksz=7500)
+    alyxraw_buffer.flush_insert(skip_duplicates=True)
+
+    # using QueryBuffer, ingest into part table AlyxRaw.Field
+    alyxraw_field_buffer = QueryBuffer(AlyxRawTable.Field, verbose=True)
 
     # ingest fields and single foreign key references in alyxraw.AlyxRaw.Field
-    field_names = get_field_names(alyx_model)
-
     for r in tqdm(entries):
         # e.g. for table subjects.models.Subject, each r is a subject queryset
         # for one subject
         try:
-
+            field_entries = []
             for field_name in field_names:
-
                 if field_name == 'id':
                     continue
 
-                field_entry = dict(uuid=r.id)
-                field_entry['fname'] = field_name
+                field_entry = {'uuid': r.id, 'fname': field_name}
                 field_value = getattr(r, field_name)
 
-                # dump the json field
                 if field_name == 'json' and field_value:
+                    # handles the 'json' field - store the json dump
+                    field_entry['value_idx'] = 0
                     field_entry['fvalue'] = json.dumps(field_value)
-                    if len(field_entry['fvalue']) < 10000:
-                        field_entry['value_idx'] = 0
-                        ib_part.add_to_queue1(field_entry)
-                    else:
-                        continue
+                    if len(field_entry['fvalue']) >= 10000:
+                        # if the json dump is too large, store fvalue as null
+                        field_entry.pop('fvalue')
                 elif field_name == 'narrative' and field_value is not None:
-                    # filter out emoji
+                    # handles 'narrative' field with emoji - filter out emoji
                     emoji_pattern = re.compile(
                         "["
                         u"\U0001F600-\U0001F64F"  # emoticons
@@ -201,118 +246,84 @@ def insert_alyx_entries_model(
 
                     field_entry['value_idx'] = 0
                     field_entry['fvalue'] = emoji_pattern.sub(r'', field_value)
-                    ib_part.add_to_queue1(field_entry)
-
-                # handle nones
                 elif (not isinstance(field_value, (float, int)) and not field_value) or \
                         (isinstance(field_value, (float, int)) and math.isnan(field_value)):
+                    # handle "falsy" field value - store as string 'None'
                     field_entry['value_idx'] = 0
                     field_entry['fvalue'] = 'None'
-                    ib_part.add_to_queue1(field_entry)
-
                 elif isinstance(field_value, str):
                     field_entry['value_idx'] = 0
                     field_entry['fvalue'] = field_value
-                    ib_part.add_to_queue1(field_entry)
-
                 elif isinstance(field_value, (bool, float, int,
                                               datetime.datetime, datetime.date)):
                     field_entry['value_idx'] = 0
                     field_entry['fvalue'] = str(field_value)
-                    ib_part.add_to_queue1(field_entry)
-
-                # an foreign key object
                 else:
+                    # special handling for foreign key object
                     field_entry['value_idx'] = 0
-                    field_id = field_name + '_id'
-                    if field_id in r.__dict__.keys():
-                        field_entry['fvalue'] = str(r.__dict__[field_name + '_id'])
-                        ib_part.add_to_queue1(field_entry)
+                    fk_id = field_name + '_id'
+                    if hasattr(r, fk_id):
+                        field_entry['fvalue'] = str(getattr(r, fk_id))
 
-                if ib_part.flush_insert(skip_duplicates=True, chunksz=10000):
-                    logger.log(25, 'Inserted 10000 raw field tuples')
-
+                field_entries.append(field_entry)
             # ingest many to many fields into alyxraw.AlyxRaw.Field
-            for field_name in many_to_many_fields:
-                for iobj, obj in enumerate(getattr(r, field_name).all()):
-                    field_entry = dict(uuid=r.id)
-                    field_entry['fname'] = field_name
-                    field_entry['value_idx'] = iobj
-                    field_entry['fvalue'] = str(obj.id)
-                    ib_part.add_to_queue1(field_entry)
-                    if ib_part.flush_insert(skip_duplicates=True, chunksz=10000):
-                        logger.log(25, 'Inserted 10000 raw field tuples')
+            for field_name in many_to_many_field_names:
+                many_to_many_entries = getattr(r, field_name).all()
+                if len(many_to_many_entries) > 200:
+                    print(f'\tmany-to-many field {field_name} with {len(many_to_many_entries)} entries - skipping...')
+                    continue
+                field_entries.extend([
+                    dict(uuid=r.id, fname=field_name,
+                         value_idx=obj_idx, fvalue=str(obj.id))
+                    for obj_idx, obj in enumerate(many_to_many_entries)])
+
+            alyxraw_field_buffer.add_to_queue(field_entries)
+            dj.conn().ping()
+            del field_entries  # to be cleaned by garbage collector, improve memory management
 
         except Exception as e:
             logger.log(25, 'Problematic entry {} of model {} with error {}'.format(
                 r.id, model_name, str(e)))
 
-    if ib_part.flush_insert(skip_duplicates=True):
-        logger.log(25, 'Inserted all remaining raw field tuples')
+        alyxraw_field_buffer.flush_insert(skip_duplicates=True, chunksz=7500)
+
+    alyxraw_field_buffer.flush_insert(skip_duplicates=True)
 
 
-def insert_to_update_alyxraw_postgres(
-        alyx_models=None, delete_update_tables_first=False):
+def insert_to_update_alyxraw_postgres(alyx_models=None, excluded_models=[],
+                                      delete_UpdateAlyxRaw_first=False,
+                                      skip_existing_alyxraw=False):
 
     """Ingest entries into update_ibl_alyxraw from postgres alyx instance
 
     Args:
         alyx_models (list of alyx model django objects): list of alyx django models
-        delete_update_tables_first (bool, optional): whether to delete the update module alyx raw tables first. Defaults to False.
+        delete_UpdateAlyxRaw_first (bool, optional): whether to delete the update module alyx raw tables first. Defaults to False.
     """
     if not alyx_models:
-        alyx_models = TABLES_OF_INTEREST
+        alyx_models = ALYX_MODELS_OF_INTEREST
 
-    alyxraw_schema_name = dj.config.get('database.prefix', '') + 'update_ibl_alyxraw'
-
-    with dj.config(safemode=False):
-
-        if delete_update_tables_first:
+    if delete_UpdateAlyxRaw_first:
+        with dj.config(safemode=False):
             logger.log(25, 'Deleting update ibl alyxraw tables...')
-            # check existence of update_alyxraw
-            if alyxraw_schema_name in dj.list_schemas():
-                alyxraw_update = dj.create_virtual_module(
-                    'alyxraw', alyxraw_schema_name)
-                if hasattr(alyxraw_update, 'AlyxRaw') and alyxraw_update.AlyxRaw:
-                    alyxraw_update.AlyxRaw.Field.delete_quick()
-                    alyxraw_update.AlyxRaw.delete_quick()
-            else:
-                warnings.warn(f'{alyxraw_schema_name} does not exist, create alyxraw_module')
+            models_res = [{'model': get_alyx_model_name(m) for m in alyx_models}]
+            (alyxraw.UpdateAlyxRaw.Field & models_res).delete_quick()
+            (alyxraw.UpdateAlyxRaw & models_res).delete_quick()
 
-    schema = dj.schema(alyxraw_schema_name)
-
-    @schema
-    class AlyxRaw(dj.Manual):
-        definition = '''
-        uuid: uuid  # pk field (uuid string repr)
-        ---
-        model: varchar(255)  # alyx 'model'
-        '''
-
-        class Field(dj.Part):
-            definition = '''
-            -> master
-            fname: varchar(255)  # field name
-            value_idx: tinyint
-            ---
-            fvalue=null: varchar(40000)  # field value in the position of value_idx
-            index (fname)
-            '''
-    alyxraw_update = dj.create_virtual_module('alyx_raw', alyxraw_schema_name)
-
-    for model in alyx_models:
-        # skip big tables DataSet and FileRecord for updates
-        if model['alyx_model'] not in [data.models.Dataset, data.models.FileRecord]:
-            logger.log(25, 'Ingesting alyx table {} into datajoint update_alyxraw...'.format(get_alyx_model_name(model['alyx_model'])))
-            insert_alyx_entries_model(
-                model['alyx_model'], model['many_to_many_fields'], alyxraw_dj_module=alyxraw_update)
+    for alyx_model in alyx_models:
+        if alyx_model.__name__ in excluded_models:
+            continue
+        logger.log(25, 'Ingesting alyx table {} into datajoint UpdateAlyxRaw...'.format(get_alyx_model_name(alyx_model)))
+        insert_alyx_entries_model(alyx_model, AlyxRawTable=alyxraw.UpdateAlyxRaw,
+                                  skip_existing_alyxraw=skip_existing_alyxraw)
 
 
-def main(backtrack_days=3):
-
-    for t in TABLES_OF_INTEREST:
-        logger.log(25, 'Ingesting alyx table {} into datajoint alyxraw...'.format(get_alyx_model_name(t['alyx_model'])))
-        insert_alyx_entries_model(t['alyx_model'], t['many_to_many_fields'], backtrack_days=backtrack_days)
+def main(backtrack_days=3, skip_existing_alyxraw=False):
+    for alyx_model in ALYX_MODELS_OF_INTEREST:
+        logger.log(25, 'Ingesting alyx table {} into datajoint alyxraw...'.format(get_alyx_model_name(alyx_model)))
+        insert_alyx_entries_model(alyx_model, AlyxRawTable=alyxraw.AlyxRaw,
+                                  backtrack_days=backtrack_days,
+                                  skip_existing_alyxraw=skip_existing_alyxraw)
 
 
 if __name__ == '__main__':

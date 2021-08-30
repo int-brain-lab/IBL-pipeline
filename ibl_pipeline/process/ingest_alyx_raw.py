@@ -163,10 +163,8 @@ def insert_to_update_alyxraw(
         'alyxraw', dj.config.get('database.prefix', '') + 'update_ibl_alyxraw',
         create_schema=True)
 
-    with dj.config(safemode=False):
-
-        if delete_tables:
-
+    if delete_tables:
+        with dj.config(safemode=False):
             print('Deleting alyxraw update...')
             alyxraw_update.AlyxRaw.Field.delete_quick()
             alyxraw_update.AlyxRaw.delete_quick()

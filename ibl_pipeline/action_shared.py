@@ -1,7 +1,6 @@
 import datajoint as dj
-import os
+from . import mode
 
-mode = os.environ.get('MODE')
 
 if mode == 'update':
     schema = dj.schema('ibl_action')

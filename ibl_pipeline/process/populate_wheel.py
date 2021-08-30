@@ -1,22 +1,20 @@
-from ibl_pipeline.group_shared import wheel
-from ibl_pipeline import ephys
 import logging
 import datetime
 import os
 import pathlib
 
-mode = os.environ.get('MODE')
+from ibl_pipeline.group_shared import wheel
+from ibl_pipeline import mode, ephys
 
-logpath = pathlib.Path('/src/IBL-pipeline/ibl_pipeline/process/logs')
-if mode == 'public':
-    logfile = logpath / 'process_wheel_public.log'
-else:
-    logfile = logpath / 'process_wheel.log'
+log_path = pathlib.Path(__file__).parent / 'logs'
+log_path.mkdir(parents=True, exist_ok=True)
+log_file = log_path / f'process_wheel{"_public" if mode == "public" else ""}.log'
+log_file.touch(exist_ok=True)
 
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
-        logging.FileHandler(logfile),
+        logging.FileHandler(log_file),
         logging.StreamHandler()],
     level=25)
 

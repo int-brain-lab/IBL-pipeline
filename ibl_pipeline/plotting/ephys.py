@@ -289,6 +289,7 @@ class Raster(dj.Computed):
     mark_label=null:              varchar(32)
     -> RasterLayoutTemplate
     """
+
     key_source = ephys.DefaultCluster * ValidAlignSort & behavior.TrialSet & \
         ephys.AlignedTrialSpikes & [{'wheel_needed': 0}, wheel.MovementTimes]
 

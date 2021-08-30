@@ -1,27 +1,18 @@
+import os
 import datajoint as dj
-import numpy as np
-from os import path, environ
-from . import acquisition, reference, behavior, data
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
-from uuid import UUID
-import re
 import alf.io
-from ibl_pipeline.utils import atlas
+
+from . import acquisition, reference, behavior, data
+from . import one, mode
+
 
 try:
     wheel = dj.create_virtual_module('wheel', 'group_shared_wheel')
 except dj.DataJointError:
     from .group_shared import wheel
-
-try:
-    from oneibl.one import ONE
-    one = ONE()
-except ImportError:
-    print('ONE not set up')
-
-mode = environ.get('MODE')
 
 if mode == 'update':
     schema = dj.schema('ibl_ephys')
@@ -84,7 +75,6 @@ class CompleteClusterSession(dj.Computed):
             self.insert1(key)
             with dj.config(safemode=False):
                 (EphysMissingDataLog & key).delete_quick()
-
         else:
             for req_ds in self.required_datasets:
                 if req_ds not in datasets:

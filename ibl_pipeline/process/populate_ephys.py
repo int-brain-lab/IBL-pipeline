@@ -8,24 +8,17 @@ Added a number of plotting tables.
 Shan Shen, 2020-08-15
 '''
 
-from ibl_pipeline.common import *
 import logging
 import time
-
-import datetime
-from uuid import UUID
-
-import os
 import pathlib
 
+from ibl_pipeline.common import *
+from ibl_pipeline import mode
 
-mode = os.environ.get('MODE')
-logpath = pathlib.Path('/src/IBL-pipeline/ibl_pipeline/process/logs')
-
-if mode == 'public':
-    log_file = logpath / 'ephys_ingestion_public.log'
-else:
-    log_file = logpath / 'ephys_ingestion.log'
+log_path = pathlib.Path(__file__).parent / 'logs'
+log_path.mkdir(parents=True, exist_ok=True)
+log_file = log_path / f'ephys_ingestion{"_public" if mode == "public" else ""}.log'
+log_file.touch(exist_ok=True)
 
 
 EPHYS_TABLES = [

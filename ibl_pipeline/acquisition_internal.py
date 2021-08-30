@@ -1,7 +1,6 @@
 import datajoint as dj
-from . import subject
 from . import reference, subject, action
-import os
+from . import mode
 
 
 # try to access parent schemas with virtual modules, if not created, import from package
@@ -16,7 +15,6 @@ try:
 except dj.DataJointError:
     from .acquisition import Session
 
-mode = os.environ.get('MODE')
 if mode == 'update':
     schema = dj.schema('ibl_acquisition')
 else:

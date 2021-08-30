@@ -95,7 +95,7 @@ MEMBERSHIP_TABLES = [
      'dj_parent_table': reference.Project,
      'dj_other_table': data.DataRepository,
      'dj_parent_fields': 'project_name',
-     'dj_other_field': 'session_start_time',
+     'dj_other_field': 'repo_name',
      'dj_parent_uuid_name': 'project_uuid',
      'dj_other_uuid_name': 'repo_uuid'},
 ]
@@ -183,65 +183,39 @@ def ingest_membership_table(dj_current_table,
     else:
         restr = {}
 
-    if len(restr) > 1000:
-        print('More than 1000 entries to insert, using buffer...')
-        buffer = QueryBuffer(alyxraw.AlyxRaw & {'model': alyx_parent_model})
-        for r in tqdm(restr):
-            buffer.add_to_queue1(r)
-            buffer.flush_fetch('KEY', chunksz=200)
-        buffer.flush_fetch('KEY')
-        alyxraw_to_insert = buffer.fetched_results
-
-    else:
-        alyxraw_to_insert = (alyxraw.AlyxRaw & restr &
-                             {'model': alyx_parent_model}).fetch('KEY')
+    alyxraw_to_insert = alyxraw.AlyxRaw & restr & {'model': alyx_parent_model}
 
     if not alyxraw_to_insert:
         return
 
-    alyx_field_entries = alyxraw.AlyxRaw.Field & alyxraw_to_insert & \
-        {'fname': alyx_field} & 'fvalue!="None"'
+    uuid_to_str_mysql = f"CONVERT(LOWER(CONCAT(" \
+                        f"SUBSTR(HEX({dj_other_uuid_name}), 1, 8), '-'," \
+                        f"SUBSTR(HEX({dj_other_uuid_name}), 9, 4), '-'," \
+                        f"SUBSTR(HEX({dj_other_uuid_name}), 13, 4), '-'," \
+                        f"SUBSTR(HEX({dj_other_uuid_name}), 17, 4), '-'," \
+                        f"SUBSTR(HEX({dj_other_uuid_name}), 21))) USING utf8)"
 
-    keys = (alyxraw.AlyxRaw & alyx_field_entries).proj(**{dj_parent_uuid_name: 'uuid'})
+    if dj_other_uuid_name == dj_parent_uuid_name:
+        dj_other_uuid_name = 'other_' + dj_other_uuid_name
 
-    if type(dj_parent_fields) == str:
+    # other table
+    other_table_query = (dj.U(dj_other_uuid_name, renamed_other_field_name or dj_other_field)
+                         & dj_other_table.proj(
+                **{dj_other_uuid_name: uuid_to_str_mysql,
+                   renamed_other_field_name or dj_other_field: dj_other_field}))
+    # parent-table
+    if isinstance(dj_parent_fields, str):
         dj_parent_fields = [dj_parent_fields]
 
-    insert_buffer = QueryBuffer(dj_current_table)
-
-    for key in keys:
-
-        if not dj_parent_table & key:
-            print(f'The entry {key} is not parent table {dj_parent_table.__name__}')
-            continue
-
-        entry_base = (dj_parent_table & key).fetch(*dj_parent_fields, as_dict=True)[0]
-
-        key['uuid'] = key[dj_parent_uuid_name]
-        uuids = grf(key, alyx_field, multiple_entries=True,
-                    model=alyx_parent_model)
-        if len(uuids):
-            for uuid in uuids:
-                if uuid == 'None':
-                    continue
-                else:
-                    if not dj_other_table & {dj_other_uuid_name: uuid}:
-                        print(f'The uuid {uuid} is not datajoint table {dj_other_table.__name__}')
-                        continue
-                    entry = entry_base.copy()
-                    field_value = (dj_other_table & {dj_other_uuid_name: uuid}).fetch1(dj_other_field)
-                    if renamed_other_field_name:
-                        entry[renamed_other_field_name] = field_value
-                    else:
-                        entry[dj_other_field] = field_value
-
-                    insert_buffer.add_to_queue1(entry)
-                    insert_buffer.flush_insert(skip_duplicates=True, chunksz=1000)
-
-    insert_buffer.flush_insert(skip_duplicates=True)
-
+    parent_table_query = (dj_parent_table.proj(*dj_parent_fields)
+                          * (alyxraw.AlyxRaw.Field & alyxraw_to_insert
+                             & {'fname': alyx_field} & 'fvalue!="None"').proj(
+                ..., **{dj_parent_uuid_name: 'uuid', dj_other_uuid_name: 'fvalue'}))
+    # join
+    joined_tables = parent_table_query * other_table_query
+    # insert
+    dj_current_table.insert(joined_tables, ignore_extra_fields=True, skip_duplicates=True)
 
 
 if __name__ == '__main__':
-
     main()

@@ -1,16 +1,8 @@
 import datajoint as dj
-import os
 from tqdm import tqdm
 from . import reference, acquisition
+from . import mode, one
 
-try:
-    from oneibl.one import ONE
-    one = ONE()
-except Exception:
-    print('ONE does not get setup properly')
-
-
-mode = os.environ.get('MODE')
 
 if mode == 'update':
     schema = dj.schema('ibl_data')
@@ -109,7 +101,6 @@ class DataSet(dj.Manual):
             dataset_name (list of str): list of the dataset names
         """
         for uuid in tqdm(uuids):
-
             for dataset_name in tqdm(dataset_names):
                 try:
                     dataset = one.alyx.rest('datasets', 'list', session=uuid, name=dataset_name)
@@ -124,7 +115,7 @@ class DataSet(dj.Manual):
                         dataset_name=dataset_name,
                         dataset_uuid=dataset['hash'],
                         dataset_created_by=dataset['created_by'],
-                        dataset_type_name=dataset['dataset_type'],
+                        dataset_type_name='_ibl_' + dataset['dataset_type'],
                         format_name=dataset['data_format'],
                         created_datetime=dataset['created_datetime'],
                         file_size=dataset['file_size'])

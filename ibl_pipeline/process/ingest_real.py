@@ -116,13 +116,10 @@ EPHYS_TABLES = (
 def copy_table(target_schema, src_schema, table_name,
                fresh=False, use_uuid=True, backtrack_days=None, **kwargs):
     if '.' in table_name:
-        attrs = table_name.split('.')
-
-        target_table = target_schema
-        src_table = src_schema
-        for a in attrs:
-            target_table = getattr(target_table, a)
-            src_table = getattr(src_table, a)
+        # handling part-table
+        master_name, part_name = table_name.split('.')
+        target_table = getattr(getattr(target_schema, master_name), part_name)
+        src_table = getattr(getattr(src_schema, master_name), part_name)
     else:
         target_table = getattr(target_schema, table_name)
         src_table = getattr(src_schema, table_name)
@@ -147,18 +144,16 @@ def copy_table(target_schema, src_schema, table_name,
         else:
             q_insert = q_src_table - target_table.proj()
 
-        try:
-            target_table.insert(q_insert, skip_duplicates=True, **kwargs)
+        kwargs = {**kwargs, 'skip_duplicates': True, 'ignore_extra_fields': True}
 
+        try:
+            target_table.insert(q_insert, **kwargs)
         except Exception:
-            for t in (q_insert).fetch(as_dict=True):
+            for key in q_insert.fetch('KEY'):
                 try:
-                    if table_name == 'DataSet' and \
-                         not len(t['dataset_created_by']):
-                        t.pop('dataset_created_by')
-                    target_table.insert1(t, skip_duplicates=True, **kwargs)
+                    target_table.insert1(q_insert & key, **kwargs)
                 except Exception:
-                    print("Error when inserting {}".format(t))
+                    print("Error when inserting {}".format((q_insert & key).fetch1()))
                     traceback.print_exc()
 
 

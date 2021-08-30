@@ -1,12 +1,9 @@
 import datajoint as dj
 from .utils import str_to_dict
 from . import acquisition, ephys
+from . import mode, one
 
-import os
-from oneibl.one import ONE
-one = ONE()
 
-mode = os.environ.get('MODE')
 if mode == 'update':
     schema = dj.schema('ibl_qc')
 else:

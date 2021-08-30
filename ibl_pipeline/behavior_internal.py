@@ -6,17 +6,10 @@ import datetime
 import logging
 import warnings
 from . import reference, subject, acquisition, data
+from . import mode, one
 
-try:
-    from oneibl.one import ONE
-    import alf.io
-    one = ONE(silent=True)
-except ImportError:
-    warnings.warn('ONE not installed, cannot use populate')
-    pass
 
 logger = logging.getLogger(__name__)
-mode = environ.get('MODE')
 
 if mode == 'update':
     schema = dj.schema('ibl_behavior')
@@ -262,11 +255,12 @@ class PassiveTrialSet(dj.Imported):
         passive_trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
-        passive_visual_stim_contrast_left, passive_visual_stim_contrast_right = \
+        passive_visual_stim_contrast_left, \
+        passive_visual_stim_contrast_right, \
+        passive_visual_stim_times = \
             one.load(eID, dataset_types=['passiveTrials.contrastLeft',
                                          'passiveTrials.contrastRight',
-                                         'passiveTrials.times'],
-                     clobber=True)
+                                         'passiveTrials.times'], clobber=True)
 
         assert len(np.unique(np.array([len(passive_visual_stim_contrast_left),
                                        len(passive_visual_stim_contrast_right),
