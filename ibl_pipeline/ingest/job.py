@@ -636,7 +636,8 @@ class IngestAlyxRawModel(dj.Computed):
         key_source = (AlyxRawDiff * IngestionJob
                       & [AlyxRawDiff.CreatedEntry, AlyxRawDiff.ModifiedEntry]
                       & 'job_status = "on-going"')
-        return (key_source.proj() - DeleteModifiedAlyxRaw.key_source.proj()) + DeleteModifiedAlyxRaw
+        return ((key_source.proj() - DeleteModifiedAlyxRaw.key_source.proj())
+                + DeleteModifiedAlyxRaw)
 
     def make(self, key):
         entries_to_ingest = AlyxRawDiff.CreatedEntry + AlyxRawDiff.ModifiedEntry & key
@@ -656,14 +657,20 @@ class IngestAlyxRawModel(dj.Computed):
 class ShadowTable(dj.Computed):
     definition = """
     -> IngestionJob
-    table_name: varchar(36)
+    table_name: varchar(48)
     """
 
-    # this table is populated only after all the IngestAlyxRawModel populate jobs have finished
-    key_source = (IngestionJob & 'job_status = "on-going"'
-                  & ((IngestionJob.aggr(IngestAlyxRawModel.key_source, ks_count='count(*)'))
-                     * (IngestionJob.aggr(IngestAlyxRawModel, completed_count='count(*)'))
-                     & 'ks_count = completed_count'))
+    # this table is populated only after all the
+    # IngestIngestAlyxRawModel and IngestAlyxRawModel populate jobs have finished
+    key_source = (
+            IngestionJob & 'job_status = "on-going"'
+            & ((IngestionJob.proj().aggr(IngestUpdateAlyxRawModel.key_source, ks_count='count(*)'))
+               * (IngestionJob.proj().aggr(IngestUpdateAlyxRawModel, completed_count='count(*)'))
+               & 'ks_count = completed_count')
+            & ((IngestionJob.proj().aggr(IngestAlyxRawModel.key_source, ks_count='count(*)'))
+               * (IngestionJob.proj().aggr(IngestAlyxRawModel, completed_count='count(*)'))
+               & 'ks_count = completed_count')
+    )
 
     def make(self, key):
         self.insert({**key, 'table_name': table_name}
