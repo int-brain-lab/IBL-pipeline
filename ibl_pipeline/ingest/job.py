@@ -86,7 +86,8 @@ import data as alyx_data
 import experiments as alyx_experiments
 
 from ibl_pipeline.ingest import QueryBuffer, alyxraw
-from ibl_pipeline.process import ingest_alyx_raw_postgres, ingest_membership, ingest_real
+from ibl_pipeline.process import (ingest_alyx_raw_postgres, ingest_membership,
+                                  ingest_real, delete_update_entries)
 
 from ibl_pipeline.ingest import reference as shadow_reference
 from ibl_pipeline.ingest import subject as shadow_subject
@@ -406,6 +407,33 @@ DJ_SHADOW_MEMBERSHIP = {
         'dj_parent_uuid_name': 'wateradmin_uuid',
         'dj_other_uuid_name': 'session_uuid'}}
 
+DJ_UPDATES = {
+    'reference.Project': {
+        'members': [],
+        'alyx_model': alyx_subjects.models.Project,
+    },
+    'subject.Subject': {
+        'members': ['SubjectLab', 'SubjectUser', 'SubjectProject', 'Death'],
+        'alyx_model': alyx_subjects.models.Subject,
+    },
+    'action.Weighing': {
+        'members': [],
+        'alyx_model': alyx_actions.models.Weighing,
+    },
+    'action.WaterRestriction': {
+        'members': [],
+        'alyx_model': alyx_actions.models.WaterRestriction,
+    },
+    'action.WaterAdministration': {
+        'members': [],
+        'alyx_model': alyx_actions.models.WaterAdministration,
+    },
+    'acquisition.Session': {
+        'members': ['SessionUser', 'SessionProject'],
+        'alyx_model': alyx_actions.models.Session,
+    }
+}
+
 
 @schema
 class IngestionJob(dj.Manual):
@@ -464,9 +492,13 @@ class IngestUpdateAlyxRawModel(dj.Computed):
     def make(self, key):
         alyx_model = ALYX_MODELS[key['alyx_model_name']]
 
+        # break transaction here, allowing for partial completion
+        self.connection.cancel_transaction()
+
         start_time = time.time()
         ingest_alyx_raw_postgres.insert_alyx_entries_model(alyx_model,
                                                            AlyxRawTable=alyxraw.UpdateAlyxRaw,
+                                                           backtrack_days=90,
                                                            skip_existing_alyxraw=True)
         end_time = time.time()
 
@@ -510,7 +542,7 @@ class AlyxRawDiff(dj.Computed):
                            & {'model': key['alyx_model_name']})
         self.CreatedEntry.insert(created_entries.proj(
             ..., alyx_model_name=f'"{key["alyx_model_name"]}"',
-            job_datetime=f'"{key["job_datetime"]}"'))
+            job_datetime=f'"{key["job_datetime"]}"'), ignore_extra_fields=True)
 
         if key['alyx_model_name'] in ('subjects.project',
                                       'subjects.subject',
@@ -523,7 +555,7 @@ class AlyxRawDiff(dj.Computed):
                                {'model': key['alyx_model_name']})
             self.DeletedEntry.insert(deleted_entries.proj(
                 ..., alyx_model_name=f'"{key["alyx_model_name"]}"',
-                job_datetime=f'"{key["job_datetime"]}"'))
+                job_datetime=f'"{key["job_datetime"]}"'), ignore_extra_fields=True)
 
             # updated
             fields_original = (alyxraw.AlyxRaw.Field
@@ -539,7 +571,7 @@ class AlyxRawDiff(dj.Computed):
                                  & fields_restriction))
             self.ModifiedEntry.insert(modified_entries.proj(
                 ..., alyx_model_name=f'"{key["alyx_model_name"]}"',
-                job_datetime=f'"{key["job_datetime"]}"'))
+                job_datetime=f'"{key["job_datetime"]}"'), ignore_extra_fields=True)
 
 
 @schema
@@ -604,7 +636,7 @@ class IngestAlyxRawModel(dj.Computed):
         key_source = (AlyxRawDiff * IngestionJob
                       & [AlyxRawDiff.CreatedEntry, AlyxRawDiff.ModifiedEntry]
                       & 'job_status = "on-going"')
-        return (key_source - DeleteModifiedAlyxRaw.key_source) + DeleteModifiedAlyxRaw
+        return (key_source.proj() - DeleteModifiedAlyxRaw.key_source.proj()) + DeleteModifiedAlyxRaw
 
     def make(self, key):
         entries_to_ingest = AlyxRawDiff.CreatedEntry + AlyxRawDiff.ModifiedEntry & key
@@ -726,7 +758,45 @@ class UpdateRealTable(dj.Computed):
     -> CopyRealTable
     """
 
-    key_source = CopyRealTable * IngestionJob & 'job_status = "on-going"'
+    key_source = (CopyRealTable * IngestionJob & 'job_status = "on-going"'
+                  & [f'table_name = "{table_name}"' for table_name in DJ_UPDATES])
 
     def make(self, key):
-        pass
+        alyx_model_name = DJ_UPDATES[key['table_name']]['alyx_model']
+
+        real_table = DJ_TABLES[key['table_name']]['real']
+        shadow_table = DJ_TABLES[key['table_name']]['shadow']
+        target_module = inspect.getmodule(real_table)
+        source_module = inspect.getmodule(shadow_table)
+
+        modified_uuids = (AlyxRawDiff.ModifiedEntry & key
+                          & {'alyx_model_name': alyx_model_name}).fetch('uuid')
+
+        uuid_attr = next((attr for attr in real_table.heading.names
+                          if attr.endswith('uuid')))
+
+        query = real_table & [{uuid_attr: u} for u in modified_uuids]
+
+        if query:
+            delete_update_entries.update_fields(target_module,
+                                                source_module,
+                                                real_table.__name__,
+                                                pks=query.fetch('KEY'),
+                                                log_to_UpdateRecord=False)
+            member_tables = DJ_UPDATES[key['table_name']]['members']
+            for member_table_name in member_tables:
+                member_table = getattr(source_module, member_table_name)
+                if member_table & query:
+                    delete_update_entries.update_fields(
+                        target_module, source_module, member_table_name,
+                        pks=(member_table & query).fetch('KEY'),
+                        log_to_UpdateRecord=True)
+
+        self.insert1(key)
+
+# what's next
+"""
+    populate_behavior.main(backtrack_days=30)
+    populate_wheel.main(backtrack_days=30)
+    populate_ephys.main()
+"""
