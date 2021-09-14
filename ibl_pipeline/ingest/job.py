@@ -490,6 +490,7 @@ class IngestUpdateAlyxRawModel(dj.Computed):
     key_source = UpdateAlyxRawModel * IngestionJob & 'job_status = "on-going"'
 
     def make(self, key):
+        logger.info('Populating UpdateAlyxRaw for: {}'.format(key['alyx_model_name']))
         alyx_model = ALYX_MODELS[key['alyx_model_name']]
 
         # break transaction here, allowing for partial completion
@@ -517,19 +518,19 @@ class AlyxRawDiff(dj.Computed):
     class CreatedEntry(dj.Part):
         definition = """
         -> master
-        -> alyxraw.UpdateAlyxRaw
+        uuid: uuid  # pk field (uuid string repr)
         """
 
     class DeletedEntry(dj.Part):
         definition = """
         -> master
-        -> alyxraw.UpdateAlyxRaw
+        uuid: uuid  # pk field (uuid string repr)
         """
 
     class ModifiedEntry(dj.Part):
         definition = """
         -> master
-        -> alyxraw.UpdateAlyxRaw
+        uuid: uuid  # pk field (uuid string repr)
         """
 
     key_source = IngestUpdateAlyxRawModel * IngestionJob & 'job_status = "on-going"'
