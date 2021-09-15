@@ -146,19 +146,19 @@ ALYX_MODELS = {
 }
 
 MEMBERSHIP_ALYX_MODELS = {
-    'subjects.project': [reference.ProjectLabMember,
-                         data.ProjectRepository],
-    'subjects.allele': [subject.AlleleSequence],
-    'subjects.line': [subject.LineAllele],
-    'actions.surgery': [action.SurgeryProcedure,
-                        action.SurgeryUser],
-    'actions.session': [acquisition.ChildSession,
-                        acquisition.SessionUser,
-                        acquisition.SessionProcedure,
-                        acquisition.SessionProject],
-    'actions.waterrestriction': [action.WaterRestrictionUser,
-                                 action.WaterRestrictionProcedure],
-    'actions.wateradministration': [acquisition.WaterAdministrationSession]
+    'subjects.project': ['reference.ProjectLabMember',
+                         'data.ProjectRepository'],
+    'subjects.allele': ['subject.AlleleSequence'],
+    'subjects.line': ['subject.LineAllele'],
+    'actions.surgery': ['action.SurgeryProcedure',
+                        'action.SurgeryUser'],
+    'actions.session': ['acquisition.ChildSession',
+                        'acquisition.SessionUser',
+                        'acquisition.SessionProcedure',
+                        'acquisition.SessionProject'],
+    'actions.waterrestriction': ['action.WaterRestrictionUser',
+                                 'action.WaterRestrictionProcedure'],
+    'actions.wateradministration': ['acquisition.WaterAdministrationSession']
 }
 
 DJ_TABLES = {
@@ -615,13 +615,19 @@ class DeleteModifiedAlyxRaw(dj.Computed):
 
         # handle shadow membership tables
         if key['alyx_model_name'] in MEMBERSHIP_ALYX_MODELS:
-            for membership_table in MEMBERSHIP_ALYX_MODELS[key['alyx_model_name']]:
-                logger.info(f'\tDeleting shadow membership table: {membership_table.__name__}')
+            for membership_table_name in MEMBERSHIP_ALYX_MODELS[key['alyx_model_name']]:
+                logger.info(f'\tDeleting shadow membership table: {membership_table_name}')
 
-                uuid_attr = next((attr for attr in membership_table.heading.names
+                shadow_membership_table = DJ_TABLES[membership_table_name]['shadow']
+                shadow_parent_table = DJ_SHADOW_MEMBERSHIP[membership_table_name]['dj_parent_table']
+
+                uuid_attr = next((attr for attr in shadow_parent_table.heading.names
                                   if attr.endswith('uuid')))
+
                 with dj.config(safemode=False):
-                    (membership_table & entries_to_delete.proj(**{uuid_attr: 'uuid'})).delete()
+                    (shadow_membership_table
+                     & (shadow_membership_table * shadow_parent_table
+                        * entries_to_delete.proj(**{uuid_attr: 'uuid'})).fetch('KEY')).delete()
 
         self.insert1(key)
 
@@ -646,9 +652,7 @@ class IngestAlyxRawModel(dj.Computed):
         logger.info(f'Ingestion to AlyxRaw: {key["alyx_model_name"]}'
                     f' - {len(entries_to_ingest)} records')
 
-        if key['alyx_model_name'] != 'actions.session':
-            alyxraw.AlyxRaw.insert(alyxraw.UpdateAlyxRaw & entries_to_ingest)
-
+        alyxraw.AlyxRaw.insert(alyxraw.UpdateAlyxRaw & entries_to_ingest, skip_duplicates=True)
         alyxraw.AlyxRaw.Field.insert(alyxraw.UpdateAlyxRaw.Field & entries_to_ingest)
 
         self.insert1(key)
@@ -663,15 +667,18 @@ class ShadowTable(dj.Computed):
 
     # this table is populated only after all the
     # IngestIngestAlyxRawModel and IngestAlyxRawModel populate jobs have finished
-    key_source = (
-            IngestionJob & 'job_status = "on-going"'
-            & ((IngestionJob.proj().aggr(IngestUpdateAlyxRawModel.key_source, ks_count='count(*)'))
-               * (IngestionJob.proj().aggr(IngestUpdateAlyxRawModel, completed_count='count(*)'))
-               & 'ks_count = completed_count')
-            & ((IngestionJob.proj().aggr(IngestAlyxRawModel.key_source, ks_count='count(*)'))
-               * (IngestionJob.proj().aggr(IngestAlyxRawModel, completed_count='count(*)'))
-               & 'ks_count = completed_count')
-    )
+    @property
+    def key_source(self):
+        key_source = IngestionJob & 'job_status = "on-going"'
+        return (
+            key_source
+            & ((key_source.proj().aggr(IngestUpdateAlyxRawModel.key_source, ks_count='count(*)'))
+               * (key_source.proj().aggr(IngestUpdateAlyxRawModel, completed_count='count(*)'))
+               & 'completed_count = ks_count')
+            & ((key_source.proj().aggr(IngestAlyxRawModel.key_source, ks_count='count(*)'))
+               * (key_source.proj().aggr(IngestAlyxRawModel, completed_count='count(*)'))
+               & 'completed_count = ks_count')
+        )
 
     def make(self, key):
         self.insert({**key, 'table_name': table_name}
@@ -716,7 +723,7 @@ class PopulateShadowTable(dj.Computed):
                 if modified_session_entries:
                     try:
                         shadow_table.insert(modified_session_entries,
-                                 allow_direct_insert=True, replace=True)
+                                            allow_direct_insert=True, replace=True)
                     except dj.DataJointError:
                         for entry in modified_session_entries:
                             shadow_table.insert1(entry, allow_direct_insert=True, replace=True)
@@ -802,9 +809,30 @@ class UpdateRealTable(dj.Computed):
 
         self.insert1(key)
 
+
 # what's next
 """
     populate_behavior.main(backtrack_days=30)
     populate_wheel.main(backtrack_days=30)
     populate_ephys.main()
 """
+
+
+_job_tables = (UpdateAlyxRawModel,
+               IngestUpdateAlyxRawModel,
+               AlyxRawDiff,
+               DeleteModifiedAlyxRaw,
+               IngestAlyxRawModel,
+               ShadowTable,
+               PopulateShadowTable,
+               CopyRealTable,
+               UpdateRealTable)
+
+
+def populate():
+    populate_settings = {'display_progress': True,
+                         'reserve_jobs': True,
+                         'suppress_errors': True}
+    for table in _job_tables:
+        table.populate(**populate_settings)
+
