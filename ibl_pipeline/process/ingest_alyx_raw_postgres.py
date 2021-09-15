@@ -168,7 +168,6 @@ def insert_alyx_entries_model(
 
     if model_name == 'actions.session':
         backtrack_days = backtrack_days or 30
-        skip_existing_alyxraw = False
 
     if backtrack_days:
         # filtering the alyx table - get more recent entries within the backtrack_days
@@ -204,16 +203,14 @@ def insert_alyx_entries_model(
 
     # using QueryBuffer, ingest into table AlyxRaw
     alyxraw_buffer = QueryBuffer(AlyxRawTable & {'model': model_name}, verbose=False)
-    alyxraw_buffer.add_to_queue([{'uuid': u, 'model': model_name} for u in new_uuids])
-
-    alyxraw_buffer.flush_insert(skip_duplicates=True, chunksz=7500)
-    alyxraw_buffer.flush_insert(skip_duplicates=True)
-
     # using QueryBuffer, ingest into part table AlyxRaw.Field
     alyxraw_field_buffer = QueryBuffer(AlyxRawTable.Field, verbose=True)
+    # cancel on-going transaction, if any
+    AlyxRawTable.connection.cancel_transaction()
 
     # ingest fields and single foreign key references in alyxraw.AlyxRaw.Field
     for r in tqdm(entries):
+        alyxraw_buffer.add_to_queue1({'uuid': r.id, 'model': model_name})
         # e.g. for table subjects.models.Subject, each r is a subject queryset
         # for one subject
         try:
@@ -285,9 +282,14 @@ def insert_alyx_entries_model(
             logger.log(25, 'Problematic entry {} of model {} with error {}'.format(
                 r.id, model_name, str(e)))
 
-        alyxraw_field_buffer.flush_insert(skip_duplicates=True, chunksz=7500)
+        if len(alyxraw_field_buffer._queue) >= 7500:
+            with AlyxRawTable.connection.transaction:
+                alyxraw_buffer.flush_insert(skip_duplicates=True)
+                alyxraw_field_buffer.flush_insert(skip_duplicates=True, chunksz=7500)
 
-    alyxraw_field_buffer.flush_insert(skip_duplicates=True)
+    with AlyxRawTable.connection.transaction:
+        alyxraw_buffer.flush_insert(skip_duplicates=True)
+        alyxraw_field_buffer.flush_insert(skip_duplicates=True)
 
 
 def insert_to_update_alyxraw_postgres(alyx_models=None, excluded_models=[],
@@ -321,6 +323,8 @@ def insert_to_update_alyxraw_postgres(alyx_models=None, excluded_models=[],
 def main(backtrack_days=3, skip_existing_alyxraw=False):
     for alyx_model in ALYX_MODELS_OF_INTEREST:
         logger.log(25, 'Ingesting alyx table {} into datajoint alyxraw...'.format(get_alyx_model_name(alyx_model)))
+        if get_alyx_model_name(alyx_model) == 'actions.session':
+            skip_existing_alyxraw = False
         insert_alyx_entries_model(alyx_model, AlyxRawTable=alyxraw.AlyxRaw,
                                   backtrack_days=backtrack_days,
                                   skip_existing_alyxraw=skip_existing_alyxraw)
