@@ -74,6 +74,7 @@ class TaskStatus(dj.Manual):
 
 
 # ================== Orchestrating the ingestion jobs =============
+import os
 import logging
 import time
 import inspect
@@ -100,7 +101,7 @@ from ibl_pipeline import reference, subject, action, acquisition, data, ephys
 
 
 logger = logging.getLogger(__name__)
-
+_backtrack_days = os.getenv('BACKTRACK_DAYS', 10)
 
 ALYX_MODELS = {
     'misc.lab': alyx_misc.models.Lab,
@@ -499,7 +500,7 @@ class IngestUpdateAlyxRawModel(dj.Computed):
         start_time = time.time()
         ingest_alyx_raw_postgres.insert_alyx_entries_model(alyx_model,
                                                            AlyxRawTable=alyxraw.UpdateAlyxRaw,
-                                                           backtrack_days=90,
+                                                           backtrack_days=_backtrack_days,
                                                            skip_existing_alyxraw=True)
         end_time = time.time()
 
@@ -740,12 +741,14 @@ class PopulateShadowTable(dj.Computed):
             ingest_membership.ingest_membership_table(**tab_args)
         else:
             self.connection.cancel_transaction()
-            # no parallelization here
-            shadow_table.populate(display_progress=True, suppress_errors=True)
+            shadow_table.populate(reserve_jobs=True,
+                                  display_progress=True,
+                                  suppress_errors=True)
 
         after_count, _ = shadow_table.progress() if not is_membership else (None, None)
-        self.insert1({**key, 'incomplete_count': before_count,
-                      'completion_count': before_count - after_count})
+        self.insert1({**key,
+                      'incomplete_count': before_count,
+                      'completion_count': before_count - after_count if not is_membership else None})
 
 
 @schema
@@ -812,8 +815,8 @@ class UpdateRealTable(dj.Computed):
 
 # what's next
 """
-    populate_behavior.main(backtrack_days=30)
-    populate_wheel.main(backtrack_days=30)
+    populate_behavior.main(backtrack_days=_backtrack_days)
+    populate_wheel.main(backtrack_days=_backtrack_days)
     populate_ephys.main()
 """
 
@@ -834,5 +837,6 @@ def populate():
                          'reserve_jobs': True,
                          'suppress_errors': True}
     for table in _job_tables:
+        logger.info(f'------------- {table.__name__} ---------------')
         table.populate(**populate_settings)
 
