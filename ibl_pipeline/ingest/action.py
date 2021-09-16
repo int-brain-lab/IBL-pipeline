@@ -1,7 +1,7 @@
 import datajoint as dj
 from datajoint.errors import DataJointError
 import uuid
-from . import alyxraw, reference, subject
+from . import alyxraw, reference, subject, ShadowIngestionError
 from . import get_raw_field as grf
 
 
@@ -55,9 +55,8 @@ class Weighing(dj.Computed):
         key_weigh['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
 
         if not len(subject.Subject & key_weigh):
-            print('subject {} is not in the Subject table'.format(
+            raise ShadowIngestionError('subject {} is not in the Subject table'.format(
                 key_weigh['subject_uuid']))
-            return
 
         key_weigh['weighing_time'] = grf(key, 'date_time')
 
@@ -118,9 +117,8 @@ class WaterAdministration(dj.Computed):
         key_wa['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
 
         if not len(subject.Subject & key_wa):
-            print('subject {} is not in the Subject table'.format(
+            raise ShadowIngestionError('subject {} is not in the Subject table'.format(
                 key_wa['subject_uuid']))
-            return
 
         key_wa['administration_time'] = grf(key, 'date_time')
         wa = grf(key, 'water_administered')
@@ -168,9 +166,8 @@ class WaterRestriction(dj.Computed):
 
         key_res['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
         if not (subject.Subject & key_res):
-            print('subject {} is not in the Subject table'.format(
+            raise ShadowIngestionError('subject {} is not in the Subject table'.format(
                 key_res['subject_uuid']))
-            return
 
         key_res['restriction_start_time'] = grf(key, 'start_time')
 
@@ -240,9 +237,8 @@ class Surgery(dj.Computed):
 
         key_surgery['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
         if not len(subject.Subject & key_surgery):
-            print('Subject {} is not in the table subject.Subject'.format(
-                key_surgery['subject_uuid']
-            ))
+            raise ShadowIngestionError('Subject {} is not in the table subject.Subject'.format(
+                key_surgery['subject_uuid']))
 
         key_surgery['surgery_start_time'] = grf(key, 'start_time')
 
@@ -326,9 +322,8 @@ class OtherAction(dj.Computed):
         key_other['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
 
         if not len(subject.Subject & key_other):
-            print('subject {} is not in the table subject.Subject'.format(
+            raise ShadowIngestionError('subject {} is not in the table subject.Subject'.format(
                 key_other['subject_uuid']))
-            return
 
         key_other['other_action_start_time'] = grf(key, 'start_time')
 
@@ -438,10 +433,8 @@ class Cull(dj.Computed):
 
         key_cull['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
         if not len(subject.Subject & key_cull):
-            print('Subject {} is not in the table subject.Subject'.format(
-                key_cull['subject_uuid']
-            ))
-            return
+            raise ShadowIngestionError('Subject {} is not in the table subject.Subject'.format(
+                key_cull['subject_uuid']))
 
         user_uuid = grf(key, 'user')
         if user_uuid != 'None':
