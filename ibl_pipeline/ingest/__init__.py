@@ -199,3 +199,10 @@ def populate_batch(t, chunksz=1000, verbose=True):
 
     if table.flush_insert(skip_duplicates=True, allow_direct_insert=True) and verbose:
         print(f'Inserted all remaining {t.__name__} tuples.')
+
+
+class ShadowIngestionError(Exception):
+    """Raise when ingestion failed for any shadow table"""
+    def __init__(self, msg=None):
+        super().__init__('ShadowIngestionError: \n{}'.format(msg))
+    pass

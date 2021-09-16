@@ -821,22 +821,43 @@ class UpdateRealTable(dj.Computed):
 """
 
 
-_job_tables = (UpdateAlyxRawModel,
-               IngestUpdateAlyxRawModel,
-               AlyxRawDiff,
-               DeleteModifiedAlyxRaw,
-               IngestAlyxRawModel,
-               ShadowTable,
-               PopulateShadowTable,
-               CopyRealTable,
-               UpdateRealTable)
+_ingestion_tables = (UpdateAlyxRawModel,
+                     IngestUpdateAlyxRawModel,
+                     AlyxRawDiff,
+                     DeleteModifiedAlyxRaw,
+                     IngestAlyxRawModel,
+                     ShadowTable,
+                     PopulateShadowTable,
+                     CopyRealTable,
+                     UpdateRealTable)
 
 
-def populate():
+def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60):
+    """
+    Routine to populate all ingestion tables
+    Run in continuous loop for the duration defined in "run_duration" (default 3 hours)
+    """
     populate_settings = {'display_progress': True,
                          'reserve_jobs': True,
                          'suppress_errors': True}
-    for table in _job_tables:
-        logger.info(f'------------- {table.__name__} ---------------')
-        table.populate(**populate_settings)
+    start_time = time.time()
+    while ((time.time() - start_time < run_duration)
+           or (run_duration is None)
+           or (run_duration < 0)):
+        for table in _ingestion_tables:
+            logger.info(f'------------- {table.__name__} ---------------')
+            table.populate(**populate_settings)
+        time.sleep(sleep_duration)
 
+
+def clean_up():
+    """
+    Routine to clean up any error jobs of type "ShadowIngestionError"
+     in jobs tables of the shadow schemas
+    """
+    for shadow_schema in (shadow_reference, shadow_subject,
+                          shadow_action, shadow_acquisition,
+                          shadow_data, shadow_ephys):
+        (shadow_schema.schema.jobs
+         & 'status = "error"'
+         & 'error_message LIKE "%ShadowIngestionError%"').delete()
