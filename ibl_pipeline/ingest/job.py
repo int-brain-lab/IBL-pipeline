@@ -765,7 +765,7 @@ class CopyRealTable(dj.Computed):
         target_module = inspect.getmodule(real_table)
         source_module = inspect.getmodule(shadow_table)
 
-        ingest_real.copy_table(target_module, source_module, key['table_name'])
+        ingest_real.copy_table(target_module, source_module, real_table.__name__)
 
         self.insert1(key)
 
@@ -780,7 +780,8 @@ class UpdateRealTable(dj.Computed):
                   & [f'table_name = "{table_name}"' for table_name in DJ_UPDATES])
 
     def make(self, key):
-        alyx_model_name = DJ_UPDATES[key['table_name']]['alyx_model']
+        alyx_model_name = ingest_alyx_raw_postgres.get_alyx_model_name(
+            DJ_UPDATES[key['table_name']]['alyx_model'])
 
         real_table = DJ_TABLES[key['table_name']]['real']
         shadow_table = DJ_TABLES[key['table_name']]['shadow']
@@ -821,6 +822,29 @@ class UpdateRealTable(dj.Computed):
 """
 
 
+def _check_ingestion_completion():
+    """
+    Check if the current "on-going" job is completed, if so, mark `job_status` to "completed"
+    """
+    on_going_job = (IngestionJob & 'job_status = "on-going"')
+    if not on_going_job:
+        return True
+
+    finished_copy_real, total_copy_real = CopyRealTable.progress(display=False)
+    copy_real_completed = total_copy_real == len(DJ_TABLES) and finished_copy_real == 0
+
+    finished_update_real, total_update_real = UpdateRealTable.progress(display=False)
+    update_real_completed = total_update_real == len(DJ_UPDATES) and finished_update_real == 0
+
+    if copy_real_completed and update_real_completed:
+        key = on_going_job.fetch1('KEY')
+        (IngestionJob & key)._update('job_status', 'completed')
+        logger.info(f'All ingestion jobs completed: {key}')
+        return True
+
+    return False
+
+
 _ingestion_tables = (UpdateAlyxRawModel,
                      IngestUpdateAlyxRawModel,
                      AlyxRawDiff,
@@ -844,9 +868,14 @@ def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60):
     while ((time.time() - start_time < run_duration)
            or (run_duration is None)
            or (run_duration < 0)):
+
+        if _check_ingestion_completion():
+            return
+
         for table in _ingestion_tables:
             logger.info(f'------------- {table.__name__} ---------------')
             table.populate(**populate_settings)
+
         time.sleep(sleep_duration)
 
 
