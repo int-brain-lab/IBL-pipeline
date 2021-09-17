@@ -456,6 +456,7 @@ class IngestionJob(dj.Manual):
     def create_entry(cls, alyx_sql_dump):
         for key in (IngestionJob & 'job_status = "on-going"').fetch('KEY'):
             (IngestionJob & key)._update('job_status', 'terminated')
+        _clean_up()
         cls.insert1({'job_datetime': datetime.utcnow(),
                      'alyx_sql_dump': alyx_sql_dump,
                      'job_status': 'on-going'})
@@ -699,7 +700,7 @@ class PopulateShadowTable(dj.Computed):
 
     def make(self, key):
         is_membership = key['table_name'] in DJ_SHADOW_MEMBERSHIP
-        
+
         shadow_table = DJ_TABLES[key['table_name']]['shadow']
         before_count, _ = shadow_table.progress() if not is_membership else (None, None)
 
@@ -870,6 +871,7 @@ def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60):
            or (run_duration < 0)):
 
         if _check_ingestion_completion():
+            _clean_up()
             return
 
         for table in _ingestion_tables:
@@ -879,7 +881,7 @@ def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60):
         time.sleep(sleep_duration)
 
 
-def clean_up():
+def _clean_up():
     """
     Routine to clean up any error jobs of type "ShadowIngestionError"
      in jobs tables of the shadow schemas
