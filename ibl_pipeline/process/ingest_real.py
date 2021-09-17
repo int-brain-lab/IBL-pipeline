@@ -135,6 +135,7 @@ def copy_table(target_schema, src_schema, table_name,
             q_src_table = src_table & f'session_start_time > "{date_cutoff}"'
         else:
             q_src_table = src_table
+
         if use_uuid:
             pk = src_table.heading.primary_key
             if len(pk) == 1 and 'uuid' in pk[0]:
@@ -144,6 +145,12 @@ def copy_table(target_schema, src_schema, table_name,
         else:
             q_insert = q_src_table - target_table.proj()
 
+        # keep only records in "q_insert" HAVING entries in the parent tables
+        for parent_table, parent_fk_info in target_table.parents(
+                as_objects=True, foreign_key_info=True):
+            parent_table = parent_table.proj(**parent_fk_info['attr_map'])
+            q_insert &= parent_table
+
         kwargs = {**kwargs, 'skip_duplicates': True, 'ignore_extra_fields': True}
 
         try:
@@ -151,7 +158,7 @@ def copy_table(target_schema, src_schema, table_name,
         except Exception:
             for key in q_insert.fetch('KEY'):
                 try:
-                    target_table.insert1(q_insert & key, **kwargs)
+                    target_table.insert(q_insert & key, **kwargs)
                 except Exception:
                     print("Error when inserting {}".format((q_insert & key).fetch1()))
                     traceback.print_exc()
