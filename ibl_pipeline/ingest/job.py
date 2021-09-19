@@ -878,6 +878,9 @@ def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60):
             logger.info(f'------------- {table.__name__} ---------------')
             table.populate(**populate_settings)
 
+        (schema.jobs & 'status = "error"'
+         & 'error_message LIKE "%Lock wait timeout exceeded%').delete()
+
         time.sleep(sleep_duration)
 
 
