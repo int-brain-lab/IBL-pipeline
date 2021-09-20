@@ -91,16 +91,16 @@ class DataSet(dj.Manual):
     """
 
     @classmethod
-    def insert_with_alyx_rest(cls, uuids, dataset_names):
+    def insert_with_alyx_rest(cls, session_uuids, dataset_names):
         """Helper function that inserts dataset and file record entries by query alyx with rest api
         This is used when finding dataset/filerecord entries do not exist for particular sessions
         - Shan Shen 07/28/2021
 
         Args:
-            uuids (list of str): list of uuids (as str) for sessions whose datasets are missing
+            session_uuids (list of str): list of uuids (as str) for sessions whose datasets are missing
             dataset_name (list of str): list of the dataset names
         """
-        for uuid in tqdm(uuids):
+        for uuid in tqdm(session_uuids):
             for dataset_name in tqdm(dataset_names):
                 try:
                     dataset = one.alyx.rest('datasets', 'list', session=uuid, name=dataset_name)
