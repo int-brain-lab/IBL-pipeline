@@ -191,6 +191,7 @@ def update_fields(real_schema, shadow_schema, table_name, pks, log_to_UpdateReco
 
         if not shadow_table & key:
             real_record = (real_table & key).fetch1()
+            ts_field = [f for f in real_table.heading.names if '_ts' in f][0]
             if log_to_UpdateRecord:
                 update_record = dict(
                     table=real_table.__module__ + '.' + real_table.__name__,
