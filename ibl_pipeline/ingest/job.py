@@ -817,6 +817,7 @@ class UpdateRealTable(dj.Computed):
 
 # what's next
 """
+    job.main()
     populate_behavior.main(backtrack_days=_backtrack_days)
     populate_wheel.main(backtrack_days=_backtrack_days)
     populate_ephys.main()
@@ -894,3 +895,7 @@ def _clean_up():
         (shadow_schema.schema.jobs
          & 'status = "error"'
          & 'error_message LIKE "%ShadowIngestionError%"').delete()
+
+
+if __name__ == '__main__':
+    populate_ingestion_tables(run_duration=-1)
