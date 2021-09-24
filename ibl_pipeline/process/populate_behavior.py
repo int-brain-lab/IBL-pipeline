@@ -1,15 +1,17 @@
 '''
 This script ingest behavioral data into tables in the ibl_behavior schema
 '''
-import datajoint as dj
-from ibl_pipeline import acquisition, data, behavior
-from ibl_pipeline.analyses import behavior as behavior_analyses
-from ibl_pipeline.plotting import behavior as behavior_plotting
-
 import datetime
 from ibl_pipeline import subject, reference, action
 from tqdm import tqdm
 from os import environ
+import datajoint as dj
+import time
+
+from ibl_pipeline import acquisition, data, behavior
+from ibl_pipeline.analyses import behavior as behavior_analyses
+from ibl_pipeline.plotting import behavior as behavior_plotting
+
 
 mode = environ.get('MODE')
 
@@ -38,8 +40,7 @@ if mode != 'public':
     BEHAVIOR_TABLES.append(behavior_plotting.WaterTypeColor)
 
 
-kwargs = dict(
-        suppress_errors=True, display_progress=True)
+kwargs = dict(suppress_errors=True, display_progress=True)
 
 
 def compute_latest_date():
@@ -145,51 +146,58 @@ def process_daily_summary():
         behavior_plotting.DailyLabSummary.populate(**kwargs)
 
 
-def main(backtrack_days=30, excluded_tables=[]):
+def main(backtrack_days=30, excluded_tables=[], run_duration=3600*3, sleep_duration=60):
 
-    if backtrack_days:
-        date_cutoff = \
-            (datetime.datetime.now().date() -
-             datetime.timedelta(days=backtrack_days)).strftime('%Y-%m-%d')
+    start_time = time.time()
+    while ((time.time() - start_time < run_duration)
+           or (run_duration is None)
+           or (run_duration < 0)):
 
-    # ingest those dataset and file records where exists=False when json gets dumped
-    # only check those sessions where required datasets are missing.
-    # populate CompleteTrialSession first with existing file records
-    behavior.CompleteTrialSession.populate(f'session_start_time > "{date_cutoff}"', **kwargs)
-    sessions_missing = (acquisition.Session - behavior.CompleteTrialSession) & \
-            f'session_start_time > "{(datetime.datetime.now().date() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")}"'
+        if backtrack_days:
+            date_cutoff = \
+                (datetime.datetime.now().date() -
+                 datetime.timedelta(days=backtrack_days)).strftime('%Y-%m-%d')
 
-    uuids = [str(u) for u in sessions_missing.fetch('session_uuid')]
+        # ingest those dataset and file records where exists=False when json gets dumped
+        # only check those sessions where required datasets are missing.
+        # populate CompleteTrialSession first with existing file records
+        behavior.CompleteTrialSession.populate(f'session_start_time > "{date_cutoff}"', **kwargs)
+        sessions_missing = (acquisition.Session - behavior.CompleteTrialSession) & \
+                f'session_start_time > "{(datetime.datetime.now().date() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")}"'
 
-    data.DataSet.insert_with_alyx_rest(
-        uuids, behavior.CompleteTrialSession.required_datasets + behavior.CompleteTrialSession.other_datasets)
+        uuids = [str(u) for u in sessions_missing.fetch('session_uuid')]
 
-    for table in BEHAVIOR_TABLES:
+        data.DataSet.insert_with_alyx_rest(
+            uuids, behavior.CompleteTrialSession.required_datasets + behavior.CompleteTrialSession.other_datasets)
 
-        if table.__name__ in excluded_tables:
-            continue
-        print(f'Populating {table.__name__}...')
+        for table in BEHAVIOR_TABLES:
 
-        if backtrack_days and table.__name__ != 'WaterTypeColor':
-            if 'Date' in table.__name__:
-                field = 'session_date'
+            if table.__name__ in excluded_tables:
+                continue
+            print(f'Populating {table.__name__}...')
+
+            if backtrack_days and table.__name__ != 'WaterTypeColor':
+                if 'Date' in table.__name__:
+                    field = 'session_date'
+                else:
+                    field = 'session_start_time'
+                restrictor = f'{field} > "{date_cutoff}"'
             else:
-                field = 'session_start_time'
-            restrictor = f'{field} > "{date_cutoff}"'
-        else:
-            restrictor = {}
+                restrictor = {}
 
-        table.populate(restrictor, **kwargs)
+            table.populate(restrictor, **kwargs)
 
-    print('Populating latest date...')
-    compute_latest_date()
+        print('Populating latest date...')
+        compute_latest_date()
 
-    print('Processing Cumulative plots...')
-    process_cumulative_plots()
+        print('Processing Cumulative plots...')
+        process_cumulative_plots()
 
-    if mode != 'public':
-        print('Processing daily summary...')
-        process_daily_summary()
+        if mode != 'public':
+            print('Processing daily summary...')
+            process_daily_summary()
+
+        time.sleep(sleep_duration)
 
 
 if __name__ == '__main__':
