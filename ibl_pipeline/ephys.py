@@ -3,7 +3,7 @@ import datajoint as dj
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
-import alf.io
+import one.alf.io
 
 from . import acquisition, reference, behavior, data
 from . import one, mode
@@ -163,11 +163,11 @@ class ChannelGroup(dj.Imported):
 
         files = one.load(eID, dataset_types=dtypes, download_only=True,
                          clobber=True)
-        ses_path = alf.io.get_session_path(files[0])
+        ses_path = one.alf.io.get_session_path(files[0])
 
         probe_name = (ProbeInsertion & key).fetch1('probe_label')
         try:
-            channels = alf.io.load_object(
+            channels = one.alf.io.load_object(
                 ses_path.joinpath('alf', probe_name), 'channels')
         except Exception as e:
             ProbeInsertionMissingDataLog.insert1(
@@ -240,14 +240,14 @@ class DefaultCluster(dj.Imported):
         ]
 
         files = one.load(eID, dataset_types=dtypes, download_only=True, clobber=True)
-        ses_path = alf.io.get_session_path(files[0])
+        ses_path = one.alf.io.get_session_path(files[0])
 
         probe_name = (ProbeInsertion & key).fetch1('probe_label')
 
         try:
-            clusters = alf.io.load_object(
+            clusters = one.alf.io.load_object(
                 ses_path.joinpath('alf', probe_name), 'clusters')
-            spikes = alf.io.load_object(
+            spikes = one.alf.io.load_object(
                 ses_path.joinpath('alf', probe_name), 'spikes')
         except Exception as e:
             ProbeInsertionMissingDataLog.insert1(
