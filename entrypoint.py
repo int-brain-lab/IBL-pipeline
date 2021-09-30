@@ -15,5 +15,3 @@ if __name__ == '__main__':
     else:
         raise ValueError(f'Usage error! Unknown argument {sys.argv[1]}. '
                          f'Accepting: ingest|behavior|wheel|ephys')
-
-

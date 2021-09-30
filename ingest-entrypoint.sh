@@ -225,8 +225,8 @@ initdb() {
 # initialize alyx db, download sqldump and load data to alyx db
 
 loaddump() {
-	mkdb;
   fetchdump;
+	mkdb;
   loaddb;
 	alyxcfg;
 	alyxprep;

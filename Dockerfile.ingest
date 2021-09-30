@@ -14,6 +14,7 @@ RUN pip3 install pyqt5==5.14.2
 # taking care of the dependency issue
 RUN pip3 install cryptography==3.3.2
 RUN pip3 install globus-sdk==2.0.1
+RUN pip3 install numpy==1.20.0
 RUN pip3 install 'decorator<5,>=4.3'
 
 # install postgresql
@@ -40,5 +41,7 @@ RUN pip3 install -e /src/IBL-pipeline
 
 EXPOSE 8888/tcp
 COPY ingest-entrypoint.sh /
+RUN chmod +x /ingest-entrypoint.sh
+
 ENTRYPOINT ["/ingest-entrypoint.sh"]
 CMD ["www"]
