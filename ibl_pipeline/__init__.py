@@ -64,9 +64,15 @@ dj.config['stores'] = {
 
 
 try:
-    from oneibl.one import ONE
+    from one.api import ONE
 except ImportError:
     print('ONE not set up')
     one = False
 else:
-    one = ONE()
+    try:
+        one = ONE(username=os.getenv('ALYX_LOGIN'),
+                  password=os.getenv('ALYX_PWD'))
+    except OSError:
+        # by-pass error in removing the old format .one_params
+        one = ONE(username=os.getenv('ALYX_LOGIN'),
+                  password=os.getenv('ALYX_PWD'))

@@ -38,10 +38,10 @@ services:
       - ./root/.one_params:/root/.one_params
       - /tmp/alyx_data:/tmp
     healthcheck:
-      test: [ "CMD", "cat /src/alyx/alyx/db_loaded" ]
+      test: bash -c "[ -f /src/alyx/alyx/db_loaded ]"
       timeout: 5s
-      retries: 100
-      interval: 10s
+      retries: 150
+      interval: 15s
     networks:
       - ibl-dev
     entrypoint: /bin/bash
