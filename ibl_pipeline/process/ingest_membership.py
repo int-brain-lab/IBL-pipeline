@@ -5,6 +5,8 @@ which cannot be inserted with auto-population.
 
 import datajoint as dj
 from tqdm import tqdm
+import pymysql
+import itertools
 from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data, QueryBuffer
 from ibl_pipeline.ingest import get_raw_field as grf
 from ibl_pipeline.utils import is_valid_uuid
@@ -163,7 +165,6 @@ def ingest_membership_table(dj_current_table,
     This function works for the pattern that an alyx parent model contain one or multiple entries of one field
     that have the information in the membership table.
 
-
     Arguments:  dj_current_table : datajoint table object, current membership table to ingest
                 alyx_parent_model: string, model name inside alyx that contains information of the current table.
                 alyx_field       : field of alyx that contains information of current table
@@ -203,6 +204,7 @@ def ingest_membership_table(dj_current_table,
                          & dj_other_table.proj(
                 **{dj_other_uuid_name: uuid_to_str_mysql,
                    renamed_other_field_name or dj_other_field: dj_other_field}))
+
     # parent-table
     if isinstance(dj_parent_fields, str):
         dj_parent_fields = [dj_parent_fields]
@@ -211,10 +213,30 @@ def ingest_membership_table(dj_current_table,
                           * (alyxraw.AlyxRaw.Field & alyxraw_to_insert
                              & {'fname': alyx_field} & 'fvalue!="None"').proj(
                 ..., **{dj_parent_uuid_name: 'uuid', dj_other_uuid_name: 'fvalue'}))
+
     # join
     joined_tables = parent_table_query * other_table_query
     # insert
-    dj_current_table.insert(joined_tables, ignore_extra_fields=True, skip_duplicates=True)
+    try:
+        dj_current_table.insert(joined_tables, ignore_extra_fields=True, skip_duplicates=True)
+    except (pymysql.err.OperationalError, dj.errors.LostConnectionError) as e:
+        # too many records to insert all at once on server side - do this in chunks
+        attrs = [n for n in dj_current_table.heading.names if not n.endswith('_ts')]
+
+        parent_table_entries = (dj.U(*[a for a in attrs
+                                       if a in parent_table_query.heading.names])
+                                & parent_table_query).fetch(as_dict=True)
+        other_table_entries = (dj.U(*[a for a in attrs
+                                      if a in other_table_query.heading.names])
+                               & other_table_query).fetch(as_dict=True)
+
+        current_table_buffer = QueryBuffer(dj_current_table)
+        for parent_entry, other_entry in itertools.product(
+                parent_table_entries, other_table_entries):
+            current_table_buffer.add_to_queue1({**parent_entry, **other_entry})
+            current_table_buffer.flush_insert(skip_duplicates=True, chunksz=7500)
+
+        current_table_buffer.flush_insert(skip_duplicates=True)
 
 
 if __name__ == '__main__':

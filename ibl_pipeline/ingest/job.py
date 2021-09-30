@@ -466,12 +466,16 @@ class IngestionJob(dj.Manual):
 
     @classmethod
     def create_entry(cls, alyx_sql_dump):
-        for key in (IngestionJob & 'job_status = "on-going"').fetch('KEY'):
-            (IngestionJob & key)._update('job_status', 'terminated')
+        for key in (cls & 'job_status = "on-going"').fetch('KEY'):
+            (cls & key)._update('job_status', 'terminated')
         _clean_up()
         cls.insert1({'job_datetime': datetime.utcnow(),
                      'alyx_sql_dump': alyx_sql_dump,
                      'job_status': 'on-going'})
+
+    @classmethod
+    def get_on_going_key(cls):
+        return (cls & 'job_status = "on-going"').fetch1('KEY')
 
 
 @schema
