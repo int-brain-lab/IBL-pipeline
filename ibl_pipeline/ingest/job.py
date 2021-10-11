@@ -784,9 +784,10 @@ class CopyRealTable(dj.Computed):
     -> PopulateShadowTable
     """
 
+    _real_tables = [table_name for table_name, v in DJ_TABLES.items() if v['real'] is not None]
+
     key_source = (PopulateShadowTable * IngestionJob & 'job_status = "on-going"'
-                  & [f'table_name = "{table_name}"'
-                     for table_name, v in DJ_TABLES.items() if v['real'] is not None])
+                  & [f'table_name = "{table_name}"' for table_name in _real_tables])
 
     def make(self, key):
         shadow_table = DJ_TABLES[key['table_name']]['shadow']
@@ -862,10 +863,12 @@ def _check_ingestion_completion():
         return True
 
     finished_copy_real, total_copy_real = CopyRealTable.progress(display=False)
-    copy_real_completed = total_copy_real == len(DJ_TABLES) and finished_copy_real == 0
+    copy_real_completed = (total_copy_real == len(CopyRealTable._real_tables)
+                           and finished_copy_real == 0)
 
     finished_update_real, total_update_real = UpdateRealTable.progress(display=False)
-    update_real_completed = total_update_real == len(DJ_UPDATES) and finished_update_real == 0
+    update_real_completed = (total_update_real == len(DJ_UPDATES)
+                             and finished_update_real == 0)
 
     if copy_real_completed and update_real_completed:
         key = on_going_job.fetch1('KEY')
