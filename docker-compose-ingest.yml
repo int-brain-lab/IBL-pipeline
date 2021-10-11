@@ -35,7 +35,7 @@ services:
       - ./images:/images
       - .:/src/IBL-pipeline
       - ./data:/data
-      - ./root/.one_params:/root/.one_params
+      - ./root:/root
       - /tmp/alyx_data:/tmp
     healthcheck:
       test: bash -c "[ -f /src/alyx/alyx/db_loaded ]"
@@ -72,7 +72,7 @@ services:
       - ./images:/images
       - .:/src/IBL-pipeline
       - ./data:/data
-      - ./root/.one_params:/root/.one_params
+      - ./root:/root
       - /tmp/alyx_data:/tmp
     networks:
       - ibl-dev
@@ -103,7 +103,7 @@ services:
       - ./images:/images
       - .:/src/IBL-pipeline
       - ./data:/data
-      - ./root/.one_params:/root/.one_params
+      - ./root:/root
       - /tmp/alyx_data:/tmp
     networks:
       - ibl-dev
