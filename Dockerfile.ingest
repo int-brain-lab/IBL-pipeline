@@ -43,7 +43,7 @@ EXPOSE 8888/tcp
 COPY ingest-entrypoint.sh /
 RUN chmod +x /ingest-entrypoint.sh
 
-COPY ./root/.one_params $HOME/.one_params
+COPY ./root/.one_params /root/.one_params
 
 ENTRYPOINT ["/ingest-entrypoint.sh"]
 CMD ["www"]
