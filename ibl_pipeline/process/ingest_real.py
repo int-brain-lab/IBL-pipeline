@@ -151,7 +151,9 @@ def copy_table(target_schema, src_schema, table_name,
             parent_table = parent_table.proj(**parent_fk_info['attr_map'])
             q_insert &= parent_table
 
-        kwargs = {**kwargs, 'skip_duplicates': True, 'ignore_extra_fields': True}
+        kwargs = {**kwargs, 'skip_duplicates': True,
+                  'ignore_extra_fields': True,
+                  'allow_direct_insert': True}
 
         try:
             target_table.insert(q_insert, **kwargs)

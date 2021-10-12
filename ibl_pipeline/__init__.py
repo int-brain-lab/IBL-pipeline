@@ -71,8 +71,10 @@ except ImportError:
 else:
     try:
         one = ONE(username=os.getenv('ALYX_LOGIN'),
-                  password=os.getenv('ALYX_PWD'))
+                  password=os.getenv('ALYX_PWD'),
+                  silent=True)
     except OSError:
         # by-pass error in removing the old format .one_params
         one = ONE(username=os.getenv('ALYX_LOGIN'),
-                  password=os.getenv('ALYX_PWD'))
+                  password=os.getenv('ALYX_PWD'),
+                  silent=True)
