@@ -89,6 +89,9 @@ services:
       dockerfile: Dockerfile.ingest
     env_file: .env
     init: true
+    depends_on:
+      loaddump:
+        condition: service_healthy
     environment:
       - PGUSER=${ALYX_DB_USER?set ALYX_DB_USER in .env}
       - PGHOST=${ALYX_DB_HOST?set ALYX_DB_HOST in .env}
