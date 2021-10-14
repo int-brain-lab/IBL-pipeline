@@ -237,7 +237,7 @@ class CumulativeSummary(dj.Computed):
     @classmethod
     def get_outdated_entries(cls):
         return cls & (cls * SubjectLatestEvent & cls.key_source
-                      & 'latest_event_time != latest_time')
+                      & 'latest_event_time != latest_time').proj()
 
     class TrialCountsSessionDuration(dj.Part):
         definition = """
