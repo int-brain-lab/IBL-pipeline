@@ -97,13 +97,14 @@ from ibl_pipeline.ingest import acquisition as shadow_acquisition
 from ibl_pipeline.ingest import data as shadow_data
 from ibl_pipeline.ingest import ephys as shadow_ephys
 from ibl_pipeline.ingest import qc as shadow_qc
+from ibl_pipeline.ingest import histology as shadow_histology
 
 from ibl_pipeline import (reference, subject, action,
-                          acquisition, data, ephys, qc)
+                          acquisition, data, ephys, qc, histology)
 
 
 logger = logging.getLogger(__name__)
-_backtrack_days = os.getenv('BACKTRACK_DAYS', 10)
+_backtrack_days = int(os.getenv('BACKTRACK_DAYS', 10))
 
 ALYX_MODELS = {
     'misc.lab': alyx_misc.models.Lab,
@@ -145,7 +146,8 @@ ALYX_MODELS = {
     'experiments.coordinatesystem': alyx_experiments.models.CoordinateSystem,
     'experiments.probemodel': alyx_experiments.models.ProbeModel,
     'experiments.probeinsertion': alyx_experiments.models.ProbeInsertion,
-    'experiments.trajectoryestimate': alyx_experiments.models.TrajectoryEstimate
+    'experiments.trajectoryestimate': alyx_experiments.models.TrajectoryEstimate,
+    'experiments.channel': alyx_experiments.models.Channel
 }
 
 MEMBERSHIP_ALYX_MODELS = {
@@ -167,7 +169,8 @@ MEMBERSHIP_ALYX_MODELS = {
     'actions.wateradministration': ['acquisition.WaterAdministrationSession'],
     'experiments.probeinsertion': [shadow_qc.ProbeInsertionQCIngest,
                                    qc.ProbeInsertionQC,
-                                   qc.ProbeInsertionExtendedQC]
+                                   qc.ProbeInsertionExtendedQC],
+    'experiments.trajectoryestimate': [histology.ProbeTrajectoryTemp]
 }
 
 DJ_TABLES = {
@@ -286,7 +289,11 @@ DJ_TABLES = {
     'qc.SessionQCIngest': {'real': None,
                            'shadow': shadow_qc.SessionQCIngest},
     'qc.ProbeInsertionQCIngest': {'real': None,
-                                  'shadow': shadow_qc.ProbeInsertionQCIngest}
+                                  'shadow': shadow_qc.ProbeInsertionQCIngest},
+    'histology.ProbeTrajectoryTemp': {'real': histology.ProbeTrajectoryTemp,
+                                      'shadow': shadow_histology.ProbeTrajectoryTemp},
+    'histology.ChannelBrainLocationTemp': {'real': histology.ChannelBrainLocationTemp,
+                                           'shadow': shadow_histology.ChannelBrainLocationTemp}
 }
 
 DJ_SHADOW_MEMBERSHIP = {
