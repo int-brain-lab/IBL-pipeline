@@ -1,26 +1,15 @@
 import datajoint as dj
 import inspect
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+import plotly.graph_objs as go
+
 from ..analyses import behavior
 from .. import behavior as behavior_ingest
 from .. import reference, subject, action, acquisition, data
 from . import plotting_utils_behavior as putils
-import numpy as np
-import pandas as pd
-from tqdm import tqdm
-from ..utils import psychofit as psy
-import plotly
-import plotly.graph_objs as go
-import statsmodels.stats.proportion as smp
-import datetime
-import matplotlib.pyplot as plt
-import os
-from . import behavior_internal
-
-try:
-    from oneibl.one import ONE
-    one = ONE()
-except:
-    print('ONE not installed.')
+from .. import one
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_behavior')
