@@ -102,7 +102,7 @@ def main(backtrack_days=30, excluded_tables=[], run_duration=3600*3, sleep_durat
         need_update = behavior_plotting.SubjectLatestDate.proj(
             inserted_date='latest_date') * subject_latest_date & 'inserted_date != latest_date'
         for k in need_update.fetch('KEY'):
-            (behavior_plotting.SubjectLatestDate & k)._update1(
+            (behavior_plotting.SubjectLatestDate & k)._update(
                 'latest_date', (subject_latest_date & k).fetch1('latest_date'))
 
         if mode != 'public':
