@@ -58,11 +58,15 @@ HISTOLOGY_TABLES = [
     histology.ChannelBrainLocation,
     histology.ClusterBrainRegion,
     histology_plotting.SubjectSpinningBrain,
-    histology_plotting.ProbeTrajectoryCoronal,
-    histology.ClusterBrainRegionTemp,
-    histology.ProbeBrainRegionTemp,
-    histology.DepthBrainRegionTemp
+    histology_plotting.ProbeTrajectoryCoronal
 ]
+
+
+if mode != 'public':
+    HISTOLOGY_TABLES.extend([
+        histology.ClusterBrainRegionTemp,
+        histology.ProbeBrainRegionTemp,
+        histology.DepthBrainRegionTemp])
 
 
 kwargs = dict(display_progress=True, suppress_errors=True)

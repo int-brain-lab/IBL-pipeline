@@ -84,7 +84,7 @@ def main(backtrack_days=30, excluded_tables=[], run_duration=3600*3, sleep_durat
 
             table.populate(restrictor, **kwargs)
 
-        print('Populating latest date...')
+        print('Populating SubjectLatestEvent...')
         for key in tqdm(subject.Subject.fetch('KEY'), position=0):
             behavior_plotting.SubjectLatestEvent.create_entry(key)
 
