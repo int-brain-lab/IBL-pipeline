@@ -272,6 +272,7 @@ class CumulativeSummary(dj.Computed):
             SubjectLatestEvent, latest_event_time='MAX(latest_event_time)').fetch1(
             'latest_event_time')
 
+        key['latest_date'] = latest_time.date()
         self.insert1({**key, 'latest_time': latest_time})
 
         # check the environment, public or internal
