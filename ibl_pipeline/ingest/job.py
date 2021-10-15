@@ -462,12 +462,14 @@ class IngestionJob(dj.Manual):
     ---
     alyx_sql_dump: varchar(36)
     job_status: enum('completed', 'on-going', 'terminated')
+    job_endtime=null: datetime  # UTC time
     """
 
     @classmethod
     def create_entry(cls, alyx_sql_dump):
         for key in (cls & 'job_status = "on-going"').fetch('KEY'):
             (cls & key)._update('job_status', 'terminated')
+            (cls & key)._update('job_endtime', datetime.utcnow())
         _clean_up()
         cls.insert1({'job_datetime': datetime.utcnow(),
                      'alyx_sql_dump': alyx_sql_dump,
@@ -873,6 +875,7 @@ def _check_ingestion_completion():
     if copy_real_completed and update_real_completed:
         key = on_going_job.fetch1('KEY')
         (IngestionJob & key)._update('job_status', 'completed')
+        (IngestionJob & key)._update('job_endtime', datetime.utcnow())
         logger.info(f'All ingestion jobs completed: {key}')
         return True
 

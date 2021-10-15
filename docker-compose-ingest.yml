@@ -111,6 +111,7 @@ services:
     command:
       - -c
       - |
+        /ingest-entrypoint.sh initdb
         ipython ./IBL-pipeline/entrypoint.py behavior &
         ipython ./IBL-pipeline/entrypoint.py wheel &
         ipython ./IBL-pipeline/entrypoint.py ephys &

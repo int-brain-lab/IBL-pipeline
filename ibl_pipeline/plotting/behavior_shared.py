@@ -152,6 +152,59 @@ class LatestDate(dj.Manual):
 
 
 @schema
+class SubjectLatestEvent(dj.Manual):
+    definition = """  # Event and time information of the latest event for a particular subject
+    -> subject.Subject
+    latest_event_time: datetime
+    ---
+    checking_ts=CURRENT_TIMESTAMP: timestamp
+    """
+
+    @classmethod
+    def create_entry(cls, subject_key):
+        latest_behavior, latest_water_weight = None, None
+
+        if behavior.BehavioralSummaryByDate & subject_key:
+            latest_behavior = (subject.Subject
+                               & behavior.BehavioralSummaryByDate
+                               & subject_key).aggr(acquisition.Session,
+                                                   last_behavior_time='MAX(session_start_time)')
+
+        if mode != 'public':
+            water_weight = action.Weighing * action.WaterAdministration & subject_key
+            if water_weight:
+                latest_weight = subject.Subject.aggr(
+                    action.Weighing & subject_key,
+                    last_weighing_time='MAX(weighing_time)')
+                latest_water = subject.Subject.aggr(
+                    action.WaterAdministration & subject_key,
+                    last_water_time='MAX(administration_time)')
+                latest_water_weight = (latest_water * latest_weight).proj(
+                    last_water_weight_time='GREATEST(last_water_time, last_weighing_time)')
+
+        if latest_behavior and latest_water_weight:
+            last_behavior_date = latest_behavior.fetch1('last_behavior_time')
+            last_water_weight_date = latest_water_weight.fetch1('last_water_weight_time')
+            latest_time = max([last_behavior_date, last_water_weight_date])
+        elif latest_behavior:
+            latest_time = latest_behavior.fetch1('last_behavior_time')
+        elif latest_water_weight:
+            latest_time = latest_water_weight.fetch1('last_water_weight_time')
+        else:
+            return
+
+        key = {**subject_key, 'latest_event_time': latest_time}
+        if key in cls.proj():
+            return
+
+        cls.insert1(key)
+
+        # also keeping LatestDate in sync
+        # - for legacy reason, to be removed if LatestDate is no longer used
+        LatestDate.insert1({**subject_key, 'latest_date': latest_time.date()})
+
+
+@schema
 class SubjectLatestDate(dj.Lookup):
     # This table is only used by Navigator for fast fetching
     definition = """
@@ -166,12 +219,25 @@ class CumulativeSummary(dj.Computed):
     # This table contains four plots of the cumulative summary
     definition = """
     -> subject.Subject
-    latest_date:  date      # last date of any event for the subject
+    latest_date: date      # last date of any event for the subject
+    ---
+    latest_time=null: datetime  # last datetime of any event for the subject
     """
-    latest = subject.Subject.aggr(
-        LatestDate,
-        checking_ts='MAX(checking_ts)') * LatestDate
-    key_source = dj.U('subject_uuid', 'latest_date') & latest
+
+    @property
+    def key_source(self):
+        """
+        Subject and "latest_date", where "latest_date" is the most recent date
+         found in "SubjectLatestEvent" for a particular subject
+        """
+        latest = subject.Subject.aggr(SubjectLatestEvent,
+                                      latest_event_time='MAX(latest_event_time)')
+        return latest.proj(latest_date='DATE(latest_event_time)')
+
+    @classmethod
+    def get_outdated_entries(cls):
+        return cls & (cls * SubjectLatestEvent & cls.key_source
+                      & 'latest_event_time != latest_time').proj()
 
     class TrialCountsSessionDuration(dj.Part):
         definition = """
@@ -202,10 +268,13 @@ class CumulativeSummary(dj.Computed):
         """
 
     def make(self, key):
-        self.insert1(key)
+        latest_time = (subject.Subject & key).aggr(
+            SubjectLatestEvent, latest_event_time='MAX(latest_event_time)').fetch1(
+            'latest_event_time')
+
+        self.insert1({**key, 'latest_time': latest_time})
 
         # check the environment, public or internal
-
         if os.environ.get('MODE') == 'public':
             public = True
         else:
