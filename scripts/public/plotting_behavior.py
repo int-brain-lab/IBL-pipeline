@@ -7,27 +7,24 @@ from ibl_pipeline.plotting import behavior
 from ibl_pipeline import subject
 
 
-kargs = dict(
+kwargs = dict(
     suppress_errors=True, display_progress=True
 )
 
 print('------------ Populating plotting.SessionPsychCurve -----------')
-behavior.SessionPsychCurve.populate(**kargs)
+behavior.SessionPsychCurve.populate(**kwargs)
 print('------ Populating plotting.SessionReactionTimeContrast -------')
-behavior.SessionReactionTimeContrast.populate(**kargs)
+behavior.SessionReactionTimeContrast.populate(**kwargs)
 print('---- Populating plotting.SessionReactionTimeTrialNumber ------')
-behavior.SessionReactionTimeTrialNumber.populate(**kargs)
+behavior.SessionReactionTimeTrialNumber.populate(**kwargs)
 print('--------------- Populating plotting.DatePsychCurve -----------')
-behavior.DatePsychCurve.populate(**kargs)
+behavior.DatePsychCurve.populate(**kwargs)
 print('-------- Populating plotting.DateReactionTimeContrast --------')
-behavior.DateReactionTimeContrast.populate(**kargs)
+behavior.DateReactionTimeContrast.populate(**kwargs)
 print('--------------- Populating plotting.WaterTypeColor -----------')
-behavior.WaterTypeColor.populate(**kargs)
+behavior.WaterTypeColor.populate(**kwargs)
 print('------------ Populating plotting.CumulativeSummary -----------')
-latest = subject.Subject.aggr(
-        behavior.LatestDate,
-        checking_ts='MAX(checking_ts)') * behavior.LatestDate
-
 with dj.config(safemode=False):
-    (behavior.CumulativeSummary & latest).delete()
-behavior.CumulativeSummary.populate(**kargs)
+    (behavior.CumulativeSummary
+     & behavior.CumulativeSummary.get_outdated_entries().fetch('KEY')).delete()
+behavior.CumulativeSummary.populate(**kwargs)

@@ -96,8 +96,10 @@ from ibl_pipeline.ingest import action as shadow_action
 from ibl_pipeline.ingest import acquisition as shadow_acquisition
 from ibl_pipeline.ingest import data as shadow_data
 from ibl_pipeline.ingest import ephys as shadow_ephys
+from ibl_pipeline.ingest import qc as shadow_qc
 
-from ibl_pipeline import reference, subject, action, acquisition, data, ephys
+from ibl_pipeline import (reference, subject, action,
+                          acquisition, data, ephys, qc)
 
 
 logger = logging.getLogger(__name__)
@@ -156,10 +158,16 @@ MEMBERSHIP_ALYX_MODELS = {
     'actions.session': ['acquisition.ChildSession',
                         'acquisition.SessionUser',
                         'acquisition.SessionProcedure',
-                        'acquisition.SessionProject'],
+                        'acquisition.SessionProject',
+                        shadow_qc.SessionQCIngest,
+                        qc.SessionQC,
+                        qc.SessionExtendedQC],
     'actions.waterrestriction': ['action.WaterRestrictionUser',
                                  'action.WaterRestrictionProcedure'],
-    'actions.wateradministration': ['acquisition.WaterAdministrationSession']
+    'actions.wateradministration': ['acquisition.WaterAdministrationSession'],
+    'experiments.probeinsertion': [shadow_qc.ProbeInsertionQCIngest,
+                                   qc.ProbeInsertionQC,
+                                   qc.ProbeInsertionExtendedQC]
 }
 
 DJ_TABLES = {
@@ -274,7 +282,11 @@ DJ_TABLES = {
     'action.SurgeryUser': {'real': action.SurgeryUser,
                            'shadow': shadow_action.SurgeryUser},
     'acquisition.WaterAdministrationSession': {'real': acquisition.WaterAdministrationSession,
-                                               'shadow': shadow_acquisition.WaterAdministrationSession}
+                                               'shadow': shadow_acquisition.WaterAdministrationSession},
+    'qc.SessionQCIngest': {'real': None,
+                           'shadow': shadow_qc.SessionQCIngest},
+    'qc.ProbeInsertionQCIngest': {'real': None,
+                                  'shadow': shadow_qc.ProbeInsertionQCIngest}
 }
 
 DJ_SHADOW_MEMBERSHIP = {
@@ -450,16 +462,22 @@ class IngestionJob(dj.Manual):
     ---
     alyx_sql_dump: varchar(36)
     job_status: enum('completed', 'on-going', 'terminated')
+    job_endtime=null: datetime  # UTC time
     """
 
     @classmethod
     def create_entry(cls, alyx_sql_dump):
-        for key in (IngestionJob & 'job_status = "on-going"').fetch('KEY'):
-            (IngestionJob & key)._update('job_status', 'terminated')
+        for key in (cls & 'job_status = "on-going"').fetch('KEY'):
+            (cls & key)._update('job_status', 'terminated')
+            (cls & key)._update('job_endtime', datetime.utcnow())
         _clean_up()
         cls.insert1({'job_datetime': datetime.utcnow(),
                      'alyx_sql_dump': alyx_sql_dump,
                      'job_status': 'on-going'})
+
+    @classmethod
+    def get_on_going_key(cls):
+        return (cls & 'job_status = "on-going"').fetch1('KEY')
 
 
 @schema
@@ -618,18 +636,28 @@ class DeleteModifiedAlyxRaw(dj.Computed):
         # handle shadow membership tables
         if key['alyx_model_name'] in MEMBERSHIP_ALYX_MODELS:
             for membership_table_name in MEMBERSHIP_ALYX_MODELS[key['alyx_model_name']]:
-                logger.info(f'\tDeleting shadow membership table: {membership_table_name}')
+                if isinstance(membership_table_name, str):
+                    logger.info(f'\tDeleting shadow membership table: {membership_table_name}')
 
-                shadow_membership_table = DJ_TABLES[membership_table_name]['shadow']
-                shadow_parent_table = DJ_SHADOW_MEMBERSHIP[membership_table_name]['dj_parent_table']
+                    shadow_membership_table = DJ_TABLES[membership_table_name]['shadow']
+                    shadow_parent_table = DJ_SHADOW_MEMBERSHIP[membership_table_name]['dj_parent_table']
 
-                uuid_attr = next((attr for attr in shadow_parent_table.heading.names
-                                  if attr.endswith('uuid')))
+                    uuid_attr = next((attr for attr in shadow_parent_table.heading.names
+                                      if attr.endswith('uuid')))
 
-                with dj.config(safemode=False):
-                    (shadow_membership_table
-                     & (shadow_membership_table * shadow_parent_table
-                        * entries_to_delete.proj(**{uuid_attr: 'uuid'})).fetch('KEY')).delete()
+                    with dj.config(safemode=False):
+                        (shadow_membership_table
+                         & (shadow_membership_table * shadow_parent_table
+                            * entries_to_delete.proj(**{uuid_attr: 'uuid'})).fetch('KEY')).delete()
+                elif isinstance(membership_table_name, dj.user_tables.OrderedClass):
+                    related_table = membership_table_name
+                    logger.info(f'\tDeleting related table: {related_table.__name__}')
+                    uuid_attr = next((attr for attr in related_table.heading.names
+                                      if attr.endswith('uuid')))
+                    with dj.config(safemode=False):
+                        (related_table & entries_to_delete.proj(**{uuid_attr: 'uuid'})).delete()
+                else:
+                    raise NotImplementedError
 
         self.insert1(key)
 
@@ -758,11 +786,15 @@ class CopyRealTable(dj.Computed):
     -> PopulateShadowTable
     """
 
-    key_source = PopulateShadowTable * IngestionJob & 'job_status = "on-going"'
+    _real_tables = [table_name for table_name, v in DJ_TABLES.items() if v['real'] is not None]
+
+    key_source = (PopulateShadowTable * IngestionJob & 'job_status = "on-going"'
+                  & [f'table_name = "{table_name}"' for table_name in _real_tables])
 
     def make(self, key):
         shadow_table = DJ_TABLES[key['table_name']]['shadow']
         real_table = DJ_TABLES[key['table_name']]['real']
+
         target_module = inspect.getmodule(real_table)
         source_module = inspect.getmodule(shadow_table)
 
@@ -817,6 +849,7 @@ class UpdateRealTable(dj.Computed):
 
 # what's next
 """
+    job.main()
     populate_behavior.main(backtrack_days=_backtrack_days)
     populate_wheel.main(backtrack_days=_backtrack_days)
     populate_ephys.main()
@@ -832,14 +865,17 @@ def _check_ingestion_completion():
         return True
 
     finished_copy_real, total_copy_real = CopyRealTable.progress(display=False)
-    copy_real_completed = total_copy_real == len(DJ_TABLES) and finished_copy_real == 0
+    copy_real_completed = (total_copy_real == len(CopyRealTable._real_tables)
+                           and finished_copy_real == 0)
 
     finished_update_real, total_update_real = UpdateRealTable.progress(display=False)
-    update_real_completed = total_update_real == len(DJ_UPDATES) and finished_update_real == 0
+    update_real_completed = (total_update_real == len(DJ_UPDATES)
+                             and finished_update_real == 0)
 
     if copy_real_completed and update_real_completed:
         key = on_going_job.fetch1('KEY')
         (IngestionJob & key)._update('job_status', 'completed')
+        (IngestionJob & key)._update('job_endtime', datetime.utcnow())
         logger.info(f'All ingestion jobs completed: {key}')
         return True
 
@@ -894,3 +930,7 @@ def _clean_up():
         (shadow_schema.schema.jobs
          & 'status = "error"'
          & 'error_message LIKE "%ShadowIngestionError%"').delete()
+
+
+if __name__ == '__main__':
+    populate_ingestion_tables(run_duration=-1)

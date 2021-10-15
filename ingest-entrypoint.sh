@@ -69,6 +69,16 @@ loaddb() {
 	fi
 }
 
+# reloaddb - redownload sqldump and redo loaddb
+# ------
+
+reloaddb() {
+  echo "---- reloaddb() ----"
+  fetchdump;
+  rm ${dbloaded};
+  loaddb;
+}
+
 # configure alyx/django
 # ---------------------
 
@@ -199,14 +209,25 @@ renamedb() {
 }
 
 
-# init
+# initdb
 # ----
-# perform all initialization steps
+# perform all initialization steps to bring up the alyx database
 
-init() {
-	fetchdump;
+initdb() {
 	mkdb;
-	loaddb;
+	alyxcfg;
+	alyxprep;
+}
+
+
+# loaddump
+# ---
+# initialize alyx db, download sqldump and load data to alyx db
+
+loaddump() {
+  fetchdump;
+	mkdb;
+  loaddb;
 	alyxcfg;
 	alyxprep;
 }
@@ -217,7 +238,9 @@ init() {
 # initialize environment and run alyx web
 
 www() {
-	init;
+  fetchdump;
+	initdb;
+	loaddb;
 	alyxstart;
 }
 
@@ -237,14 +260,17 @@ case "$1" in
 	"fetchdump") fetchdump;;
 	"mkdb") mkdb;;
 	"loaddb") loaddb;;
+  "reloaddb") reloaddb;;
 	"alyxcfg") alyxcfg;;
 	"alyxprep") alyxprep;;
+  "initdb") initdb;;
 	"alyxstart") alyxstart;;
 	"renamedb") renamedb;;
+  "loaddump") loaddump;;
 	"www") www;;
 	"dev") dev;;
 	"sh") exec /bin/sh -c "$*";;
 	"help") \
-		echo "usage: `basename $0` [fetchdump|mkdb|loaddb|alyxcfg|alyxprep|alyxstart|renamedb|www|dev|sh]";;
+		echo "usage: `basename $0` [fetchdump|mkdb|loaddb|reloaddb|alyxcfg|alyxprep|initdb|alyxstart|renamedb|loaddump|www|dev|sh]";;
 	*) ;; # ... sourceable
 esac

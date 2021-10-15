@@ -5,11 +5,10 @@ import datajoint as dj
 from ibl_pipeline import acquisition, behavior
 import numpy as np
 
-from oneibl.one import ONE
 import brainbox.behavior.wheel as wh
 from ibllib.io.extractors.training_wheel import extract_wheel_moves, extract_first_movement_times, infer_wheel_units
-from ibllib.io.params import getfile
 
+from .. import one
 
 logging.basicConfig(
     format='%(asctime)s - %(message)s',

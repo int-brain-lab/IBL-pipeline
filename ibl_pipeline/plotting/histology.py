@@ -4,17 +4,15 @@ from .. import subject, acquisition, ephys, histology
 from . import histology_plotting as hplt
 from .figure_model import PngFigure, GifFigure
 import boto3
-from oneibl.one import ONE
 
+from .. import one, mode
 
-mode = environ.get('MODE')
 
 if mode == 'public':
     root_path = 'public'
 else:
     root_path = ''
 
-one = ONE()
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_histology')
 

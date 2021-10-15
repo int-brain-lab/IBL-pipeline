@@ -112,12 +112,15 @@ class CompleteTrialSession(dj.Computed):
                       "_ibl_trials.itiDuration.npy"
                       ]
 
-    def make(self, key):
+    def get_missing_files(self, key):
         datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
                     {'exists': 1}).fetch('dataset_name')
-        is_complete = bool(np.all([req_ds in datasets
-                                   for req_ds in self.required_datasets]))
-        if is_complete is True:
+        missing_files = [req_ds for req_ds in self.required_datasets if req_ds not in datasets]
+        return datasets, missing_files
+
+    def make(self, key):
+        datasets, missing_files = self.get_missing_files(key)
+        if not missing_files:
             if '_ibl_trials.stimOn_times.npy' not in datasets:
                 key['stim_on_times_status'] = 'Missing'
             else:
