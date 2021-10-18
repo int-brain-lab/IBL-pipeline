@@ -915,11 +915,10 @@ def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60):
 
         if _check_ingestion_completion():
             _clean_up()
-            return
-
-        for table in _ingestion_tables:
-            logger.info(f'------------- {table.__name__} ---------------')
-            table.populate(**populate_settings)
+        else:
+            for table in _ingestion_tables:
+                logger.info(f'------------- {table.__name__} ---------------')
+                table.populate(**populate_settings)
 
         (schema.jobs & 'status = "error"').delete()
 
