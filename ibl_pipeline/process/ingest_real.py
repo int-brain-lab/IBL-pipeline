@@ -148,6 +148,12 @@ def copy_table(target_schema, src_schema, table_name,
         # keep only records in "q_insert" HAVING entries in the parent tables
         for parent_table, parent_fk_info in target_table.parents(
                 as_objects=True, foreign_key_info=True):
+
+            # special case of `BrainRegion` table, skipping due to a collations conflicts
+            if dj.utils.to_camel_case(
+                parent_table.full_table_name.split('.')[-1].replace('`', '')) in ('BrainRegion'):
+                continue
+
             parent_table = parent_table.proj(**parent_fk_info['attr_map'])
             q_insert &= parent_table
 
