@@ -942,7 +942,7 @@ def _clean_up():
                           shadow_qc, shadow_histology):
         (shadow_schema.schema.jobs & 'status = "error"'
          & [f'error_message LIKE "{e}"'
-            for e in _generic_errors + ['%ShadowIngestionError%', '%AlyxKeyError%']]).delete()
+            for e in _generic_errors + ['%ShadowIngestionError%']]).delete()
 
 
 if __name__ == '__main__':
