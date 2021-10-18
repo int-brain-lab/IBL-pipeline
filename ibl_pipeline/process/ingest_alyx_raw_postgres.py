@@ -255,6 +255,9 @@ def insert_alyx_entries_model(
                                               datetime.datetime, datetime.date)):
                     field_entry['value_idx'] = 0
                     field_entry['fvalue'] = str(field_value)
+                elif isinstance(field_value, dict):
+                    field_entry['value_idx'] = 0
+                    field_entry['fvalue'] = json.dumps(field_value, default=str)
                 else:
                     # special handling for foreign key object
                     field_entry['value_idx'] = 0

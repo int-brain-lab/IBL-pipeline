@@ -113,7 +113,6 @@ class SessionQCIngest(dj.Computed):
 
                 # get the entries for the part table SessionExtendedQC.Field
                 for k, v in qc_extended_alyx.items():
-
                     # for the session qc field, it has the format of '_{qc_type}', e.g. '_task_trial_length'
                     if f'_{qc_type}' in k:
                         qc_field = dict(
