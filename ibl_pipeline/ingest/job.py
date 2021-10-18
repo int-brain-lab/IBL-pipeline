@@ -931,12 +931,18 @@ def _clean_up():
     Routine to clean up any error jobs of type "ShadowIngestionError"
      in jobs tables of the shadow schemas
     """
+    _generic_errors = ["%Deadlock%", "%DuplicateError%", "%Lock wait timeout%",
+                       "%MaxRetryError%", "%KeyboardInterrupt%",
+                       "InternalError: (1205%", "%SIGTERM%",
+                       "LostConnectionError"]
+
     for shadow_schema in (shadow_reference, shadow_subject,
                           shadow_action, shadow_acquisition,
-                          shadow_data, shadow_ephys):
-        (shadow_schema.schema.jobs
-         & 'status = "error"'
-         & 'error_message LIKE "%ShadowIngestionError%"').delete()
+                          shadow_data, shadow_ephys,
+                          shadow_qc, shadow_histology):
+        (shadow_schema.schema.jobs & 'status = "error"'
+         & [f'error_message LIKE "{e}"'
+            for e in _generic_errors + ['%ShadowIngestionError%', '%AlyxKeyError%']]).delete()
 
 
 if __name__ == '__main__':
