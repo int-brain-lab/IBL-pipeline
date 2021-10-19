@@ -2,8 +2,8 @@
 # Joseph Burling <joseph@datajoint.com>
 # --------------------------------------------------------------------------------------
 # Basic usage:
-#   docker-compose build conda alyx env
-#   docker-compose up --detach pgserv alyx env
+#   docker-compose build conda alyx ingest
+#   docker-compose up --detach pgserv alyx ingest
 #
 # Compose Script Example Usage:
 #   ./compose --help
@@ -100,7 +100,7 @@ services:
       - "${ALYX_PORT:-8888}:${ALYX_PORT:-8888}"
 
   # IBL Environment for DataJoint Ingestion --------------------------------------------
-  env:
+  ingest:
     <<: *common-platform
     <<: *shared-networks
     volumes:
@@ -116,12 +116,12 @@ services:
         condition: service_started
     build:
       context: ../..
-      dockerfile: docker/ibl/env/Dockerfile
+      dockerfile: docker/ibl/ingest/Dockerfile
       args:
         <<: *user-build-args
         CONDA_ENV_FILE: ${CONDA_ENV_FILE:-__NULL}
-        APT_REQUIREMENTS: ${APT_REQUIREMENTS:-docker/ibl/env/apt_requirements.txt}
-        DOT_ONE_FILE:
+        APT_REQUIREMENTS: ${APT_REQUIREMENTS:-docker/ibl/ingest/apt_requirements.txt}
+        DOT_ONE_FILE: ${DOT_ONE_FILE:-docker/ibl/template.one_params}
     environment:
       - IBL_PATH_ROOT=${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}
     expose:

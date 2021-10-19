@@ -17,9 +17,12 @@ USER_GID= \
 # conda yaml file for custom python environment, defaults to GitHub iblenv.yaml if empty
 CONDA_ENV_FILE= \
 # path to folder containing dockerfile relative to build context
-REL_PATH_DOCKFILE=docker/ibl/env \
+REL_PATH_DOCKFILE=docker/ibl/ingest \
+# path to .one_params
+DOT_ONE_FILE= \
 # path to list of debian dependencies to install
 APT_REQUIREMENTS="${REL_PATH_DOCKFILE}/apt_requirements.txt"
+
 
 ENV IBL_PATH_ROOT=/int-brain-lab
 ENV \
@@ -113,6 +116,6 @@ mkdir -p \
 	/home/$USERNAME/.vscode-server-insiders/extensions
 EOF
 
-COPY ./admin/.one_params /home${USERNAME}/.one_params
+COPY --chown=${USER_UID}:${USER_GID} ${DOT_ONE_FILE} /home/${USERNAME}/.one_params
 ENTRYPOINT [ "/entrypoint" ]
 CMD [ "tail", "-f", "/dev/null" ]

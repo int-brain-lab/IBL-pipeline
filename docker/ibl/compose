@@ -14,8 +14,8 @@ ENV_FILE="${SCRIPT_DIR}/.env"
 FORCE_RECREATE=""
 
 # default services for build and up
-DCB_SERVICES=(conda alyx env)
-DCU_SERVICES=(pgserv alyx env)
+DCB_SERVICES=(conda alyx ingest)
+DCU_SERVICES=(pgserv alyx ingest)
 
 err_exit() {
     echo "#! Error: $*"
