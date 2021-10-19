@@ -2,10 +2,13 @@
 This module delete the entries from alyxraw, shadow membership_tables and update real membership_tables
 '''
 import datajoint as dj
+import pathlib
 from ibl_pipeline.process.ingest_membership import MEMBERSHIP_TABLES
 from ibl_pipeline.common import *
 from ibl_pipeline.ingest.common import *
 from ibl_pipeline.ingest import job, QueryBuffer
+from ibl_pipeline import mode
+
 from ibl_pipeline.ingest import ingest_utils
 from ibl_pipeline import update
 from uuid import UUID
@@ -20,6 +23,10 @@ django.setup()
 # alyx models
 import subjects, actions
 
+log_path = pathlib.Path(__file__).parent / 'logs'
+log_path.mkdir(parents=True, exist_ok=True)
+log_file = log_path / f'delete_update_entries{"_public" if mode == "public" else ""}.log'
+log_file.touch(exist_ok=True)
 
 # logger does not work without this somehow
 for handler in logging.root.handlers[:]:
@@ -29,7 +36,7 @@ logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
         # write info into both the log file and console
-        logging.FileHandler("/src/IBL-pipeline/ibl_pipeline/process/logs/main_ingest.log"),
+        logging.FileHandler(log_file),
         logging.StreamHandler()],
     level=25)
 

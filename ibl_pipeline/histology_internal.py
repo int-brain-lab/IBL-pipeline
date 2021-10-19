@@ -186,9 +186,7 @@ class ProbeBrainRegionTemp(dj.Computed):
     key_source = ProbeTrajectoryTemp & ClusterBrainRegionTemp
 
     def make(self, key):
-
         regions = (dj.U('acronym') & (ClusterBrainRegionTemp & key)).fetch('acronym')
-
         associated_regions = [
             atlas.BrainAtlas.get_parents(acronym)
             for acronym in regions] + list(regions)
