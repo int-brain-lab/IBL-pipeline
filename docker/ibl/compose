@@ -1,0 +1,118 @@
+#! /bin/bash
+# --------------------------------------------------------------------------------------
+# Run a docker compose file using some defaults for ibl ingestion
+# Joseph Burling <joseph@datajoint.com>
+
+# get this script file and dir name (no symlinks)
+SCRIPT_CMD="${BASH_SOURCE[0]}"
+SCRIPT_DIR="$(cd "$(dirname ${SCRIPT_CMD})" &>/dev/null && pwd)"
+THIS_FILE=$(basename "${SCRIPT_CMD}")
+
+# default options
+DC_FILE="${SCRIPT_DIR}/docker-compose.yml"
+ENV_FILE="${SCRIPT_DIR}/.env"
+FORCE_RECREATE=""
+
+# default services for build and up
+DCB_SERVICES=(conda alyx env)
+DCU_SERVICES=(pgserv alyx env)
+
+err_exit() {
+    echo "#! Error: $*"
+    exit 1
+}
+
+# program help documentation
+show_help() {
+    echo "Usage: $THIS_FILE [options] [functions]
+
+Build and start Docker containers for IBL ingestion
+
+options:
+    -h, --help          Show this help documentation then exit.
+    -f, --file=DC_FILE  Specify an alternate compose file.
+                        Defaults to: '$DC_FILE'
+    -e, --env=ENV_FILE  Load env vars from an alternate .env file.
+                        Defaults to: '$ENV_FILE'
+        --force         Force recreate images during docker-compose up.
+
+functions:
+    build    Run docker-compose build ${DCB_SERVICES[@]}
+    up       Run docker-compose up ${DCU_SERVICES[@]}
+
+examples:
+    cd docker/ibl
+   ./compose --help
+   ./compose build up
+   ./compose up
+   ./compose -e ./admin/ingest.env build up
+   ./compose -e ./admin/ingest.env --force up
+"
+    exit 0
+}
+
+image_exists() {
+    [[ "$(docker inspect --type image $1 2>/dev/null)" = "[]" ]] && echo "" || echo 1
+}
+
+build() {
+    # use labs syntax from dockerfile
+    export COMPOSE_DOCKER_CLI_BUILD=1
+    export DOCKER_BUILDKIT=1
+
+    echo "building services: ${DCB_SERVICES[@]}"
+    docker-compose --file="${DC_FILE}" --env-file="$ENV_FILE" build $@ ${DCB_SERVICES[@]}
+}
+
+up() {
+    echo "starting services: ${DCU_SERVICES[@]}"
+    docker-compose --file="${DC_FILE}" --env-file="$ENV_FILE" up --detach $@ $FORCE_RECREATE ${DCU_SERVICES[@]}
+}
+
+set -e
+
+# handle input arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -h | --help | help)
+        show_help
+        ;;
+    -e)
+        ENV_FILE="$2"
+        shift
+        shift
+        ;;
+    --env=*)
+        ENV_FILE="${1#*=}"
+        shift
+        ;;
+    -f)
+        DC_FILE="$2"
+        shift
+        shift
+        ;;
+    --file=*)
+        DC_FILE="${1#*=}"
+        shift
+        ;;
+    --force | --force=*)
+        FORCE_RECREATE="--force-recreate"
+        shift
+        ;;
+    build)
+        build
+        shift
+        ;;
+    up)
+        if [[ ! $(image_exists "ibl_conda_base") ]]; then
+            echo "#! Building non-existent images first."
+            build
+        fi
+        up
+        shift
+        ;;
+    *)
+        err_exit "Unknown option: $1"
+        ;;
+    esac
+done
