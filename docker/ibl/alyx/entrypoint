@@ -139,17 +139,17 @@ while [[ $# -gt 0 ]]; do
 	case "$1" in
 	--dump_date=*)
 		ALYX_DL_DATE="${1#*=}"
-		echo "--dump_date set, using dump date: '$ALYX_DL_DATE'"
+		echo "--dump_date passed. Using dump date: '$ALYX_DL_DATE'"
 		shift
 		;;
 	--dump_url=*)
 		ALYX_DUMP_URL="${1#*=}"
-		echo "--dump_url set, using dump url: '$ALYX_DUMP_URL'"
+		echo "--dump_url passed. Using dump url: '$ALYX_DUMP_URL'"
 		shift
 		;;
 	--dump_file=*)
 		export ALYX_DUMP_FILE="${1#*=}"
-		echo "--dump_file set, using dump file: '$ALYX_DUMP_FILE'"
+		echo "--dump_file passed. Using dump file: '$ALYX_DUMP_FILE'"
 		shift
 		;;
 	"help" | "--help" | "-h" | "--help")
@@ -306,14 +306,14 @@ mkdb() {
 
 fetchdump() {
 	echo "---- fetchdump() ----"
-	if [ -f "${ALYX_DUMP_FILE}" ]; then
+	if [[ -f "${ALYX_DUMP_FILE}" ]]; then
 		echo "alyx dump file '$ALYX_DUMP_FILE' already exists"
 		echo "run 'rm -f $ALYX_DUMP_FILE' to forcibly remove if you want to re-download"
 		return 0
 	fi
 
-	[ -z "$HTTP_DATA_SERVER_LOGIN" ] && err_exit "HTTP_DATA_SERVER_LOGIN environment variable is not set"
-	[ -z "$HTTP_DATA_SERVER_PWD" ] && err_exit "HTTP_DATA_SERVER_PWD environment variable is not set"
+	[[ -z "${HTTP_DATA_SERVER_LOGIN}" ]] && err_exit "HTTP_DATA_SERVER_LOGIN environment variable is not set"
+	[[ -z "${HTTP_DATA_SERVER_PWD}" ]] && err_exit "HTTP_DATA_SERVER_PWD environment variable is not set"
 
 	local base_url="http://ibl.flatironinstitute.org/json"
 	local url="${ALYX_DUMP_URL}"
@@ -523,8 +523,9 @@ dumpjson() {
 }
 
 dumpsql() {
-	pg_dump -cOx -U ibl_dev -h $HOST -d alyx -f "$backup_dir/alyx_full.sql"
-	gzip -f "$backup_dir/alyx_full.sql"
+	pg_dump
+	#pg_dump -cOx -U ibl_dev -h $HOST -d alyx -f "$backup_dir/alyx_full.sql"
+	#gzip -f "$backup_dir/alyx_full.sql"
 }
 
 alyxstart() {

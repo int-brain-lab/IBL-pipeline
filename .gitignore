@@ -63,3 +63,4 @@ dj_local_conf.json
 # others
 scratch_*/*
 scratch*.py
+shared/public_alyx.sql.gz

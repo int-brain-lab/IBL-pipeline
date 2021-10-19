@@ -109,7 +109,6 @@ services:
       - type: bind
         source: ../../ibl_pipeline
         target: ${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}/ibldatajoint/ibl_pipeline
-        read_only: true
     init: true
     depends_on:
       alyx:
