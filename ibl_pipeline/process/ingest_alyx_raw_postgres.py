@@ -8,7 +8,6 @@ import datajoint as dj
 import pathlib
 import numpy as np
 
-
 mode = os.getenv('MODE')
 
 django.setup()
@@ -193,12 +192,15 @@ def insert_alyx_entries_model(
     # Ingest into main table
     if skip_existing_alyxraw:
         existing_uuids = (AlyxRawTable & {'model': model_name}).fetch('uuid')
-        new_uuids = np.setxor1d(list(entries.values_list('id', flat=True)), existing_uuids)
-        entries = [e for e in entries if e.id in new_uuids]
+        new_uuids = np.setxor1d(list(entries.values_list('id', flat=True)),
+                                existing_uuids, assume_unique=True)
     else:
-        new_uuids = list(entries.values_list('id', flat=True))
+        new_uuids = entries.values_list('id', flat=True)
 
-    if not len(new_uuids):
+    # convert to dict to make use of indexing for speed
+    new_uuids = {eid: None for eid in new_uuids}
+
+    if not new_uuids:
         return
 
     # using QueryBuffer, ingest into table AlyxRaw
@@ -210,6 +212,9 @@ def insert_alyx_entries_model(
 
     # ingest fields and single foreign key references in alyxraw.AlyxRaw.Field
     for r in tqdm(entries):
+        if r.id not in new_uuids:
+            continue
+
         alyxraw_buffer.add_to_queue1({'uuid': r.id, 'model': model_name})
         # e.g. for table subjects.models.Subject, each r is a subject queryset
         # for one subject
