@@ -4,7 +4,7 @@ import json
 import uuid
 import re
 
-from . import alyxraw, reference, acquisition
+from . import alyxraw, reference, acquisition, ShadowIngestionError
 from . import get_raw_field as grf
 
 from ibl_pipeline import acquisition as acquisition_real
@@ -68,14 +68,16 @@ class ProbeInsertion(dj.Imported):
         session_uuid = grf(key, 'session')
         session_key = dict(session_uuid=session_uuid)
 
-        try:
+        if (acquisition_real.Session & session_key):
             subject_uuid, session_start_time = \
                 (acquisition_real.Session & session_key).fetch1(
                     'subject_uuid', 'session_start_time')
-        except DataJointError:
+        elif (acquisition.Session & session_key):
             subject_uuid, session_start_time = \
                 (acquisition.Session & session_key).fetch1(
                     'subject_uuid', 'session_start_time')
+        else:
+            raise ShadowIngestionError('Non existing session: {}'.format(session_uuid))
 
         key_pi.update(
             subject_uuid=subject_uuid,
