@@ -55,9 +55,6 @@ coverage.xml
 .ipynb_checkpoints
 
 # credential files
-admin/dj_local_conf.json
-admin/.one_params
-admin/*.env
 docker/ibl/.env
 docker/ibl/.one_params
 dj_local_conf.json
