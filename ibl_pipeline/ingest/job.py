@@ -97,13 +97,14 @@ from ibl_pipeline.ingest import acquisition as shadow_acquisition
 from ibl_pipeline.ingest import data as shadow_data
 from ibl_pipeline.ingest import ephys as shadow_ephys
 from ibl_pipeline.ingest import qc as shadow_qc
+from ibl_pipeline.ingest import histology as shadow_histology
 
 from ibl_pipeline import (reference, subject, action,
-                          acquisition, data, ephys, qc)
+                          acquisition, data, ephys, qc, histology)
 
 
 logger = logging.getLogger(__name__)
-_backtrack_days = os.getenv('BACKTRACK_DAYS', 10)
+_backtrack_days = int(os.getenv('BACKTRACK_DAYS', 10))
 
 ALYX_MODELS = {
     'misc.lab': alyx_misc.models.Lab,
@@ -145,7 +146,8 @@ ALYX_MODELS = {
     'experiments.coordinatesystem': alyx_experiments.models.CoordinateSystem,
     'experiments.probemodel': alyx_experiments.models.ProbeModel,
     'experiments.probeinsertion': alyx_experiments.models.ProbeInsertion,
-    'experiments.trajectoryestimate': alyx_experiments.models.TrajectoryEstimate
+    'experiments.trajectoryestimate': alyx_experiments.models.TrajectoryEstimate,
+    'experiments.channel': alyx_experiments.models.Channel
 }
 
 MEMBERSHIP_ALYX_MODELS = {
@@ -167,7 +169,8 @@ MEMBERSHIP_ALYX_MODELS = {
     'actions.wateradministration': ['acquisition.WaterAdministrationSession'],
     'experiments.probeinsertion': [shadow_qc.ProbeInsertionQCIngest,
                                    qc.ProbeInsertionQC,
-                                   qc.ProbeInsertionExtendedQC]
+                                   qc.ProbeInsertionExtendedQC],
+    'experiments.trajectoryestimate': [histology.ProbeTrajectoryTemp]
 }
 
 DJ_TABLES = {
@@ -286,7 +289,11 @@ DJ_TABLES = {
     'qc.SessionQCIngest': {'real': None,
                            'shadow': shadow_qc.SessionQCIngest},
     'qc.ProbeInsertionQCIngest': {'real': None,
-                                  'shadow': shadow_qc.ProbeInsertionQCIngest}
+                                  'shadow': shadow_qc.ProbeInsertionQCIngest},
+    'histology.ProbeTrajectoryTemp': {'real': histology.ProbeTrajectoryTemp,
+                                      'shadow': shadow_histology.ProbeTrajectoryTemp},
+    'histology.ChannelBrainLocationTemp': {'real': histology.ChannelBrainLocationTemp,
+                                           'shadow': shadow_histology.ChannelBrainLocationTemp}
 }
 
 DJ_SHADOW_MEMBERSHIP = {
@@ -908,11 +915,10 @@ def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60):
 
         if _check_ingestion_completion():
             _clean_up()
-            return
-
-        for table in _ingestion_tables:
-            logger.info(f'------------- {table.__name__} ---------------')
-            table.populate(**populate_settings)
+        else:
+            for table in _ingestion_tables:
+                logger.info(f'------------- {table.__name__} ---------------')
+                table.populate(**populate_settings)
 
         (schema.jobs & 'status = "error"').delete()
 
@@ -924,13 +930,24 @@ def _clean_up():
     Routine to clean up any error jobs of type "ShadowIngestionError"
      in jobs tables of the shadow schemas
     """
+    _generic_errors = ["%Deadlock%", "%DuplicateError%", "%Lock wait timeout%",
+                       "%MaxRetryError%", "%KeyboardInterrupt%",
+                       "InternalError: (1205%", "%SIGTERM%",
+                       "LostConnectionError"]
+
     for shadow_schema in (shadow_reference, shadow_subject,
                           shadow_action, shadow_acquisition,
-                          shadow_data, shadow_ephys):
-        (shadow_schema.schema.jobs
-         & 'status = "error"'
-         & 'error_message LIKE "%ShadowIngestionError%"').delete()
-
+                          shadow_data, shadow_ephys,
+                          shadow_qc, shadow_histology):
+        # clear generic error jobs
+        (shadow_schema.schema.jobs & 'status = "error"'
+         & [f'error_message LIKE "{e}"'
+            for e in _generic_errors + ['%ShadowIngestionError%']]).delete()
+        # clear stale "reserved" jobs
+        stale_jobs = (shadow_schema.schema.jobs & 'status = "reserved"').proj(
+            elapsed_days='TIMESTAMPDIFF(DAY, timestamp, NOW())') & 'elapsed_days > 1'
+        (shadow_schema.schema.jobs & stale_jobs).delete()
+        
 
 if __name__ == '__main__':
     populate_ingestion_tables(run_duration=-1)

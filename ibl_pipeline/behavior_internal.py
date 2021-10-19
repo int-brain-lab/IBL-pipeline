@@ -92,8 +92,8 @@ class SparseNoise(dj.Imported):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         sparse_noise_positions, sparse_noise_times = \
-            one.load(eID, dataset_types=['sparseNoise.positions',
-                                         'sparseNoise.times'])
+            one.load_datasets(eID, datasets=['_ibl_sparseNoise.positions',
+                                             '_ibl_sparseNoise.times'], clobber=True)
 
         assert len(np.unique(np.array([len(sparse_noise_positions),
                                        len(sparse_noise_times)]))) == 1, \
@@ -124,8 +124,8 @@ class ExtraRewards(dj.Imported):
 
         eID = (acquisition.Session & key).fetch1('session_uuid')
 
-        extra_rewards_times = \
-            one.load(eID, dataset_types=['extraRewards.times'])
+        extra_rewards_times = one.load_dataset(eID, dataset='_ibl_extraRewards.times',
+                                               clobber=True)
 
         key['extra_rewards_times'] = extra_rewards_times
 
@@ -154,8 +154,8 @@ class SpontaneousTimeSet(dj.Imported):
 
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
-        spontaneous_intervals = \
-            one.load(eID, dataset_types=['spontaneous.intervals'])
+        spontaneous_intervals = one.load_dataset(eID, dataset='_ibl_spontaneous.intervals',
+                                                 clobber=True)
 
         key['spontaneous_time_total_num'] = len(spontaneous_intervals)
         self.insert1(key)
@@ -211,9 +211,9 @@ class Lick(dj.Imported):
         eID = (acquisition.Session & key).fetch1('session_uuid')
 
         lick_times, lick_piezo_raw, lick_piezo_timestamps = \
-            one.load(eID, dataset_types=['licks.times',
-                                         'lickPiezo.raw',
-                                         'lickPiezo.timestamps'])
+            one.load_datasets(eID, datasets=['_ibl_licks.times',
+                                             '_ibl_lickPiezo.raw',
+                                             '_ibl_lickPiezo.timestamps'], clobber=True)
 
         lick_sample_ids = lick_piezo_timestamps[:, 0]
         lick_piezo_timestamps = lick_piezo_timestamps[:, 1]
@@ -251,16 +251,15 @@ class PassiveTrialSet(dj.Imported):
                                         "_ibl_lickPiezo.timestamps.npy")')
 
     def make(self, key):
-
         passive_trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
 
         passive_visual_stim_contrast_left, \
         passive_visual_stim_contrast_right, \
         passive_visual_stim_times = \
-            one.load(eID, dataset_types=['passiveTrials.contrastLeft',
-                                         'passiveTrials.contrastRight',
-                                         'passiveTrials.times'], clobber=True)
+            one.load_datasets(eID, datasets=['passiveTrials.contrastLeft',
+                                             'passiveTrials.contrastRight',
+                                             'passiveTrials.times'], clobber=True)
 
         assert len(np.unique(np.array([len(passive_visual_stim_contrast_left),
                                        len(passive_visual_stim_contrast_right),
@@ -295,7 +294,7 @@ class PassiveTrialSet(dj.Imported):
             passive_trial_key['passive_trial_stim_contrast_right'] = float(
                 passive_stim_contrast_right)
 
-            self.PassiveTrial().insert1(passive_trial_key)
+            self.PassiveTrial.insert1(passive_trial_key)
 
         logger.info('Populated a PassiveTrialSet tuple, all Trial tuples and \
             Excluded Trial tuples for subject {subject_uuid} in \
@@ -331,9 +330,7 @@ class PassiveRecordings(dj.Imported):
 
         key['passive_beep_times'], key['passive_valve_click_times'], \
             key['passive_white_noise_times'] = \
-            one.load(eID, dataset_types=['passiveBeeps.times',
-                                         'passiveValveClicks.times',
-                                         'passiveWhiteNoise.times'],
-                     clobber=True)
-
+            one.load_datasets(eID, datasets=['passiveBeeps.times',
+                                             'passiveValveClicks.times',
+                                             'passiveWhiteNoise.times'], clobber=True)
         self.insert1(key)

@@ -109,34 +109,23 @@ class ChannelBrainLocation(dj.Imported):
 
     if mode != 'public':
         key_source = (ProbeTrajectory
-                    & (data.FileRecord & 'dataset_name like "%channels.brainLocationIds%"')
-                    & (data.FileRecord & 'dataset_name like "%channels.mlapdv%"')) - \
+                      & (data.FileRecord & 'dataset_name like "%channels.brainLocationIds%"')
+                      & (data.FileRecord & 'dataset_name like "%channels.mlapdv%"')) - \
             (ephys.ProbeInsertionMissingDataLog & 'missing_data="channels_brain_region"')
 
     def make(self, key):
 
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        dtypes = [
-            'channels.brainLocationIds_ccf_2017',
-            'channels.mlapdv'
-        ]
-
-        files = one.load(eID, dataset_types=dtypes, download_only=True,
-                         clobber=True)
-        ses_path = alf.io.get_session_path(files[0])
-
-        probe_label = (ephys.ProbeInsertion & key).fetch1('probe_label')
-        if not probe_label:
-            probe_label = 'probe0' + key['probe_idx']
+        probe_name = (ephys.ProbeInsertion & key).fetch1('probe_label')
+        probe_name = probe_name or 'probe0' + key['probe_idx']
 
         try:
-            channels = alf.io.load_object(
-                ses_path.joinpath('alf', probe_label), 'channels')
+            channels = one.load_object(eID, obj='channels',
+                                       collection=f'alf/{probe_name}')
         except Exception as e:
             ephys.ProbeInsertionMissingDataLog.insert1(
                 dict(**key, missing_data='channels_brain_region',
-                     error_message=str(e))
-            )
+                     error_message=str(e)))
             return
 
         channel_entries = []
@@ -176,29 +165,16 @@ class ClusterBrainRegion(dj.Imported):
         (data.FileRecord & 'dataset_name like "%clusters.mlapdv%"')
 
     def make(self, key):
-
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        dtypes = [
-            'clusters.brainLocationIds_ccf_2017',
-            'clusters.mlapdv'
-        ]
-
-        files = one.load(eID, dataset_types=dtypes, download_only=True,
-                         clobber=True)
-        ses_path = alf.io.get_session_path(files[0])
-
-        probe_label = (ephys.ProbeInsertion & key).fetch1('probe_label')
-        if not probe_label:
-            probe_label = 'probe0' + key['probe_idx']
+        probe_name = (ephys.ProbeInsertion & key).fetch1('probe_label')
+        probe_name = probe_name or 'probe0' + key['probe_idx']
 
         try:
-            clusters = alf.io.load_object(
-                ses_path.joinpath('alf', probe_label), 'clusters')
+            clusters = one.load_object(eID, obj='clusters', collection=f'alf/{probe_name}')
         except Exception as e:
             ephys.ProbeInsertionMissingDataLog.insert1(
                 dict(**key, missing_data='clusters_brain_region',
-                     error_message=str(e))
-            )
+                     error_message=str(e)))
             return
 
         cluster_entries = []
@@ -231,9 +207,7 @@ class ProbeBrainRegion(dj.Computed):
     key_source = ProbeTrajectory & ClusterBrainRegion
 
     def make(self, key):
-
         regions = (dj.U('acronym') & (ClusterBrainRegion & key)).fetch('acronym')
-
         associated_regions = [
             atlas.BrainAtlas.get_parents(acronym)
             for acronym in regions] + list(regions)

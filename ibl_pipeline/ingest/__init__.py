@@ -73,7 +73,7 @@ def get_raw_field(key, field, multiple_entries=False, model=None):
         query = alyxraw.AlyxRaw.Field & key & 'fname="{}"'.format(field)
 
     if not query:
-        raise KeyError(f'No "{field}" field in AlyxRaw.Field for key: {key}')
+        raise AlyxKeyError(f'No "{field}" field in AlyxRaw.Field for key: {key}')
 
     return (query.fetch1('fvalue')
             if not multiple_entries and len(query)
@@ -205,4 +205,11 @@ class ShadowIngestionError(Exception):
     """Raise when ingestion failed for any shadow table"""
     def __init__(self, msg=None):
         super().__init__('ShadowIngestionError: \n{}'.format(msg))
+    pass
+
+
+class AlyxKeyError(Exception):
+    """Raise when KeyError encountered when accessing Alyx fields"""
+    def __init__(self, msg=None):
+        super().__init__('AlyxKeyError: \n{}'.format(msg))
     pass

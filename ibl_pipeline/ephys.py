@@ -3,7 +3,6 @@ import datajoint as dj
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
-import one.alf.io
 
 from . import acquisition, reference, behavior, data
 from . import one, mode
@@ -154,21 +153,12 @@ class ChannelGroup(dj.Imported):
                 (ProbeInsertionMissingDataLog & 'missing_data="channels"')
 
     def make(self, key):
-
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        dtypes = [
-            'channels.rawInd',
-            'channels.localCoordinates'
-        ]
-
-        files = one.load(eID, dataset_types=dtypes, download_only=True,
-                         clobber=True)
-        ses_path = one.alf.io.get_session_path(files[0])
-
         probe_name = (ProbeInsertion & key).fetch1('probe_label')
+
         try:
-            channels = one.alf.io.load_object(
-                ses_path.joinpath('alf', probe_name), 'channels')
+            channels = one.load_object(eID, obj='channels',
+                                       collection=f'alf/{probe_name}')
         except Exception as e:
             ProbeInsertionMissingDataLog.insert1(
                 dict(**key, missing_data='channels', error_message=str(e)))
@@ -211,44 +201,16 @@ class DefaultCluster(dj.Imported):
     """
 
     if mode != 'public':
-        key_source = ProbeInsertion & (CompleteClusterSession - ProblematicDataSet) - \
-            (ProbeInsertionMissingDataLog & 'missing_data="clusters"')
+        key_source = (ProbeInsertion & (CompleteClusterSession - ProblematicDataSet)
+                      - (ProbeInsertionMissingDataLog & 'missing_data="clusters"'))
 
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-
-        spikes_times_dtype_name = (
-            data.FileRecord & key &
-            'dataset_name like "%spikes.times%.npy"').fetch1(
-                'dataset_name').split('.npy')[0]
-
-        dtypes = [
-            'clusters.amps',
-            'clusters.channels',
-            'clusters.depths',
-            'clusters.metrics',
-            'clusters.peakToTrough',
-            'clusters.uuids',
-            'clusters.waveforms',
-            'clusters.waveformsChannels',
-            'spikes.amps',
-            'spikes.clusters',
-            'spikes.depths',
-            'spikes.samples',
-            'spikes.templates',
-            spikes_times_dtype_name
-        ]
-
-        files = one.load(eID, dataset_types=dtypes, download_only=True, clobber=True)
-        ses_path = one.alf.io.get_session_path(files[0])
-
         probe_name = (ProbeInsertion & key).fetch1('probe_label')
 
         try:
-            clusters = one.alf.io.load_object(
-                ses_path.joinpath('alf', probe_name), 'clusters')
-            spikes = one.alf.io.load_object(
-                ses_path.joinpath('alf', probe_name), 'spikes')
+            clusters = one.load_object(eID, obj='clusters', collection=f'alf/{probe_name}')
+            spikes = one.load_object(eID, obj='spikes', collection=f'alf/{probe_name}')
         except Exception as e:
             ProbeInsertionMissingDataLog.insert1(
                 dict(**key, missing_data='clusters', error_message=str(e)))
@@ -263,9 +225,8 @@ class DefaultCluster(dj.Imported):
 
         max_spike_time = spikes[time_fname][-1]
 
-        for icluster, cluster_uuid in tqdm(enumerate(clusters.uuids['uuids']),
-                                           position=0):
-
+        cluster_list, metrics_list, metric_list, Ks2Label_list = [], [], [], []
+        for icluster, cluster_uuid in tqdm(enumerate(clusters.uuids['uuids']), position=0):
             idx = spikes.clusters == icluster
             cluster = dict(
                 **key,
@@ -283,32 +244,34 @@ class DefaultCluster(dj.Imported):
                 cluster_spikes_templates=spikes.templates[idx],
                 cluster_spikes_samples=spikes.samples[idx])
 
-            self.insert1(cluster)
+            cluster_list.append(cluster)
 
             num_spikes = len(cluster['cluster_spikes_times'])
             firing_rate = num_spikes/max_spike_time
 
             metrics = clusters.metrics.iloc[icluster]
 
-            self.Metrics.insert1(
-                dict(
-                    **key,
-                    cluster_id=icluster,
-                    num_spikes=num_spikes,
-                    firing_rate=firing_rate,
-                    metrics=metrics.to_dict()))
+            metrics_list.append(dict(**key,
+                                     cluster_id=icluster,
+                                     num_spikes=num_spikes,
+                                     firing_rate=firing_rate,
+                                     metrics=metrics.to_dict()))
 
             if metrics.ks2_label and (not pd.isnull(metrics.ks2_label)):
-                self.Ks2Label.insert1(
+                Ks2Label_list.append(
                     dict(**key, cluster_id=icluster,
                          ks2_label=metrics.ks2_label))
 
-            self.Metric.insert(
+            metric_list.extend(
                 [dict(**key, cluster_id=icluster,
                       metric_name=name, metric_value=value)
                  for name, value in metrics.to_dict().items()
-                 if name != 'ks2_label' and not np.isnan(value) and not np.isinf(value)]
-            )
+                 if name != 'ks2_label' and not np.isnan(value) and not np.isinf(value)])
+
+        self.insert(cluster_list)
+        self.Metrics.insert(metrics_list)
+        self.Metric.insert(metric_list)
+        self.Ks2Label.insert(Ks2Label_list)
 
     class Metric(dj.Part):
         definition = """
@@ -360,12 +323,10 @@ class GoodCluster(dj.Computed):
     """
 
     def make(self, key):
-
         firing_rate = (DefaultCluster.Metrics & key).fetch1('firing_rate')
         if key['criterion_id'] == 1:
             if firing_rate > 0.2:
                 key['is_good'] = True
-
         self.insert1(key)
 
 
@@ -394,7 +355,6 @@ class AlignedTrialSpikes(dj.Computed):
          dj.AndList([wheel.MovementTimes, 'event="movement"'])]
 
     def make(self, key):
-
         cluster = DefaultCluster() & key
         spike_times = cluster.fetch1('cluster_spikes_times')
         event = (Event & key).fetch1('event')
