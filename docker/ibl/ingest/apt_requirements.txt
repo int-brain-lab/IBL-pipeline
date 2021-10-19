@@ -1,0 +1,11 @@
+build-essential
+bzip2
+ca-certificates
+cron
+git
+htop
+mesa-utils
+nvi
+openssh-client
+procps
+tmux
