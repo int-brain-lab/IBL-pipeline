@@ -60,6 +60,8 @@ admin/.one_params
 admin/*.env
 docker/ibl/.env
 docker/ibl/.one_params
+dj_local_conf.json
+.env
 
 # others
 scratch_*/*
