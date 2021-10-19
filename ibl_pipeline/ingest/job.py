@@ -939,10 +939,15 @@ def _clean_up():
                           shadow_action, shadow_acquisition,
                           shadow_data, shadow_ephys,
                           shadow_qc, shadow_histology):
+        # clear generic error jobs
         (shadow_schema.schema.jobs & 'status = "error"'
          & [f'error_message LIKE "{e}"'
             for e in _generic_errors + ['%ShadowIngestionError%']]).delete()
-
+        # clear stale "reserved" jobs
+        stale_jobs = (shadow_schema.schema.jobs & 'status = "reserved"').proj(
+            elapsed_days='TIMESTAMPDIFF(DAY, timestamp, NOW())') & 'elapsed_days > 1'
+        (shadow_schema.schema.jobs & stale_jobs).delete()
+        
 
 if __name__ == '__main__':
     populate_ingestion_tables(run_duration=-1)
