@@ -106,6 +106,8 @@ from ibl_pipeline import (reference, subject, action,
 logger = logging.getLogger(__name__)
 _backtrack_days = int(os.getenv('BACKTRACK_DAYS', 10))
 
+# --------- Some constants -------
+
 ALYX_MODELS = {
     'misc.lab': alyx_misc.models.Lab,
     'misc.lablocation': alyx_misc.models.LabLocation,
@@ -455,6 +457,28 @@ DJ_UPDATES = {
 }
 
 
+def _sort_tables_topologically(table_names):
+    diagram = None
+    for table_name in table_names:
+        table = DJ_TABLES[table_name]['real']
+        if table is None:
+            continue
+        if diagram is None:
+            diagram = dj.Diagram(table)
+        else:
+            diagram += table
+
+    schema_prefix = dj.config.get('database.prefix', '') + 'ibl_'
+
+    sorted_schema_table = [tbl_name.split('.') for tbl_name in diagram.topological_sort()]
+    return [schema_name.strip('`').replace(schema_prefix, '')
+            + '.' + '.'.join([dj.utils.to_camel_case(s)
+                              for s in tbl_name.strip('`').split('__') if s])
+            for schema_name, tbl_name in sorted_schema_table]
+
+
+# ------ Pipeline for ingestion orchestration ------
+
 @schema
 class IngestionJob(dj.Manual):
     """
@@ -799,6 +823,18 @@ class CopyRealTable(dj.Computed):
                   & [f'table_name = "{table_name}"' for table_name in _real_tables])
 
     def make(self, key):
+        # Ensure the real-table copy routine is "in topologically sorted order"
+        sorted_tables = _sort_tables_topologically(
+            (ShadowTable & (IngestionJob & key)).fetch('table_name'))
+        upstream_tables = sorted_tables[:sorted_tables.index(key['table_name'])]
+        are_upstreams_copied = (len(self & (IngestionJob & key)
+                                    & [{'table_name': n} for n in upstream_tables])
+                                == len(upstream_tables))
+
+        if not are_upstreams_copied:
+            return
+
+        # Do the copying
         shadow_table = DJ_TABLES[key['table_name']]['shadow']
         real_table = DJ_TABLES[key['table_name']]['real']
 
@@ -947,7 +983,7 @@ def _clean_up():
         stale_jobs = (shadow_schema.schema.jobs & 'status = "reserved"').proj(
             elapsed_days='TIMESTAMPDIFF(DAY, timestamp, NOW())') & 'elapsed_days > 1'
         (shadow_schema.schema.jobs & stale_jobs).delete()
-        
+
 
 if __name__ == '__main__':
     populate_ingestion_tables(run_duration=-1)
