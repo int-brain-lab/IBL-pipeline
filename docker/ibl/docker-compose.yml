@@ -11,7 +11,8 @@
 #   ./compose --env=./admin/ingest.env build up
 #   ./compose --force up
 #   ./compose up
-
+#
+# docker-compose up --force-recreate --detach pgserv alyx ingest adminer
 # Shared properties across services ----------------------------------------------------
 x-user-build-args: &user-build-args
   GROUPNAME: ibl
@@ -95,9 +96,11 @@ services:
       - PGHOST=${ALYX_DB_HOST:-pgserv}
       - HTTP_DATA_SERVER_LOGIN=${HTTP_DATA_SERVER_LOGIN:-}
       - HTTP_DATA_SERVER_PWD=${HTTP_DATA_SERVER_PWD:-}
-      - ALYX_PORT=${ALYX_PORT:-8888}
+      - ALYX_PORT=${ALYX_PORT:-8000}
+      - ALYX_SECRET_KEY=${ALYX_SECRET_KEY:-0xdeadbeef}
     ports:
-      - "${ALYX_PORT:-8888}:${ALYX_PORT:-8888}"
+      - "${ALYX_PORT:-8000}:${ALYX_PORT:-8000}"
+    command: [ "www" ]
 
   # IBL Environment for DataJoint Ingestion --------------------------------------------
   ingest:
@@ -124,4 +127,14 @@ services:
     environment:
       - IBL_PATH_ROOT=${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}
     expose:
-      - "${ALYX_PORT:-8888}"
+      - "${ALYX_PORT:-8000}"
+
+  adminer:
+    image: adminer
+    restart: always
+    environment:
+      - ADMINER_DEFAULT_SERVER=pgserv
+      - ADMINER_DESIGN=nette
+    ports:
+      - 8081:8080
+    <<: *shared-networks

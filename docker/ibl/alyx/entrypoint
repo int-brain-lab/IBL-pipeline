@@ -17,26 +17,25 @@ script_path="$(cd "$(dirname ${script_cmd})" &>/dev/null && pwd)"
 script_file=$(basename "${script_cmd}")
 
 # use default dockerfile directory if root path not specified
-[ -z "${IBL_PATH_ROOT}" ] && IBL_PATH_ROOT="/int-brain-lab"
+[ -z "${IBL_PATH_ROOT}" ] && IBL_PATH_ROOT=/int-brain-lab
 
 # get alyx source code directory or default to ./alyx
-[ -z "${IBL_PATH_ALYX}" ] && IBL_PATH_ALYX="${IBL_PATH_ROOT}/alyx"
+[ -z "${IBL_PATH_ALYX}" ] && IBL_PATH_ALYX=/var/www/alyx-main
 
 # get data directory or default to ./data
 [ -z "${IBL_PATH_DATA}" ] && IBL_PATH_DATA="${IBL_PATH_ROOT}/data"
 ALYX_DUMP_DIR="${IBL_PATH_DATA}/alyx/dumps"
 
 # get default port for alyx server
-[ -z "${ALYX_PORT}" ] && ALYX_PORT=8888
+[ -z "${ALYX_PORT}" ] && ALYX_PORT=8000
 
 # get current date as default
 [ -z "${ALYX_DL_DATE}" ] && ALYX_DL_DATE=$(date -u +'%Y-%m-%d')
 
 # paths for alyx files used for db setup steps
-dbloaded="${IBL_PATH_ALYX}/alyx/db_loaded"
-sucreated="${IBL_PATH_ALYX}/alyx/superuser_created"
-alyxmanagepy="${IBL_PATH_ALYX}/alyx/manage.py"
-secretsettings="${IBL_PATH_ALYX}/alyx/alyx/settings_secret.py"
+alyxmanagepy="${IBL_PATH_ALYX}/alyx/alyx/manage.py"
+dbloaded="${IBL_PATH_ALYX}/alyx/alyx/db_loaded"
+sucreated="${IBL_PATH_ALYX}/alyx/alyx/superuser_created"
 
 # optional globals
 ALYX_DUMP_URL=
@@ -95,6 +94,8 @@ Environment Variables:
   IBL_PATH_ALYX=$IBL_PATH_ALYX
   IBL_PATH_DATA=$IBL_PATH_DATA
   PGDBNAME=$PGDBNAME
+  PGUSER=$PGUSER
+  PGHOST=$PGHOST
   ALYX_DL_DATE=$ALYX_DL_DATE
   ALYX_DUMP_FILE=$ALYX_DUMP_FILE
   ALYX_DUMP_DIR=$ALYX_DUMP_DIR
@@ -171,6 +172,10 @@ while [[ $# -gt 0 ]]; do
 		;;
 	"alyxcfg")
 		OPS_SEQ+=("alyxcfg")
+		shift
+		;;
+	"alyxmigrate")
+		OPS_SEQ+=("alyxmigrate")
 		shift
 		;;
 	"alyxstart")
@@ -285,12 +290,17 @@ checkurl() {
 	fi
 }
 
+alyxcmd() {
+	local acmd="$1"
+	shift
+	[[ -z "${acmd}" ]] && acmd=help
+	python "${alyxmanagepy}" "${acmd}" $*
+}
+
 # functions for postgres/django operations
 # ----------------------------------------
 
 mkdb() {
-	echo "---- mkdb() ----"
-
 	checkdb "${PGDBNAME}"
 	if [[ ${DB_NAME_EXISTS} -eq 0 ]]; then
 		echo "# ==> creating database ${PGDBNAME}"
@@ -305,7 +315,6 @@ mkdb() {
 }
 
 fetchdump() {
-	echo "---- fetchdump() ----"
 	if [[ -f "${ALYX_DUMP_FILE}" ]]; then
 		echo "alyx dump file '$ALYX_DUMP_FILE' already exists"
 		echo "run 'rm -f $ALYX_DUMP_FILE' to forcibly remove if you want to re-download"
@@ -332,7 +341,6 @@ fetchdump() {
 }
 
 fetchpubdump() {
-	echo "---- fetchpubdump() ----"
 	local pub_file=public_alyx.sql.gz
 	local pub_url=http://ibl.flatironinstitute.org/json/${pub_file}
 	local pub="${IBL_PATH_ROOT}/shared/${pub_file}"
@@ -348,7 +356,6 @@ fetchpubdump() {
 }
 
 cleandumps() {
-	echo "---- cleandumps() ----"
 	local dump_dir="${ALYX_DUMP_DIR}/sql"
 	local old_dumps=$(find "${dump_dir}/"*_alyxfull.sql.gz -type f -mtime +6 2>/dev/null)
 	if [[ ! -z ${old_dumps} ]]; then
@@ -363,39 +370,39 @@ cleandumps() {
 }
 
 alyxcfg() {
-	echo '---- alyxcfg() ----'
 	echo '# => configuring alyx'
 	echo '# ==> checking if environment variables and databases exist'
 
 	[ -z "$PGUSER" ] && err_exit "PGUSER environment variable is not set"
 	[ -z "$PGPASSWORD" ] && err_exit "PGPASSWORD environment variable is not set"
 	[ -z "$PGHOST" ] && err_exit "PGHOST environment variable is not set"
-
-	checkdb
-	[[ ${DB_NAME_EXISTS} -eq 0 ]] &&
-		err_exit "database '${PGDBNAME}' does not yet exist, run 'mkdb'"
-
-	checkdbusr
-	[[ ${DB_USER_EXISTS} -eq 0 ]] &&
-		err_exit "database user '${PGUSER}' does not yet exist"
+	[ -z "$ALYX_SECRET_KEY" ] && err_exit "ALYX_SECRET_KEY environment variable is not set"
 
 	# custom settings_secret for multiple DBs
-	# see also: alyx/alyx/alyx/settings_secret_template.py
 	echo '# ==> configuring settings_secret.py'
-	cnf="${secretsettings}"
-	sed \
-		-e "s/%SECRET_KEY%/0xdeadbeef/" \
+	local secretsettingstemp="${IBL_PATH_ALYX}/alyx/alyx/alyx/settings_secret_template.py"
+	sed -i \
+		-e "s/%SECRET_KEY%/$ALYX_SECRET_KEY/" \
 		-e "s/%DBNAME%/$PGDBNAME/" \
 		-e "s/%DBUSER%/$PGUSER/" \
 		-e "s/%DBPASSWORD%/$PGPASSWORD/" \
 		-e "s/127.0.0.1/$PGHOST/" \
-		>$cnf <<-EOF
+		${secretsettingstemp}
+
+	local secretsettings="${IBL_PATH_ALYX}/alyx/alyx/alyx/settings_secret.py"
+	sed \
+		-e "s/%SECRET_KEY%/$ALYX_SECRET_KEY/" \
+		-e "s/%DBNAME%/$PGDBNAME/" \
+		-e "s/%DBUSER%/$PGUSER/" \
+		-e "s/%DBPASSWORD%/$PGPASSWORD/" \
+		-e "s/127.0.0.1/$PGHOST/" \
+		>${secretsettings} <<-EOF
 
 			SECRET_KEY  = '%SECRET_KEY%'
 
 			DATABASES  = {
 			    'default': {
-			        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+			        'ENGINE': 'django_prometheus.db.backends.postgresql',
 			        'NAME': '%DBNAME%',
 			        'USER': '%DBUSER%',
 			        'PASSWORD': '%DBPASSWORD%',
@@ -403,7 +410,7 @@ alyxcfg() {
 			        'PORT': '5432',
 			    },
 			    'old': {
-			        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+			        'ENGINE': 'django_prometheus.db.backends.postgresql',
 			        'NAME': '%DBNAME%_old',
 			        'USER': '%DBUSER%',
 			        'PASSWORD': '%DBPASSWORD%',
@@ -420,6 +427,19 @@ alyxcfg() {
 
 		EOF
 
+	install -m 660 /dev/null ~/.pgpass
+	echo "${PGHOST}:5432:${PGDBNAME}:${PGUSER}:${PGPASSWORD}" >>~/.pgpass
+}
+
+alyxmigrate() {
+	checkdb
+	[[ ${DB_NAME_EXISTS} -eq 0 ]] &&
+		err_exit "database '${PGDBNAME}' does not yet exist, run 'mkdb'"
+
+	checkdbusr
+	[[ ${DB_USER_EXISTS} -eq 0 ]] &&
+		err_exit "database user '${PGUSER}' does not yet exist"
+
 	echo "# ===> makemigrations"
 	python "${alyxmanagepy}" makemigrations
 
@@ -427,38 +447,24 @@ alyxcfg() {
 	python "${alyxmanagepy}" migrate
 
 	if [ ! -f "$sucreated" ]; then
+		set -e
 		echo '# ==> creating alyx superuser'
-		python "${alyxmanagepy}" createsuperuser \
-			--no-input \
-			--username admin \
-			--email admin@localhost
-
-		echo '# ===> setting alyx superuser password'
-		# note on superuser create:
-		#
-		# - no-input 'createsuperuser' creates without password
-		# - cant set password from cli here or in setpassword command
-		# - so script reset via manage.py shell
-		# - see also:
-		#   https://stackoverflow.com/questions/6358030/\
-		#     how-to-reset-django-admin-password
-
 		python "${alyxmanagepy}" shell <<-EOF
-
-			from django.contrib.auth import get_user_model
-			User = get_user_model()
-			admin = User.objects.get(username='admin')
-			admin.set_password('$PGPASSWORD')
-			admin.save()
-			exit()
+			from misc.models import LabMember
+			LabMember.objects.create(
+				username='$PGUSER',
+				password='$PGPASSWORD',
+			    is_superuser=True,
+				is_staff=True,
+				email='joseph@datajoint.com')
 		EOF
 
 		touch ${sucreated}
+		set +e
 	fi
 }
 
 loaddb() {
-	echo "---- loaddb() ----"
 	if [ -f "${dbloaded}" ]; then
 		echo '# => database loaded - skipping load.'
 	else
@@ -467,13 +473,13 @@ loaddb() {
 			err_exit "database '${PGDBNAME}' does not yet exist, run 'mkdb'"
 		echo "# => loading database ${ALYX_DUMP_FILE}"
 		[ ! -f "${ALYX_DUMP_FILE}" ] && err_exit "database dump file '$ALYX_DUMP_FILE' doesn't exist"
+		python "${alyxmanagepy}" reset_db --noinput
 		gzip -dc ${ALYX_DUMP_FILE} | psql -d ${PGDBNAME}
 		touch ${dbloaded}
 	fi
 }
 
 renamedb() {
-	echo "---- renamedb() ----"
 	echo "# => renaming databases:"
 
 	checkdb "${PGDBNAME}_old"
@@ -496,7 +502,6 @@ renamedb() {
 }
 
 dumpjson() {
-	echo "---- dumpjson() ----"
 	if [ ! -f "${dbloaded}" ]; then
 		echo '# => database not loaded - skipping json dump.'
 		return 0
@@ -507,6 +512,7 @@ dumpjson() {
 
 	[[ -f "${json_dump_file}" ]] && mv -f "${json_dump_file}" "${json_dump_file}.last"
 
+	echo '# => dumping db as JSON to ${json_dump_file}'
 	python "${alyxmanagepy}" dumpdata \
 		-e contenttypes -e auth.permission \
 		-e reversion.version -e reversion.revision -e admin.logentry \
@@ -523,13 +529,14 @@ dumpjson() {
 }
 
 dumpsql() {
-	pg_dump
-	#pg_dump -cOx -U ibl_dev -h $HOST -d alyx -f "$backup_dir/alyx_full.sql"
-	#gzip -f "$backup_dir/alyx_full.sql"
+	echo '# => performing sql backup'
+	mkdir -p "${ALYX_DUMP_DIR}/backup"
+	pg_dump -cOx -U ${PGUSER} -h ${PGHOST} -d ${PGDBNAME} -f "${ALYX_DUMP_DIR}/backup/alyx_full.sql"
+	echo '# ==> zipping sql backup'
+	gzip -f "${ALYX_DUMP_DIR}/backup/alyx_full.sql"
 }
 
 alyxstart() {
-	echo "---- alyxstart() ----"
 	echo '# => starting alyx'
 	python "${alyxmanagepy}" runserver --insecure 0.0.0.0:${ALYX_PORT}
 }
@@ -540,12 +547,12 @@ alyxstart() {
 initdb() {
 	mkdb
 	alyxcfg
+	alyxmigrate
 }
 
 loaddump() {
 	fetchdump
-	mkdb
-	alyxcfg
+	initdb
 	loaddb
 }
 
@@ -583,7 +590,7 @@ fi
 if [[ ${#OPS_SEQ[@]} -gt 0 ]]; then
 	echo "# > operation sequence: ${OPS_SEQ[@]}"
 	for fn in ${OPS_SEQ[@]}; do
-		echo "# > running: $fn"
+		echo "---- ${fn}() ----"
 		$fn
 	done
 fi
