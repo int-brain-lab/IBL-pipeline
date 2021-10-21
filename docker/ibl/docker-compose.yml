@@ -100,7 +100,8 @@ services:
       - ALYX_SECRET_KEY=${ALYX_SECRET_KEY:-0xdeadbeef}
     ports:
       - "${ALYX_PORT:-8000}:${ALYX_PORT:-8000}"
-    command: [ "www" ]
+    command: [ "dev" ]
+    # user: root
 
   # IBL Environment for DataJoint Ingestion --------------------------------------------
   ingest:
