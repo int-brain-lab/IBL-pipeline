@@ -78,13 +78,13 @@ fetchpubdump .. Download the public Alyx database dump from flatiron.
 Routines:
 
 initdb ........ Routine that performs all initialization steps to bring up the
-                '${PGDBNAME}' database by running: mkdb, alyxcfg
+                '${PGDBNAME}' database by running: mkdb, alyxcfg, alyxmigrate
 loaddump ...... Routine that inserts the sql dump into the '${PGDBNAME}' postgres database by
-                running: fetchdump, mkdb, alyxcfg, loaddb
+                running: fetchdump, mkdb, alyxcfg, alyxmigrate, loaddb
 reloaddb ...... Routine that fetches a new dump from ALYX_DL_DATE and force reload into
                 '${PGDBNAME}' db by running: fetchdump, loaddb
 www ........... Routine that initializes environment and runs Alyx web
-                by running: fetchdump, mkdb, alyxcfg, loaddb, alyxstart
+                by running: fetchdump, mkdb, alyxcfg, alyxmigrate, loaddb, alyxstart
 dev ........... Initialize parent process and wait indefinitely (no db setup)
 
 
@@ -482,11 +482,12 @@ loaddb() {
 		echo "# => resetting database"
 		[ ! -f "${ALYX_DUMP_FILE}" ] && err_exit "database dump file '$ALYX_DUMP_FILE' doesn't exist"
 		alyxcmd reset_db --noinput
+		alyxcmd migrate
 		echo "# ==> loading database ${ALYX_DUMP_FILE}"
 		gzip -dc ${ALYX_DUMP_FILE} | psql -d ${PGDBNAME}
+		alyxcmd migrate
 		mkdir -p $(dirname "${dbloaded}")
 		touch ${dbloaded}
-		alyxcmd migrate
 	fi
 }
 
