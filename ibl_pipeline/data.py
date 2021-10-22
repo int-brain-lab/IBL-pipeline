@@ -115,7 +115,7 @@ class DataSet(dj.Manual):
                         dataset_name=dataset_name,
                         dataset_uuid=dataset['hash'],
                         dataset_created_by=dataset['created_by'],
-                        dataset_type_name='_ibl_' + dataset['dataset_type'],
+                        dataset_type_name=dataset['dataset_type'],
                         format_name=dataset['data_format'],
                         created_datetime=dataset['created_datetime'],
                         file_size=dataset['file_size'])
@@ -140,7 +140,8 @@ class DataSet(dj.Manual):
                     FileRecord.insert(file_record_entries, skip_duplicates=True)
                     # except Exception as e:
                     #     print(f'Error inserting {dataset_name} in table FileRecord for session {uuid}: {str(e)}')
-                except:
+                except Exception as e:
+                    print(str(e))
                     continue
 
 

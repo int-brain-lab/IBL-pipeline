@@ -8,6 +8,7 @@ from ibl_pipeline import reference, subject, action, acquisition, data, ephys
 import traceback
 import datetime
 import os
+import numpy as np
 
 
 mode = os.environ.get('MODE')
@@ -148,8 +149,11 @@ def copy_table(target_schema, src_schema, table_name,
         # keep only records in "q_insert" HAVING entries in the parent tables
         for parent_table, parent_fk_info in target_table.parents(
                 as_objects=True, foreign_key_info=True):
-
-            # special case of `BrainRegion` table, skipping due to a collations conflicts
+            # skipping "nullable" foreign key
+            if np.all([target_table.heading.attributes[attr].nullable
+                       for attr in parent_fk_info['attr_map']]):
+                continue
+            # skipping `BrainRegion` table, collations conflicts
             if dj.utils.to_camel_case(
                 parent_table.full_table_name.split('.')[-1].replace('`', '')) in ('BrainRegion'):
                 continue
