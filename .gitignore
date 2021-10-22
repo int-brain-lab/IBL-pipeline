@@ -57,10 +57,13 @@ coverage.xml
 # credential files
 docker/ibl/.env
 docker/ibl/.one_params
+root/.one_params
 dj_local_conf.json
-.env
+.env*
 
 # others
 scratch_*/*
 scratch*.py
 shared/public_alyx.sql.gz
+data/*
+*.log

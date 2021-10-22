@@ -2,7 +2,7 @@ import datajoint as dj
 import json
 import uuid
 
-from . import alyxraw, reference, acquisition
+from . import alyxraw, reference, acquisition, ShadowIngestionError
 from . import get_raw_field as grf
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
@@ -184,10 +184,7 @@ class DataSet(dj.Computed):
         session = grf(key, 'session')
         if not len(acquisition.Session &
                    dict(session_uuid=uuid.UUID(session))):
-            print('Session {} is not in the table acquisition.Session'.format(
-                session))
-            print('dataset_uuid: {}'.format(str(key['uuid'])))
-            return
+            raise ShadowIngestionError('Non existing session: {}'.format(session))
 
         key_ds['subject_uuid'], key_ds['session_start_time'] = \
             (acquisition.Session &
@@ -268,9 +265,7 @@ class FileRecord(dj.Computed):
 
         dataset = grf(key, 'dataset')
         if not len(DataSet & dict(dataset_uuid=uuid.UUID(dataset))):
-            print('Dataset {} is not in the table data.DataSet')
-            print('Record_uuid: {}'.format(str(key['uuid'])))
-            return
+            raise ShadowIngestionError('Dataset is not in the table data.DataSet: {}'.format(str(key['uuid'])))
 
         key_fr['subject_uuid'], key_fr['session_start_time'], \
             key_fr['dataset_name'] = \

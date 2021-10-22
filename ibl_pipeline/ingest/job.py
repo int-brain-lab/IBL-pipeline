@@ -106,6 +106,8 @@ from ibl_pipeline import (reference, subject, action,
 logger = logging.getLogger(__name__)
 _backtrack_days = int(os.getenv('BACKTRACK_DAYS', 10))
 
+# --------- Some constants -------
+
 ALYX_MODELS = {
     'misc.lab': alyx_misc.models.Lab,
     'misc.lablocation': alyx_misc.models.LabLocation,
@@ -236,6 +238,10 @@ DJ_TABLES = {
                             'real': data.DataRepository},
     'data.DataSetType': {'shadow': shadow_data.DataSetType,
                          'real': data.DataSetType},
+    'data.DataSet': {'shadow': shadow_data.DataSet,
+                     'real': data.DataSet},
+    'data.FileRecord': {'shadow': shadow_data.FileRecord,
+                        'real': data.FileRecord},
     'subject.SubjectCullMethod': {'shadow': shadow_subject.SubjectCullMethod,
                                   'real': subject.SubjectCullMethod},
     'action.Weighing': {'shadow': shadow_action.Weighing,
@@ -454,6 +460,8 @@ DJ_UPDATES = {
     }
 }
 
+
+# ------ Pipeline for ingestion orchestration ------
 
 @schema
 class IngestionJob(dj.Manual):
@@ -802,6 +810,24 @@ class CopyRealTable(dj.Computed):
         shadow_table = DJ_TABLES[key['table_name']]['shadow']
         real_table = DJ_TABLES[key['table_name']]['real']
 
+        # Ensure the real-table copy routine is "in topologically sorted order"
+        schema_prefix = dj.config.get('database.prefix', '') + 'ibl_'
+        ancestors = [tbl_name.split('.') for tbl_name in real_table.ancestors()]
+        ancestors = [schema_name.strip('`').replace(schema_prefix, '')
+                     + '.' + '.'.join([dj.utils.to_camel_case(s)
+                                       for s in tbl_name.strip('`').split('__') if s])
+                     for schema_name, tbl_name in ancestors]
+
+        ancestors = [n for n in ancestors if n in self._real_tables and n != key['table_name']]
+
+        are_ancestors_copied = (len(self & (IngestionJob & key)
+                                    & [{'table_name': n} for n in ancestors])
+                                == len(ancestors))
+
+        if not are_ancestors_copied:
+            return
+
+        # Do the copying
         target_module = inspect.getmodule(real_table)
         source_module = inspect.getmodule(shadow_table)
 
@@ -947,7 +973,7 @@ def _clean_up():
         stale_jobs = (shadow_schema.schema.jobs & 'status = "reserved"').proj(
             elapsed_days='TIMESTAMPDIFF(DAY, timestamp, NOW())') & 'elapsed_days > 1'
         (shadow_schema.schema.jobs & stale_jobs).delete()
-        
+
 
 if __name__ == '__main__':
     populate_ingestion_tables(run_duration=-1)

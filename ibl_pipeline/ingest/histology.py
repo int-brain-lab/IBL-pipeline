@@ -5,7 +5,7 @@ import uuid
 import re
 import pdb
 
-from . import alyxraw, reference, acquisition, ephys
+from . import alyxraw, reference, acquisition, ephys, ShadowIngestionError
 from . import get_raw_field as grf
 
 from ibl_pipeline import acquisition as acquisition_real
@@ -61,14 +61,16 @@ class ProbeTrajectoryTemp(dj.Imported):
         probe_insertion_uuid = grf(key, 'probe_insertion')
         probe_insertion_key = dict(probe_insertion_uuid=probe_insertion_uuid)
 
-        try:
+        if (ephys_real.ProbeInsertion & probe_insertion_key):
             subject_uuid, session_start_time, probe_idx = \
                 (ephys_real.ProbeInsertion & probe_insertion_key).fetch1(
                     'subject_uuid', 'session_start_time', 'probe_idx')
-        except DataJointError:
+        elif (ephys.ProbeInsertion & probe_insertion_key):
             subject_uuid, session_start_time, probe_idx = \
                 (ephys.ProbeInsertion & probe_insertion_key).fetch1(
                     'subject_uuid', 'session_start_time', 'probe_idx')
+        else:
+            raise ShadowIngestionError('Non existing probe insertion: {}'.format(probe_insertion_uuid))
 
         key_traj.update(
             x=grf(key, 'x'),
@@ -124,15 +126,13 @@ class ChannelBrainLocationTemp(dj.Imported):
         key['uuid'] = key_brain_loc['channel_brain_location_uuid']
 
         probe_trajectory_uuid = grf(key, 'trajectory_estimate')
-        try:
+        if (ProbeTrajectoryTemp & dict(probe_trajectory_uuid=probe_trajectory_uuid)):
             subject_uuid, session_start_time, probe_idx, provenance = \
-                (ProbeTrajectoryTemp & dict(
-                    probe_trajectory_uuid=probe_trajectory_uuid)).fetch1(
+                (ProbeTrajectoryTemp & dict(probe_trajectory_uuid=probe_trajectory_uuid)).fetch1(
                     'subject_uuid', 'session_start_time', 'probe_idx',
                     'provenance')
-        except Exception:
-            print('Non exisiting trajectory: {}'.format(probe_trajectory_uuid))
-            return None
+        else:
+            raise ShadowIngestionError('Non existing trajectory: {}'.format(probe_trajectory_uuid))
 
         brain_region_pk = grf(key, 'brain_region')
         ontology, acronym = (reference.BrainRegion &
@@ -155,7 +155,6 @@ class ChannelBrainLocationTemp(dj.Imported):
         return key_brain_loc
 
     def make(self, key):
-
         entry = ChannelBrainLocationTemp.create_entry(key)
         if entry:
             self.insert1(entry)
