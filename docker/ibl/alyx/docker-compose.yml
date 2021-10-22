@@ -1,6 +1,7 @@
 # cd docker/ibl/alyx
 # docker-compose up --build --detach pgserv adminer alyx
-# ctid="`docker ps -a -q -f name=alyx_alyx`" && docker exec -d $ctid /entrypoint initdb
+# ctid="`docker ps -a -q -f name=alyx_alyx`" && docker exec -t $ctid alyx initdb
+
 version: "2.4"
 
 x-common-platform: &common-platform

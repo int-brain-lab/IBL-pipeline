@@ -60,8 +60,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 ENV LANG=en_US.utf8 LC_ALL=en_US.utf8
 
-COPY "${REL_PATH_DOCKFILE}/entrypoint" /entrypoint
-RUN chmod 771 /entrypoint && chown ${USER_UID}:${USER_GID} /entrypoint
+COPY "${REL_PATH_DOCKFILE}/entrypoint" /usr/local/bin/alyx
+RUN chmod 771 /usr/local/bin/alyx && chown ${USER_UID}:${USER_GID} /usr/local/bin/alyx
 
 # set file permissions for user and django
 USER 0:${USER_GID}
@@ -92,5 +92,5 @@ RUN /usr/sbin/a2enmod -q wsgi && \
     pip install -r requirements.txt
 
 # use custom script as entrypoint for alyx db management/setup
-ENTRYPOINT [ "/entrypoint" ]
+ENTRYPOINT [ "alyx" ]
 CMD [ "dev" ]

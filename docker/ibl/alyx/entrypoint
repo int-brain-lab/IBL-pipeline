@@ -40,6 +40,7 @@ sucreated="${IBL_PATH_DATA}/alyx/superuser_created"
 # optional globals
 ALYX_DUMP_URL=
 ALYX_DUMP_FILE=
+ALYX_DUMP_EXPIRES=6
 
 # help documentation
 # ------------------
@@ -52,9 +53,13 @@ Entrypoint for Alyx database management
 
 Options:
 
---dump_date=ALYX_DL_DATE .... Date used to fetch database dump in YYYY-mm-dd format
---dump_url=ALYX_DUMP_URL .... Full url of sql dump instead of using ALYX_DL_DATE to form the url
---dump_file=ALYX_DUMP_FILE .. Path to store or load local copy of SQL dump, defaults to file formed via ALYX_DL_DATE
+--dump_date=ALYX_DL_DATE ...... Date used to fetch database dump in YYYY-mm-dd format
+--dump_url=ALYX_DUMP_URL ...... Full url of sql dump instead of using ALYX_DL_DATE
+                                to form the url
+--dump_file=ALYX_DUMP_FILE .... Path to store or load local copy of SQL dump, defaults
+                                to file formed via ALYX_DL_DATE
+--dump_exp=ALYX_DUMP_EXPIRES .. Number of days for dumps to be considered expired when
+                                using function 'cleandumps'. Default is ${ALYX_DUMP_EXPIRES} days.
 
 
 Functions:
@@ -153,6 +158,11 @@ while [[ $# -gt 0 ]]; do
 		echo "--dump_file passed. Using dump file: '$ALYX_DUMP_FILE'"
 		shift
 		;;
+	--dump_exp=*)
+		ALYX_DUMP_EXPIRES="${1#*=}"
+		echo "--dump_exp passed. Using dump expiration: '$ALYX_DUMP_EXPIRES' days"
+		shift
+		;;
 	"help" | "--help" | "-h" | "--help")
 		SHOW_HELP=1
 		break
@@ -226,10 +236,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "${ALYX_DUMP_FILE}" ]]; then
-	# check that IBL data path is a directory that exists
-	[ -d "${IBL_PATH_DATA}" ] ||
-		err_exit "path '${IBL_PATH_DATA}' from IBL_PATH_DATA does not exist"
-
 	# where to save/load sql dump
 	export ALYX_DUMP_FILE="${ALYX_DUMP_DIR}/sql/${ALYX_DL_DATE}_alyxfull.sql.gz"
 fi
@@ -255,6 +261,8 @@ fi
 	err_exit "can't locate '$alyxmanagepy'; check alyx source code path IBL_PATH_ALYX='$IBL_PATH_ALYX'"
 
 [ -z "$PGDBNAME" ] && err_exit "PGDBNAME database name environment variable is not set"
+
+[ -d "${ALYX_DUMP_DIR}/sql" ] || mkdir -p "${ALYX_DUMP_DIR}/sql"
 
 # helpers
 # -------
@@ -356,16 +364,15 @@ fetchpubdump() {
 }
 
 cleandumps() {
-	local dump_dir="${ALYX_DUMP_DIR}/sql"
-	local old_dumps=$(find "${dump_dir}/"*_alyxfull.sql.gz -type f -mtime +6 2>/dev/null)
+	local old_dumps=$(find "${ALYX_DUMP_DIR}/sql/." -type f -mmin +$((${ALYX_DUMP_EXPIRES}*60*24)) 2>/dev/null)
 	if [[ ! -z ${old_dumps} ]]; then
 		echo "=> cleaning sql dumps ${old_dumps}"
 		rm -f ${old_dumps}
 	else
-		echo "=> no sql dumps to clean"
+		echo "=> no sql dumps to clean from $(ls -lh ${ALYX_DUMP_DIR}/sql)"
 	fi
 
-	# path in ONE params set to data
+	# TODO: path in ONE params set to data
 	# sudo find ~/IBL-pipeline/data/FlatIron -mindepth 1 ! -type d -not -name histology -delete
 }
 
