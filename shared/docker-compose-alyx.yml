@@ -1,24 +1,7 @@
-# Setup containers for IBL datajoint pipeline ingestion routines
-# Joseph Burling <joseph@datajoint.com>
-# --------------------------------------------------------------------------------------
-# Basic usage:
-#   docker-compose build conda alyx ingest
-#   docker-compose up --detach pgserv alyx ingest
-#
-# Compose Script Example Usage:
-#   ./compose --help
-#   ./compose build up
-#   ./compose --env=./admin/ingest.env build up
-#   ./compose --force up
-#   ./compose up
-#
-# docker-compose up --force-recreate --detach pgserv alyx ingest adminer
-# Shared properties across services ----------------------------------------------------
-x-user-build-args: &user-build-args
-  GROUPNAME: ibl
-  USERNAME: ${USER:-ibl}
-  USER_GID: ${GID:-1000}
-  USER_UID: ${UID:-1000}
+# cd ~/ibl-pipeline-joseph/docker_alyx/docker/ibl
+# docker-compose up --build --detach pgserv adminer alyx
+# ctid="`docker ps -a -q -f name=ibl_alyx`" && docker exec -d $ctid /entrypoint initdb
+version: "2.4"
 
 x-common-platform: &common-platform
   platform: linux/${LNX_ARCH:-x86_64}
@@ -30,7 +13,7 @@ x-ibl-data-volume: &ibl-data-volume
 
 x-ibl-shared-mount: &ibl-shared-mount
   - type: bind
-    source: ../../shared
+    source: /home/ubuntu/ibl-pipeline-joseph/docker_alyx/shared
     target: ${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}/shared
 
 x-shared-networks: &shared-networks
@@ -44,16 +27,6 @@ volumes:
   pgdata:
 
 services:
-  # Base Conda Environment -------------------------------------------------------------
-  conda:
-    image: ibl_conda_base
-    <<: *common-platform
-    init: true
-    build:
-      context: ../conda_base_debian
-      args:
-        <<: *user-build-args
-
   # Postgres Server --------------------------------------------------------------------
   pgserv:
     image: postgres:13.3
@@ -86,8 +59,6 @@ services:
     build:
       context: ../..
       dockerfile: docker/ibl/alyx/Dockerfile
-      args:
-        <<: *user-build-args
     environment:
       - IBL_PATH_ROOT=${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}
       - PGUSER=${ALYX_DB_USER:?set ALYX_DB_USER in .env file}
@@ -100,35 +71,8 @@ services:
       - ALYX_SECRET_KEY=${ALYX_SECRET_KEY:-0xdeadbeef}
     ports:
       - "${ALYX_PORT:-8000}:${ALYX_PORT:-8000}"
+    working_dir: ${IBL_PATH_ROOT}
     command: [ "initdb", "dev" ]
-    # user: root
-
-  # IBL Environment for DataJoint Ingestion --------------------------------------------
-  ingest:
-    <<: *common-platform
-    <<: *shared-networks
-    volumes:
-      - <<: *ibl-data-volume
-      - <<: *ibl-shared-mount
-      - type: bind
-        source: ../../ibl_pipeline
-        target: ${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}/ibldatajoint/ibl_pipeline
-    init: true
-    depends_on:
-      alyx:
-        condition: service_started
-    build:
-      context: ../..
-      dockerfile: docker/ibl/ingest/Dockerfile
-      args:
-        <<: *user-build-args
-        CONDA_ENV_FILE: ${CONDA_ENV_FILE:-__NULL}
-        APT_REQUIREMENTS: ${APT_REQUIREMENTS:-docker/ibl/ingest/apt_requirements.txt}
-        DOT_ONE_FILE: ${DOT_ONE_FILE:-docker/ibl/template.one_params}
-    environment:
-      - IBL_PATH_ROOT=${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}
-    expose:
-      - "${ALYX_PORT:-8000}"
 
   adminer:
     image: adminer

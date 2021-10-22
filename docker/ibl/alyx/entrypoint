@@ -1,4 +1,4 @@
-#! /bin/bash --login
+#! /bin/bash
 
 # IBL Alyx Entrypoint Script
 # ==========================
@@ -20,7 +20,7 @@ script_file=$(basename "${script_cmd}")
 [ -z "${IBL_PATH_ROOT}" ] && IBL_PATH_ROOT=/int-brain-lab
 
 # get alyx source code directory or default to ./alyx
-[ -z "${IBL_PATH_ALYX}" ] && IBL_PATH_ALYX=/var/www/alyx-main
+[ -z "${IBL_PATH_ALYX}" ] && IBL_PATH_ALYX=/var/www/alyx
 
 # get data directory or default to ./data
 [ -z "${IBL_PATH_DATA}" ] && IBL_PATH_DATA="${IBL_PATH_ROOT}/data"
@@ -33,9 +33,9 @@ ALYX_DUMP_DIR="${IBL_PATH_DATA}/alyx/dumps"
 [ -z "${ALYX_DL_DATE}" ] && ALYX_DL_DATE=$(date -u +'%Y-%m-%d')
 
 # paths for alyx files used for db setup steps
-alyxmanagepy="${IBL_PATH_ALYX}/alyx/alyx/manage.py"
-dbloaded="${IBL_PATH_ALYX}/alyx/alyx/db_loaded"
-sucreated="${IBL_PATH_ALYX}/alyx/alyx/superuser_created"
+alyxmanagepy="${IBL_PATH_ALYX}/alyx/manage.py"
+dbloaded="${IBL_PATH_DATA}/alyx/db_loaded"
+sucreated="${IBL_PATH_DATA}/alyx/superuser_created"
 
 # optional globals
 ALYX_DUMP_URL=
@@ -78,13 +78,13 @@ fetchpubdump .. Download the public Alyx database dump from flatiron.
 Routines:
 
 initdb ........ Routine that performs all initialization steps to bring up the
-                '${PGDBNAME}' database by running: mkdb, alyxcfg
+                '${PGDBNAME}' database by running: mkdb, alyxcfg, alyxmigrate
 loaddump ...... Routine that inserts the sql dump into the '${PGDBNAME}' postgres database by
-                running: fetchdump, mkdb, alyxcfg, loaddb
+                running: fetchdump, mkdb, alyxcfg, alyxmigrate, loaddb
 reloaddb ...... Routine that fetches a new dump from ALYX_DL_DATE and force reload into
                 '${PGDBNAME}' db by running: fetchdump, loaddb
 www ........... Routine that initializes environment and runs Alyx web
-                by running: fetchdump, mkdb, alyxcfg, loaddb, alyxstart
+                by running: fetchdump, mkdb, alyxcfg, alyxmigrate, loaddb, alyxstart
 dev ........... Initialize parent process and wait indefinitely (no db setup)
 
 
@@ -370,8 +370,8 @@ cleandumps() {
 }
 
 alyxcfg() {
-	echo '# => configuring alyx'
-	echo '# ==> checking if environment variables and databases exist'
+	echo "# => configuring alyx"
+	echo "# ==> checking if environment variables and databases exist"
 
 	[ -z "$PGUSER" ] && err_exit "PGUSER environment variable is not set"
 	[ -z "$PGPASSWORD" ] && err_exit "PGPASSWORD environment variable is not set"
@@ -379,25 +379,27 @@ alyxcfg() {
 	[ -z "$ALYX_SECRET_KEY" ] && err_exit "ALYX_SECRET_KEY environment variable is not set"
 
 	# custom settings_secret for multiple DBs
-	echo '# ==> configuring settings_secret.py'
-	local secretsettingstemp="${IBL_PATH_ALYX}/alyx/alyx/alyx/settings_secret_template.py"
+	echo "# ==> configuring settings_*.py"
+
+	sed -i \
+		-e "s/'localhost'/'localhost','$PGHOST'/" \
+		"${IBL_PATH_ALYX}/alyx/alyx/settings_lab.py"
+
 	sed -i \
 		-e "s/%SECRET_KEY%/$ALYX_SECRET_KEY/" \
 		-e "s/%DBNAME%/$PGDBNAME/" \
 		-e "s/%DBUSER%/$PGUSER/" \
 		-e "s/%DBPASSWORD%/$PGPASSWORD/" \
 		-e "s/127.0.0.1/$PGHOST/" \
-		${secretsettingstemp}
+		"${IBL_PATH_ALYX}/alyx/alyx/settings_secret_template.py"
 
-	local secretsettings="${IBL_PATH_ALYX}/alyx/alyx/alyx/settings_secret.py"
 	sed \
 		-e "s/%SECRET_KEY%/$ALYX_SECRET_KEY/" \
 		-e "s/%DBNAME%/$PGDBNAME/" \
 		-e "s/%DBUSER%/$PGUSER/" \
 		-e "s/%DBPASSWORD%/$PGPASSWORD/" \
 		-e "s/127.0.0.1/$PGHOST/" \
-		>${secretsettings} <<-EOF
-
+		>"${IBL_PATH_ALYX}/alyx/alyx/settings_secret.py" <<-EOF
 			SECRET_KEY  = '%SECRET_KEY%'
 
 			DATABASES  = {
@@ -424,8 +426,14 @@ alyxcfg() {
 			EMAIL_HOST_PASSWORD = 'UnbreakablePassword'
 			EMAIL_PORT = 587
 			EMAIL_USE_TLS = True
-
 		EOF
+
+	# '/home/joseph/.local/lib/python3.9/site-packages'
+	sed -i \
+		-e "s/alyx.internationalbrainlab.org/$PGHOST/" \
+		"${IBL_PATH_ALYX}/docs/_static/001-alyx.conf"
+
+	cat "${IBL_PATH_ALYX}/docs/_static/001-alyx.conf" > /etc/apache2/sites-available/001-alyx.conf
 
 	install -m 660 /dev/null ~/.pgpass
 	echo "${PGHOST}:5432:${PGDBNAME}:${PGUSER}:${PGPASSWORD}" >>~/.pgpass
@@ -441,15 +449,15 @@ alyxmigrate() {
 		err_exit "database user '${PGUSER}' does not yet exist"
 
 	echo "# ===> makemigrations"
-	python "${alyxmanagepy}" makemigrations
+	alyxcmd makemigrations
 
 	echo "# ====> migrate"
-	python "${alyxmanagepy}" migrate
+	alyxcmd migrate
 
 	if [ ! -f "$sucreated" ]; then
 		set -e
-		echo '# ==> creating alyx superuser'
-		python "${alyxmanagepy}" shell <<-EOF
+		echo "# ==> creating alyx superuser"
+		alyxcmd shell <<-EOF
 			from misc.models import LabMember
 			LabMember.objects.create(
 				username='$PGUSER',
@@ -458,7 +466,7 @@ alyxmigrate() {
 				is_staff=True,
 				email='joseph@datajoint.com')
 		EOF
-
+		mkdir -p $(dirname "${sucreated}")
 		touch ${sucreated}
 		set +e
 	fi
@@ -466,15 +474,19 @@ alyxmigrate() {
 
 loaddb() {
 	if [ -f "${dbloaded}" ]; then
-		echo '# => database loaded - skipping load.'
+		echo "# => database loaded - skipping load."
 	else
 		checkdb
 		[[ ${DB_NAME_EXISTS} -eq 0 ]] &&
 			err_exit "database '${PGDBNAME}' does not yet exist, run 'mkdb'"
-		echo "# => loading database ${ALYX_DUMP_FILE}"
+		echo "# => resetting database"
 		[ ! -f "${ALYX_DUMP_FILE}" ] && err_exit "database dump file '$ALYX_DUMP_FILE' doesn't exist"
-		python "${alyxmanagepy}" reset_db --noinput
+		alyxcmd reset_db --noinput
+		alyxcmd migrate
+		echo "# ==> loading database ${ALYX_DUMP_FILE}"
 		gzip -dc ${ALYX_DUMP_FILE} | psql -d ${PGDBNAME}
+		alyxcmd migrate
+		mkdir -p $(dirname "${dbloaded}")
 		touch ${dbloaded}
 	fi
 }
@@ -503,7 +515,7 @@ renamedb() {
 
 dumpjson() {
 	if [ ! -f "${dbloaded}" ]; then
-		echo '# => database not loaded - skipping json dump.'
+		echo "# => database not loaded - skipping json dump."
 		return 0
 	fi
 
@@ -512,8 +524,8 @@ dumpjson() {
 
 	[[ -f "${json_dump_file}" ]] && mv -f "${json_dump_file}" "${json_dump_file}.last"
 
-	echo '# => dumping db as JSON to ${json_dump_file}'
-	python "${alyxmanagepy}" dumpdata \
+	echo "# => dumping db as JSON to ${json_dump_file}"
+	alyxcmd dumpdata \
 		-e contenttypes -e auth.permission \
 		-e reversion.version -e reversion.revision -e admin.logentry \
 		-e actions.ephyssession \
@@ -529,16 +541,16 @@ dumpjson() {
 }
 
 dumpsql() {
-	echo '# => performing sql backup'
+	echo "# => performing sql backup"
 	mkdir -p "${ALYX_DUMP_DIR}/backup"
 	pg_dump -cOx -U ${PGUSER} -h ${PGHOST} -d ${PGDBNAME} -f "${ALYX_DUMP_DIR}/backup/alyx_full.sql"
-	echo '# ==> zipping sql backup'
+	echo "# ==> zipping sql backup"
 	gzip -f "${ALYX_DUMP_DIR}/backup/alyx_full.sql"
 }
 
 alyxstart() {
-	echo '# => starting alyx'
-	python "${alyxmanagepy}" runserver --insecure 0.0.0.0:${ALYX_PORT}
+	echo "# => starting alyx"
+	alyxcmd runserver --insecure 0.0.0.0:${ALYX_PORT}
 }
 
 # Routines
@@ -578,13 +590,7 @@ dev() {
 # Start
 # -----
 
-# switch to appropriate python environment
-[ -z "$CONDA_ENV_ALYX" ] && CONDA_ENV_ALYX=alyxenv
-if [ -z "$CONDA_DEFAULT_ENV" ] && [ "$CONDA_DEFAULT_ENV" = "$CONDA_ENV_ALYX" ]; then
-	echo "conda environment '$CONDA_ENV_ALYX' already activated."
-else
-	conda activate $CONDA_ENV_ALYX
-fi
+source "${VIRTUAL_ENV}/bin/activate"
 
 # run sequence of operations specified by user
 if [[ ${#OPS_SEQ[@]} -gt 0 ]]; then
