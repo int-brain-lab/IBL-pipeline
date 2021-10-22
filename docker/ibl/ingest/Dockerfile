@@ -3,25 +3,25 @@
 FROM ibl_conda_base:latest
 
 LABEL \
-org.opencontainers.image.authors="Joseph Burling" \
-org.opencontainers.image.title="iblenv" \
-org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-org.opencontainers.image.version="1.0" \
-org.opencontainers.image.description="Containerized IBL Environment"
+	org.opencontainers.image.authors="Joseph Burling" \
+	org.opencontainers.image.title="iblenv" \
+	org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+	org.opencontainers.image.version="1.0" \
+	org.opencontainers.image.description="Containerized IBL Environment"
 
 ARG \
-# inherit user args from base image
-USERNAME= \
-USER_UID= \
-USER_GID= \
-# conda yaml file for custom python environment, defaults to GitHub iblenv.yaml if empty
-CONDA_ENV_FILE= \
-# path to folder containing dockerfile relative to build context
-REL_PATH_DOCKFILE=docker/ibl/ingest \
-# path to .one_params
-DOT_ONE_FILE= \
-# path to list of debian dependencies to install
-APT_REQUIREMENTS="${REL_PATH_DOCKFILE}/apt_requirements.txt"
+	# inherit user args from base image
+	USERNAME= \
+	USER_UID= \
+	USER_GID= \
+	# conda yaml file for custom python environment, defaults to GitHub iblenv.yaml if empty
+	CONDA_ENV_FILE= \
+	# path to folder containing dockerfile relative to build context
+	REL_PATH_DOCKFILE=docker/ibl/ingest \
+	# path to .one_params
+	DOT_ONE_FILE= \
+	# path to list of debian dependencies to install
+	APT_REQUIREMENTS="${REL_PATH_DOCKFILE}/apt_requirements.txt"
 
 
 ENV IBL_PATH_ROOT=/int-brain-lab

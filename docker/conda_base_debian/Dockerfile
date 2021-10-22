@@ -9,11 +9,11 @@ ARG TIMEZONE="America/Chicago"
 FROM debian:11-slim as conda_base_debian
 
 LABEL \
-org.opencontainers.image.authors="Joseph Burling" \
-org.opencontainers.image.title="conda_base_debian" \
-org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-org.opencontainers.image.version="1.0" \
-org.opencontainers.image.description="Debian-based conda environment"
+	org.opencontainers.image.authors="Joseph Burling" \
+	org.opencontainers.image.title="conda_base_debian" \
+	org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+	org.opencontainers.image.version="1.0" \
+	org.opencontainers.image.description="Debian-based conda environment"
 
 ARG USERNAME
 ARG GROUPNAME
@@ -33,72 +33,71 @@ RUN groupadd --gid ${USER_GID} --force ${GROUPNAME} && \
 	useradd --uid ${USER_UID} --gid ${USER_GID} \
 	  --create-home --system --groups users --shell /bin/bash ${USERNAME}
 USER 0:${USER_GID}
-RUN	<<EOF
-umask ug+rw
-mkdir -p ${CONDA_DIR}
-chmod -R ug+rw ${CONDA_DIR}
-chgrp --no-dereference ${USER_GID} /etc/profile.d /var/log
-chmod -R g+rw /etc/profile.d /var/log
+RUN	<<-EOF
+	umask a+rwx,o-wx
+	mkdir -p ${CONDA_DIR}
+	chgrp --no-dereference ${USER_GID} /etc/profile.d /var/log
+	chmod -R 774 /etc/profile.d /var/log
+	echo -e ". '/etc/profile.d/conda.sh'\nconda activate base" >> /etc/skel/.bashrc
 EOF
 
 # Entrypoint to activate specific conda environment ------------------------------------
 RUN cat <<-'EOF' > /entrypoint
-#! /bin/bash --login
-[ -z "$CONDA_ENV_USER" ] && CONDA_ENV_USER=base
-set -euo pipefail
-conda activate $CONDA_ENV_USER
-"$@"
+	#! /bin/bash --login
+	[ -z "$CONDA_ENV_USER" ] && CONDA_ENV_USER=base
+	set -euo pipefail
+	conda activate $CONDA_ENV_USER
+	"$@"
 EOF
-RUN chmod a+rx,a-w /entrypoint
+RUN chmod 771 /entrypoint
 
 # Install linux dependencies -----------------------------------------------------------
 ENV TZ=${TIMEZONE}
-RUN <<EOF
-export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get install -y apt-utils
-apt-get install -y locales wget
-localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
-ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
-echo $TZ > /etc/timezone
-apt-get autoremove -y
-apt-get clean -y
-rm -rf /var/lib/apt/lists/*
-apt list --installed > /apt_pkgs.txt
+RUN <<-EOF
+	export DEBIAN_FRONTEND=noninteractive
+	apt-get update
+	apt-get install -y apt-utils
+	apt-get install -y locales wget
+	localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+	ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime
+	echo ${TZ} > /etc/timezone
+	apt-get autoremove -y
+	apt-get clean -y
+	rm -rf /var/lib/apt/lists/*
 EOF
 ENV LANG=en_US.utf8 LC_ALL=en_US.utf8
 
 # Install conda as user ----------------------------------------------------------------
+
 USER ${USER_UID}:${USER_GID}
 WORKDIR /home/${USERNAME}
-RUN <<EOF
-URL=https://github.com/conda-forge/miniforge/releases/latest/download/${CONDA_DIST}-$(uname)-$(uname -m).sh
-wget --no-hsts --quiet -O ~/conda_install.sh ${URL}
-chmod +x ~/conda_install.sh
-~/conda_install.sh -vbup ${CONDA_DIR}
+RUN <<-EOF
+	URL=https://github.com/conda-forge/miniforge/releases/latest/download/${CONDA_DIST}-$(uname)-$(uname -m).sh
+	wget --no-hsts --quiet -O ~/conda_install.sh ${URL}
+	chmod +x ~/conda_install.sh
+	~/conda_install.sh -vbup ${CONDA_DIR}
 
-# do some clean up
-rm ~/conda_install.sh
-find ${CONDA_DIR} -follow -type f -name '*.a' -delete
-find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete
-find ${CONDA_DIR} -follow -type f -name '*.js.map' -delete
-ln -s ${CONDA_DIR}/etc/profile.d/conda.sh /etc/profile.d/conda.sh
+	# do some clean up
+	rm ~/conda_install.sh
+	find ${CONDA_DIR} -follow -type f -name '*.a' -delete
+	find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete
+	find ${CONDA_DIR} -follow -type f -name '*.js.map' -delete
+	ln -s ${CONDA_DIR}/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
-# replicate behavior of `conda init -q bash` for interactive shells to load login scripts
-echo ". '/etc/profile.d/conda.sh'" >> ~/.bashrc
-echo "conda activate base" >> ~/.bashrc
+	# replicate behavior of `conda init -q bash` for interactive shells to load login scripts
+	echo -e ". '/etc/profile.d/conda.sh'\nconda activate base" >> ~/.bashrc
 EOF
 
 # switch to bash as default shell for the next RUN commands, conda already in PATH
 SHELL [ "/bin/bash", "-ec" ]
 
 # configure and update base conda
-RUN <<EOF
-conda install -qy conda-build
-conda config --add channels conda-forge
-conda config --append channels defaults
-conda config --set pip_interop_enabled true
-conda clean -yiqaf
+RUN <<-EOF
+	conda install -qy conda-build
+	conda config --add channels conda-forge
+	conda config --append channels defaults
+	conda config --set pip_interop_enabled true
+	conda clean -yiqaf
 EOF
 
 # set default command as a constantly running process
@@ -108,11 +107,11 @@ CMD [ "tail", "-f", "/dev/null" ]
 # Conda base image ---------------------------------------------------------------------
 FROM scratch as conda_base_env
 LABEL \
-org.opencontainers.image.authors="Joseph Burling" \
-org.opencontainers.image.title="conda_base_env" \
-org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-org.opencontainers.image.version="1.0" \
-org.opencontainers.image.description="A base conda environment with user access"
+	org.opencontainers.image.authors="Joseph Burling" \
+	org.opencontainers.image.title="conda_base_env" \
+	org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+	org.opencontainers.image.version="1.0" \
+	org.opencontainers.image.description="A base conda environment with custom user and group"
 ARG USERNAME
 ARG USER_UID
 ARG USER_GID

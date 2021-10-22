@@ -1,6 +1,5 @@
-data/*
-snapshots/*
-raster/*
+.git
+.gitignore
 .Trash-0/*
 .vscode/*
-notebooks/*
+*.DS_Store
