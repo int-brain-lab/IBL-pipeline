@@ -602,4 +602,4 @@ if [[ ${#OPS_SEQ[@]} -gt 0 ]]; then
 fi
 
 # run rest of user specified commands
-"$@"
+exec "$@"

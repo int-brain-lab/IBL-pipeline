@@ -1,6 +1,6 @@
-# cd ~/ibl-pipeline-joseph/docker_alyx/docker/ibl
+# cd docker/ibl/alyx
 # docker-compose up --build --detach pgserv adminer alyx
-# ctid="`docker ps -a -q -f name=ibl_alyx`" && docker exec -d $ctid /entrypoint initdb
+# ctid="`docker ps -a -q -f name=alyx_alyx`" && docker exec -d $ctid /entrypoint initdb
 version: "2.4"
 
 x-common-platform: &common-platform
@@ -13,12 +13,12 @@ x-ibl-data-volume: &ibl-data-volume
 
 x-ibl-shared-mount: &ibl-shared-mount
   - type: bind
-    source: /home/ubuntu/ibl-pipeline-joseph/docker_alyx/shared
+    source: ../../shared
     target: ${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}/shared
 
 x-shared-networks: &shared-networks
   networks:
-    ibl-dev:
+    ibl-alyx:
 
 <<: *shared-networks
 
