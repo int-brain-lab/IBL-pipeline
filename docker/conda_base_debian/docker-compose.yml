@@ -2,7 +2,6 @@
 # Usage:
 #   cd ./docker/conda_base_debian
 #   docker-compose up --detach
-#
 #   LNX_ARCH=aarch64 docker-compose up --detach
 #
 #
@@ -20,4 +19,4 @@ services:
         USERNAME: ${USER:-anaconda}
         USER_GID: ${GID:-1000}
         USER_UID: ${UID:-1000}
-    command: ["tail", "-f", "/dev/null"]
+    command: [ "python" ]
