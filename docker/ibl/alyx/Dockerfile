@@ -7,11 +7,11 @@ LABEL \
     org.opencontainers.image.version="1.0" \
     org.opencontainers.image.description="Containerized Environment for Alyx DB"
 
-ARG USERNAME=admin \
-    GROUPNAME=ibl \
-    USER_UID=1000 \
-    USER_GID=1000 \
-    TIMEZONE="America/Chicago"
+ARG USERNAME=admin
+ARG GROUPNAME=ibl
+ARG USER_UID=1000
+ARG USER_GID=1000
+ARG TIMEZONE="America/Chicago"
 
 # path to folder containing dockerfile relative to build context
 ARG REL_PATH_DOCKFILE=docker/ibl/alyx
@@ -60,6 +60,9 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 ENV LANG=en_US.utf8 LC_ALL=en_US.utf8
 
+COPY "${REL_PATH_DOCKFILE}/entrypoint" /entrypoint
+RUN chmod 771 /entrypoint && chown ${USER_UID}:${USER_GID} /entrypoint
+
 # set file permissions for user and django
 USER 0:${USER_GID}
 RUN umask 001 && \
@@ -89,7 +92,5 @@ RUN /usr/sbin/a2enmod -q wsgi && \
     pip install -r requirements.txt
 
 # use custom script as entrypoint for alyx db management/setup
-COPY --chown=${USER_UID}:${USER_GID} "${REL_PATH_DOCKFILE}/entrypoint" /entrypoint
-RUN chmod 771 /entrypoint
 ENTRYPOINT [ "/entrypoint" ]
 CMD [ "dev" ]
