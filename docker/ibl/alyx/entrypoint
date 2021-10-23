@@ -378,7 +378,7 @@ fetchpubdump() {
 }
 
 cleandumps() {
-	local old_dumps=$(find "${ALYX_DUMP_DIR}/sql/." -type f -mmin +$((${ALYX_DUMP_EXPIRES} * 60 * 24)) 2>/dev/null)
+	local old_dumps=$(find "${ALYX_DUMP_DIR}/sql" -type f -mmin +$((${ALYX_DUMP_EXPIRES} * 60 * 24)) 2>/dev/null)
 	if [[ ! -z ${old_dumps} ]]; then
 		echo "=> cleaning sql dumps ${old_dumps}"
 		rm -f ${old_dumps}
