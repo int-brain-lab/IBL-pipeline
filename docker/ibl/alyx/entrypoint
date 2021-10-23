@@ -24,7 +24,6 @@ script_file=$(basename "${script_cmd}")
 
 # get data directory or default to ./data
 [ -z "${IBL_PATH_DATA}" ] && IBL_PATH_DATA="${IBL_PATH_ROOT}/data"
-ALYX_DUMP_DIR="${IBL_PATH_DATA}/alyx/dumps"
 
 # get default port for alyx server
 [ -z "${ALYX_PORT}" ] && ALYX_PORT=8000
@@ -37,10 +36,11 @@ alyxmanagepy="${IBL_PATH_ALYX}/alyx/manage.py"
 dbloaded="${IBL_PATH_DATA}/alyx/db_loaded"
 sucreated="${IBL_PATH_DATA}/alyx/superuser_created"
 
-# optional globals
+# dump variables
 ALYX_DUMP_URL=
 ALYX_DUMP_FILE=
 ALYX_DUMP_EXPIRES=6
+ALYX_DUMP_DIR="${IBL_PATH_DATA}/alyx/dumps"
 
 # help documentation
 # ------------------
@@ -167,7 +167,10 @@ while [[ $# -gt 0 ]]; do
 		SHOW_HELP=1
 		break
 		;;
-	"dev") dev ;;
+	"dev")
+		OPS_SEQ+=("dev")
+		shift
+		;;
 	"fetchdump")
 		OPS_SEQ+=("fetchdump")
 		shift
@@ -256,13 +259,20 @@ fi
 [ -d "${IBL_PATH_ALYX}" ] ||
 	err_exit "path '${IBL_PATH_ALYX}' from IBL_PATH_ALYX does not exist"
 
+# check that IBL data path is a directory that exists
+[ -d "${IBL_PATH_DATA}" ] ||
+	err_exit "path '${IBL_PATH_DATA}' from IBL_PATH_DATA does not exist"
+
 # check for proper alyx source code directory
 [ -f "${alyxmanagepy}" ] ||
 	err_exit "can't locate '$alyxmanagepy'; check alyx source code path IBL_PATH_ALYX='$IBL_PATH_ALYX'"
 
 [ -z "$PGDBNAME" ] && err_exit "PGDBNAME database name environment variable is not set"
 
+# make directories if they don't exist
 [ -d "${ALYX_DUMP_DIR}/sql" ] || mkdir -p "${ALYX_DUMP_DIR}/sql"
+[ -d "${ALYX_DUMP_DIR}/json" ] || mkdir -p "${ALYX_DUMP_DIR}/json"
+[ -d "${ALYX_DUMP_DIR}/backup" ] || mkdir -p "${ALYX_DUMP_DIR}/backup"
 
 # helpers
 # -------
@@ -357,7 +367,7 @@ fetchpubdump() {
 		echo "run 'rm -f ${pub}' to forcibly remove if you want to re-download"
 		return 0
 	fi
-	mkdir -p "${IBL_PATH_ROOT}/shared"
+	mkdir -p $(dirname "${pub}")
 	echo "=> downloading public database dump from '$pub_url' ..."
 	wget -q -O "${pub}" --user "$HTTP_DATA_SERVER_LOGIN" --password "$HTTP_DATA_SERVER_PWD" ${pub_url}
 	echo "==> download complete, saved to file: '${pub}'"
@@ -473,7 +483,6 @@ alyxmigrate() {
 				is_staff=True,
 				email='joseph@datajoint.com')
 		EOF
-		mkdir -p $(dirname "${sucreated}")
 		touch ${sucreated}
 		set +e
 	fi
@@ -493,7 +502,6 @@ loaddb() {
 		echo "# ==> loading database ${ALYX_DUMP_FILE}"
 		gzip -dc ${ALYX_DUMP_FILE} | psql -d ${PGDBNAME}
 		alyxcmd migrate
-		mkdir -p $(dirname "${dbloaded}")
 		touch ${dbloaded}
 	fi
 }
@@ -527,7 +535,6 @@ dumpjson() {
 	fi
 
 	local json_dump_file="${ALYX_DUMP_DIR}/json/alyx_full.json"
-	mkdir -p $(dirname "${json_dump_file}")
 
 	[[ -f "${json_dump_file}" ]] && mv -f "${json_dump_file}" "${json_dump_file}.last"
 
@@ -549,7 +556,6 @@ dumpjson() {
 
 dumpsql() {
 	echo "# => performing sql backup"
-	mkdir -p "${ALYX_DUMP_DIR}/backup"
 	pg_dump -cOx -U ${PGUSER} -h ${PGHOST} -d ${PGDBNAME} -f "${ALYX_DUMP_DIR}/backup/alyx_full.sql"
 	echo "# ==> zipping sql backup"
 	gzip -f "${ALYX_DUMP_DIR}/backup/alyx_full.sql"
