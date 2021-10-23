@@ -76,7 +76,7 @@ loaddb ........ Load data from the sql dump into postgres '${PGDBNAME}' db if
 alyxstart ..... Start Alyx server using port $ALYX_PORT
 renamedb ...... Switch '${PGDBNAME}' to '${PGDBNAME}_old' and create a new empty '${PGDBNAME}' in postgres
 dumpjson....... Send request to Alyx to perform a JSON dump of the current database
-cleandumps .... Clean up existing sql dumps in sql dump folder.
+cleandumps .... Clean up existing sql dumps in sql dump folder. Use with option '--dump_exp'.
 fetchpubdump .. Download the public Alyx database dump from flatiron.
 
 
@@ -90,7 +90,7 @@ reloaddb ...... Routine that fetches a new dump from ALYX_DL_DATE and force relo
                 '${PGDBNAME}' db by running: fetchdump, loaddb
 www ........... Routine that initializes environment and runs Alyx web
                 by running: fetchdump, mkdb, alyxcfg, alyxmigrate, loaddb, alyxstart
-dev ........... Initialize parent process and wait indefinitely (no db setup)
+dev ........... Initialize parent process and wait indefinitely
 
 
 Environment Variables:
@@ -126,6 +126,10 @@ Examples:
  Load public data dump
 
    $script_file --dump_file=/int-brain-lab/shared/public_alyx.sql.gz loaddump
+
+ Clean existing sql dumps older than 3 days
+
+   $script_file --dump_exp=3 cleandumps
 
  Bypass routines and run a command
 
@@ -374,7 +378,7 @@ fetchpubdump() {
 }
 
 cleandumps() {
-	local old_dumps=$(find "${ALYX_DUMP_DIR}/sql/." -type f -mmin +$((${ALYX_DUMP_EXPIRES}*60*24)) 2>/dev/null)
+	local old_dumps=$(find "${ALYX_DUMP_DIR}/sql/." -type f -mmin +$((${ALYX_DUMP_EXPIRES} * 60 * 24)) 2>/dev/null)
 	if [[ ! -z ${old_dumps} ]]; then
 		echo "=> cleaning sql dumps ${old_dumps}"
 		rm -f ${old_dumps}
@@ -450,7 +454,7 @@ alyxcfg() {
 		-e "s/alyx.internationalbrainlab.org/$PGHOST/" \
 		"${IBL_PATH_ALYX}/docs/_static/001-alyx.conf"
 
-	cat "${IBL_PATH_ALYX}/docs/_static/001-alyx.conf" > /etc/apache2/sites-available/001-alyx.conf
+	cat "${IBL_PATH_ALYX}/docs/_static/001-alyx.conf" >/etc/apache2/sites-available/001-alyx.conf
 
 	install -m 660 /dev/null ~/.pgpass
 	echo "${PGHOST}:5432:${PGDBNAME}:${PGUSER}:${PGPASSWORD}" >>~/.pgpass
