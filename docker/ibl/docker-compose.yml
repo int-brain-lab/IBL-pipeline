@@ -13,6 +13,7 @@
 #   ./compose up
 #
 # docker-compose up --force-recreate --detach pgserv alyx ingest adminer
+# docker exec -t ibl_alyx_1 alyx help
 # Shared properties across services ----------------------------------------------------
 x-user-build-args: &user-build-args
   GROUPNAME: ibl

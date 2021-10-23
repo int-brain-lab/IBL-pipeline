@@ -1,4 +1,4 @@
-# cd docker/ibl/alyx
+# cd IBL-pipeline/docker/ibl/alyx
 # docker-compose up --build --detach pgserv adminer alyx
 # ctid="`docker ps -a -q -f name=alyx_alyx`" && docker exec -t $ctid alyx initdb
 
@@ -14,7 +14,7 @@ x-ibl-data-volume: &ibl-data-volume
 
 x-ibl-shared-mount: &ibl-shared-mount
   - type: bind
-    source: ../../shared
+    source: ../../../shared
     target: ${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}/shared
 
 x-shared-networks: &shared-networks
@@ -58,7 +58,7 @@ services:
       pgserv:
         condition: service_healthy
     build:
-      context: ../..
+      context: ../../..
       dockerfile: docker/ibl/alyx/Dockerfile
     environment:
       - IBL_PATH_ROOT=${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}
