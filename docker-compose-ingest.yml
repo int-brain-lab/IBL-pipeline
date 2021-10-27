@@ -82,7 +82,6 @@ services:
         ipython ./IBL-pipeline/entrypoint.py ingest
         tail -f /dev/null
     scale: ${WORKER_COUNT:-1}
-
   populate:
     build:
       context: .

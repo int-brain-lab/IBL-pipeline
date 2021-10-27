@@ -231,6 +231,16 @@ class DataSet(dj.Computed):
 
         return key_ds
 
+    @classmethod
+    def create_session_entries(cls, session_uuid):
+        alyxraw_dataset_query = (alyxraw.AlyxRaw * alyxraw.AlyxRaw.Field
+                                 & 'model = "data.dataset"'
+                                 & 'fname = "session"' & {'fvalue': session_uuid})
+        alyxraw_dataset_keys = (alyxraw.AlyxRaw & alyxraw_dataset_query.proj()).fetch('KEY')
+        dataset_entries = [cls.create_entry(key) for key in alyxraw_dataset_keys]
+
+        pass
+
 
 @schema
 class FileRecord(dj.Computed):
