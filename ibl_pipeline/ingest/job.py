@@ -475,7 +475,7 @@ class IngestionJob(dj.Manual):
     definition = """
     job_datetime: datetime  # UTC time
     ---
-    alyx_sql_dump: varchar(36)
+    alyx_sql_dump: varchar(36)  # '2021-10-26'
     job_status: enum('completed', 'on-going', 'terminated')
     job_endtime=null: datetime  # UTC time
     """
@@ -939,6 +939,13 @@ def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60):
            or (run_duration is None)
            or (run_duration < 0)):
 
+        # create new ingestion job?
+        current_job_key = IngestionJob.get_on_going_key()
+        latest_sql_dump = os.environ.get('ALYX_SQL_DUMP')
+        if (latest_sql_dump and (IngestionJob & current_job_key).fetch1('alyx_sql_dump') != latest_sql_dump):
+            IngestionJob.create_entry(latest_sql_dump)
+
+        # check if completed
         if _check_ingestion_completion():
             _clean_up()
         else:
