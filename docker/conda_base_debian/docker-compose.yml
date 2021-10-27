@@ -19,4 +19,4 @@ services:
         USERNAME: ${USER:-anaconda}
         USER_GID: ${GID:-1000}
         USER_UID: ${UID:-1000}
-    command: [ "python" ]
+    command: [ "python", "--version" ]

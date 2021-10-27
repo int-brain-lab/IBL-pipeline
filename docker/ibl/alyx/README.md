@@ -2,7 +2,7 @@
 
 This is a stanadalone image that serves as a middleman between the postgres service and the service running the ONE-api.
 
-## Example installation
+## Installation
 
 1. Download the repository
 
@@ -25,21 +25,37 @@ Open file `.env` and edit the values manually.
 3. Build and start the containers
 
 ```bash
-docker-compose up --build --detach pgserv adminer alyx
-ctid="`docker ps -a -q -f name=alyx_alyx`" 
-docker exec -t $ctid alyx initb 
+docker-compose up --build --detach pgserver alyx
+docker exec -t alyx_db_server_0 alyx initdb 
 docker image prune
 ```
 
 **NOTE:** If updating container, do these steps before step 1 above.
 
 ```bash
-cd ~/docker_alyx/docker/ibl/alyx
+cd ~/docker_alyx/IBL-pipeline/docker/ibl/alyx
 docker-compose down 
 cd ~/docker_alyx/IBL-pipeline
 git checkout new-ingestion
 git pull
 docker system prune --volumes
+```
+
+## Example usage
+
+Executing a command from a running container
+
+```bash
+docker exec -t alyx_db_server_0 alyx help 
+```
+
+Run an arbitrary Alyx command from the container
+
+```bash
+docker exec -it alyx_db_server_0 bash
+source alyx 
+alyxcmd help
+exit
 ```
 
 ## Reproduce JSON dump daily ingestion routine
@@ -55,7 +71,7 @@ err_exit() {
 }
 
 echo "#! running `basename $0` at `date`"
-echo $(docker ps -a)
+docker ps -a
 cd /home/ubuntu/IBL-pipeline/data
 
 dl_date=$(date -u +'%Y-%m-%d')
@@ -63,7 +79,7 @@ dump_file="/int-brain-lab/data/alyx/dumps/sql/alyxfull.sql.gz"
 dump_url="http://ibl.flatironinstitute.org/json/${dl_date}_alyxfull.sql.gz"
 
 echo "#! fetch at `date`"
-alyx_cid="`docker ps -a -q -f name=alyx_alyx`"
+alyx_cid="`docker ps -a -q -f name=alyx_db_server_0`"
 [ -z "$alyx_cid" ] && err_exit "cannot find alyx container"
 docker exec -t $alyx_cid alyx --dump_file="$dump_file" --dump_url="$dump_url" reloaddb dumpjson
 set -e
@@ -85,13 +101,14 @@ docker exec -t $ingest_cid /bin/bash -c "cd /src/IBL-pipeline/ibl_pipeline/proce
 echo "#! cleanup at `date`"
 du -h --max-depth=1 | sort -h
 rm -vf alyx_full.json
-docker exec -t $alyx_cid alyx --dump_exp=0 cleandumps
+docker exec -t $alyx_cid alyx --dump_exp=0 cleandls
 find ~/IBL-pipeline/data/FlatIron -mindepth 1 ! -type d -not -name histology -printf '%s %p\n'
-find ~/IBL-pipeline/data/FlatIron -mindepth 1 ! -type d -not -name histology -delete
+sudo find ~/IBL-pipeline/data/FlatIron -mindepth 1 ! -type d -not -name histology -delete
 find /tmp/datajoint-ingest*.log -type f -mtime +6
 find /tmp/datajoint-ingest*.log -type f -mtime +6 -delete
 find ~/IBL-pipeline/data/daily_increments -type f -mtime +6
 find ~/IBL-pipeline/data/daily_increments -type f -mtime +6 -delete
+
 echo "#! script finished at `date`"
 ```
 

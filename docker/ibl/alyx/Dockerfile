@@ -7,8 +7,8 @@ LABEL \
     org.opencontainers.image.version="1.0" \
     org.opencontainers.image.description="Containerized Environment for Alyx DB"
 
-ARG USERNAME=admin
-ARG GROUPNAME=ibl
+ARG USERNAME=alyxadmin
+ARG GROUPNAME=alyxdb
 ARG USER_UID=1000
 ARG USER_GID=1000
 ARG TIMEZONE="America/Chicago"
@@ -27,17 +27,16 @@ ENV IBL_PATH_ALYX=/var/www/alyx \
     IBL_PATH_DATA=${IBL_PATH_ROOT}/data \
     IBL_PATH_SHARED=${IBL_PATH_ROOT}/shared
 
-# alyx/django related environment variables
-ENV PYTHONPATH="${IBL_PATH_ALYX}/alyx" \
-    DJANGO_SETTINGS_MODULE=alyx.settings
+# postgres/alyx/django related environment variables
+ENV PGUSER=${USERNAME} \
+    PGDATABASE=${GROUPNAME} \
+    PYTHONPATH="${IBL_PATH_ALYX}/alyx" \
+    DJANGO_SETTINGS_MODULE=alyx.settings \
+    ALYX_SECRET_KEY=0xdeadbeef \
+    ALYX_PORT=8000
 
 # python aliases
 RUN echo "alias python=python3" | tee -a /etc/skel/.bash_aliases /etc/bash.bashrc
-
-# add custom user and group
-RUN groupadd --gid ${USER_GID} --force ${GROUPNAME} && \
-    useradd  --uid ${USER_UID} --gid ${USER_GID} \
-      --create-home --system --groups users --shell /bin/bash ${USERNAME}
 
 # install debian dependencies and set locale
 RUN apt-get update && \
@@ -50,7 +49,8 @@ RUN apt-get update && \
       postgresql-client-13 \
       python3-dev \
       python3-pip  \
-      python3-venv \
+      virtualenv \
+      sudo \
       wget && \
     localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 && \
     ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && \
@@ -60,8 +60,12 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 ENV LANG=en_US.utf8 LC_ALL=en_US.utf8
 
-COPY "${REL_PATH_DOCKFILE}/entrypoint" /usr/local/bin/alyx
-RUN chmod 771 /usr/local/bin/alyx && chown ${USER_UID}:${USER_GID} /usr/local/bin/alyx
+# add custom user and group
+RUN groupadd --gid ${USER_GID} --force ${GROUPNAME} && \
+    useradd  --uid ${USER_UID} --gid ${USER_GID} \
+      --create-home --system --groups users,sudo --shell /bin/bash ${USERNAME} && \
+    passwd -d ${USERNAME} && \
+    echo '${USERNAME} ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 
 # set file permissions for user and django
 USER 0:${USER_GID}
@@ -82,15 +86,28 @@ SHELL [ "/bin/bash", "-c" ]
 
 # install alyx
 ENV VIRTUAL_ENV="${IBL_PATH_ALYX}/alyxvenv"
-RUN python3 -m venv ${VIRTUAL_ENV}
 ENV PATH="${VIRTUAL_ENV}/bin:${PATH}:/home/${USERNAME}/.local/bin"
-RUN /usr/sbin/a2enmod -q wsgi && \
-    wget --no-check-certificate -q -O - \
+RUN virtualenv alyxvenv --python=python3 && \
+    echo "alias alyxenv='source ${VIRTUAL_ENV}/bin/activate'" >> ~/.bashrc
+RUN wget --no-check-certificate -q -O - \
       https://github.com/cortex-lab/alyx/tarball/master | \
       tar -xz --strip-components 1 && \
-    source $VIRTUAL_ENV/bin/activate && \
-    pip install -r requirements.txt
+    source ${VIRTUAL_ENV}/bin/activate && \
+    python -m pip install --upgrade pip wheel && \
+    pip install -r requirements.txt && \
+    sudo /usr/sbin/a2enmod -q wsgi
 
 # use custom script as entrypoint for alyx db management/setup
+USER 0:0
+COPY "${REL_PATH_DOCKFILE}/entrypoint" /usr/local/bin/alyx
+RUN chmod 771 /usr/local/bin/alyx && chown ${USER_UID}:${USER_GID} /usr/local/bin/alyx
+USER ${USER_UID}:${USER_GID}
+EXPOSE ${ALYX_PORT}
 ENTRYPOINT [ "alyx" ]
 CMD [ "dev" ]
+
+# these env variables should be specified during build or in a compose file
+ENV PGHOST=
+ENV PGPASSWORD=
+ENV HTTP_DATA_SERVER_LOGIN=
+ENV HTTP_DATA_SERVER_PWD=

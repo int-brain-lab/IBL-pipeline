@@ -15,7 +15,7 @@ FORCE_RECREATE=""
 
 # default services for build and up
 DCB_SERVICES=(conda alyx ingest)
-DCU_SERVICES=(pgserv alyx ingest adminer)
+DCU_SERVICES=(pgserver alyx ingest adminer)
 
 err_exit() {
     echo "#! Error: $*"
