@@ -178,6 +178,10 @@ class DataSet(dj.Computed):
 
     @staticmethod
     def create_entry(key):
+        """
+        For a dataset_uuid from alyx, generate the dictionary
+         to be inserted into this DataSet table
+        """
         key_ds = key.copy()
         key['uuid'] = key['dataset_uuid']
 
@@ -233,13 +237,15 @@ class DataSet(dj.Computed):
 
     @classmethod
     def create_session_entries(cls, session_uuid):
+        """
+        For a session_uuid, create a list of ditionaries representing all entries
+         for the given session to be inserted into the DataSet table
+        """
         alyxraw_dataset_query = (alyxraw.AlyxRaw * alyxraw.AlyxRaw.Field
                                  & 'model = "data.dataset"'
                                  & 'fname = "session"' & {'fvalue': session_uuid})
         alyxraw_dataset_keys = (alyxraw.AlyxRaw & alyxraw_dataset_query.proj()).fetch('KEY')
-        dataset_entries = [cls.create_entry(key) for key in alyxraw_dataset_keys]
-
-        pass
+        return [cls.create_entry(key) for key in alyxraw_dataset_keys]
 
 
 @schema
