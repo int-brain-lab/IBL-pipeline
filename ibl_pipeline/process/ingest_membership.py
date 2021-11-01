@@ -13,7 +13,7 @@ from ibl_pipeline.utils import is_valid_uuid
 import os
 
 
-mode = os.environ.get('MODE')
+mode = dj.config.get('custom', {}).get('database.mode', "")
 
 
 MEMBERSHIP_TABLES = [

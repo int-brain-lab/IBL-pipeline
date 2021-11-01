@@ -1,5 +1,5 @@
 import datajoint as dj
-from os import path, environ
+from os import path
 from .. import subject, acquisition, ephys, histology
 from . import histology_plotting as hplt
 from .figure_model import PngFigure, GifFigure

@@ -3,7 +3,7 @@ from . import reference, subject
 from .action_shared import ProcedureType
 import os
 
-mode = os.environ.get('MODE')
+mode = dj.config.get('custom', {}).get('database.mode', "")
 
 if mode == 'update':
     schema = dj.schema('ibl_action')

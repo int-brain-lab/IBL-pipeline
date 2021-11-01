@@ -58,7 +58,7 @@ from tqdm import tqdm
 from . import alyxraw
 import os
 
-if os.environ.get('MODE') == 'test':
+if dj.config.get('custom', {}).get('database.mode', "") == 'test':
     dj.config['database.prefix'] = 'test_'
 
 logger = logging.getLogger(__name__)
