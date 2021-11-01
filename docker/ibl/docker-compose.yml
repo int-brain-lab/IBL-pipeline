@@ -4,16 +4,15 @@
 # Basic usage:
 #   docker-compose build conda alyx ingest
 #   docker-compose up --detach pgserver alyx ingest adminer
+#   docker-compose down --volumes
 #
 # Compose Script Example Usage:
 #   ./compose --help
 #   ./compose build up
-#   ./compose --env=./admin/ingest.env build up
+#   ./compose --env=./shared/dev.env build up
 #   ./compose --force up
 #   ./compose up
 #
-# docker-compose up --force-recreate --detach pgserver alyx ingest adminer
-# docker exec -t ibl_alyx_1 alyx help
 # Shared properties across services ----------------------------------------------------
 x-user-build-args: &user-build-args
   GROUPNAME: ibl
@@ -108,7 +107,7 @@ services:
       - PGUSER=${ALYX_DB_USER:-alyxadmin}
       - PGHOST=${PGHOST:-pgserver}
     ports:
-      - "${ALYX_PORT:-8000}:${ALYX_PORT:-8000}"
+      - ${ALYX_PORT:-8000}:${ALYX_PORT:-8000}
     working_dir: ${IBL_PATH_ROOT}
     command: ["loadpubdump", "startserver"]
 
@@ -131,15 +130,25 @@ services:
       dockerfile: docker/ibl/ingest/Dockerfile
       args:
         <<: *user-build-args
-        CONDA_ENV_FILE: ${CONDA_ENV_FILE:-__NULL}
+        CONDA_ENV_FILE: ${CONDA_ENV_FILE:-}
         APT_REQUIREMENTS: ${APT_REQUIREMENTS:-docker/ibl/ingest/apt_requirements.txt}
     environment:
       - IBL_PATH_ROOT=${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}
+      - DJ_USER=${DJ_USER:-}
+      - DJ_PASS=${DJ_PASS:-}
+      - S3_ACCESS=${S3_ACCESS:-}
+      - S3_SECRET=${S3_SECRET:-}
+      - DJ_HOST=${DJ_HOST:-datajoint.internationalbrainlab.org}
+      - DJ_MODE=${DJ_MODE:-test}
+      - S3_MIGRATE_BUCKET=${S3_MIGRATE_BUCKET:-ibl-dj-external}
+      - S3_ROOT_PATH=${S3_ROOT_PATH:-}
+      - JUPYTER_PORT=${JUPYTER_PORT:-10000}
+      - ALYX_PORT=${ALYX_PORT:-8000}
     expose:
       - ${ALYX_PORT:-8000}
     ports:
-      - 9999:9999
-    command: ["jupyter", "notebook", "-y", "--no-browser", "--port=9999"]
+      - ${JUPYTER_PORT:-10000}:${JUPYTER_PORT:-10000}
+    command: ["dev"] # ["copy_one_params", "start_jupyter"]
 
   adminer:
     image: adminer

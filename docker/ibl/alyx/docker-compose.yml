@@ -29,7 +29,7 @@ volumes:
 
 services:
   # Postgres Server --------------------------------------------------------------------
-  pgserver:
+  pgserv:
     container_name: postgres_db_server_0
     image: postgres:13-bullseye
     <<: *common-platform
@@ -59,7 +59,7 @@ services:
       - <<: *ibl-shared-mount
     init: true
     depends_on:
-      pgserver:
+      pgserv:
         condition: service_healthy
     build:
       context: ../../..
@@ -71,8 +71,9 @@ services:
       - PGPASSWORD=${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
       - PGDATABASE=${ALYX_DB_NAME:-alyxdb}
       - PGUSER=${ALYX_DB_USER:-alyxadmin}
-      - PGHOST=${PGHOST:-pgserver}
+      - PGHOST=${PGHOST:-pgserv}
+      - ALYX_PORT=${ALYX_PORT:-8003}
     ports:
-      - "${ALYX_PORT:-8000}:${ALYX_PORT:-8000}"
+      - "${ALYX_PORT:-8003}:${ALYX_PORT:-8003}"
     working_dir: ${IBL_PATH_ROOT}
     command: [ "loadpubdump", "startserver" ]

@@ -45,13 +45,12 @@ ALYX_DUMP_URL=
 ALYX_DUMP_FILE=
 ALYX_DUMP_EXPIRES=6
 ALYX_DUMP_DIR="${IBL_PATH_DATA}/alyx/dumps"
-ALYX_DATA_CACHE="${IBL_PATH_DATA}/alyx/cache"
 
 # help documentation
 # ------------------
 
 show_help() {
-	echo "usage: $script_file FUNC/ROUTINE... [OPTIONS]... [-- CMD]
+	echo "usage: $script_file [OPTION]... FUNC/ROUTINE... [-- EXEC_CMD]
 
 Entrypoint for Alyx database management
 
@@ -113,7 +112,6 @@ Environment Variables (available if script is sourced):
   ALYX_DL_DATE=$ALYX_DL_DATE
   ALYX_DUMP_FILE=$ALYX_DUMP_FILE
   ALYX_DUMP_DIR=$ALYX_DUMP_DIR
-  ALYX_DATA_CACHE=$ALYX_DATA_CACHE
   ALYX_PORT=$ALYX_PORT
 
 
@@ -313,7 +311,6 @@ fi
 	err_exit "PGDATABASE, database name environment variable, is not set"
 
 # make these additional directories if they don't exist
-[[ -d "${ALYX_DATA_CACHE}" ]] || mkdir -p "${ALYX_DATA_CACHE}"
 [[ -d "${ALYX_DUMP_DIR}/sql" ]] || mkdir -p "${ALYX_DUMP_DIR}/sql"
 [[ -d "${ALYX_DUMP_DIR}/json" ]] || mkdir -p "${ALYX_DUMP_DIR}/json"
 [[ -d "${ALYX_DUMP_DIR}/backup" ]] || mkdir -p "${ALYX_DUMP_DIR}/backup"
@@ -466,8 +463,9 @@ configalyx() {
 	# custom settings_secret for multiple DBs
 	echo "# ==> configuring settings_*.py"
 
+	# http://alyx:8000
 	sed -i \
-		-e "s/\['localhost'\]/\['localhost','localhost:$ALYX_PORT'\]/" \
+		-e "s/\['localhost'\]/\['localhost','alyx'\]/" \
 		"${IBL_PATH_ALYX}/alyx/alyx/settings_lab.py"
 
 	sed -i \
@@ -513,13 +511,12 @@ configalyx() {
 			EMAIL_USE_TLS = True
 		EOF
 
-	sed -i \
-		-e "s/alyx.internationalbrainlab.org/localhost:$ALYX_PORT/" \
-		-e "s/LogLevel info/LogLevel error/" \
-		-e "s/WSGIDaemonProcess alyx python-path/WSGIDaemonProcess alyx user=$(id -un) group=$(id -Gn) python-path/" \
-		"${IBL_PATH_ALYX}/docs/_static/001-alyx.conf"
-	cat "${IBL_PATH_ALYX}/docs/_static/001-alyx.conf" \
-		>/etc/apache2/sites-available/001-alyx.conf
+	awk -v USERNAME="$(id -un)" -v GROUPNAME=$(id -Gn) '{
+			sub(/LogLevel info/,"LogLevel error");
+			sub(/alyx.internationalbrainlab.org/,"localhost\n        ServerAlias alyx");
+			sub(/WSGIDaemonProcess alyx python-path/,"WSGIDaemonProcess alyx user=" USERNAME " group=" GROUPNAME " python-path")
+		} 1' "${IBL_PATH_ALYX}/docs/_static/001-alyx.conf" > /etc/apache2/sites-available/001-alyx.conf
+
 	sudo a2dissite -q 001-alyx
 	sudo a2ensite -q 001-alyx
 	sudo service apache2 restart >/dev/null
@@ -657,15 +654,15 @@ dumpsql() {
 }
 
 oneparams() {
-	cat <<-EOF >"${IBL_PATH_SHARED}/localhost.one_params"
+	cat <<-EOF >"${IBL_PATH_SHARED}/local.one_params"
 		{
-		    "ALYX_URL": "http://localhost:${ALYX_PORT}",
 		    "ALYX_LOGIN": "${PGUSER}",
 		    "ALYX_PWD": "${PGPASSWORD}",
-		    "HTTP_DATA_SERVER": "${HTTP_DATA_SERVER}",
+		    "ALYX_URL": "http://localhost:${ALYX_PORT}",
+		    "CACHE_DIR": null,
 		    "HTTP_DATA_SERVER_LOGIN": "${HTTP_DATA_SERVER_LOGIN}",
 		    "HTTP_DATA_SERVER_PWD": "${HTTP_DATA_SERVER_PWD}",
-		    "CACHE_DIR": "${ALYX_DATA_CACHE}"
+		    "HTTP_DATA_SERVER": "${HTTP_DATA_SERVER}"
 		}
 	EOF
 }

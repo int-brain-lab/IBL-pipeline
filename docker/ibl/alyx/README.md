@@ -15,17 +15,20 @@ cd IBL-pipeline/docker/ibl/alyx
 
 2. Add your credentials
 
+If your `.env` file does not yet exist, run the lines below.
+
 ```bash
 touch .env
 cat template.env >> .env
 ```
 
-Open file `.env` and edit the values manually.
+Then open file the `.env` and fill in the values manually.
 
 3. Build and start the containers
 
 ```bash
-docker-compose up --build --detach pgserver alyx
+docker-compose up --build --detach pgserv alyx
+sleep(60)
 docker exec -t alyx_db_server_0 alyx initdb 
 docker image prune
 ```
@@ -34,7 +37,7 @@ docker image prune
 
 ```bash
 cd ~/docker_alyx/IBL-pipeline/docker/ibl/alyx
-docker-compose down 
+docker-compose down --volumes
 cd ~/docker_alyx/IBL-pipeline
 git checkout new-ingestion
 git pull

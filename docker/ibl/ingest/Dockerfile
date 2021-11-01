@@ -49,8 +49,9 @@ RUN <<-EOF
 	# make folders for IBL data and source code
 	umask 001
 	mkdir -p "${IBL_PATH_DATA}" "${IBL_PATH_SHARED}"
-	chown -R ${USER_UID}:${USER_GID} "${IBL_PATH_DATA}" "${IBL_PATH_SHARED}"
 	chmod -R o-wx "${IBL_PATH_DATA}" "${IBL_PATH_SHARED}"
+	cd "${IBL_PATH_DATA}"
+	chown -R ${USER_UID}:${USER_GID} "${IBL_PATH_SHARED}" .*
 	chmod -R a+rwX /tmp
 EOF
 
@@ -59,14 +60,14 @@ USER ${USER_UID}:${USER_GID}
 WORKDIR "${IBL_PATH_ROOT}"
 SHELL [ "/bin/bash", "--login", "-ec" ]
 
-# dummy file README.md is required, path set in CONDA_ENV_FILE is optional
+# path set in CONDA_ENV_FILE is optional
 COPY --chown=${USER_UID}:${USER_GID} \
-		["${REL_PATH_DOCKFILE}/README.md", "${CONDA_ENV_FILE}*", "./"]
+	"${REL_PATH_DOCKFILE}/README.md" "${CONDA_ENV_FILE}" ./
 
 RUN <<-EOF
 	# use iblenv from GitHub as default conda environment if CONDA_ENV_FILE doesnt exist
 	git clone https://github.com/int-brain-lab/iblenv.git
-	CONDA_YAML="${IBL_PATH_ROOT}/$(basename ${CONDA_ENV_FILE})"
+	CONDA_YAML="$(basename ${CONDA_ENV_FILE:-__NULL})"
 	[ -f "${CONDA_YAML}" ] || CONDA_YAML=iblenv/iblenv.yaml
 
 	# conda config setup
@@ -117,6 +118,14 @@ RUN <<-EOF
 		/home/$USERNAME/.vscode-server-insiders/extensions
 EOF
 
-COPY --chown=${USER_UID}:${USER_GID} ${DOT_ONE_FILE} /home/${USERNAME}/.one_params
-ENTRYPOINT [ "/entrypoint" ]
+COPY --chown=${USER_UID}:${USER_GID} \
+	"${REL_PATH_DOCKFILE}/template.ingest.json" \
+	"${REL_PATH_DOCKFILE}/init.py" ./
+
+COPY --chown=${USER_UID}:${USER_GID} \
+	"${REL_PATH_DOCKFILE}/entrypoint" /usr/local/bin/ingest
+
+RUN chmod 771 /usr/local/bin/ingest init.py
+
+ENTRYPOINT [ "ingest" ]
 CMD [ "tail", "-f", "/dev/null" ]

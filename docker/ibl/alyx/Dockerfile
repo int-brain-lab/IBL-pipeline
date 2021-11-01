@@ -73,11 +73,22 @@ RUN umask 001 && \
     install -m 776 /dev/null /var/log/alyx.log && \
     install -m 776 /dev/null /var/log/alyx_json.log && \
     install -m 776 /dev/null /etc/apache2/sites-available/001-alyx.conf && \
-    mkdir -p "${IBL_PATH_ALYX}/uploaded" \
-      "${IBL_PATH_DATA}/alyx" "${IBL_PATH_SHARED}" && \
-    chown -R www-data:www-data "${IBL_PATH_ALYX}/uploaded" && \
-    chown -R ${USER_UID}:${USER_GID} /var/log /etc/apache2/sites-available \
-      "${IBL_PATH_ALYX}" "${IBL_PATH_DATA}/alyx" "${IBL_PATH_SHARED}"
+    mkdir -p \
+      "${IBL_PATH_ALYX}/uploaded" \
+      "${IBL_PATH_DATA}/alyx" \
+      "${IBL_PATH_SHARED}" && \
+    cd "${IBL_PATH_DATA}/alyx" && \
+    chown -R ${USER_UID}:${USER_GID} \
+      .* \
+      "${IBL_PATH_SHARED}" && \
+    cd "${IBL_PATH_ALYX}" && \
+    chown -R ${USER_UID}:${USER_GID} \
+      .* \
+      /var/log \
+      /etc/apache2/sites-available/001-alyx.conf && \
+    chown www-data:www-data \
+      "${IBL_PATH_ALYX}/uploaded" \
+      /var/www
 
 # switch to user and alyx dir, use bash
 USER ${USER_UID}:${USER_GID}
