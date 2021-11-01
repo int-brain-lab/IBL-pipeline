@@ -147,6 +147,9 @@ def dj_config_mappings() -> dict:
             "%S3_SECRET%": "S3_SECRET",
             "%S3_MIGRATE_BUCKET%": "S3_MIGRATE_BUCKET",
             "%S3_ROOT_PATH%": "S3_ROOT_PATH",
+            "%IBL_PATH_ROOT%": "IBL_PATH_ROOT",
+            "%IBL_PATH_DATA%": "IBL_PATH_DATA",
+            "%IBL_PATH_SHARED%": "IBL_PATH_SHARED",
         }
     )
 
@@ -265,9 +268,9 @@ def init_dj_config(file: Path) -> None:
         must_exist=[
             "database.host",
             "database.password",
-            "database.mode",
             "database.user",
             "stores",
+            "custom",
         ],
     )
     if not config.get("connection.charset"):
