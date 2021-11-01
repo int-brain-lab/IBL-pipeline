@@ -13,7 +13,7 @@ import datetime
 import matplotlib.pyplot as plt
 import os
 
-mode = os.environ.get('MODE')
+mode = dj.config.get('custom', {}).get('database.mode', "")
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_behavior')
@@ -276,7 +276,7 @@ class CumulativeSummary(dj.Computed):
         self.insert1({**key, 'latest_time': latest_time})
 
         # check the environment, public or internal
-        if os.environ.get('MODE') == 'public':
+        if dj.config.get('custom', {}).get('database.mode', "") == 'public':
             public = True
         else:
             public = False

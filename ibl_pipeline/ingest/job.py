@@ -475,7 +475,7 @@ class IngestionJob(dj.Manual):
     definition = """
     job_datetime: datetime  # UTC time
     ---
-    alyx_sql_dump: varchar(36)
+    alyx_sql_dump: varchar(36)  # '2021-10-26'
     job_status: enum('completed', 'on-going', 'terminated')
     job_endtime=null: datetime  # UTC time
     """
@@ -926,6 +926,22 @@ _ingestion_tables = (UpdateAlyxRawModel,
                      UpdateRealTable)
 
 
+def read_db_loaded_file(last_entry: str = "public_alyx") -> str:
+    # this function may or may not exist here
+    # if it stays here can put imports in import section instead of here
+    from pathlib import Path
+    ibl_path_data = dj.config["custom"]["repository.config"]["ibl_path_data"]
+    db_loaded = Path(ibl_path_data) / "alyx" / "db_loaded"
+    if not db_loaded.exists():
+        return last_entry
+    with open(db_loaded, "r") as f:
+        dump_file = f.read()
+        dump_file = Path(dump_file.rstrip("\n")).stem
+        dump_file = dump_file.replace(".sql", "")
+        dump_file = dump_file.replace("_alyxfull", "")
+    return dump_file
+
+
 def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60):
     """
     Routine to populate all ingestion tables
@@ -939,6 +955,14 @@ def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60):
            or (run_duration is None)
            or (run_duration < 0)):
 
+        # create new ingestion job?
+        current_job_key = IngestionJob.get_on_going_key()
+        last_dump_file = (IngestionJob & current_job_key).fetch1('alyx_sql_dump')
+        latest_sql_dump = read_db_loaded_file(last_dump_file)
+        if (last_dump_file != latest_sql_dump):
+            IngestionJob.create_entry(latest_sql_dump)
+
+        # check if completed
         if _check_ingestion_completion():
             _clean_up()
         else:

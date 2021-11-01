@@ -6,7 +6,7 @@ _one = None
 
 dj.config['enable_python_native_blobs'] = True
 
-mode = os.environ.get('MODE')
+mode = dj.config.get('custom', {}).get('database.mode', "")
 
 if mode == 'test':
     dj.config['database.prefix'] = 'test_'

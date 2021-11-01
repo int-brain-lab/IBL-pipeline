@@ -1,7 +1,7 @@
 import datajoint as dj
 import numpy as np
 import pandas as pd
-from os import path, environ
+from os import path
 import datetime
 import logging
 import warnings

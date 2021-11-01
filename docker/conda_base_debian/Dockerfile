@@ -28,36 +28,13 @@ ENV PATH=${CONDA_DIR}/bin:$PATH
 # set default shell to exit on first error
 SHELL [ "/bin/sh", "-e", "-c" ]
 
-# Add user/group -----------------------------------------------------------------------
-RUN groupadd --gid ${USER_GID} --force ${GROUPNAME} && \
-	useradd --uid ${USER_UID} --gid ${USER_GID} \
-	  --create-home --system --groups users --shell /bin/bash ${USERNAME}
-USER 0:${USER_GID}
-RUN	<<-EOF
-	umask a+rwx,o-wx
-	mkdir -p ${CONDA_DIR}
-	chgrp --no-dereference ${USER_GID} /etc/profile.d /var/log
-	chmod -R 774 /etc/profile.d /var/log
-	echo -e ". '/etc/profile.d/conda.sh'\nconda activate base" >> /etc/skel/.bashrc
-EOF
-
-# Entrypoint to activate specific conda environment ------------------------------------
-RUN cat <<-'EOF' > /entrypoint
-	#! /bin/bash --login
-	[ -z "$CONDA_ENV_USER" ] && CONDA_ENV_USER=base
-	set -euo pipefail
-	conda activate $CONDA_ENV_USER
-	"$@"
-EOF
-RUN chmod 771 /entrypoint
-
 # Install linux dependencies -----------------------------------------------------------
 ENV TZ=${TIMEZONE}
 RUN <<-EOF
-	export DEBIAN_FRONTEND=noninteractive
 	apt-get update
-	apt-get install -y apt-utils
-	apt-get install -y locales wget
+	apt-get -qq install -y apt-utils
+	export DEBIAN_FRONTEND=noninteractive
+	apt-get -qq install -y locales wget sudo
 	localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 	ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime
 	echo ${TZ} > /etc/timezone
@@ -67,8 +44,34 @@ RUN <<-EOF
 EOF
 ENV LANG=en_US.utf8 LC_ALL=en_US.utf8
 
-# Install conda as user ----------------------------------------------------------------
+# Add directories, user/group ----------------------------------------------------------
+RUN	<<-EOF
+	groupadd --gid ${USER_GID} --force ${GROUPNAME}
+	umask a+rwx,o-wx
+	mkdir -p ${CONDA_DIR}
+	cd ${CONDA_DIR}
+	chown -R :${USER_GID} .*
+	chgrp --no-dereference ${USER_GID} /etc/profile.d /var/log
+	chmod -R 774 /etc/profile.d /var/log
+	echo ". '/etc/profile.d/conda.sh'\nconda activate base" >> /etc/skel/.bashrc
+	useradd --uid ${USER_UID} --gid ${USER_GID} \
+		--create-home --system --groups users,sudo --shell /bin/bash ${USERNAME}
+	passwd -d ${USERNAME}
+	echo '${USERNAME} ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+	install -m 771 /dev/null /entrypoint
+	chown :${USER_GID} /entrypoint
+EOF
 
+# Entrypoint to activate specific conda environment ------------------------------------
+RUN cat <<-'EOF' >> /entrypoint
+	#! /bin/bash --login
+	[ -z "$CONDA_ENV_USER" ] && CONDA_ENV_USER=base
+	set -euo pipefail
+	conda activate $CONDA_ENV_USER
+	exec -l "$@"
+EOF
+
+# Install conda as user ----------------------------------------------------------------
 USER ${USER_UID}:${USER_GID}
 WORKDIR /home/${USERNAME}
 RUN <<-EOF
@@ -83,9 +86,6 @@ RUN <<-EOF
 	find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete
 	find ${CONDA_DIR} -follow -type f -name '*.js.map' -delete
 	ln -s ${CONDA_DIR}/etc/profile.d/conda.sh /etc/profile.d/conda.sh
-
-	# replicate behavior of `conda init -q bash` for interactive shells to load login scripts
-	echo -e ". '/etc/profile.d/conda.sh'\nconda activate base" >> ~/.bashrc
 EOF
 
 # switch to bash as default shell for the next RUN commands, conda already in PATH
@@ -101,7 +101,7 @@ RUN <<-EOF
 EOF
 
 # set default command as a constantly running process
-ENTRYPOINT [ "/entrypoint" ]
+ENTRYPOINT [ "/bin/bash", "--login", "-c" ]
 CMD [ "tail", "-f", "/dev/null" ]
 
 # Conda base image ---------------------------------------------------------------------
@@ -120,5 +120,6 @@ ENV TZ=${TIMEZONE} LANG=en_US.utf8 LC_ALL=en_US.utf8 CONDA_ENV_USER=base
 COPY --from=conda_base_debian / /
 USER ${USER_UID}:${USER_GID}
 WORKDIR /home/${USERNAME}
+SHELL [ "/bin/bash", "--login", "-c" ]
 ENTRYPOINT [ "/entrypoint" ]
 CMD [ "conda", "info", "-a" ]

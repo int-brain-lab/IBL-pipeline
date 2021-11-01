@@ -3,16 +3,16 @@
 # --------------------------------------------------------------------------------------
 # Basic usage:
 #   docker-compose build conda alyx ingest
-#   docker-compose up --detach pgserv alyx ingest
+#   docker-compose up --detach pgserver alyx ingest adminer
+#   docker-compose down --volumes
 #
 # Compose Script Example Usage:
 #   ./compose --help
 #   ./compose build up
-#   ./compose --env=./admin/ingest.env build up
-#   ./compose --force up
+#   ./compose --env=./shared/dev.env build up
 #   ./compose up
+#   ./compose --force up
 #
-# docker-compose up --force-recreate --detach pgserv alyx ingest adminer
 # Shared properties across services ----------------------------------------------------
 x-user-build-args: &user-build-args
   GROUPNAME: ibl
@@ -35,7 +35,7 @@ x-ibl-shared-mount: &ibl-shared-mount
 
 x-shared-networks: &shared-networks
   networks:
-    ibl-dev:
+    ingest_dev:
 
 <<: *shared-networks
 
@@ -55,25 +55,29 @@ services:
         <<: *user-build-args
 
   # Postgres Server --------------------------------------------------------------------
-  pgserv:
-    image: postgres:13.3
+  pgserver:
+    container_name: postgres_db_server
+    image: postgres:13-bullseye
     <<: *common-platform
     <<: *shared-networks
-    user: postgres
     environment:
-      - POSTGRES_USER=${ALYX_DB_USER:?set ALYX_DB_USER in .env file}
+      - POSTGRES_DB=${ALYX_DB_NAME:-alyxdb}
+      - POSTGRES_USER=${ALYX_DB_USER:-alyxadmin}
       - POSTGRES_PASSWORD=${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
-      interval: 30s
-      timeout: 20s
-      start_period: 5s
-      retries: 6
+      interval: 60s
+      timeout: 15s
+      start_period: 30s
+      retries: 3
     volumes:
       - pgdata:/var/lib/postgresql/data
+    ports:
+      - 5438:5432
 
   # Alyx Database ----------------------------------------------------------------------
   alyx:
+    container_name: alyx_db_server
     <<: *common-platform
     <<: *shared-networks
     volumes:
@@ -81,27 +85,31 @@ services:
       - <<: *ibl-shared-mount
     init: true
     depends_on:
-      pgserv:
+      pgserver:
         condition: service_healthy
     build:
       context: ../..
       dockerfile: docker/ibl/alyx/Dockerfile
       args:
         <<: *user-build-args
+    healthcheck:
+      test: ["CMD", "alyx", "checkserver"]
+      interval: 30s
+      timeout: 15s
+      start_period: 120s
+      retries: 5
     environment:
       - IBL_PATH_ROOT=${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}
-      - PGUSER=${ALYX_DB_USER:?set ALYX_DB_USER in .env file}
+      - HTTP_DATA_SERVER_LOGIN=${HTTP_DATA_SERVER_LOGIN:?set HTTP_DATA_SERVER_LOGIN in .env file}
+      - HTTP_DATA_SERVER_PWD=${HTTP_DATA_SERVER_PWD:?set HTTP_DATA_SERVER_PWD in .env file}
       - PGPASSWORD=${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
-      - PGDBNAME=${ALYX_DB_NAME:-iblalyx}
-      - PGHOST=${ALYX_DB_HOST:-pgserv}
-      - HTTP_DATA_SERVER_LOGIN=${HTTP_DATA_SERVER_LOGIN:-}
-      - HTTP_DATA_SERVER_PWD=${HTTP_DATA_SERVER_PWD:-}
-      - ALYX_PORT=${ALYX_PORT:-8000}
-      - ALYX_SECRET_KEY=${ALYX_SECRET_KEY:-0xdeadbeef}
+      - PGDATABASE=${ALYX_DB_NAME:-alyxdb}
+      - PGUSER=${ALYX_DB_USER:-alyxadmin}
+      - PGHOST=${PGHOST:-pgserver}
     ports:
-      - "${ALYX_PORT:-8000}:${ALYX_PORT:-8000}"
-    command: [ "initdb", "dev" ]
-    # user: root
+      - ${ALYX_PORT:-8000}:${ALYX_PORT:-8000}
+    working_dir: ${IBL_PATH_ROOT}
+    command: ["loadpubdump", "startserver"]
 
   # IBL Environment for DataJoint Ingestion --------------------------------------------
   ingest:
@@ -116,26 +124,38 @@ services:
     init: true
     depends_on:
       alyx:
-        condition: service_started
+        condition: service_healthy
     build:
       context: ../..
       dockerfile: docker/ibl/ingest/Dockerfile
       args:
         <<: *user-build-args
-        CONDA_ENV_FILE: ${CONDA_ENV_FILE:-__NULL}
+        CONDA_ENV_FILE: ${CONDA_ENV_FILE:-}
         APT_REQUIREMENTS: ${APT_REQUIREMENTS:-docker/ibl/ingest/apt_requirements.txt}
-        DOT_ONE_FILE: ${DOT_ONE_FILE:-docker/ibl/template.one_params}
     environment:
       - IBL_PATH_ROOT=${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}
+      - DJ_USER=${DJ_USER:-}
+      - DJ_PASS=${DJ_PASS:-}
+      - S3_ACCESS=${S3_ACCESS:-}
+      - S3_SECRET=${S3_SECRET:-}
+      - DJ_HOST=${DJ_HOST:-datajoint.internationalbrainlab.org}
+      - DJ_MODE=${DJ_MODE:-test}
+      - S3_MIGRATE_BUCKET=${S3_MIGRATE_BUCKET:-ibl-dj-external}
+      - S3_ROOT_PATH=${S3_ROOT_PATH:-}
+      - JUPYTER_PORT=${JUPYTER_PORT:-10000}
+      - ALYX_PORT=${ALYX_PORT:-8000}
     expose:
-      - "${ALYX_PORT:-8000}"
+      - ${ALYX_PORT:-8000}
+    ports:
+      - ${JUPYTER_PORT:-10000}:${JUPYTER_PORT:-10000}
+    command: [ "init_cfg", "start_jupyter"]
 
   adminer:
     image: adminer
     restart: always
     environment:
-      - ADMINER_DEFAULT_SERVER=pgserv
+      - ADMINER_DEFAULT_SERVER=${PGHOST:-pgserver}
       - ADMINER_DESIGN=nette
     ports:
-      - 8081:8080
+      - 8088:8080
     <<: *shared-networks
