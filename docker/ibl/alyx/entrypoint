@@ -35,16 +35,16 @@ shell_dir=$PWD
 # default flatiron server url
 [[ -z "${HTTP_DATA_SERVER}" ]] && HTTP_DATA_SERVER=https://ibl.flatironinstitute.org
 
-# paths of alyx files used during db setup/interaction steps
-alyx_manager="${IBL_PATH_ALYX}/alyx/manage.py"
-db_loaded_file="${IBL_PATH_DATA}/alyx/db_loaded"
-su_created_file="${IBL_PATH_DATA}/alyx/superuser_created"
-
 # dump/misc variables
 ALYX_DUMP_URL=
 ALYX_DUMP_FILE=
 ALYX_DUMP_EXPIRES=6
 ALYX_DUMP_DIR="${IBL_PATH_DATA}/alyx/dumps"
+
+# paths of alyx files used during db setup/interaction steps
+alyx_manager="${IBL_PATH_ALYX}/alyx/manage.py"
+db_loaded_file="${IBL_PATH_DATA}/alyx/db_loaded"
+su_created_file="${IBL_PATH_DATA}/alyx/superuser_created"
 
 # help documentation
 # ------------------
@@ -538,7 +538,7 @@ createsu() {
 			    username='$PGUSER', email='info@datajoint.com', password='$PGPASSWORD'
 			)
 		EOF
-		touch ${su_created_file}
+		echo "${PGUSER}" >"${su_created_file}"
 		alyxcmd drf_create_token "${PGUSER}" >/dev/null
 		set +e
 	else
@@ -593,7 +593,7 @@ loaddb() {
 		gzip -dc ${ALYX_DUMP_FILE} | psql -d "${PGDATABASE}"
 		createsu
 		alyxcmd migrate
-		touch ${db_loaded_file}
+		echo "${ALYX_DUMP_FILE}" >"${db_loaded_file}"
 	fi
 }
 
@@ -613,8 +613,8 @@ renamedb() {
 	echo "# ====> creating new ${PGDATABASE}"
 	createdb "${PGDATABASE}" || err_exit "couldn't create ${PGDATABASE} db"
 
-	rm -f ${db_loaded_file}
-	rm -f ${su_created_file}
+	rm -f "${db_loaded_file}"
+	rm -f "${su_created_file}"
 
 	echo "# ======> ok"
 }
