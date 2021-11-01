@@ -1,8 +1,8 @@
 from ibl_pipeline.analyses import behavior
 from ibl_pipeline import behavior as behavior_ingest
 from ibl_pipeline import subject, action, acquisition
-from os import environ
-mode = environ.get('MODE')
+import datajoint as dj
+mode = dj.config.get('custom', {}).get('database.mode', "")
 if mode != 'public':
     from ibl_pipeline import ephys
 from ibl_pipeline.utils import psychofit as psy

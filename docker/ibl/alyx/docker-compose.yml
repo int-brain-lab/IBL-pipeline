@@ -1,6 +1,7 @@
-# cd ~/ibl-pipeline-joseph/docker_alyx/docker/ibl
-# docker-compose up --build --detach pgserv adminer alyx
-# ctid="`docker ps -a -q -f name=ibl_alyx`" && docker exec -d $ctid /entrypoint initdb
+# cd IBL-pipeline/docker/ibl/alyx
+# docker-compose up --build --detach pgserver alyx
+# docker exec -dt alyx_db_server_0 alyx initdb dev
+
 version: "2.4"
 
 x-common-platform: &common-platform
@@ -13,12 +14,12 @@ x-ibl-data-volume: &ibl-data-volume
 
 x-ibl-shared-mount: &ibl-shared-mount
   - type: bind
-    source: /home/ubuntu/ibl-pipeline-joseph/docker_alyx/shared
+    source: ../../../shared
     target: ${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}/shared
 
 x-shared-networks: &shared-networks
   networks:
-    ibl-dev:
+    ibl_alyx:
 
 <<: *shared-networks
 
@@ -29,24 +30,28 @@ volumes:
 services:
   # Postgres Server --------------------------------------------------------------------
   pgserv:
-    image: postgres:13.3
+    container_name: postgres_db_server_0
+    image: postgres:13-bullseye
     <<: *common-platform
     <<: *shared-networks
-    user: postgres
     environment:
-      - POSTGRES_USER=${ALYX_DB_USER:?set ALYX_DB_USER in .env file}
+      - POSTGRES_DB=${ALYX_DB_NAME:-alyxdb}
+      - POSTGRES_USER=${ALYX_DB_USER:-alyxadmin}
       - POSTGRES_PASSWORD=${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
-      interval: 30s
-      timeout: 20s
-      start_period: 5s
-      retries: 6
+      interval: 60s
+      timeout: 15s
+      start_period: 30s
+      retries: 3
     volumes:
       - pgdata:/var/lib/postgresql/data
+    ports:
+      - 5435:5432
 
   # Alyx Database ----------------------------------------------------------------------
   alyx:
+    container_name: alyx_db_server_0
     <<: *common-platform
     <<: *shared-networks
     volumes:
@@ -57,29 +62,18 @@ services:
       pgserv:
         condition: service_healthy
     build:
-      context: ../..
+      context: ../../..
       dockerfile: docker/ibl/alyx/Dockerfile
     environment:
       - IBL_PATH_ROOT=${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}
-      - PGUSER=${ALYX_DB_USER:?set ALYX_DB_USER in .env file}
+      - HTTP_DATA_SERVER_LOGIN=${HTTP_DATA_SERVER_LOGIN:?set HTTP_DATA_SERVER_LOGIN in .env file}
+      - HTTP_DATA_SERVER_PWD=${HTTP_DATA_SERVER_PWD:?set HTTP_DATA_SERVER_PWD in .env file}
       - PGPASSWORD=${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
-      - PGDBNAME=${ALYX_DB_NAME:-iblalyx}
-      - PGHOST=${ALYX_DB_HOST:-pgserv}
-      - HTTP_DATA_SERVER_LOGIN=${HTTP_DATA_SERVER_LOGIN:-}
-      - HTTP_DATA_SERVER_PWD=${HTTP_DATA_SERVER_PWD:-}
-      - ALYX_PORT=${ALYX_PORT:-8000}
-      - ALYX_SECRET_KEY=${ALYX_SECRET_KEY:-0xdeadbeef}
+      - PGDATABASE=${ALYX_DB_NAME:-alyxdb}
+      - PGUSER=${ALYX_DB_USER:-alyxadmin}
+      - PGHOST=${PGHOST:-pgserv}
+      - ALYX_PORT=${ALYX_PORT:-8003}
     ports:
-      - "${ALYX_PORT:-8000}:${ALYX_PORT:-8000}"
+      - "${ALYX_PORT:-8003}:${ALYX_PORT:-8003}"
     working_dir: ${IBL_PATH_ROOT}
-    command: [ "initdb", "dev" ]
-
-  adminer:
-    image: adminer
-    restart: always
-    environment:
-      - ADMINER_DEFAULT_SERVER=pgserv
-      - ADMINER_DESIGN=nette
-    ports:
-      - 8081:8080
-    <<: *shared-networks
+    command: [ "loadpubdump", "startserver" ]

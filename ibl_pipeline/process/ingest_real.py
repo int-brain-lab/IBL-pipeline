@@ -11,7 +11,7 @@ import os
 import numpy as np
 
 
-mode = os.environ.get('MODE')
+mode = dj.config.get('custom', {}).get('database.mode', "")
 
 REF_TABLES = (
     'Lab',

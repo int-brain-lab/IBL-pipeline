@@ -1,0 +1,56 @@
+// DO NOT EDIT ! --- Template JSON for autogenerating package configuration files
+{
+  "alyx": {
+    "ALYX_LOGIN": "%ALYX_LOGIN%",
+    "ALYX_PWD": "%ALYX_PWD%",
+    "ALYX_URL": "%ALYX_URL%",
+    "CACHE_DIR": null,
+    "HTTP_DATA_SERVER": "%HTTP_DATA_SERVER%",
+    "HTTP_DATA_SERVER_LOGIN": "%HTTP_DATA_SERVER_LOGIN%",
+    "HTTP_DATA_SERVER_PWD": "%HTTP_DATA_SERVER_PWD%"
+  },
+  "datajoint": {
+    "connection.charset": "",
+    "connection.init_function": null,
+    "database.host": "%DJ_HOST%",
+    "database.password": "%DJ_PASS%",
+    "database.port": 3306,
+    "database.prefix": null,
+    "database.reconnect": true,
+    "database.use_tls": null,
+    "database.user": "%DJ_USER%",
+    "display.limit": 35,
+    "display.show_tuple_count": true,
+    "display.width": 25,
+    "enable_python_native_blobs": true,
+    "fetch_format": "array",
+    "loglevel": "INFO",
+    "safemode": true,
+    "stores": {
+      "ephys": {
+        "access_key": "%S3_ACCESS%",
+        "bucket": "%S3_MIGRATE_BUCKET%",
+        "endpoint": "s3.amazonaws.com",
+        "location": "%S3_ROOT_PATH%/ephys",
+        "protocol": "s3",
+        "secret_key": "%S3_SECRET%"
+      },
+      "plotting": {
+        "access_key": "%S3_ACCESS%",
+        "bucket": "%S3_MIGRATE_BUCKET%",
+        "endpoint": "s3.amazonaws.com",
+        "location": "%S3_ROOT_PATH%/plotting",
+        "protocol": "s3",
+        "secret_key": "%S3_SECRET%"
+      }
+    },
+    "custom": {
+      "database.mode": "%DJ_MODE%",
+      "repository.config": {
+        "ibl_path_root": "%IBL_PATH_ROOT%",
+        "ibl_path_data": "%IBL_PATH_DATA%",
+        "ibl_path_shared": "%IBL_PATH_SHARED%"
+      }
+    }
+  }
+}

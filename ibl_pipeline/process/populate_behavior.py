@@ -4,7 +4,6 @@ This script ingest behavioral data into tables in the ibl_behavior schema
 import datetime
 from ibl_pipeline import subject, reference, action
 from tqdm import tqdm
-from os import environ
 import datajoint as dj
 import time
 
@@ -13,7 +12,7 @@ from ibl_pipeline.analyses import behavior as behavior_analyses
 from ibl_pipeline.plotting import behavior as behavior_plotting
 
 
-mode = environ.get('MODE')
+mode = dj.config.get('custom', {}).get('database.mode', "")
 
 BEHAVIOR_TABLES = [
     behavior.CompleteWheelSession,

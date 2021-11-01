@@ -4,9 +4,7 @@ from ibl_pipeline.ingest import \
     (alyxraw, QueryBuffer,
      reference, subject, action, acquisition, data)
 
-from os import environ
-
-mode = environ.get('MODE')
+mode = dj.config.get('custom', {}).get('database.mode', "")
 if mode != 'public':
     from ibl_pipeline.ingest import ephys, histology
 

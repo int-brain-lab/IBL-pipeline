@@ -1,3 +1,4 @@
+import datajoint as dj
 from ibl_pipeline.process import ingest_alyx_raw, ingest_real, ingest_alyx_raw_postgres
 from ibl_pipeline.ingest.common import *
 from ibl_pipeline.ingest import populate_batch, QueryBuffer
@@ -25,7 +26,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-mode = os.environ.get('MODE')
+mode = dj.config.get('custom', {}).get('database.mode', "")
 
 
 ALYX_HISTOLOGY_MODELS = [

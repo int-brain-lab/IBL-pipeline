@@ -1,9 +1,5 @@
 # Containerized IBL Environment 
 
-This is a Docker container for ingestion, alyx, IBL stuff, etc...
+This is a Docker container for ingestion of IBL data w/ DataJoint
 
-All defaults are located in the `.env` file and `apt_requirements.txt`.
-
-Run with `./compose`
-
-Execute commands using `./alyx` as the container entrypoint
+TODO: environment variable instructions
