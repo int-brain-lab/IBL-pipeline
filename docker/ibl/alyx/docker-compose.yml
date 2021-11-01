@@ -41,8 +41,8 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
       interval: 60s
-      timeout: 120s
-      start_period: 20s
+      timeout: 15s
+      start_period: 30s
       retries: 3
     volumes:
       - pgdata:/var/lib/postgresql/data

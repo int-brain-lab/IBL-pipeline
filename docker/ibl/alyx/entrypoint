@@ -515,7 +515,7 @@ configalyx() {
 			sub(/LogLevel info/,"LogLevel error");
 			sub(/alyx.internationalbrainlab.org/,"localhost\n        ServerAlias alyx");
 			sub(/WSGIDaemonProcess alyx python-path/,"WSGIDaemonProcess alyx user=" USERNAME " group=" GROUPNAME " python-path")
-		} 1' "${IBL_PATH_ALYX}/docs/_static/001-alyx.conf" > /etc/apache2/sites-available/001-alyx.conf
+		} 1' "${IBL_PATH_ALYX}/docs/_static/001-alyx.conf" >/etc/apache2/sites-available/001-alyx.conf
 
 	sudo a2dissite -q 001-alyx
 	sudo a2ensite -q 001-alyx
@@ -681,7 +681,10 @@ stopserver() {
 
 checkserver() {
 	echo "# => checking alyx"
+	alyxcmd check --database default
 	alyxcmd check
+	[[ $(netstat -ano | grep "0.0.0.0:${ALYX_PORT}") ]] ||
+		err_exit "server not running at 0.0.0.0:${ALYX_PORT}"
 }
 
 # Routines

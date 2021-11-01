@@ -46,6 +46,7 @@ RUN apt-get update && \
       libapache2-mod-wsgi-py3 \
       libmagic1 \
       locales \
+      net-tools \
       postgresql-client-13 \
       python3-dev \
       python3-pip  \

@@ -10,8 +10,8 @@
 #   ./compose --help
 #   ./compose build up
 #   ./compose --env=./shared/dev.env build up
-#   ./compose --force up
 #   ./compose up
+#   ./compose --force up
 #
 # Shared properties across services ----------------------------------------------------
 x-user-build-args: &user-build-args
@@ -67,8 +67,8 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
       interval: 60s
-      timeout: 120s
-      start_period: 20s
+      timeout: 15s
+      start_period: 30s
       retries: 3
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -95,9 +95,9 @@ services:
     healthcheck:
       test: ["CMD", "alyx", "checkserver"]
       interval: 30s
-      timeout: 20s
-      start_period: 15s
-      retries: 6
+      timeout: 15s
+      start_period: 120s
+      retries: 5
     environment:
       - IBL_PATH_ROOT=${IBL_PATH_ROOT:?set IBL_PATH_ROOT path in .env file}
       - HTTP_DATA_SERVER_LOGIN=${HTTP_DATA_SERVER_LOGIN:?set HTTP_DATA_SERVER_LOGIN in .env file}
@@ -124,7 +124,7 @@ services:
     init: true
     depends_on:
       alyx:
-        condition: service_started # service_healthy
+        condition: service_healthy
     build:
       context: ../..
       dockerfile: docker/ibl/ingest/Dockerfile
@@ -148,7 +148,7 @@ services:
       - ${ALYX_PORT:-8000}
     ports:
       - ${JUPYTER_PORT:-10000}:${JUPYTER_PORT:-10000}
-    command: ["dev"] # ["copy_one_params", "start_jupyter"]
+    command: [ "init_cfg", "start_jupyter"]
 
   adminer:
     image: adminer
