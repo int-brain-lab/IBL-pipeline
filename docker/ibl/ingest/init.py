@@ -274,7 +274,7 @@ def init_dj_config(file: Path) -> None:
         ],
     )
     if not config.get("connection.charset"):
-        config["connection.charset"] = "''"
+        config["connection.charset"] = ''
     _dest_dj_config_path.unlink(True)
     _dest_dj_config_path.touch(0o664)
     with open(_dest_dj_config_path, "w") as f:

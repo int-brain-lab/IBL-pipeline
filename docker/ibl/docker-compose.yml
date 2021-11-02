@@ -39,6 +39,8 @@ x-shared-networks: &shared-networks
 
 <<: *shared-networks
 
+version: '2.4'
+
 volumes:
   datacache:
   pgdata:
