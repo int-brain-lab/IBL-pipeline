@@ -494,6 +494,10 @@ class IngestionJob(dj.Manual):
     def get_on_going_key(cls):
         return (cls & 'job_status = "on-going"').fetch1('KEY')
 
+    @classmethod
+    def get_latest_key(cls):
+        return cls.fetch('KEY', order_by='job_datetime DESC', limit=1)[0]
+
 
 @schema
 class UpdateAlyxRawModel(dj.Computed):
@@ -926,14 +930,19 @@ _ingestion_tables = (UpdateAlyxRawModel,
                      UpdateRealTable)
 
 
-def read_db_loaded_file(last_entry: str = "public_alyx") -> str:
+def read_db_loaded_file() -> str:
     # this function may or may not exist here
     # if it stays here can put imports in import section instead of here
     from pathlib import Path
-    ibl_path_data = dj.config["custom"]["repository.config"]["ibl_path_data"]
+    try:
+        ibl_path_data = dj.config["custom"]["repository.config"]["ibl_path_data"]
+    except KeyError:
+        return ''
+
     db_loaded = Path(ibl_path_data) / "alyx" / "db_loaded"
     if not db_loaded.exists():
-        return last_entry
+        return ''
+
     with open(db_loaded, "r") as f:
         dump_file = f.read()
         dump_file = Path(dump_file.rstrip("\n")).stem
@@ -955,11 +964,11 @@ def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60):
            or (run_duration is None)
            or (run_duration < 0)):
 
-        # create new ingestion job?
-        current_job_key = IngestionJob.get_on_going_key()
-        last_dump_file = (IngestionJob & current_job_key).fetch1('alyx_sql_dump')
-        latest_sql_dump = read_db_loaded_file(last_dump_file)
-        if last_dump_file != latest_sql_dump:
+        # create new ingestion job
+        last_job_key = IngestionJob.get_latest_key()
+        last_dump_file = (IngestionJob & last_job_key).fetch1('alyx_sql_dump')
+        latest_sql_dump = read_db_loaded_file()
+        if latest_sql_dump and last_dump_file != latest_sql_dump:
             IngestionJob.create_entry(latest_sql_dump)
 
         # check if completed
