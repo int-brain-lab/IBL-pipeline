@@ -78,7 +78,7 @@ import os
 import logging
 import time
 import inspect
-from datetime import datetime
+import datetime
 
 import misc as alyx_misc
 import subjects as alyx_subjects
@@ -484,9 +484,9 @@ class IngestionJob(dj.Manual):
     def create_entry(cls, alyx_sql_dump):
         for key in (cls & 'job_status = "on-going"').fetch('KEY'):
             (cls & key)._update('job_status', 'terminated')
-            (cls & key)._update('job_endtime', datetime.utcnow())
+            (cls & key)._update('job_endtime', datetime.datetime.utcnow())
         _clean_up()
-        cls.insert1({'job_datetime': datetime.utcnow(),
+        cls.insert1({'job_datetime': datetime.datetime.utcnow(),
                      'alyx_sql_dump': alyx_sql_dump,
                      'job_status': 'on-going'})
 
@@ -778,8 +778,16 @@ class PopulateShadowTable(dj.Computed):
                             shadow_table.insert1(entry, allow_direct_insert=True, replace=True)
 
         if key['table_name'] in ('data.DataSet', 'data.FileRecord'):
+            date_cutoff = (datetime.datetime.now().date() -
+                           datetime.timedelta(days=_backtrack_days)).strftime('%Y-%m-%d')
+            uuid_attr = shadow_table.primary_key[0]
+            key_source = (shadow_table.key_source.proj(uuid=uuid_attr)
+                          & (alyxraw.AlyxRaw * alyxraw.AlyxRaw.Field
+                             & 'fname = "auto_datetime"'
+                             & f'fvalue > "{date_cutoff}"')).proj(**{uuid_attr: 'uuid'})
+
             query_buffer = QueryBuffer(shadow_table, verbose=True)
-            for key in (shadow_table.key_source - shadow_table).fetch('KEY'):
+            for key in (key_source - shadow_table).fetch('KEY'):
                 query_buffer.add_to_queue1(shadow_table.create_entry(key))
                 query_buffer.flush_insert(skip_duplicates=True, allow_direct_insert=True,
                                           chunksz=1000)
@@ -912,7 +920,7 @@ def _check_ingestion_completion():
     if copy_real_completed and update_real_completed:
         key = on_going_job.fetch1('KEY')
         (IngestionJob & key)._update('job_status', 'completed')
-        (IngestionJob & key)._update('job_endtime', datetime.utcnow())
+        (IngestionJob & key)._update('job_endtime', datetime.datetime.utcnow())
         logger.info(f'All ingestion jobs completed: {key}')
         return True
 
