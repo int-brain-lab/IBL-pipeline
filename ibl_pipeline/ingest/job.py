@@ -79,6 +79,7 @@ import logging
 import time
 import inspect
 import datetime
+from tqdm import tqdm
 
 import misc as alyx_misc
 import subjects as alyx_subjects
@@ -86,7 +87,7 @@ import actions as alyx_actions
 import data as alyx_data
 import experiments as alyx_experiments
 
-from ibl_pipeline.ingest import QueryBuffer, alyxraw
+from ibl_pipeline.ingest import QueryBuffer, alyxraw, ShadowIngestionError
 from ibl_pipeline.process import (ingest_alyx_raw_postgres, ingest_membership,
                                   ingest_real, delete_update_entries)
 
@@ -787,8 +788,11 @@ class PopulateShadowTable(dj.Computed):
                              & f'fvalue > "{date_cutoff}"')).proj(**{uuid_attr: 'uuid'})
 
             query_buffer = QueryBuffer(shadow_table, verbose=True)
-            for key in (key_source - shadow_table).fetch('KEY'):
-                query_buffer.add_to_queue1(shadow_table.create_entry(key))
+            for key in tqdm((key_source - shadow_table).fetch('KEY')):
+                try:
+                    query_buffer.add_to_queue1(shadow_table.create_entry(key))
+                except ShadowIngestionError:
+                    pass
                 query_buffer.flush_insert(skip_duplicates=True, allow_direct_insert=True,
                                           chunksz=1000)
             query_buffer.flush_insert(skip_duplicates=True, allow_direct_insert=True)
