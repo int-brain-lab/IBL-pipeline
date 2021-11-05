@@ -788,9 +788,9 @@ class PopulateShadowTable(dj.Computed):
                              & f'fvalue > "{date_cutoff}"')).proj(**{uuid_attr: 'uuid'})
 
             query_buffer = QueryBuffer(shadow_table, verbose=True)
-            for key in tqdm((key_source - shadow_table).fetch('KEY')):
+            for k in tqdm((key_source - shadow_table).fetch('KEY')):
                 try:
-                    query_buffer.add_to_queue1(shadow_table.create_entry(key))
+                    query_buffer.add_to_queue1(shadow_table.create_entry(k))
                 except ShadowIngestionError:
                     pass
                 query_buffer.flush_insert(skip_duplicates=True, allow_direct_insert=True,
