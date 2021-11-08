@@ -66,7 +66,7 @@ class PublicProbeInsertion(dj.Manual):
 
 
 def import_public_subjects():
-
+    # TODO : where is this file at??
     subject_lists = pd.read_csv('/data/list_of_subjects_behavior_paper.csv')
 
     lab_mapping = {
@@ -139,7 +139,7 @@ def import_public_subjects():
 
 
 def import_public_sessions():
-
+    # TODO : where is this file at??
     sessions = pd.read_csv('/data/sessions.csv')
 
     session_uuids = sessions['0'].values
