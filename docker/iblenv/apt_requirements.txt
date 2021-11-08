@@ -1,0 +1,16 @@
+apache2
+apache2-dev
+bzip2
+ca-certificates
+cron
+git
+htop
+libmagic1
+mesa-utils
+net-tools
+nvi
+openssh-client
+postgresql-client-13
+procps
+tmux
+wget

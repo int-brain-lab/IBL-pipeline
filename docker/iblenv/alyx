@@ -1,0 +1,782 @@
+#! /bin/bash --login
+
+# IBL Alyx Entrypoint Script
+# ==========================
+
+err_exit() {
+	echo "#! Error: $*"
+	exit 1
+}
+
+# globals
+# -------
+
+# get this script file and its parent directory name (no symlink resolution)
+script_cmd="${BASH_SOURCE[0]}"
+script_path="$(cd "$(dirname ${script_cmd})" &>/dev/null && pwd)"
+script_file=$(basename "${script_cmd}")
+shell_dir=$PWD
+
+# use default dockerfile directory if root path not specified
+[[ -z "${IBL_PATH_ROOT}" ]] && IBL_PATH_ROOT=/int-brain-lab
+
+# get alyx source code directory or default to /var/www/alyx
+[[ -z "${IBL_PATH_ALYX}" ]] && IBL_PATH_ALYX=/var/www/alyx
+
+# get data directory or default to IBL_PATH_ROOT/data
+[[ -z "${IBL_PATH_DATA}" ]] && IBL_PATH_DATA="${IBL_PATH_ROOT}/data"
+
+# get shared data directory or default to IBL_PATH_ROOT/shared
+[[ -z "${IBL_PATH_SHARED}" ]] && IBL_PATH_SHARED="${IBL_PATH_ROOT}/shared"
+
+# get current date as default
+[[ -z "${ALYX_DL_DATE}" ]] && ALYX_DL_DATE=$(date -u +'%Y-%m-%d')
+
+# default flatiron server url
+[[ -z "${HTTP_DATA_SERVER}" ]] && HTTP_DATA_SERVER=https://ibl.flatironinstitute.org
+
+# dump/misc variables
+ALYX_DUMP_URL=
+ALYX_DUMP_FILE=
+ALYX_DUMP_EXPIRES=6
+ALYX_DUMP_DIR="${IBL_PATH_DATA}/alyx/dumps"
+
+# paths of alyx files used during db setup/interaction steps
+alyx_manager="${IBL_PATH_ALYX}/alyx/manage.py"
+db_loaded_file="${IBL_PATH_DATA}/alyx/db_loaded"
+su_created_file="${IBL_PATH_DATA}/alyx/superuser_created"
+
+# help documentation
+# ------------------
+
+show_help() {
+	echo "usage: $script_file [OPTION]... FUNC/ROUTINE... [-- EXEC_CMD]
+
+Entrypoint for Alyx database management
+
+
+Options:
+
+--dump_date=ALYX_DL_DATE ...... Date used to fetch database dump in YYYY-mm-dd format
+--dump_url=ALYX_DUMP_URL ...... Full url of sql dump instead of using ALYX_DL_DATE
+                                to form the url
+--dump_file=ALYX_DUMP_FILE .... Path to store or load local copy of SQL dump, defaults
+                                to file formed via ALYX_DL_DATE
+--dump_exp=ALYX_DUMP_EXPIRES .. Number of days for dumps to be considered expired when
+                                using function 'cleandls'. Default is ${ALYX_DUMP_EXPIRES} days.
+
+
+Functions:
+
+fetchdump ..... Download Alyx database dump from the date set in env variable ALYX_DL_DATE
+                or from the option --dump_url.
+mkdb .......... Create new, empty '${PGDATABASE}' and '${PGDATABASE}_old' postgres databases
+                if they do not already exist.
+configalyx .... Configure Alyx/django settings. The environment variables
+                PGUSER PGHOST and PGPASSWORD are required.
+                Run manage.py w/ 'makemigrations' and 'migrate' then create superuser.
+loaddb ........ Load data from the sql dump into postgres '${PGDATABASE}' db if
+                file '$db_loaded_file' does not already exist
+startserver ... Start Alyx server using port $ALYX_PORT
+renamedb ...... Switch '${PGDATABASE}' to '${PGDATABASE}_old' and create a new empty '${PGDATABASE}' in postgres
+dumpjson....... Send request to Alyx to perform a JSON dump of the current database
+cleandls ...... Clean up existing sql dumps in sql dump folder. Use with option '--dump_exp'.
+fetchpubdump .. Download the public Alyx database dump from flatiron.
+checkserver ... Check if Alyx is up and running
+stopserver .... Kill process for manage.py runserver command
+oneparams ..... Make a .one_params file and save to shared directory
+
+Routines:
+
+initdb ........ Routine that performs all initialization steps to bring up the
+                '${PGDATABASE}' database by running: mkdb, configalyx, updatealyx
+loaddump ...... Routine that inserts the sql dump into the '${PGDATABASE}' postgres database by
+                running: fetchdump, mkdb, configalyx, updatealyx, loaddb
+reloaddb ...... Routine that fetches a new dump from ALYX_DL_DATE and force reload into
+                '${PGDATABASE}' db by running: fetchdump, loaddb
+www ........... Routine that initializes environment and runs Alyx web
+                by running: fetchdump, mkdb, configalyx, updatealyx, loaddb, startserver
+dev ........... Initialize parent process and wait indefinitely
+loadpubdump ... Like loaddump but for public data
+wwwpublic ..... Run 'loadpubdump' then 'startserver'
+
+Environment Variables (available if script is sourced):
+
+  IBL_PATH_ROOT=$IBL_PATH_ROOT
+  IBL_PATH_ALYX=$IBL_PATH_ALYX
+  IBL_PATH_DATA=$IBL_PATH_DATA
+  PGDATABASE=$PGDATABASE
+  PGHOST=$PGHOST
+  PGUSER=$PGUSER
+  PGPASSWORD=******
+  ALYX_DL_DATE=$ALYX_DL_DATE
+  ALYX_DUMP_FILE=$ALYX_DUMP_FILE
+  ALYX_DUMP_DIR=$ALYX_DUMP_DIR
+  ALYX_PORT=$ALYX_PORT
+
+
+Database File Status:
+
+  db_loaded: $(test -f $db_loaded_file && echo "YES" || echo "NO")
+  superuser_created: $(test -f $su_created_file && echo "YES" || echo "NO")
+
+
+Examples:
+
+ Run operations in a specific order
+
+   $script_file fetchdump mkdb loaddb
+
+ Fetch and load dump from specific date
+
+   $script_file --dump_date=2021-10-07 reloaddb
+
+ Load public data dump
+
+   $script_file --dump_file=$IBL_PATH_SHARED/public_alyx.sql.gz loaddump
+
+ Clean existing sql dumps older than 3 days
+
+   $script_file --dump_exp=3 cleandls
+
+ Bypass routines and run a command
+
+   $script_file -- echo 'hello'
+
+ Source the variables and functions in this script
+
+   source $script_file
+   alyxcmd help
+"
+	exit 0
+}
+
+# flag to show help after some variables are populated
+SHOW_HELP=0
+
+# stores set of db functions to run in sequence
+OPS_SEQ=()
+
+# handle input arguments
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+	--dump_date=*)
+		ALYX_DL_DATE="${1#*=}"
+		echo "--dump_date passed. Using dump date: '$ALYX_DL_DATE'"
+		shift
+		;;
+	--dump_url=*)
+		ALYX_DUMP_URL="${1#*=}"
+		echo "--dump_url passed. Using dump url: '$ALYX_DUMP_URL'"
+		shift
+		;;
+	--dump_file=*)
+		export ALYX_DUMP_FILE="${1#*=}"
+		echo "--dump_file passed. Using dump file: '$ALYX_DUMP_FILE'"
+		shift
+		;;
+	--dump_exp=*)
+		ALYX_DUMP_EXPIRES="${1#*=}"
+		echo "--dump_exp passed. Using dump expiration: '$ALYX_DUMP_EXPIRES' days"
+		shift
+		;;
+	"help" | "--help" | "-h" | "--help")
+		SHOW_HELP=1
+		break
+		;;
+	"dev")
+		OPS_SEQ+=("dev")
+		shift
+		;;
+	"fetchdump")
+		OPS_SEQ+=("fetchdump")
+		shift
+		;;
+	"fetchpubdump")
+		OPS_SEQ+=("fetchpubdump")
+		shift
+		;;
+	"mkdb")
+		OPS_SEQ+=("mkdb")
+		shift
+		;;
+	"configalyx")
+		OPS_SEQ+=("configalyx")
+		shift
+		;;
+	"updatealyx")
+		OPS_SEQ+=("updatealyx")
+		shift
+		;;
+	"startserver")
+		OPS_SEQ+=("startserver")
+		shift
+		;;
+	"checkserver")
+		OPS_SEQ+=("checkserver")
+		shift
+		;;
+	"stopserver")
+		OPS_SEQ+=("stopserver")
+		shift
+		;;
+	"loaddb")
+		OPS_SEQ+=("loaddb")
+		shift
+		;;
+	"renamedb")
+		OPS_SEQ+=("renamedb")
+		shift
+		;;
+	"dumpjson")
+		OPS_SEQ+=("dumpjson")
+		shift
+		;;
+	"cleandls")
+		OPS_SEQ+=("cleandls")
+		shift
+		;;
+	"initdb")
+		OPS_SEQ+=("initdb")
+		shift
+		;;
+	"loaddump")
+		OPS_SEQ+=("loaddump")
+		shift
+		;;
+	"loadpubdump")
+		OPS_SEQ+=("loadpubdump")
+		shift
+		;;
+	"www")
+		OPS_SEQ+=("www")
+		shift
+		;;
+	"wwwpublic")
+		OPS_SEQ+=("wwwpublic")
+		shift
+		;;
+	"reloaddb")
+		OPS_SEQ+=("reloaddb")
+		shift
+		;;
+	"oneparams")
+		OPS_SEQ+=("oneparams")
+		shift
+		;;
+	"--")
+		shift
+		echo "Other command: $*"
+		break
+		;;
+	*)
+		err_exit "Unknown option: $1"
+		;;
+	esac
+done
+
+# write ALYX_DUMP_FILE after any options passed
+if [[ -z "${ALYX_DUMP_FILE}" ]]; then
+	# where to save/load sql dump
+	export ALYX_DUMP_FILE="${ALYX_DUMP_DIR}/sql/${ALYX_DL_DATE}_alyxfull.sql.gz"
+fi
+
+# show help if asked
+# ------------------
+
+[[ ${SHOW_HELP} -eq 1 ]] && show_help
+
+# other checks
+# ------------
+
+# check that IBL path is a directory that exists
+[[ -d "${IBL_PATH_ROOT}" ]] ||
+	err_exit "path '${IBL_PATH_ROOT}' from IBL_PATH_ROOT does not exist"
+
+# check that Alyx path is a directory that exists
+[[ -d "${IBL_PATH_ALYX}" ]] ||
+	err_exit "path '${IBL_PATH_ALYX}' from IBL_PATH_ALYX does not exist"
+
+# check that IBL data path is a directory that exists
+[[ -d "${IBL_PATH_DATA}" ]] ||
+	err_exit "path '${IBL_PATH_DATA}' from IBL_PATH_DATA does not exist"
+
+# check that IBL shared path is a directory that exists
+[[ -d "${IBL_PATH_SHARED}" ]] ||
+	err_exit "path '${IBL_PATH_SHARED}' from IBL_PATH_SHARED does not exist"
+
+# check for django python script manager
+[[ -f "${alyx_manager}" ]] ||
+	err_exit "can't locate '$alyx_manager'," \
+		"check alyx source code path IBL_PATH_ALYX='$IBL_PATH_ALYX'"
+
+# check that a central database name exists
+[[ -z "$PGDATABASE" ]] &&
+	err_exit "PGDATABASE, database name environment variable, is not set"
+
+# make these additional directories if they don't exist
+[[ -d "${ALYX_DUMP_DIR}/sql" ]] || mkdir -p "${ALYX_DUMP_DIR}/sql"
+[[ -d "${ALYX_DUMP_DIR}/json" ]] || mkdir -p "${ALYX_DUMP_DIR}/json"
+[[ -d "${ALYX_DUMP_DIR}/backup" ]] || mkdir -p "${ALYX_DUMP_DIR}/backup"
+
+# helpers
+# -------
+
+checkdb() {
+	local datname="$1"
+	[[ -z "${datname}" ]] && datname="${PGDATABASE}"
+	echo "# => checking for existing database '${datname}'"
+	DB_NAME_EXISTS=0
+	[[ $(psql -tAc "SELECT 1 FROM pg_database WHERE datname='${datname}';") == "1" ]] &&
+		DB_NAME_EXISTS=1
+	echo ${DB_NAME_EXISTS}
+	if [[ ${DB_NAME_EXISTS} -eq 0 ]] && [[ "$2" == "-e" ]]; then
+		err_exit "database '${datname}' does not yet exist, run 'mkdb' first" \
+			"or create the database manually"
+	fi
+}
+
+checkdbusr() {
+	local usename="$1"
+	[[ -z "${usename}" ]] && usename="${PGUSER}"
+	echo "# => checking for existing database user '${usename}'"
+	DB_USER_EXISTS=0
+	[[ $(psql -tAc "SELECT 1 FROM pg_user WHERE usename  = '${usename}';") == "1" ]] &&
+		DB_USER_EXISTS=1
+	echo ${DB_USER_EXISTS}
+	if [[ ${DB_USER_EXISTS} -eq 0 ]] && [[ "$2" == "-e" ]]; then
+		err_exit "database does not have a user named '${usename}'"
+	fi
+}
+
+checkurl() {
+	local chkurl="$1"
+	shift
+	[[ -z "${chkurl}" ]] && err_exit "checkurl() requires at least 1 input arg"
+	echo "=> checking for a valid flatiron URL: $chkurl"
+	local response=$(wget --server-response --spider $chkurl $* 2>&1)
+	CONNECTION_ESTABLISHED=1
+	if [[ ! $(echo "$response" 2>&1 | grep 'HTTP/1.1 200 OK') ]] ||
+		[[ ! $(echo "$response" 2>&1 | grep 'Connection: Keep-Alive') ]]; then
+		echo "#~ Warning: could not connect to: '$chkurl' w/ '$*'"
+		echo "$response"
+		CONNECTION_ESTABLISHED=0
+	fi
+}
+
+alyxcmd() {
+	local acmd="$1"
+	shift
+	[[ -z "${acmd}" ]] && acmd=help
+	python "${alyx_manager}" "${acmd}" $*
+}
+
+# functions for postgres/django operations
+# ----------------------------------------
+
+mkdb() {
+	pg_isready
+	local pg_status=$?
+	[[ $pg_status -gt 0 ]] && err_exit "postgres not accepting connections"
+	createdb 2>/dev/null
+
+	checkdb "${PGDATABASE}"
+	if [[ ${DB_NAME_EXISTS} -eq 0 ]]; then
+		echo "# ==> creating database ${PGDATABASE}"
+		psql -c "CREATE DATABASE \"${PGDATABASE}\";"
+	fi
+
+	checkdb "${PGDATABASE}_old"
+	if [[ ${DB_NAME_EXISTS} -eq 0 ]]; then
+		echo "# ==> creating database ${PGDATABASE}_old"
+		psql -c "CREATE DATABASE \"${PGDATABASE}_old\";"
+	fi
+
+	# stop postgres container warnings
+	checkdb root
+	if [[ ${DB_NAME_EXISTS} -eq 0 ]]; then
+		psql -c "CREATE USER root WITH PASSWORD 'root';"
+		psql -c "CREATE DATABASE root;"
+	fi
+}
+
+fetchdump() {
+	if [[ -f "${ALYX_DUMP_FILE}" ]]; then
+		echo "alyx dump file '$ALYX_DUMP_FILE' already exists"
+		echo "run 'rm -f $ALYX_DUMP_FILE' to forcibly remove" \
+			"the file then re-attempt download"
+	else
+		[[ -z "${HTTP_DATA_SERVER_LOGIN}" ]] &&
+			err_exit "HTTP_DATA_SERVER_LOGIN environment variable is not set"
+		[[ -z "${HTTP_DATA_SERVER_PWD}" ]] &&
+			err_exit "HTTP_DATA_SERVER_PWD environment variable is not set"
+
+		local url="${ALYX_DUMP_URL}"
+		[[ -z "${url}" ]] &&
+			url="${HTTP_DATA_SERVER}/json/${ALYX_DL_DATE}_alyxfull.sql.gz"
+
+		checkurl "$url" \
+			--user "${HTTP_DATA_SERVER_LOGIN}" --password "${HTTP_DATA_SERVER_PWD}"
+
+		if [[ $CONNECTION_ESTABLISHED -eq 0 ]]; then
+			unset ALYX_DUMP_FILE
+		else
+			mkdir -p $(dirname "${ALYX_DUMP_FILE}")
+			echo "==> downloading database dump from '$url' ..."
+			wget -q -O ${ALYX_DUMP_FILE} \
+				--user "$HTTP_DATA_SERVER_LOGIN" \
+				--password "$HTTP_DATA_SERVER_PWD" \
+				"${url}"
+			echo "===> download complete, saved to file: '$ALYX_DUMP_FILE'"
+		fi
+	fi
+}
+
+fetchpubdump() {
+	local pub_file=public_alyx.sql.gz
+	ALYX_DUMP_FILE="${IBL_PATH_SHARED}/${pub_file}"
+	ALYX_DUMP_URL=${HTTP_DATA_SERVER}/json/${pub_file}
+	echo "=> starting fetch of public IBL data," \
+		"setting ALYX_DUMP_URL=$ALYX_DUMP_URL; ALYX_DUMP_FILE=$ALYX_DUMP_FILE"
+	fetchdump
+}
+
+cleandls() {
+	local old_dumps=$(find "${ALYX_DUMP_DIR}/sql" -type f \
+		-mmin +$((${ALYX_DUMP_EXPIRES} * 60 * 24)) 2>/dev/null)
+	if [[ ! -z ${old_dumps} ]]; then
+		echo "=> cleaning sql dumps ${old_dumps}"
+		rm -f ${old_dumps}
+	else
+		echo "=> no sql dumps to clean from $(ls -lh ${ALYX_DUMP_DIR}/sql)"
+	fi
+
+	local cache_dir="${IBL_PATH_DATA}/alyx/cache"
+	echo "==> cleaning cache files from '$cache_dir'"
+	find "${cache_dir}" -mindepth 1 ! -type d -not -name histology -printf '%s %p\n'
+	sudo find "${cache_dir}" -mindepth 1 ! -type d -not -name histology -delete
+}
+
+configalyx() {
+	echo "# => configuring alyx"
+	echo "# ==> checking if environment variables and databases exist"
+
+	[[ -z "$PGUSER" ]] && err_exit "PGUSER environment variable is not set"
+	[[ -z "$PGPASSWORD" ]] && err_exit "PGPASSWORD environment variable is not set"
+	[[ -z "$PGHOST" ]] && err_exit "PGHOST environment variable is not set"
+	[[ -z "$ALYX_SECRET_KEY" ]] && err_exit "ALYX_SECRET_KEY environment variable is not set"
+
+	# custom settings_secret for multiple DBs
+	echo "# ===> configuring settings_*.py"
+
+	# http://alyx:8000
+	sed -i \
+		-e "s/\['localhost'\]/\['localhost','alyx'\]/" \
+		"${IBL_PATH_ALYX}/alyx/alyx/settings_lab.py"
+
+	sed -i \
+		-e "s/%SECRET_KEY%/$ALYX_SECRET_KEY/" \
+		-e "s/%DBNAME%/$PGDATABASE/" \
+		-e "s/%DBUSER%/$PGUSER/" \
+		-e "s/%DBPASSWORD%/$PGPASSWORD/" \
+		-e "s/127.0.0.1/$PGHOST/" \
+		"${IBL_PATH_ALYX}/alyx/alyx/settings_secret_template.py"
+
+	sed \
+		-e "s/%SECRET_KEY%/$ALYX_SECRET_KEY/" \
+		-e "s/%DBNAME%/$PGDATABASE/" \
+		-e "s/%DBUSER%/$PGUSER/" \
+		-e "s/%DBPASSWORD%/$PGPASSWORD/" \
+		-e "s/127.0.0.1/$PGHOST/" \
+		>"${IBL_PATH_ALYX}/alyx/alyx/settings_secret.py" <<-EOF
+			SECRET_KEY  = '%SECRET_KEY%'
+
+			DATABASES  = {
+			    'default': {
+			        'ENGINE': 'django_prometheus.db.backends.postgresql',
+			        'NAME': '%DBNAME%',
+			        'USER': '%DBUSER%',
+			        'PASSWORD': '%DBPASSWORD%',
+			        'HOST': '127.0.0.1',
+			        'PORT': '5432',
+			    },
+			    'old': {
+			        'ENGINE': 'django_prometheus.db.backends.postgresql',
+			        'NAME': '%DBNAME%_old',
+			        'USER': '%DBUSER%',
+			        'PASSWORD': '%DBPASSWORD%',
+			        'HOST': '127.0.0.1',
+			        'PORT': '5432',
+			    }
+			}
+
+			EMAIL_HOST = 'mail.superserver.net'
+			EMAIL_HOST_USER = 'alyx@awesomedomain.org'
+			EMAIL_HOST_PASSWORD = 'UnbreakablePassword'
+			EMAIL_PORT = 587
+			EMAIL_USE_TLS = True
+		EOF
+
+	echo "# ====> configuring apache2"
+	local condaenvpath="/opt/local/conda/envs/${CONDA_ENV_USER}"
+	local condaenvpkgs="${condaenvpath}/lib/python3.9/site-packages"
+
+	awk \
+		-v USERNAME="$(id -un)" \
+		-v GROUPNAME=$(id -Gn) \
+		-v CENVPTH="${condaenvpath}" \
+		-v CENVPKG="${condaenvpkgs}" '{
+			sub(/LogLevel info/,"LogLevel error");
+			sub(/alyx.internationalbrainlab.org/,"localhost\n        ServerAlias alyx");
+			sub(/python-path=\/var\/www\/alyx\/alyx/,"python-path=" CENVPKG );
+			sub(/python-home=\/var\/www\/alyx\/alyxvenv/,"python-home=" CENVPTH );
+			sub(/WSGIDaemonProcess alyx python-path/,"WSGIDaemonProcess alyx user=" USERNAME " group=" GROUPNAME " python-path")
+		} 1' "${IBL_PATH_ALYX}/docs/_static/001-alyx.conf" >/etc/apache2/sites-available/001-alyx.conf
+
+	echo "ServerName localhost" > /etc/apache2/conf-available/servername.conf
+	mod_wsgi-express module-config > /etc/apache2/mods-available/wsgi.load
+
+	echo "# =====> configuring .pgpass"
+	rm -f ~/.pgpass
+	install -m 0600 /dev/null ~/.pgpass
+	echo "${PGHOST}:5432:${PGDATABASE}:${PGUSER}:${PGPASSWORD}" >>~/.pgpass
+}
+
+createsu() {
+	if [[ ! -f "${su_created_file}" ]]; then
+		set -e
+		echo "# ===> creating alyx superuser"
+		alyxcmd shell <<-EOF
+			from misc.models import LabMember
+
+			LabMember.objects.create_superuser(
+			    username='$PGUSER', email='info@datajoint.com', password='$PGPASSWORD'
+			)
+		EOF
+		echo "${PGUSER}" >"${su_created_file}"
+		alyxcmd drf_create_token "${PGUSER}" >/dev/null
+		set +e
+	else
+		echo "# ===> superuser already exists"
+	fi
+}
+
+updatealyx() {
+	checkdb ${PGDATABASE} -e
+	checkdbusr ${PGUSER} -e
+
+	psql -c "ALTER ROLE ${PGUSER} SET client_encoding TO 'utf8';"
+	psql -c "ALTER ROLE ${PGUSER} SET default_transaction_isolation TO 'read committed';"
+	psql -c "ALTER ROLE ${PGUSER} SET timezone TO 'UTC';"
+	psql -c "GRANT ALL PRIVILEGES ON DATABASE \"${PGDATABASE}\" TO \"${PGUSER}\";"
+	psql -c "ALTER USER ${PGUSER} WITH CREATEROLE;"
+	psql -c "ALTER USER ${PGUSER} WITH SUPERUSER;"
+	psql -c "ALTER USER ${PGUSER} WITH CREATEDB;"
+
+	echo "# => makemigrations"
+	alyxcmd makemigrations
+
+	echo "# ==> migrate"
+	alyxcmd migrate
+
+	echo "# ===> loading fixtures"
+	cd $(dirname ${alyx_manager})
+	../scripts/load-init-fixtures.sh
+	cd ${shell_dir}
+
+	echo "# ====> setting permissions"
+	alyxcmd set_db_permissions
+	alyxcmd set_user_permissions
+}
+
+loaddb() {
+	checkdb ${PGDATABASE} -e
+
+	if [[ "$1" == "--reset" ]]; then
+		echo "# => resetting database"
+		alyxcmd reset_db --noinput
+		updatealyx
+		rm -f "${db_loaded_file}" "${su_created_file}"
+	fi
+
+	if [[ -f "${db_loaded_file}" ]]; then
+		echo "# => database already loaded, skipping load"
+	else
+		[[ ! -f "${ALYX_DUMP_FILE}" ]] &&
+			err_exit "dump file '$ALYX_DUMP_FILE' does not exist"
+		echo "# ==> loading database ${ALYX_DUMP_FILE}"
+		gzip -dc ${ALYX_DUMP_FILE} | psql -d "${PGDATABASE}"
+		createsu
+		alyxcmd migrate
+		echo "${ALYX_DUMP_FILE}" >"${db_loaded_file}"
+	fi
+}
+
+renamedb() {
+	echo "# => renaming databases"
+
+	checkdb "${PGDATABASE}_old"
+	if [[ ${DB_NAME_EXISTS} -eq 1 ]]; then
+		echo "# ==> dropping ${PGDATABASE}_old"
+		dropdb "${PGDATABASE}_old" || err_exit "couldn't drop ${PGDATABASE}_old"
+	fi
+
+	echo "# ===> renaming ${PGDATABASE} to ${PGDATABASE}_old"
+	psql -c "alter database \"${PGDATABASE}\" rename to \"${PGDATABASE}_old\";" >/dev/null ||
+		err_exit "couldn't rename ${PGDATABASE} to ${PGDATABASE}_old"
+
+	echo "# ====> creating new ${PGDATABASE}"
+	createdb "${PGDATABASE}" || err_exit "couldn't create ${PGDATABASE} db"
+
+	rm -f "${db_loaded_file}"
+	rm -f "${su_created_file}"
+
+	echo "# ======> ok"
+}
+
+dumpjson() {
+	if [[ ! -f "${db_loaded_file}" ]]; then
+		echo "# => database not loaded - skipping json dump."
+	else
+		local json_dump_file="${ALYX_DUMP_DIR}/json/alyx_full.json"
+
+		[[ -f "${json_dump_file}" ]] &&
+			mv -f "${json_dump_file}" "${json_dump_file}.last"
+
+		echo "# => dumping db as JSON to ${json_dump_file}"
+		alyxcmd dumpdata \
+			-e contenttypes -e auth.permission \
+			-e reversion.version -e reversion.revision -e admin.logentry \
+			-e actions.ephyssession \
+			-e actions.notification \
+			-e actions.notificationrule \
+			-e actions.virusinjection \
+			-e data.download \
+			-e experiments.brainregion \
+			-e jobs.task \
+			-e misc.note \
+			-e subjects.subjectrequest \
+			--indent 1 -o "${json_dump_file}"
+	fi
+}
+
+dumpsql() {
+	echo "# => performing sql backup"
+	pg_dump -cOx -U ${PGUSER} -h ${PGHOST} -d ${PGDATABASE} \
+		-f "${ALYX_DUMP_DIR}/backup/alyx_full.sql"
+	echo "# ==> zipping sql backup"
+	gzip -f "${ALYX_DUMP_DIR}/backup/alyx_full.sql"
+}
+
+oneparams() {
+	cat <<-EOF >"${IBL_PATH_SHARED}/local.one_params"
+		{
+		    "ALYX_LOGIN": "${PGUSER}",
+		    "ALYX_PWD": "${PGPASSWORD}",
+		    "ALYX_URL": "http://localhost:${ALYX_PORT}",
+		    "CACHE_DIR": null,
+		    "HTTP_DATA_SERVER_LOGIN": "${HTTP_DATA_SERVER_LOGIN}",
+		    "HTTP_DATA_SERVER_PWD": "${HTTP_DATA_SERVER_PWD}",
+		    "HTTP_DATA_SERVER": "${HTTP_DATA_SERVER}"
+		}
+	EOF
+}
+
+stopserver() {
+	sudo a2dissite -q 001-alyx
+	sudo a2dismod -q wsgi
+	sudo service apache2 stop >/dev/null
+	sudo pkill -f "manage.py runserver"
+	ps auxw | grep runserver
+}
+
+startserver() {
+	echo "# => starting alyx"
+	[[ -z "${ALYX_PORT}" ]] && err_exit "port '${ALYX_PORT}' from ALYX_PORT is empty"
+	oneparams
+	stopserver
+	sudo service apache2 restart >/dev/null
+	source /etc/apache2/envvars
+	sudo a2enconf servername
+	sudo a2enmod -q wsgi
+	sudo a2ensite -q 001-alyx
+	sudo service apache2 reload >/dev/null
+	alyxcmd runserver --insecure 0.0.0.0:${ALYX_PORT}
+}
+
+checkserver() {
+	echo "# => checking alyx"
+	alyxcmd check --database default
+	alyxcmd check
+	[[ $(netstat -ano | grep "0.0.0.0:${ALYX_PORT}") ]] ||
+		err_exit "server not running at 0.0.0.0:${ALYX_PORT}"
+}
+
+# Routines
+# --------
+
+initdb() {
+	mkdb
+	configalyx
+	updatealyx
+	createsu
+}
+
+loaddump() {
+	fetchdump
+	mkdb
+	configalyx
+	updatealyx
+	loaddb
+}
+
+www() {
+	loaddump
+	startserver
+}
+
+reloaddb() {
+	fetchdump
+	loaddb --reset
+}
+
+loadpubdump() {
+	fetchpubdump
+	mkdb
+	configalyx
+	updatealyx
+	rm -f "${db_loaded_file}" "${su_created_file}"
+	loaddb
+}
+
+wwwpublic() {
+	loadpubdump
+	startserver
+}
+
+# Development
+# -----------
+
+dev() {
+	echo -e "starting development environment...\n"
+	exec tail -f /dev/null
+}
+
+# Start
+# -----
+
+# switch to appropriate python environment
+[[ -z "${CONDA_ENV_USER}" ]] && CONDA_ENV_USER=base
+conda activate $CONDA_ENV_USER
+
+# run sequence of operations specified by user
+if [[ ${#OPS_SEQ[@]} -gt 0 ]]; then
+	echo "# > operation sequence: ${OPS_SEQ[@]}"
+	for fn in ${OPS_SEQ[@]}; do
+		echo "---- ${fn}() ----"
+		$fn
+	done
+fi
+
+# run rest of user specified commands
+exec -l "$@"
