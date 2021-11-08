@@ -105,10 +105,15 @@ services:
 
   ingest:
     <<: *iblenv-alyx
+    entrypoint:
+      - ingest
     command:
       - init_cfg
       - start_jupyter
     container_name: ingest
+    depends_on:
+      alyx:
+        condition: service_healthy
     ports:
       - target: ${JUPYTER_PORT:-10000}
         published: ${JUPYTER_PORT:-10000}
