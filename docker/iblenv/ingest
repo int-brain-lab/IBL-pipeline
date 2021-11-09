@@ -23,7 +23,8 @@ OPS_SEQ=()
 [[ -z "${JUPYTER_PORT}" ]] && JUPYTER_PORT=10000
 [[ -z "${JUPYTER_TOKEN}" ]] && JUPYTER_TOKEN=IBLt0k
 
-init_dot_py="${IBL_PATH_ROOT}/init.py"
+init_dot_py=/usr/local/bin/config_init.py
+CFG_INIT_ARGS=()
 INIT_CFG_ARGS=
 
 show_help() {
@@ -91,6 +92,14 @@ while [[ $# -gt 0 ]]; do
     "init_cfg")
         OPS_SEQ+=("init_cfg")
         shift
+        for arg in "$@"; do
+            case "$1" in
+            --alyxhost=*)
+                CFG_INIT_ARGS+=("$1")
+                shift
+                ;;
+            esac
+        done
         ;;
     "start_jupyter")
         OPS_SEQ+=("start_jupyter")
@@ -113,6 +122,7 @@ dev() {
 }
 
 copy_one_params() {
+    [[ -f "${IBL_PATH_SHARED}/local.one_params" ]] || alyx oneparams
     cp -fv "${IBL_PATH_SHARED}/local.one_params" ~/
 }
 

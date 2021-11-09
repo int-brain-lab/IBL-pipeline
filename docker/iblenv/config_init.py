@@ -1,16 +1,16 @@
 """Setup DataJoint config and ONE-api connection
 
-DESCRIPTION
+Initialize configuration files for DataJoint and ONE and their connections.
 
 Usage as a script:
 
-    python init.py ...
+    python config_init.py ...
 
 See script help messages:
 
-    python init.py --help
+    python config_init.py --help
 
-(or the function `x:x` can be imported directly)
+(or the functions `init_dj_config` or `init_one_alyx` can be imported directly)
 """
 
 import argparse

@@ -255,19 +255,17 @@ RUN mkdir -p \
 		/home/$USERNAME/.vscode-server-insiders/extensions
 
 # alyx/DataJoint config initialization files saved to root IBL path
-COPY --chown=${USER_UID}:${USER_GID} \
-		"${REL_PATH_DOCKFILE}/init.py" \
-		"${REL_PATH_DOCKFILE}/template.ingest.json" \
-		./
+COPY --chown=${USER_UID}:${USER_GID} "${REL_PATH_DOCKFILE}/template.ingest.json" ./
 
 # copy over entrypoint executable scripts to bin dir in PATH
 COPY --chown=${USER_UID}:${USER_GID} \
 		"${REL_PATH_DOCKFILE}/ingest" \
 		"${REL_PATH_DOCKFILE}/alyx" \
+		"${REL_PATH_DOCKFILE}/config_init.py" \
 		/usr/local/bin/
 
 # make executable
-RUN chmod 771 init.py /usr/local/bin/alyx /usr/local/bin/ingest
+RUN chmod 771 /usr/local/bin/config_init.py /usr/local/bin/alyx /usr/local/bin/ingest
 
 ## Target IBL environment image ========================================================
 FROM scratch as iblenv_alyx

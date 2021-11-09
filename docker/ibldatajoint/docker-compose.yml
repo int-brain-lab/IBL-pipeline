@@ -25,10 +25,10 @@ x-ibl-pipeline-mount: &ibl-pipeline-mount
 
 x-shared-networks: &shared-networks
   networks:
-    ingest_dev:
+    ingestion:
 
 x-iblenv-alyx: &iblenv-alyx
-  image: iamamutt/iblenv_alyx:latest # iblenv_alyx:latest
+  image: iblenv_alyx:latest # iamamutt/iblenv_alyx:latest
   environment:
     ALYX_LOGIN: ${ALYX_LOGIN:-}
     ALYX_PWD: ${ALYX_PWD:-}
@@ -118,8 +118,10 @@ services:
   jupyter:
     <<: *ingest-common
     command:
-      - init_cfg
-      - start_jupyter
+      - --
+      - python
+      - config_init.py
+      # - start_jupyter
     container_name: jupyter
     ports:
       - target: ${JUPYTER_PORT:-10000}

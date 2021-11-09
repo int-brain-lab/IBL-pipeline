@@ -45,7 +45,7 @@ def env_test():
     tmp_local.unlink(True)
     copyfile(local_one_params, tmp_local)
 
-    from init import (
+    from config_init import (
         get_config,
         init_one_alyx,
         init_dj_config,
@@ -60,5 +60,6 @@ def env_test():
 
     init_dj_config(tmp_json)
     init_one_alyx("local", tmp_local)
+
     _dest_one_params_path.unlink(True)
     _dest_dj_config_path.unlink(True)
