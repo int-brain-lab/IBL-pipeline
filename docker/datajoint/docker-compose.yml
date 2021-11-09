@@ -1,0 +1,132 @@
+# Setup containers for IBL datajoint pipeline ingestion routines
+# Joseph Burling <joseph@datajoint.com>
+# --------------------------------------------------------------------------------------
+# Basic usage:
+#   docker-compose up --detach
+#   docker-compose down
+#   docker-compose down --volumes
+
+# Shared properties across services ----------------------------------------------------
+
+x-ibl-data-volume: &ibl-data-volume
+  - type: volume
+    source: datacache
+    target: /int-brain-lab/data
+
+x-ibl-shared-mount: &ibl-shared-mount
+  - type: bind
+    source: ../../shared
+    target: /int-brain-lab/shared
+
+x-ibl-pipeline-mount: &ibl-pipeline-mount
+  - type: bind
+    source: ../../ibl_pipeline
+    target: /int-brain-lab/ibldatajoint/ibl_pipeline
+
+x-shared-networks: &shared-networks
+  networks:
+    ingest_dev:
+
+x-iblenv-alyx: &iblenv-alyx
+  image: iamamutt/iblenv_alyx:latest # iblenv_alyx:latest
+  environment:
+    ALYX_LOGIN: ${ALYX_LOGIN:-}
+    ALYX_PWD: ${ALYX_PWD:-}
+    ALYX_URL: ${ALYX_URL:-}
+    DJ_HOST: ${DJ_HOST:-datajoint.internationalbrainlab.org}
+    DJ_MODE: ${DJ_MODE:-test}
+    DJ_PASS: ${DJ_PASS:-}
+    DJ_USER: ${DJ_USER:-}
+    HTTP_DATA_SERVER_LOGIN: ${HTTP_DATA_SERVER_LOGIN:?set HTTP_DATA_SERVER_LOGIN in .env file}
+    HTTP_DATA_SERVER_PWD: ${HTTP_DATA_SERVER_PWD:?set HTTP_DATA_SERVER_PWD in .env file}
+    IBL_PATH_ROOT: /int-brain-lab
+    JUPYTER_PORT: ${JUPYTER_PORT:-10000}
+    PGDATABASE: ${ALYX_DB_NAME:-alyxdb}
+    PGHOST: ${PGHOST:-pgserver}
+    PGPASSWORD: ${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
+    PGUSER: ${ALYX_DB_USER:-alyxadmin}
+    S3_ACCESS: ${S3_ACCESS:-}
+    S3_MIGRATE_BUCKET: ${S3_MIGRATE_BUCKET:-ibl-dj-external}
+    S3_ROOT_PATH: ${S3_ROOT_PATH:-}
+    S3_SECRET: ${S3_SECRET:-}
+  init: true
+  <<: *shared-networks
+  volumes:
+    - <<: *ibl-data-volume
+    - <<: *ibl-shared-mount
+    - <<: *ibl-pipeline-mount
+
+x-ingest-common: &ingest-common
+  <<: *iblenv-alyx
+  entrypoint:
+    - ingest
+  depends_on:
+    alyx:
+      condition: service_healthy
+
+services:
+  # Postgres Server --------------------------------------------------------------------
+  pgserver:
+    container_name: postgres_db_server
+    environment:
+      POSTGRES_DB: ${ALYX_DB_NAME:-alyxdb}
+      POSTGRES_PASSWORD: ${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
+      POSTGRES_USER: ${ALYX_DB_USER:-alyxadmin}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready
+      timeout: 15s
+      interval: 1m0s
+      retries: 3
+      start_period: 30s
+    image: postgres:13-bullseye
+    <<: *shared-networks
+    ports:
+      - target: 5432
+        published: 5438
+    volumes:
+      - type: volume
+        source: pgdata
+        target: /var/lib/postgresql/data
+        volume: {}
+
+  # IBL Environment for DataJoint Ingestion --------------------------------------------
+  alyx:
+    <<: *iblenv-alyx
+    entrypoint:
+      - alyx
+    command:
+      - wwwpublic
+    container_name: alyx_db_server
+    depends_on:
+      pgserver:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - alyx
+        - checkserver
+      timeout: 15s
+      interval: 30s
+      retries: 5
+      start_period: 2m0s
+    ports:
+      - target: ${ALYX_PORT:-8000}
+        published: ${ALYX_PORT:-8000}
+
+  jupyter:
+    <<: *ingest-common
+    command:
+      - init_cfg
+      - start_jupyter
+    container_name: jupyter
+    ports:
+      - target: ${JUPYTER_PORT:-10000}
+        published: ${JUPYTER_PORT:-10000}
+
+# Global Networks and Volumes ----------------------------------------------------------
+<<: *shared-networks
+volumes:
+  datacache:
+  pgdata:
