@@ -17,14 +17,17 @@ def load_env(file):
 
 def env_test():
     this_dir = Path(__file__).parent
-    env_file = this_dir / ".." / ".env"
+    env_file = this_dir / ".." / "ingest" / ".env"
     ingest_json = this_dir / "template.ingest.json"
-    local_one_params = this_dir / ".." / ".." / ".." / "shared" / "local.one_params"
+    local_one_params = this_dir / ".." / ".." / "shared" / "local.one_params"
 
     if not env_file.exists():
         raise FileNotFoundError("wrong path for .env file")
+
+    # load environment variables from .env file
     load_env(env_file.resolve())
 
+    # temp dir for cache and ibl root
     tempd = Path(tempfile.gettempdir())
     ibl_path_root = tempd / "int-brain-lab"
     rmtree(ibl_path_root, ignore_errors=True)

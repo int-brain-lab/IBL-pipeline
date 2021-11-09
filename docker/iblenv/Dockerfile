@@ -307,9 +307,13 @@ ENV DJANGO_SETTINGS_MODULE=alyx.settings
 ENV PYTHONPATH="${IBL_PATH_ALYX}/alyx"
 ENV PGPASSWORD=supersecretdbpass
 
-# flatiron access credentials
+# alyx/flatiron access credentials
+ENV HTTP_DATA_SERVER=https://ibl.flatironinstitute.org
 ENV HTTP_DATA_SERVER_LOGIN=
 ENV HTTP_DATA_SERVER_PWD=
+ENV ALYX_LOGIN=
+ENV ALYX_PWD=
+ENV ALYX_URL=
 
 # DataJoint config
 ENV DJ_MODE=test

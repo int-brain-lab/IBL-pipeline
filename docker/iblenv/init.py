@@ -87,10 +87,9 @@ def parse_args(args: Sequence[str]) -> argparse.Namespace:
         dest="one_file",
         help="Path to a JSON file with ONE parameters. "
         "Must be accessible from within the container. "
-        "Contents will be temporarily saved to '~/.one_params'. "
-        "Leave blank to use default template JSON.",
+        "Contents will be temporarily saved to '~/.one_params'. ",
         type=str,
-        default=_default_local_one_params.as_posix(),
+        default=None,
     )
 
     parser.add_argument(
@@ -109,6 +108,15 @@ def parse_args(args: Sequence[str]) -> argparse.Namespace:
 
 
 def _read_file(file: StrPath) -> str:
+    """
+    Return a string representation of a file that has c-style comments removed
+
+    :param file: A text file
+    :type file: StrPath
+    :raises FileNotFoundError: Path from `file` must exist
+    :return: string content of the text file
+    :rtype: str
+    """
     file = Path(file)
     if not file.exists():
         raise FileNotFoundError(file.as_posix())
@@ -128,10 +136,10 @@ def assert_keys(obj: dict, keys: StrVec = None) -> None:
 
 
 def insert_envars(mappings: dict) -> dict:
-    for rep, env in mappings.items():
-        mappings[rep] = os.getenv(env)
-        if mappings[rep] is None:
-            print(f"#~ WARNING: environment variable '{env}' is empty.")
+    for tag, env in mappings.items():
+        mappings[tag] = os.getenv(env)
+        if mappings[tag] is None:
+            print(f"#~ INFO: environment variable '{env}' is empty.")
 
     return mappings
 
@@ -169,14 +177,39 @@ def one_params_mappings() -> dict:
 
 
 def replace_tags(cfg_str: str, mappings: dict) -> str:
-    for rep, value in mappings.items():
-        cfg_str = cfg_str.replace(rep, value or "")
+    """
+    Take a long string with multiple tags (e.g., %TAG%) and replace them with matching
+    values found in `mappings`
+
+    :param cfg_str: A long string with tags
+    :type cfg_str: str
+    :param mappings: key-value pairs of values to use to replace tags
+    :type mappings: dict
+    :return: Input string but with tags replaced
+    :rtype: str
+    """
+    for tag, value in mappings.items():
+        cfg_str = cfg_str.replace(tag, value or "")
     return cfg_str.replace('""', "null")
 
 
 def get_config(
     file: Path, cfg_set: str, mappings: dict, must_exist: StrVec = None
 ) -> dict:
+    """
+    Read a JSON config file and replace tags with the provided mappings
+
+    :param file: Path to a JSON file
+    :type file: Path
+    :param cfg_set: Top-level key, e.g., "alyx" or "datajoint"
+    :type cfg_set: str
+    :param mappings: Dictionary of '%TAG%':'value' mappings
+    :type mappings: dict
+    :param must_exist: A list keys that just exist in the config, defaults to None
+    :type must_exist: StrVec, optional
+    :return: JSON configuration as dict with tags replaced.
+    :rtype: dict
+    """
     cfg_str = replace_tags(_read_file(file), mappings)
     config = json.loads(cfg_str)
     config = config.get(cfg_set, config)
@@ -205,22 +238,31 @@ def connect_alyx(base_url: str) -> OneAlyx:
     :return: A connection object used to interact with an Alyx database
     :rtype: one.api.OneAlyx
     """
-    # base_url and password are minimum required arguments if
-    # .one_params is filled out correctly
+    # the arguments base_url and password are the minimum required if
+    # the rest of ~/.one_params is filled out correctly
     one_args = {
         "base_url": base_url,
         "silent": True,
     }
 
     if _dest_one_params_path.exists():
+        print("#~ INFO: Removing existing ~/.one_params file")
         with open(_dest_one_params_path, "r") as jsf:
             params = json.load(jsf)
         one_args = {"password": params.get("ALYX_PWD", None), **one_args}
 
+    print("#~ INFO: Initiating connection to Alyx")
     return OneAlyx(**one_args)
 
 
 def init_one_alyx(host: str = "dev", file: Optional[Path] = None) -> None:
+    # using environment variables instead of file
+    if file is None:
+        if host in ["private", "public"]:
+            file = _default_json_template
+        elif host in ["dev", "local"]:
+            file = _default_local_one_params
+
     params = get_config(
         file or _default_local_one_params,
         cfg_set="alyx",
@@ -240,11 +282,13 @@ def init_one_alyx(host: str = "dev", file: Optional[Path] = None) -> None:
         params["ALYX_URL"] = params["ALYX_URL"].replace("localhost", "alyx")
         params["CACHE_DIR"] = None
 
+    # make cache dir based on type of host connection
     if not params.get("CACHE_DIR"):
         cache_dir = Path(IBL_PATH_DATA) / "alyx" / "cache" / host
         cache_dir.mkdir(0o776, True, True)
         params["CACHE_DIR"] = cache_dir.as_posix()
 
+    # if CACHE_DIR is pre set in .one_params file, make sure it exists
     if not Path(params["CACHE_DIR"]).exists():
         raise NotADirectoryError(
             f'CACHE_DIR: {params["CACHE_DIR"]}, custom path must exist'
