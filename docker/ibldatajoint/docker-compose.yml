@@ -8,6 +8,26 @@
 
 # Shared properties across services ----------------------------------------------------
 
+x-img-env-vars: &img-env-vars
+  ALYX_LOGIN: ${ALYX_LOGIN:-}
+  ALYX_PORT: ${ALYX_PORT:-8000}
+  ALYX_PWD: ${ALYX_PWD:-}
+  ALYX_URL: ${ALYX_URL:-}
+  DJ_HOST: ${DJ_HOST:-datajoint.internationalbrainlab.org}
+  DJ_MODE: ${DJ_MODE:-test}
+  DJ_PASS: ${DJ_PASS:-}
+  DJ_USER: ${DJ_USER:-}
+  HTTP_DATA_SERVER_LOGIN: ${HTTP_DATA_SERVER_LOGIN:?set HTTP_DATA_SERVER_LOGIN in .env file}
+  HTTP_DATA_SERVER_PWD: ${HTTP_DATA_SERVER_PWD:?set HTTP_DATA_SERVER_PWD in .env file}
+  PGDATABASE: ${ALYX_DB_NAME:-alyxdb}
+  PGHOST: ${PGHOST:-pgserver}
+  PGPASSWORD: ${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
+  PGUSER: ${ALYX_DB_USER:-alyxadmin}
+  S3_ACCESS: ${S3_ACCESS:-}
+  S3_MIGRATE_BUCKET: ${S3_MIGRATE_BUCKET:-ibl-dj-external}
+  S3_ROOT_PATH: ${S3_ROOT_PATH:-}
+  S3_SECRET: ${S3_SECRET:-}
+
 x-ibl-data-volume: &ibl-data-volume
   - type: volume
     source: datacache
@@ -27,42 +47,24 @@ x-shared-networks: &shared-networks
   networks:
     ingestion:
 
-x-iblenv-alyx: &iblenv-alyx
+x-iblenv-image-common: &iblenv-image-common
   image: iblenv_alyx:latest # iamamutt/iblenv_alyx:latest
   environment:
-    ALYX_LOGIN: ${ALYX_LOGIN:-}
-    ALYX_PWD: ${ALYX_PWD:-}
-    ALYX_URL: ${ALYX_URL:-}
-    DJ_HOST: ${DJ_HOST:-datajoint.internationalbrainlab.org}
-    DJ_MODE: ${DJ_MODE:-test}
-    DJ_PASS: ${DJ_PASS:-}
-    DJ_USER: ${DJ_USER:-}
-    HTTP_DATA_SERVER_LOGIN: ${HTTP_DATA_SERVER_LOGIN:?set HTTP_DATA_SERVER_LOGIN in .env file}
-    HTTP_DATA_SERVER_PWD: ${HTTP_DATA_SERVER_PWD:?set HTTP_DATA_SERVER_PWD in .env file}
-    IBL_PATH_ROOT: /int-brain-lab
-    JUPYTER_PORT: ${JUPYTER_PORT:-10000}
-    PGDATABASE: ${ALYX_DB_NAME:-alyxdb}
-    PGHOST: ${PGHOST:-pgserver}
-    PGPASSWORD: ${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
-    PGUSER: ${ALYX_DB_USER:-alyxadmin}
-    S3_ACCESS: ${S3_ACCESS:-}
-    S3_MIGRATE_BUCKET: ${S3_MIGRATE_BUCKET:-ibl-dj-external}
-    S3_ROOT_PATH: ${S3_ROOT_PATH:-}
-    S3_SECRET: ${S3_SECRET:-}
+    <<: *img-env-vars
   init: true
   <<: *shared-networks
-  volumes:
-    - <<: *ibl-data-volume
-    - <<: *ibl-shared-mount
-    - <<: *ibl-pipeline-mount
 
-x-ingest-common: &ingest-common
-  <<: *iblenv-alyx
+x-dj-pipeline-common: &dj-pipeline-common
+  <<: *iblenv-image-common
   entrypoint:
     - ingest
   depends_on:
     alyx:
       condition: service_healthy
+  volumes:
+    - <<: *ibl-data-volume
+    - <<: *ibl-shared-mount
+    - <<: *ibl-pipeline-mount
 
 services:
   # Postgres Server --------------------------------------------------------------------
@@ -93,7 +95,7 @@ services:
 
   # IBL Environment for DataJoint Ingestion --------------------------------------------
   alyx:
-    <<: *iblenv-alyx
+    <<: *iblenv-image-common
     entrypoint:
       - alyx
     command:
@@ -114,14 +116,37 @@ services:
     ports:
       - target: ${ALYX_PORT:-8000}
         published: ${ALYX_PORT:-8000}
+    volumes:
+      - <<: *ibl-data-volume
+      - <<: *ibl-shared-mount
+
+  ingest:
+    <<: *dj-pipeline-common
+    command:
+      - config_init
+      - --alyxhost=private
+      - populate
+      - ingest
+      - --duration=0.1
+      - --backtrack=5
+    scale: ${WORKER_COUNT:-1}
+
+  populate_behavior:
+    <<: *dj-pipeline-common
+    command:
+      - config_init
+      - --alyxhost=private
+      - populate
+      - behavior
+      - --duration=0.1
+      - --backtrack=5
+    container_name: populate_behavior
 
   jupyter:
-    <<: *ingest-common
+    <<: *dj-pipeline-common
     command:
-      - --
-      - python
-      - config_init.py
-      # - start_jupyter
+      - config_init
+      - jupyterlab
     container_name: jupyter
     ports:
       - target: ${JUPYTER_PORT:-10000}
