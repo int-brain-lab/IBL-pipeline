@@ -139,7 +139,7 @@ def insert_envars(mappings: dict) -> dict:
     for tag, env in mappings.items():
         mappings[tag] = os.getenv(env)
         if mappings[tag] is None:
-            print(f"#~ INFO: environment variable '{env}' is empty.")
+            print(f"#~ INFO: Environment variable '{env}' is empty.")
 
     return mappings
 
@@ -262,7 +262,10 @@ def init_one_alyx(host: str = "dev", file: Optional[Path] = None) -> None:
             file = _default_json_template
         elif host in ["dev", "local"]:
             file = _default_local_one_params
+        else:
+            raise FileExistsError("'host' must be valid if file not present")
 
+    file = Path(file)
     params = get_config(
         file or _default_local_one_params,
         cfg_set="alyx",
@@ -318,7 +321,7 @@ def init_dj_config(file: Path) -> None:
         ],
     )
     if not config.get("connection.charset"):
-        config["connection.charset"] = "''"
+        config["connection.charset"] = ""
     _dest_dj_config_path.unlink(True)
     _dest_dj_config_path.touch(0o664)
     with open(_dest_dj_config_path, "w") as f:
@@ -333,7 +336,7 @@ def main(args: Sequence[str]) -> None:
     :type args: Sequence[str]
     """
     args = parse_args(args)
-    init_one_alyx(args.alyx_host, Path(args.one_file))
+    init_one_alyx(args.alyx_host, args.one_file)
     init_dj_config(Path(args.dj_cfg_file))
 
 

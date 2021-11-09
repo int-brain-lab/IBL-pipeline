@@ -20,7 +20,7 @@ docker build \
     --build-arg USER_GID=1000 \
     --build-arg USER_UID=1000 \
     --build-arg REL_PATH_DOCKFILE=docker/iblenv \
-    --build-arg CONDA_ENV_FILE=docker/iblenv/iblenv.yaml \
+    --build-arg CONDA_ENV_FILE=docker/iblenv/iblenv.dj.yml \
     ../../.
 ```
 

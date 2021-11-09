@@ -228,6 +228,13 @@ RUN <<-EOF
 	mamba develop --build_ext .
 EOF
 
+RUN <<-EOF
+	git clone --branch develop https://github.com/int-brain-lab/ibllib.git
+	cd ./ibllib
+	conda activate ${CONDA_ENV_USER}
+	mamba develop --build_ext .
+EOF
+
 # install datajoint pipeline package, requirements should already be in CONDA_ENV_USER
 COPY --chown=${USER_UID}:${USER_GID} \
 	"${REL_PATH_DOCKFILE}/../../ibl_pipeline" \
@@ -262,10 +269,15 @@ COPY --chown=${USER_UID}:${USER_GID} \
 		"${REL_PATH_DOCKFILE}/ingest" \
 		"${REL_PATH_DOCKFILE}/alyx" \
 		"${REL_PATH_DOCKFILE}/config_init.py" \
+		"${REL_PATH_DOCKFILE}/populate.py" \
 		/usr/local/bin/
 
 # make executable
-RUN chmod 771 /usr/local/bin/config_init.py /usr/local/bin/alyx /usr/local/bin/ingest
+RUN chmod 771 \
+		/usr/local/bin/config_init.py \
+		/usr/local/bin/populate.py \
+		/usr/local/bin/alyx \
+		/usr/local/bin/ingest
 
 ## Target IBL environment image ========================================================
 FROM scratch as iblenv_alyx

@@ -13,35 +13,35 @@ script_path="$(cd "$(dirname ${script_cmd})" &>/dev/null && pwd)"
 script_file=$(basename "${script_cmd}")
 shell_dir=$PWD
 
-SHOW_HELP=0
-OPS_SEQ=()
-
-[[ -z "${IBL_PATH_ROOT}" ]] && err_exit "IBL_PATH_ROOT is empty"
-[[ -z "${IBL_PATH_DATA}" ]] && err_exit "IBL_PATH_DATA is empty"
-[[ -z "${IBL_PATH_SHARED}" ]] && err_exit "IBL_PATH_SHARED is empty"
 [[ -z "$CONDA_ENV_USER" ]] && CONDA_ENV_USER=base
 [[ -z "${JUPYTER_PORT}" ]] && JUPYTER_PORT=10000
 [[ -z "${JUPYTER_TOKEN}" ]] && JUPYTER_TOKEN=IBLt0k
 
 init_dot_py=/usr/local/bin/config_init.py
+populate_dot_py=/usr/local/bin/populate.py
+
+SHOW_HELP=0
+OPS_SEQ=()
 CFG_INIT_ARGS=()
-INIT_CFG_ARGS=
+POPULATE_ARGS=()
 
 show_help() {
-    echo "usage: $script_file [OPTION]... FUNC/ROUTINE... [-- EXEC_CMD]
+    echo "usage: $script_file FUNC/ROUTINE [OPTION]... [-- EXEC_CMD]
 
 Entrypoint for ingestion routines
-
-Options:
-
---jupytertok=JUPYTER_TOKEN ... Token to use when connecting to a jupyterlab server
---jupyterport=JUPYTER_PORT ... Port to use for a new Jupyter Lab session
 
 Functions:
 
 dev .............. Initialize parent process and wait indefinitely
 copy_one_params .. Copy 'local.one_params' parameters file from shared to home dir
-init_cfg ......... Init configuration files for Alyx and DataJoint
+config_init ...... Init configuration files for Alyx and DataJoint. Can pass args from
+                   'config_init.py' after specifying this function to run.
+                   See examples section below.
+populate ......... Run the python script ${populate_dot_py}.
+                   Can pass args to script if args are specified after 'populate'.
+                   See examples section below.
+jupyterlab ....... Start a jupyter lab server using the link below.
+                     http://127.0.0.1:${JUPYTER_PORT}/lab?token=${JUPYTER_TOKEN}
 
 
 Environment Variables:
@@ -53,30 +53,22 @@ Environment Variables:
 Examples:
 
  Start a dev container
+   > $script_file dev
 
-   $script_file dev
+ Initialize configuration for Alyx and DataJoint
+   > $script_file config_init --alyxhost=private --djcfg='$IBL_PATH_ROOT/template.ingest.json'
 
+ Run a population task
+   > $script_file populate behavior -b 5 --duration=0.5
+
+ Start a jupyter lab server using custom token and port
+   > $script_file jupyterlab --jupytertok=$JUPYTER_TOKEN --jupyterport=$JUPYTER_PORT
 "
     exit 0
 }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-    --jupytertok=*)
-        JUPYTER_TOKEN="${1#*=}"
-        echo "--jupytertok passed. Using token: '$JUPYTER_TOKEN'"
-        shift
-        ;;
-    --jupyterport=*)
-        JUPYTER_PORT="${1#*=}"
-        echo "--jupyterport passed. Using port: '$JUPYTER_PORT'"
-        shift
-        ;;
-    --initargs=*)
-        INIT_CFG_ARGS="${1#*=}"
-        echo "--initargs passed. Using args: '$INIT_CFG_ARGS'"
-        shift
-        ;;
     "help" | "--help" | "-h" | "--help")
         SHOW_HELP=1
         break
@@ -89,21 +81,65 @@ while [[ $# -gt 0 ]]; do
         OPS_SEQ+=("copy_one_params")
         shift
         ;;
-    "init_cfg")
-        OPS_SEQ+=("init_cfg")
+    "config_init")
+        OPS_SEQ+=("config_init")
         shift
         for arg in "$@"; do
             case "$1" in
-            --alyxhost=*)
+            --alyxhost=* | --onepar=* | --djcfg=*)
+                echo "config_init.py arg: '$1'"
                 CFG_INIT_ARGS+=("$1")
                 shift
                 ;;
             esac
         done
         ;;
-    "start_jupyter")
-        OPS_SEQ+=("start_jupyter")
+    "populate")
+        OPS_SEQ+=("populate")
         shift
+        for arg in "$@"; do
+            case "$1" in
+            ingest | behavior | wheel | ephys)
+                POPULATE_ARGS+=("$1")
+                shift
+                ;;
+            --duration=* | --backtrack=*)
+                echo "populate.py arg: '$1'"
+                POPULATE_ARGS+=("$1")
+                shift
+                ;;
+            -d)
+                echo "populate.py arg: '-d $1'"
+                POPULATE_ARGS+=("--duration=$2")
+                shift
+                shift
+                ;;
+            -b)
+                echo "populate.py arg: '-b $1'"
+                POPULATE_ARGS+=("--backtrack=$2")
+                shift
+                shift
+                ;;
+            esac
+        done
+        ;;
+    "jupyterlab")
+        OPS_SEQ+=("jupyterlab")
+        shift
+        for arg in "$@"; do
+            case "$1" in
+            --jupytertok=*)
+                JUPYTER_TOKEN="${1#*=}"
+                echo "--jupytertok passed. Using token: '$JUPYTER_TOKEN'"
+                shift
+                ;;
+            --jupyterport=*)
+                JUPYTER_PORT="${1#*=}"
+                echo "--jupyterport passed. Using port: '$JUPYTER_PORT'"
+                shift
+                ;;
+            esac
+        done
         ;;
     "--")
         shift
@@ -116,6 +152,15 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# show help if asked
+# ------------------
+
+[[ ${SHOW_HELP} -eq 1 ]] && show_help
+
+[[ -z "${IBL_PATH_ROOT}" ]] && err_exit "IBL_PATH_ROOT is empty"
+[[ -z "${IBL_PATH_DATA}" ]] && err_exit "IBL_PATH_DATA is empty"
+[[ -z "${IBL_PATH_SHARED}" ]] && err_exit "IBL_PATH_SHARED is empty"
+
 dev() {
     echo -e "starting development environment...\n"
     exec tail -f /dev/null
@@ -126,14 +171,19 @@ copy_one_params() {
     cp -fv "${IBL_PATH_SHARED}/local.one_params" ~/
 }
 
-start_jupyter() {
-    echo "Jupyter link: http://127.0.0.1:${JUPYTER_PORT}/lab?token=${JUPYTER_TOKEN}"
-    jupyter lab -y --no-browser --ip=0.0.0.0 --port=${JUPYTER_PORT} --ServerApp.token="${JUPYTER_TOKEN}"
+config_init() {
+    copy_one_params
+    alyx configalyx
+    python $init_dot_py ${CFG_INIT_ARGS[@]}
 }
 
-init_cfg() {
-    copy_one_params
-    python $init_dot_py ${INIT_CFG_ARGS}
+populate() {
+    python $populate_dot_py ${POPULATE_ARGS[@]}
+}
+
+jupyterlab() {
+    echo "Jupyter link: http://127.0.0.1:${JUPYTER_PORT}/lab?token=${JUPYTER_TOKEN}"
+    jupyter lab -y --no-browser --ip=0.0.0.0 --port=${JUPYTER_PORT} --ServerApp.token="${JUPYTER_TOKEN}"
 }
 
 # Start operations ---------------------------------------------------------------------
