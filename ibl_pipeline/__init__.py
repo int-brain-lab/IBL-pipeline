@@ -6,7 +6,7 @@ _one = None
 
 dj.config["enable_python_native_blobs"] = True
 
-mode = dj.config.get('custom', {}).get('database.mode', os.getenv('MODE', ''))
+mode = dj.config.get("custom", {}).get("database.mode", os.getenv("MODE", ""))
 
 if mode == "test":
     dj.config["database.prefix"] = "test_"
@@ -28,8 +28,8 @@ class S3Access(dj.Manual):
 
 
 # attempt to get S3 access/secret key from different sources
-access_key = os.environ.get("S3_ACCESS")
-secret_key = os.environ.get("S3_SECRET")
+access_key = os.getenv("S3_ACCESS")
+secret_key = os.getenv("S3_SECRET")
 
 if (access_key is None or secret_key is None) and len(S3Access.fetch()) > 0:
     # if there are multiple entries in S3, it won't work

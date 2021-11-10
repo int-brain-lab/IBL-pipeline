@@ -8,8 +8,6 @@ import datajoint as dj
 import pathlib
 import numpy as np
 
-mode = os.getenv('MODE')
-
 django.setup()
 
 # alyx models
