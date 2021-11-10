@@ -8,6 +8,8 @@
 
 # Shared properties across services ----------------------------------------------------
 
+version: "2.4"
+
 x-img-env-vars: &img-env-vars
   ALYX_LOGIN: ${ALYX_LOGIN:-}
   ALYX_PORT: ${ALYX_PORT:-8000}
@@ -114,8 +116,7 @@ services:
       retries: 5
       start_period: 2m0s
     ports:
-      - target: ${ALYX_PORT:-8000}
-        published: ${ALYX_PORT:-8000}
+      - ${ALYX_PORT:-8000}:${ALYX_PORT:-8000}
     volumes:
       - <<: *ibl-data-volume
       - <<: *ibl-shared-mount
@@ -150,8 +151,7 @@ services:
       - jupyterlab
     container_name: jupyter
     ports:
-      - target: ${JUPYTER_PORT:-10000}
-        published: ${JUPYTER_PORT:-10000}
+      - ${JUPYTER_PORT:-10000}:${JUPYTER_PORT:-10000}
 
 # Global Networks and Volumes ----------------------------------------------------------
 <<: *shared-networks
