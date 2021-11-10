@@ -18,7 +18,7 @@ import misc, subjects, actions, data, experiments
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
-log_file = pathlib.Path(__file__).parent / 'logs/main_ingest.log'
+log_file = pathlib.Path(__file__).parent / 'logs/ingest_alyx_raw_postgres.log'
 log_file.parent.mkdir(parents=True, exist_ok=True)
 log_file.touch(exist_ok=True)
 
@@ -169,16 +169,16 @@ def insert_alyx_entries_model(
     if backtrack_days:
         # filtering the alyx table - get more recent entries within the backtrack_days
         # only applicable to alyx models having "auto_datetime" and FileRecord alyx model
-        date_cut = datetime.datetime.strptime(
-                os.getenv('ALYX_DL_DATE'), '%Y-%m-%d').date() - \
-            datetime.timedelta(days=backtrack_days)
+        date_cutoff = (datetime.datetime.now().date() -
+                       datetime.timedelta(days=backtrack_days)).strftime('%Y-%m-%d')
+
         if alyx_model in get_tables_with_auto_datetime():
             # actions.models.Session, data.models.Dataset, experiments.models.ProbeInsertion
             entries = alyx_model.objects.filter(
-                auto_datetime__date__gte=date_cut)
+                auto_datetime__date__gte=date_cutoff)
         elif alyx_model == data.models.FileRecord:
             entries = alyx_model.objects.filter(
-                dataset__auto_datetime__date__gte=date_cut, exists=True)
+                dataset__auto_datetime__date__gte=date_cutoff, exists=True)
         else:
             entries = alyx_model.objects.all()
     elif alyx_model == data.models.FileRecord:
