@@ -77,7 +77,8 @@ import os
 import logging
 import time
 import inspect
-from datetime import datetime
+import datetime
+from tqdm import tqdm
 
 import misc as alyx_misc
 import subjects as alyx_subjects
@@ -85,7 +86,7 @@ import actions as alyx_actions
 import data as alyx_data
 import experiments as alyx_experiments
 
-from ibl_pipeline.ingest import QueryBuffer, alyxraw
+from ibl_pipeline.ingest import QueryBuffer, alyxraw, ShadowIngestionError
 from ibl_pipeline.process import (ingest_alyx_raw_postgres, ingest_membership,
                                   ingest_real, delete_update_entries)
 
@@ -483,15 +484,19 @@ class IngestionJob(dj.Manual):
     def create_entry(cls, alyx_sql_dump):
         for key in (cls & 'job_status = "on-going"').fetch('KEY'):
             (cls & key)._update('job_status', 'terminated')
-            (cls & key)._update('job_endtime', datetime.utcnow())
+            (cls & key)._update('job_endtime', datetime.datetime.utcnow())
         _clean_up()
-        cls.insert1({'job_datetime': datetime.utcnow(),
+        cls.insert1({'job_datetime': datetime.datetime.utcnow(),
                      'alyx_sql_dump': alyx_sql_dump,
                      'job_status': 'on-going'})
 
     @classmethod
     def get_on_going_key(cls):
         return (cls & 'job_status = "on-going"').fetch1('KEY')
+
+    @classmethod
+    def get_latest_key(cls):
+        return cls.fetch('KEY', order_by='job_datetime DESC', limit=1)[0]
 
 
 @schema
@@ -773,9 +778,20 @@ class PopulateShadowTable(dj.Computed):
                             shadow_table.insert1(entry, allow_direct_insert=True, replace=True)
 
         if key['table_name'] in ('data.DataSet', 'data.FileRecord'):
+            date_cutoff = (datetime.datetime.now().date() -
+                           datetime.timedelta(days=_backtrack_days)).strftime('%Y-%m-%d')
+            uuid_attr = shadow_table.primary_key[0]
+            key_source = (shadow_table.key_source.proj(uuid=uuid_attr)
+                          & (alyxraw.AlyxRaw * alyxraw.AlyxRaw.Field
+                             & 'fname = "auto_datetime"'
+                             & f'fvalue > "{date_cutoff}"')).proj(**{uuid_attr: 'uuid'})
+
             query_buffer = QueryBuffer(shadow_table, verbose=True)
-            for key in (shadow_table.key_source - shadow_table).fetch('KEY'):
-                query_buffer.add_to_queue1(shadow_table.create_entry(key))
+            for k in tqdm((key_source - shadow_table).fetch('KEY')):
+                try:
+                    query_buffer.add_to_queue1(shadow_table.create_entry(k))
+                except ShadowIngestionError:
+                    pass
                 query_buffer.flush_insert(skip_duplicates=True, allow_direct_insert=True,
                                           chunksz=1000)
             query_buffer.flush_insert(skip_duplicates=True, allow_direct_insert=True)
@@ -907,7 +923,7 @@ def _check_ingestion_completion():
     if copy_real_completed and update_real_completed:
         key = on_going_job.fetch1('KEY')
         (IngestionJob & key)._update('job_status', 'completed')
-        (IngestionJob & key)._update('job_endtime', datetime.utcnow())
+        (IngestionJob & key)._update('job_endtime', datetime.datetime.utcnow())
         logger.info(f'All ingestion jobs completed: {key}')
         return True
 
@@ -925,14 +941,19 @@ _ingestion_tables = (UpdateAlyxRawModel,
                      UpdateRealTable)
 
 
-def read_db_loaded_file(last_entry: str = "public_alyx") -> str:
+def read_db_loaded_file() -> str:
     # this function may or may not exist here
     # if it stays here can put imports in import section instead of here
     from pathlib import Path
-    ibl_path_data = dj.config["custom"]["repository.config"]["ibl_path_data"]
+    try:
+        ibl_path_data = dj.config["custom"]["repository.config"]["ibl_path_data"]
+    except KeyError:
+        return ''
+
     db_loaded = Path(ibl_path_data) / "alyx" / "db_loaded"
     if not db_loaded.exists():
-        return last_entry
+        return ''
+
     with open(db_loaded, "r") as f:
         dump_file = f.read()
         dump_file = Path(dump_file.rstrip("\n")).stem
@@ -954,11 +975,11 @@ def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60, **kwargs):
            or (run_duration is None)
            or (run_duration < 0)):
 
-        # create new ingestion job?
-        current_job_key = IngestionJob.get_on_going_key()
-        last_dump_file = (IngestionJob & current_job_key).fetch1('alyx_sql_dump')
-        latest_sql_dump = read_db_loaded_file(last_dump_file)
-        if (last_dump_file != latest_sql_dump):
+        # create new ingestion job
+        last_job_key = IngestionJob.get_latest_key()
+        last_dump_file = (IngestionJob & last_job_key).fetch1('alyx_sql_dump')
+        latest_sql_dump = read_db_loaded_file()
+        if latest_sql_dump and last_dump_file != latest_sql_dump:
             IngestionJob.create_entry(latest_sql_dump)
 
         # check if completed

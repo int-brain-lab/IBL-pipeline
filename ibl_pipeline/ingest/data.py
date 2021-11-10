@@ -238,13 +238,14 @@ class DataSet(dj.Computed):
     @classmethod
     def create_session_entries(cls, session_uuid):
         """
-        For a session_uuid, create a list of ditionaries representing all entries
+        For a session_uuid, create a list of dictionaries representing all entries
          for the given session to be inserted into the DataSet table
         """
         alyxraw_dataset_query = (alyxraw.AlyxRaw * alyxraw.AlyxRaw.Field
                                  & 'model = "data.dataset"'
                                  & 'fname = "session"' & {'fvalue': session_uuid})
-        alyxraw_dataset_keys = (alyxraw.AlyxRaw & alyxraw_dataset_query.proj()).fetch('KEY')
+        alyxraw_dataset_keys = (alyxraw.AlyxRaw & alyxraw_dataset_query.proj()).proj(
+            dataset_uuid="uuid").fetch('KEY')
         return [cls.create_entry(key) for key in alyxraw_dataset_keys]
 
 
@@ -295,3 +296,22 @@ class FileRecord(dj.Computed):
 
         key_fr['relative_path'] = grf(key, 'relative_path')
         return key_fr
+
+    @classmethod
+    def create_session_entries(cls, session_uuid):
+        """
+        For a session_uuid, create a list of dictionaries representing all entries
+         for the given session to be inserted into the FileRecord table
+        """
+        subject_uuid, session_start_time = (acquisition.Session
+                                            & {'session_uuid': session_uuid}).fetch1(
+            'subject_uuid', 'session_start_time')
+        dataset_uuids = (DataSet & {'subject_uuid': subject_uuid,
+                                    'session_start_time': session_start_time}).fetch('dataset_uuid')
+        session_records = (alyxraw.AlyxRaw * alyxraw.AlyxRaw.Field & 'model="data.filerecord"'
+                           & 'fname = "dataset"' & [{'fvalue': str(u)} for u in dataset_uuids])
+
+        alyxraw_filerecord_keys = (cls.key_source
+                                   & session_records.proj(record_uuid='uuid')).fetch('KEY')
+
+        return [cls.create_entry(key) for key in alyxraw_filerecord_keys]
