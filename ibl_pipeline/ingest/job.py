@@ -1,7 +1,6 @@
 import datajoint as dj
 
-schema = dj.schema(dj.config.get('database.prefix', '') +
-                   'ibl_ingest_job')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_job')
 
 
 @schema

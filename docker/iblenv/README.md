@@ -4,12 +4,17 @@ This is a containerized IBL environment for ingestion of IBL data from Alyx/flat
 
 ## Docker build
 
-From the `IBL-pipeline` directory: 
+The Dockerfile makes use of `buildx`. You may need to set this up before trying to build the image.
+
+```bash
+docker buildx install
+docker buildx create --use
+```
+
+Then from the `IBL-pipeline` directory: 
 
 ```bash
 cd docker/iblenv
-docker buildx install
-docker buildx create --use
 docker buildx build \
     --file=Dockerfile \
     --push \
