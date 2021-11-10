@@ -235,6 +235,14 @@ RUN <<-EOF
 	mamba develop --build_ext .
 EOF
 
+# install mayavi from source, requirements should already be in CONDA_ENV_USER
+RUN <<-EOF
+	git clone https://github.com/enthought/mayavi.git
+	cd ./mayavi
+	conda activate ${CONDA_ENV_USER}
+	mamba develop --build_ext .
+EOF
+
 # install datajoint pipeline package, requirements should already be in CONDA_ENV_USER
 COPY --chown=${USER_UID}:${USER_GID} \
 	"${REL_PATH_DOCKFILE}/../../ibl_pipeline" \

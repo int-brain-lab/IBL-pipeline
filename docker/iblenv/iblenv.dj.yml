@@ -35,7 +35,8 @@ dependencies:
   - jupyter                            # ibllib
   - jupyterlab                         # ibllib
   - matplotlib                         # ibllib
-  - mayavi                             # iblapps
+  # ! conda-forge has old python as requirement, must be built from GitHub source
+  # - mayavi                             # iblapps
   - nb_conda                           # ?, pkgs/main
   - nb_conda_kernels                   # ?, pkgs/main
   - numba                              # ibllib
@@ -56,7 +57,8 @@ dependencies:
   - scikits-bootstrap                  # datajoint
   - scipy                              # ibllib
   - seaborn                            # ibllib
-  - libsimpleitk                       # iblapps
+  # ! pkg has no linux/aarch64 builds and does not use manylinux2014 for pip either
+  #- libsimpleitk                       # iblapps
   - statsmodels                        # ibllib
   - tqdm                               # ibllib
   - vtk                                # mayavi
