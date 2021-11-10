@@ -115,7 +115,7 @@ services:
       retries: 5
       start_period: 2m0s
     ports:
-      - "${ALYX_PORT:-8000}:${ALYX_PORT:-8000}"
+      - ${ALYX_PORT:-8000}:${ALYX_PORT:-8000}
     volumes:
       - <<: *ibl-data-volume
       - <<: *ibl-shared-mount
@@ -150,7 +150,7 @@ services:
       - jupyterlab
     container_name: jupyter
     ports:
-      - "${JUPYTER_PORT:-10000}:${JUPYTER_PORT:-10000}"
+      - ${JUPYTER_PORT:-10000}:${JUPYTER_PORT:-10000}
 
 # Global Networks and Volumes ----------------------------------------------------------
 <<: *shared-networks
