@@ -41,7 +41,7 @@ x-ibl-shared-mount: &ibl-shared-mount
 x-ibl-pipeline-mount: &ibl-pipeline-mount
   - type: bind
     source: ../../ibl_pipeline
-    target: /int-brain-lab/ibldatajoint/ibl_pipeline
+    target: /int-brain-lab/IBL-pipeline/ibl_pipeline
 
 x-shared-networks: &shared-networks
   networks:

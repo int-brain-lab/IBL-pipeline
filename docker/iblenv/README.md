@@ -26,16 +26,15 @@ docker buildx build \
     --build-arg USERNAME=ibluser \
     --build-arg USER_GID=1000 \
     --build-arg USER_UID=1000 \
-    --build-arg REL_PATH_DOCKFILE=docker/iblenv \
-    --build-arg CONDA_ENV_FILE=docker/iblenv/iblenv.dj.yml \
-    ../../.
+    --build-arg CONDA_ENV_FILE=iblenv.dj.yml \
+    .
 ```
 
 <!--
 local docker image (single platform only)
 
 ```bash
-docker buildx build \
+docker build \
     --file=Dockerfile \
     --output=type=docker \
     --platform=linux/arm64 \
@@ -46,9 +45,8 @@ docker buildx build \
     --build-arg USERNAME=ibluser \
     --build-arg USER_GID=1000 \
     --build-arg USER_UID=1000 \
-    --build-arg REL_PATH_DOCKFILE=docker/iblenv \
-    --build-arg CONDA_ENV_FILE=docker/iblenv/iblenv.dj.yml \
-    ../../.
+    --build-arg CONDA_ENV_FILE=iblenv.dj.yml \
+    .
 ```
 
 Push image to Docker Hub
@@ -60,6 +58,6 @@ docker push iamamutt/iblenv_alyx:latest
 ```
 -->
 
-The environment variable `CONDA_ENV_FILE` allows for using a different conda environment file. Leave blank to use the default iblenv.yaml from the iblenv GitHub repo. If the standard iblenv.yaml setup fails, try the one from the shared folder: `shared/iblenv.mamba.yml`. The path should be relative to the build context.
+The environment variable `CONDA_ENV_FILE` allows for using a different conda environment file. Leave blank to use the default iblenv.yaml from the iblenv GitHub repo. If the standard iblenv.yaml setup fails, try a different one such as: `docker/iblenv/iblenv.dj.yml`. The path should be relative to the build context.
 
 Change `--platform` to a valid architecture name to use another platform when building, e.g., `linux/aarch64`.

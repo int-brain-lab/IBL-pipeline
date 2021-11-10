@@ -243,13 +243,16 @@ RUN <<-EOF
 	mamba develop --build_ext .
 EOF
 
-# install datajoint pipeline package, requirements should already be in CONDA_ENV_USER
-COPY --chown=${USER_UID}:${USER_GID} \
-	"${REL_PATH_DOCKFILE}/../../ibl_pipeline" \
-	./ibldatajoint/ibl_pipeline
-
+# install IBL-pipeline/ibl_pipeline only
 RUN <<-EOF
-	cd ./ibldatajoint
+	mkdir -p /tmp/ibldatajoint ./IBL-pipeline
+	cd /tmp/ibldatajoint
+	wget --no-check-certificate -q -O - \
+		https://github.com/iamamutt/IBL-pipeline/tarball/new-ingestion | \
+		tar -xz --strip-components 1
+	cd "${IBL_PATH_ROOT}/IBL-pipeline"
+	mv -v /tmp/ibldatajoint/ibl_pipeline .
+	rm -rf /tmp/ibldatajoint
 	conda activate ${CONDA_ENV_USER}
 	pip install --upgrade --pre "datajoint==0.12.9" # revert to old version
 	mamba develop .
