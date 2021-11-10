@@ -71,12 +71,40 @@ def parse_args(args: list[str]) -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "-s",
+        "--sleep",
+        dest="sleep_duration",
+        help="Time to sleep in between loops (in minutes)",
+        type=float,
+        default=1,
+        action=MultipyArg,
+        multiplier=60,
+    )
+
+    parser.add_argument(
         "-b",
         "--backtrack",
         dest="backtrack_days",
         help="The number of past days for which to compare records. ",
         type=int,
         default=3,
+    )
+
+    parser.add_argument(
+        "-x",
+        "--xtable",
+        dest="excluded_tables",
+        help="Exclude a behavior table. Can be used multiple times. ",
+        nargs="+",
+        type=str,
+        action='extend'
+    )
+
+    parser.add_argument(
+        "--xplots",
+        dest="exclude_plottings",
+        help="Exclude populating plots from module 'ibl_pipeline.plotting.ephys'. ",
+        action="store_true"
     )
 
     return parser.parse_args(args)

@@ -39,10 +39,12 @@ if mode != 'public':
     BEHAVIOR_TABLES.append(behavior_plotting.WaterTypeColor)
 
 
-kwargs = dict(suppress_errors=True, display_progress=True)
+gkwargs = dict(suppress_errors=True, display_progress=True)
 
 
-def main(backtrack_days=30, excluded_tables=[], run_duration=3600*3, sleep_duration=60*10):
+def main(backtrack_days=30, excluded_tables=None, run_duration=3600*3, sleep_duration=60*10, **kwargs):
+    if excluded_tables is None:
+        excluded_tables = []
 
     start_time = time.time()
     while ((time.time() - start_time < run_duration)
@@ -57,7 +59,7 @@ def main(backtrack_days=30, excluded_tables=[], run_duration=3600*3, sleep_durat
         # ingest those dataset and file records where exists=False when json gets dumped
         # only check those sessions where required datasets are missing.
         # populate CompleteTrialSession first with existing file records
-        behavior.CompleteTrialSession.populate(f'session_start_time > "{date_cutoff}"', **kwargs)
+        behavior.CompleteTrialSession.populate(f'session_start_time > "{date_cutoff}"', **gkwargs)
         sessions_missing = (acquisition.Session - behavior.CompleteTrialSession) & \
                 f'session_start_time > "{(datetime.datetime.now().date() - datetime.timedelta(days=backtrack_days)).strftime("%Y-%m-%d")}"'
 
@@ -81,7 +83,7 @@ def main(backtrack_days=30, excluded_tables=[], run_duration=3600*3, sleep_durat
             else:
                 restrictor = {}
 
-            table.populate(restrictor, **kwargs)
+            table.populate(restrictor, **gkwargs)
 
         print('Populating SubjectLatestEvent...')
         for key in tqdm(subject.Subject.fetch('KEY'), position=0):
@@ -91,7 +93,7 @@ def main(backtrack_days=30, excluded_tables=[], run_duration=3600*3, sleep_durat
         with dj.config(safemode=False):
             (behavior_plotting.CumulativeSummary
              & behavior_plotting.CumulativeSummary.get_outdated_entries().fetch('KEY')).delete()
-        behavior_plotting.CumulativeSummary.populate(**kwargs)
+        behavior_plotting.CumulativeSummary.populate(**gkwargs)
 
         print('Update SubjectLatestDate...')
         subject_latest_date = subject.Subject.aggr(behavior_plotting.CumulativeSummary,
@@ -110,7 +112,7 @@ def main(backtrack_days=30, excluded_tables=[], run_duration=3600*3, sleep_durat
                                     - behavior_plotting.DailyLabSummary.key_source)
             with dj.config(safemode=False):
                 (behavior_plotting.DailyLabSummary & outdated_lab_summary.fetch('KEY')).delete()
-            behavior_plotting.DailyLabSummary.populate(**kwargs)
+            behavior_plotting.DailyLabSummary.populate(**gkwargs)
 
         time.sleep(sleep_duration)
 

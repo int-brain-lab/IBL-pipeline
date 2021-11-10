@@ -103,20 +103,32 @@ while [[ $# -gt 0 ]]; do
                 POPULATE_ARGS+=("$1")
                 shift
                 ;;
-            --duration=* | --backtrack=*)
+            --duration=* | --backtrack=* | --sleep=* | --xtable=* | --xplots)
                 echo "populate.py arg: '$1'"
                 POPULATE_ARGS+=("$1")
                 shift
                 ;;
             -d)
-                echo "populate.py arg: '-d $1'"
+                echo "populate.py arg: '-d $2'"
                 POPULATE_ARGS+=("--duration=$2")
                 shift
                 shift
                 ;;
             -b)
-                echo "populate.py arg: '-b $1'"
+                echo "populate.py arg: '-b $2'"
                 POPULATE_ARGS+=("--backtrack=$2")
+                shift
+                shift
+                ;;
+            -d)
+                echo "populate.py arg: '-d $2'"
+                POPULATE_ARGS+=("--sleep=$2")
+                shift
+                shift
+                ;;
+            -x)
+                echo "populate.py arg: '-x $2'"
+                POPULATE_ARGS+=("--xtable=$2")
                 shift
                 shift
                 ;;

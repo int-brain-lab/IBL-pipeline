@@ -69,10 +69,10 @@ if mode != 'public':
         histology.DepthBrainRegionTemp])
 
 
-kwargs = dict(display_progress=True, suppress_errors=True)
+gkwargs = dict(display_progress=True, suppress_errors=True)
 
 
-def main(exclude_plottings=False, run_duration=3600*3, sleep_duration=60):
+def main(exclude_plottings=False, run_duration=3600*3, sleep_duration=60, **kwargs):
 
     start_time = time.time()
     while ((time.time() - start_time < run_duration)
@@ -88,7 +88,7 @@ def main(exclude_plottings=False, run_duration=3600*3, sleep_duration=60):
             if exclude_plottings and table.__module__ == 'ibl_pipeline.plotting.ephys':
                 continue
             logger.log(30, 'Ingesting {}...'.format(table.__name__))
-            table.populate(**kwargs)
+            table.populate(**gkwargs)
             logger.log(30, 'Ingestion time of {} is {}'.format(
                 table.__name__,
                 time.time()-table_start_time))
@@ -98,7 +98,7 @@ def main(exclude_plottings=False, run_duration=3600*3, sleep_duration=60):
         logger.log(30, 'Histology populate')
         for table in HISTOLOGY_TABLES:
             logger.log(30, f'Populating {table.__name__}...')
-            table.populate(**kwargs)
+            table.populate(**gkwargs)
 
         time.sleep(sleep_duration)
 

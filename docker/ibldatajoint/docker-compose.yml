@@ -127,8 +127,8 @@ services:
       - --alyxhost=private
       - populate
       - ingest
-      - --duration=0.1
-      - --backtrack=5
+      - --duration=1
+      - --backtrack=3
     scale: ${WORKER_COUNT:-1}
 
   populate_behavior:
@@ -138,8 +138,9 @@ services:
       - --alyxhost=private
       - populate
       - behavior
-      - --duration=0.1
-      - --backtrack=5
+      - --duration=1
+      - --sleep=10
+      - --backtrack=10
     container_name: populate_behavior
 
   jupyter:
