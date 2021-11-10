@@ -1,20 +1,20 @@
-import datajoint as dj
 import os
 
+import datajoint as dj
 
 _one = None
 
-dj.config['enable_python_native_blobs'] = True
+dj.config["enable_python_native_blobs"] = True
 
-mode = dj.config.get('custom', {}).get('database.mode', "")
+mode = dj.config.get("custom", {}).get("database.mode", "")
 
-if mode == 'test':
-    dj.config['database.prefix'] = 'test_'
-elif mode == 'update':
-    dj.config['database.prefix'] = 'update_'
+if mode == "test":
+    dj.config["database.prefix"] = "test_"
+elif mode == "update":
+    dj.config["database.prefix"] = "update_"
 
 
-schema = dj.schema('ibl_storage')
+schema = dj.schema("ibl_storage")
 
 
 @schema
@@ -28,53 +28,49 @@ class S3Access(dj.Manual):
 
 
 # attempt to get S3 access/secret key from different sources
-access_key = os.environ.get('S3_ACCESS')
-secret_key = os.environ.get('S3_SECRET')
+access_key = os.environ.get("S3_ACCESS")
+secret_key = os.environ.get("S3_SECRET")
 
 if (access_key is None or secret_key is None) and len(S3Access.fetch()) > 0:
     # if there are multiple entries in S3, it won't work
-    access_key, secret_key = S3Access.fetch1('access_key', 'secret_key')
+    access_key, secret_key = S3Access.fetch1("access_key", "secret_key")
 
 
-if mode == 'public':
-    bucket = 'ibl-dj-external-public'
-    root = '/public'
+if mode == "public":
+    bucket = "ibl-dj-external-public"
+    root = "/public"
 else:
-    bucket = 'ibl-dj-external'
-    root = ''
+    bucket = "ibl-dj-external"
+    root = ""
 
-dj.config['stores'] = {
-    'ephys': dict(
-        protocol='s3',
-        endpoint='s3.amazonaws.com',
+dj.config["stores"] = {
+    "ephys": dict(
+        protocol="s3",
+        endpoint="s3.amazonaws.com",
         access_key=access_key,
         secret_key=secret_key,
         bucket=bucket,
-        location=root + '/ephys'
+        location=root + "/ephys",
     ),
-    'plotting': dict(
-        protocol='s3',
-        endpoint='s3.amazonaws.com',
+    "plotting": dict(
+        protocol="s3",
+        endpoint="s3.amazonaws.com",
         access_key=access_key,
         secret_key=secret_key,
         bucket=bucket,
-        location=root + '/plotting'
+        location=root + "/plotting",
     ),
 }
 
 
 try:
-    from one.api import ONE
+    from one.api import OneAlyx
 except ImportError:
-    print('ONE not set up')
+    print("ONE-api not set up")
     one = False
 else:
     try:
-        one = ONE(username=os.getenv('ALYX_LOGIN'),
-                  password=os.getenv('ALYX_PWD'),
-                  silent=True)
-    except OSError:
+        one = OneAlyx(silent=True)
+    except ConnectionError:
         # by-pass error in removing the old format .one_params
-        one = ONE(username=os.getenv('ALYX_LOGIN'),
-                  password=os.getenv('ALYX_PWD'),
-                  silent=True)
+        one = OneAlyx(silent=True)

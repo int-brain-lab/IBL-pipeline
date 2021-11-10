@@ -942,7 +942,7 @@ def read_db_loaded_file(last_entry: str = "public_alyx") -> str:
     return dump_file
 
 
-def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60):
+def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60, **kwargs):
     """
     Routine to populate all ingestion tables
     Run in continuous loop for the duration defined in "run_duration" (default 3 hours)

@@ -48,7 +48,7 @@ x-shared-networks: &shared-networks
     ingestion:
 
 x-iblenv-image-common: &iblenv-image-common
-  image: iblenv_alyx:latest # iamamutt/iblenv_alyx:latest
+  image: iamamutt/iblenv_alyx:latest
   environment:
     <<: *img-env-vars
   init: true

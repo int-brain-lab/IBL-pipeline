@@ -249,7 +249,11 @@ def connect_alyx(base_url: str) -> OneAlyx:
         print("#~ INFO: Removing existing ~/.one_params file")
         with open(_dest_one_params_path, "r") as jsf:
             params = json.load(jsf)
-        one_args = {"password": params.get("ALYX_PWD", None), **one_args}
+        one_args = {
+            "password": params.get("ALYX_PWD", os.getenv("ALYX_PWD", None)),
+            "username": params.get("ALYX_LOGIN", os.getenv("ALYX_LOGIN", None)),
+            **one_args,
+        }
 
     print("#~ INFO: Initiating connection to Alyx")
     return OneAlyx(**one_args)
