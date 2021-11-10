@@ -97,14 +97,14 @@ def parse_args(args: list[str]) -> argparse.Namespace:
         help="Exclude a behavior table. Can be used multiple times. ",
         nargs="+",
         type=str,
-        action='extend'
+        action="extend",
     )
 
     parser.add_argument(
         "--xplots",
         dest="exclude_plottings",
         help="Exclude populating plots from module 'ibl_pipeline.plotting.ephys'. ",
-        action="store_true"
+        action="store_true",
     )
 
     return parser.parse_args(args)
