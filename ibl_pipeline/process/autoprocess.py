@@ -121,7 +121,7 @@ def process_new(previous_dump=None, latest_dump=None,
     job.TaskStatus.insert_task_status(job_key, 'Populate behavior',
                                       start, end=datetime.datetime.now())
 
-
+# TODO: change /data /tmp to use dj.config
 def process_updates(pks, current_dump='/data/alyxfull.json'):
     '''
     Update the all the fields in givens a set of pks
@@ -310,7 +310,7 @@ def process_postgres(sql_dump_path='/tmp/dump.sql.gz', perform_updates=True):
 
 
 if __name__ == '__main__':
-
+# TODO: change /data /tmp to use dj.config
     process_new(previous_dump='/data/alyxfull_20210617_1200.json',
                 latest_dump='/data/alyxfull.json',
                 job_date='2021-06-18', timezone='PST')

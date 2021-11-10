@@ -17,14 +17,17 @@ def load_env(file):
 
 def env_test():
     this_dir = Path(__file__).parent
-    env_file = this_dir / ".." / ".env"
+    env_file = this_dir / ".." / "ingest" / ".env"
     ingest_json = this_dir / "template.ingest.json"
-    local_one_params = this_dir / ".." / ".." / ".." / "shared" / "local.one_params"
+    local_one_params = this_dir / ".." / ".." / "shared" / "local.one_params"
 
     if not env_file.exists():
         raise FileNotFoundError("wrong path for .env file")
+
+    # load environment variables from .env file
     load_env(env_file.resolve())
 
+    # temp dir for cache and ibl root
     tempd = Path(tempfile.gettempdir())
     ibl_path_root = tempd / "int-brain-lab"
     rmtree(ibl_path_root, ignore_errors=True)
@@ -42,7 +45,7 @@ def env_test():
     tmp_local.unlink(True)
     copyfile(local_one_params, tmp_local)
 
-    from init import (
+    from config_init import (
         get_config,
         init_one_alyx,
         init_dj_config,
@@ -57,5 +60,6 @@ def env_test():
 
     init_dj_config(tmp_json)
     init_one_alyx("local", tmp_local)
+
     _dest_one_params_path.unlink(True)
     _dest_dj_config_path.unlink(True)

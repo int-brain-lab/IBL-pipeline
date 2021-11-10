@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/bash --login
 
 # IBL Alyx Entrypoint Script
 # ==========================
@@ -97,8 +97,8 @@ reloaddb ...... Routine that fetches a new dump from ALYX_DL_DATE and force relo
 www ........... Routine that initializes environment and runs Alyx web
                 by running: fetchdump, mkdb, configalyx, updatealyx, loaddb, startserver
 dev ........... Initialize parent process and wait indefinitely
-loaddump ...... Like loaddump but for public data
-
+loadpubdump ... Like loaddump but for public data
+wwwpublic ..... Run 'loadpubdump' then 'startserver'
 
 Environment Variables (available if script is sourced):
 
@@ -250,6 +250,10 @@ while [[ $# -gt 0 ]]; do
 		;;
 	"www")
 		OPS_SEQ+=("www")
+		shift
+		;;
+	"wwwpublic")
+		OPS_SEQ+=("wwwpublic")
 		shift
 		;;
 	"reloaddb")
@@ -438,6 +442,8 @@ fetchpubdump() {
 }
 
 cleandls() {
+	du -h --max-depth=1 | sort -h
+
 	local old_dumps=$(find "${ALYX_DUMP_DIR}/sql" -type f \
 		-mmin +$((${ALYX_DUMP_EXPIRES} * 60 * 24)) 2>/dev/null)
 	if [[ ! -z ${old_dumps} ]]; then
@@ -447,8 +453,10 @@ cleandls() {
 		echo "=> no sql dumps to clean from $(ls -lh ${ALYX_DUMP_DIR}/sql)"
 	fi
 
-	# TODO: path in ONE params set to data
-	# sudo find ~/IBL-pipeline/data/FlatIron -mindepth 1 ! -type d -not -name histology -delete
+	local cache_dir="${IBL_PATH_DATA}/alyx/cache"
+	echo "==> cleaning cache files from '$cache_dir'"
+	find "${cache_dir}" -mindepth 1 ! -type d -not -name histology -printf '%s %p\n'
+	sudo find "${cache_dir}" -mindepth 1 ! -type d -not -name histology -delete
 }
 
 configalyx() {
@@ -461,7 +469,7 @@ configalyx() {
 	[[ -z "$ALYX_SECRET_KEY" ]] && err_exit "ALYX_SECRET_KEY environment variable is not set"
 
 	# custom settings_secret for multiple DBs
-	echo "# ==> configuring settings_*.py"
+	echo "# ===> configuring settings_*.py"
 
 	# http://alyx:8000
 	sed -i \
@@ -511,17 +519,26 @@ configalyx() {
 			EMAIL_USE_TLS = True
 		EOF
 
-	awk -v USERNAME="$(id -un)" -v GROUPNAME=$(id -Gn) '{
+	echo "# ====> configuring apache2"
+	local condaenvpath="/opt/local/conda/envs/${CONDA_ENV_USER}"
+	local condaenvpkgs="${condaenvpath}/lib/python3.9/site-packages"
+
+	awk \
+		-v USERNAME="$(id -un)" \
+		-v GROUPNAME=$(id -Gn) \
+		-v CENVPTH="${condaenvpath}" \
+		-v CENVPKG="${condaenvpkgs}" '{
 			sub(/LogLevel info/,"LogLevel error");
 			sub(/alyx.internationalbrainlab.org/,"localhost\n        ServerAlias alyx");
+			sub(/python-path=\/var\/www\/alyx\/alyx/,"python-path=" CENVPKG );
+			sub(/python-home=\/var\/www\/alyx\/alyxvenv/,"python-home=" CENVPTH );
 			sub(/WSGIDaemonProcess alyx python-path/,"WSGIDaemonProcess alyx user=" USERNAME " group=" GROUPNAME " python-path")
 		} 1' "${IBL_PATH_ALYX}/docs/_static/001-alyx.conf" >/etc/apache2/sites-available/001-alyx.conf
 
-	sudo a2dissite -q 001-alyx
-	sudo a2ensite -q 001-alyx
-	sudo service apache2 restart >/dev/null
-	sudo service apache2 reload >/dev/null
+	echo "ServerName localhost" > /etc/apache2/conf-available/servername.conf
+	mod_wsgi-express module-config > /etc/apache2/mods-available/wsgi.load
 
+	echo "# =====> configuring .pgpass"
 	rm -f ~/.pgpass
 	install -m 0600 /dev/null ~/.pgpass
 	echo "${PGHOST}:5432:${PGDATABASE}:${PGUSER}:${PGPASSWORD}" >>~/.pgpass
@@ -667,16 +684,26 @@ oneparams() {
 	EOF
 }
 
+stopserver() {
+	sudo a2dissite -q 001-alyx
+	sudo a2dismod -q wsgi
+	sudo service apache2 stop >/dev/null
+	sudo pkill -f "manage.py runserver"
+	ps auxw | grep runserver
+}
+
 startserver() {
 	echo "# => starting alyx"
 	[[ -z "${ALYX_PORT}" ]] && err_exit "port '${ALYX_PORT}' from ALYX_PORT is empty"
 	oneparams
+	stopserver
+	sudo service apache2 restart >/dev/null
+	source /etc/apache2/envvars
+	sudo a2enconf servername
+	sudo a2enmod -q wsgi
+	sudo a2ensite -q 001-alyx
+	sudo service apache2 reload >/dev/null
 	alyxcmd runserver --insecure 0.0.0.0:${ALYX_PORT}
-}
-
-stopserver() {
-	pkill -f "manage.py runserver"
-	ps auxw | grep runserver
 }
 
 checkserver() {
@@ -694,18 +721,14 @@ initdb() {
 	mkdb
 	configalyx
 	updatealyx
+	createsu
 }
 
 loaddump() {
 	fetchdump
-	initdb
-	loaddb
-}
-
-loadpubdump() {
-	fetchpubdump
-	initdb
-	rm -f "${db_loaded_file}" "${su_created_file}"
+	mkdb
+	configalyx
+	updatealyx
 	loaddb
 }
 
@@ -719,6 +742,20 @@ reloaddb() {
 	loaddb --reset
 }
 
+loadpubdump() {
+	fetchpubdump
+	mkdb
+	configalyx
+	updatealyx
+	rm -f "${db_loaded_file}" "${su_created_file}"
+	loaddb
+}
+
+wwwpublic() {
+	loadpubdump
+	startserver
+}
+
 # Development
 # -----------
 
@@ -730,8 +767,9 @@ dev() {
 # Start
 # -----
 
-# activate virtualenv
-source "${VIRTUAL_ENV}/bin/activate"
+# switch to appropriate python environment
+[[ -z "${CONDA_ENV_USER}" ]] && CONDA_ENV_USER=base
+conda activate $CONDA_ENV_USER
 
 # run sequence of operations specified by user
 if [[ ${#OPS_SEQ[@]} -gt 0 ]]; then
@@ -743,4 +781,4 @@ if [[ ${#OPS_SEQ[@]} -gt 0 ]]; then
 fi
 
 # run rest of user specified commands
-exec "$@"
+exec -l "$@"

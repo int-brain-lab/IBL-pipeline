@@ -20,10 +20,10 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-kwargs = dict(display_progress=True, suppress_errors=True)
+gkwargs = dict(display_progress=True, suppress_errors=True)
 
 
-def main(backtrack_days=30, run_duration=3600*3, sleep_duration=60):
+def main(backtrack_days=30, run_duration=3600*3, sleep_duration=60, **kwargs):
     start_time = time.time()
     while ((time.time() - start_time < run_duration)
            or (run_duration is None)
@@ -35,10 +35,10 @@ def main(backtrack_days=30, run_duration=3600*3, sleep_duration=60):
         date_range = f'session_start_time > "{date_cutoff}"'
 
         logger.log(25, 'Populating WheelMoveSet...')
-        wheel.WheelMoveSet.populate(date_range, ephys.ProbeInsertion, **kwargs)
+        wheel.WheelMoveSet.populate(date_range, ephys.ProbeInsertion, **gkwargs)
 
         logger.log(25, 'Populating MovementTimes...')
-        wheel.MovementTimes.populate(date_range, ephys.ProbeInsertion, **kwargs)
+        wheel.MovementTimes.populate(date_range, ephys.ProbeInsertion, **gkwargs)
 
         time.sleep(sleep_duration)
 

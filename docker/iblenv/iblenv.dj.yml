@@ -31,6 +31,7 @@ dependencies:
   - globus-sdk                         # ibllib
   - graphviz                           # datajoint
   - h5py                               # sorting_analysis
+  - imageio                            # datajoint
   - jupyter                            # ibllib
   - jupyterlab                         # ibllib
   - matplotlib                         # ibllib
@@ -39,7 +40,7 @@ dependencies:
   - nb_conda                           # ?, pkgs/main
   - nb_conda_kernels                   # ?, pkgs/main
   - numba                              # ibllib
-  - numpy                              # ibllib
+  - numpy>=1.21.0                      # ibllib
   - pandas                             # ibllib
   - pillow                             # datajoint
   - plotly                             # datajoint
@@ -57,17 +58,16 @@ dependencies:
   - scipy                              # ibllib
   - seaborn                            # ibllib
   # ! pkg has no linux/aarch64 builds and does not use manylinux2014 for pip either
-  # - libsimpleitk                       # iblapps
+  #- libsimpleitk                       # iblapps
   - statsmodels                        # ibllib
   - tqdm                               # ibllib
   - vtk                                # mayavi
   - pip:
-      - --pre
       - datajoint                      # datajoint
       - easyqc                         # iblapps
       - iblutil                        # ibllib
       - mtscomp                        # ibllib
       - ONE-api                        # ibllib
-      - opencv-python                  # ibllib
       - phylib                         # ibllib
       - soundfile                      # examples
+      - opencv-python-headless         # ibllib, tries to rebuild numba if not correct numpy version

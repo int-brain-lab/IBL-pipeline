@@ -23,7 +23,7 @@ import logging, warnings
 import numpy as np
 from pathlib import Path
 
-
+# TODO: change /data /tmp to use dj.config
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
@@ -63,6 +63,7 @@ def ingest_uuid_into_public_tables(uuid_datapath):
     conn_public = dj.conn()
 
     # load credentials for internal database instance
+    # TODO: change /data /tmp to use dj.config
     internal_env = get_env_data_as_dict('/src/IBL-pipeline/.env')
     conn_internal = dj.conn(
         internal_env['DJ_HOST'], internal_env['DJ_USER'], internal_env['DJ_PASS'])
@@ -167,7 +168,7 @@ def delete_non_published_records():
                 (subject.Subject - public.PublicSubjectUuid - subjs.proj()).fetch('KEY')):
             (subject.Subject & key).delete()
 
-
+# TODO: change /data /tmp to use dj.config
 def main(populate_only=False, populate_wheel=False, populate_ephys_histology=False):
     """This function process the all the steps to get data ingested into the public database, needs rewriting
         to load data from sql dump instead.

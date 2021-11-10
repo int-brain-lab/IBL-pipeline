@@ -4,7 +4,7 @@ import datetime
 import pathlib
 from tqdm import tqdm
 
-
+# TODO: change /data /tmp to use dj.config
 def get_file_timestamp(filepath=None, filetype='json'):
     if not filepath:
         if filetype == 'json':
