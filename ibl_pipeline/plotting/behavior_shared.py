@@ -143,6 +143,7 @@ class DateReactionTimeTrialNumber(dj.Computed):
 @schema
 class LatestDate(dj.Manual):
     # compute the last date of any event for individual subjects
+    # (no longer needed for the new ingestion)
     definition = """
     -> subject.Subject
     checking_ts=CURRENT_TIMESTAMP: timestamp
@@ -222,6 +223,7 @@ class CumulativeSummary(dj.Computed):
     latest_date: date      # last date of any event for the subject
     ---
     latest_time=null: datetime  # last datetime of any event for the subject
+    session_count=null: int     # total number of sessions for the subject at this time of calculation
     """
 
     @property
@@ -236,8 +238,15 @@ class CumulativeSummary(dj.Computed):
 
     @classmethod
     def get_outdated_entries(cls):
-        return cls & (cls * SubjectLatestEvent & cls.key_source
-                      & 'latest_event_time != latest_time').proj()
+        outdated_events = cls & (cls * SubjectLatestEvent & cls.key_source
+                                 & ['latest_time IS NULL',
+                                    'latest_event_time != latest_time']).proj()
+        outdated_sessions = cls & ((cls * SubjectLatestEvent & cls.key_source).aggr(
+            behavior_ingest.TrialSet, 'session_count',
+            latest_session_count='count(session_start_time)', keep_all_rows=True)
+                                   & ['session_count IS NULL',
+                                      'latest_session_count != session_count']).proj()
+        return outdated_events.proj() + outdated_sessions.proj()
 
     class TrialCountsSessionDuration(dj.Part):
         definition = """
@@ -273,7 +282,9 @@ class CumulativeSummary(dj.Computed):
             'latest_event_time')
 
         key['latest_date'] = latest_time.date()
-        self.insert1({**key, 'latest_time': latest_time})
+        self.insert1({**key,
+                      'latest_time': latest_time,
+                      'session_count': len(behavior_ingest.TrialSet & key)})
 
         # check the environment, public or internal
         if dj.config.get('custom', {}).get('database.mode', "") == 'public':
