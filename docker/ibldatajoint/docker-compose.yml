@@ -4,31 +4,54 @@
 # Basic usage:
 #   docker-compose up --detach
 #   docker-compose down
+#   docker-compose up --detach jupyter
 #   docker-compose down --volumes
-
+#
 # Shared properties across services ----------------------------------------------------
 
 version: "2.4"
 
-x-img-env-vars: &img-env-vars
+x-alyx-env-vars: &alyx-env-vars
   ALYX_LOGIN: ${ALYX_LOGIN:-}
   ALYX_PORT: ${ALYX_PORT:-8000}
   ALYX_PWD: ${ALYX_PWD:-}
   ALYX_URL: ${ALYX_URL:-}
-  DJ_HOST: ${DJ_HOST:-datajoint.internationalbrainlab.org}
-  DJ_MODE: ${DJ_MODE:-test}
-  DJ_PASS: ${DJ_PASS:-}
-  DJ_USER: ${DJ_USER:-}
   HTTP_DATA_SERVER_LOGIN: ${HTTP_DATA_SERVER_LOGIN:?set HTTP_DATA_SERVER_LOGIN in .env file}
   HTTP_DATA_SERVER_PWD: ${HTTP_DATA_SERVER_PWD:?set HTTP_DATA_SERVER_PWD in .env file}
   PGDATABASE: ${ALYX_DB_NAME:-alyxdb}
   PGHOST: ${PGHOST:-pgserver}
   PGPASSWORD: ${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
   PGUSER: ${ALYX_DB_USER:-alyxadmin}
+
+x-dj-env-vars: &dj-env-vars
+  DJ_HOST: ${DJ_HOST:-datajoint.internationalbrainlab.org}
+  DJ_MODE: ${DJ_MODE:-test}
+  DJ_PASS: ${DJ_PASS:-}
+  DJ_USER: ${DJ_USER:-}
   S3_ACCESS: ${S3_ACCESS:-}
   S3_MIGRATE_BUCKET: ${S3_MIGRATE_BUCKET:-ibl-dj-external}
   S3_ROOT_PATH: ${S3_ROOT_PATH:-}
   S3_SECRET: ${S3_SECRET:-}
+
+# x-img-env-vars: &img-env-vars
+#   ALYX_LOGIN: ${ALYX_LOGIN:-}
+#   ALYX_PORT: ${ALYX_PORT:-8000}
+#   ALYX_PWD: ${ALYX_PWD:-}
+#   ALYX_URL: ${ALYX_URL:-}
+#   DJ_HOST: ${DJ_HOST:-datajoint.internationalbrainlab.org}
+#   DJ_MODE: ${DJ_MODE:-test}
+#   DJ_PASS: ${DJ_PASS:-}
+#   DJ_USER: ${DJ_USER:-}
+#   HTTP_DATA_SERVER_LOGIN: ${HTTP_DATA_SERVER_LOGIN:?set HTTP_DATA_SERVER_LOGIN in .env file}
+#   HTTP_DATA_SERVER_PWD: ${HTTP_DATA_SERVER_PWD:?set HTTP_DATA_SERVER_PWD in .env file}
+#   PGDATABASE: ${ALYX_DB_NAME:-alyxdb}
+#   PGHOST: ${PGHOST:-pgserver}
+#   PGPASSWORD: ${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
+#   PGUSER: ${ALYX_DB_USER:-alyxadmin}
+#   S3_ACCESS: ${S3_ACCESS:-}
+#   S3_MIGRATE_BUCKET: ${S3_MIGRATE_BUCKET:-ibl-dj-external}
+#   S3_ROOT_PATH: ${S3_ROOT_PATH:-}
+#   S3_SECRET: ${S3_SECRET:-}
 
 x-ibl-data-volume: &ibl-data-volume
   - type: volume
@@ -49,15 +72,13 @@ x-shared-networks: &shared-networks
   networks:
     ingestion:
 
-x-iblenv-image-common: &iblenv-image-common
+x-dj-pipeline-common: &dj-pipeline-common
   image: iamamutt/iblenv_alyx:latest
   environment:
-    <<: *img-env-vars
+    <<: *dj-env-vars
+    <<: *alyx-env-vars
   init: true
   <<: *shared-networks
-
-x-dj-pipeline-common: &dj-pipeline-common
-  <<: *iblenv-image-common
   entrypoint:
     - ingest
   depends_on:
@@ -96,7 +117,10 @@ services:
 
   # IBL Environment for DataJoint Ingestion --------------------------------------------
   alyx:
-    <<: *iblenv-image-common
+    image: iamamutt/iblenv_alyx:latest
+    environment:
+      <<: *alyx-env-vars
+    init: true
     entrypoint:
       - alyx
     command:
@@ -114,6 +138,7 @@ services:
       interval: 30s
       retries: 5
       start_period: 2m0s
+    <<: *shared-networks
     ports:
       - ${ALYX_PORT:-8000}:${ALYX_PORT:-8000}
     volumes:
@@ -127,7 +152,7 @@ services:
       - --alyxhost=private
       - populate
       - ingest
-      - --duration=1000
+      - --duration=1
       - --backtrack=3
     scale: ${WORKER_COUNT:-1}
 
@@ -138,7 +163,7 @@ services:
       - --alyxhost=private
       - populate
       - behavior
-      - --duration=1000
+      - --duration=1
       - --sleep=10
       - --backtrack=10
     container_name: populate_behavior

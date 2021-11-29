@@ -17,7 +17,7 @@ channels:
   - defaults
 dependencies:
   - python=3.9.*                       # minimum python version
-  - pip>=19.3                          # manylinux2014 version
+  - pip>=21.1.0                        # no setup.py
   - apptools                           # dev
   - boto3                              # datajoint
   - click                              # ibllib
@@ -70,4 +70,4 @@ dependencies:
       - ONE-api                        # ibllib
       - phylib                         # ibllib
       - soundfile                      # examples
-      - opencv-python-headless         # ibllib, tries to rebuild numba if not correct numpy version
+      - opencv-python                  # ibllib, tries to rebuild numba if not correct numpy version

@@ -68,3 +68,4 @@ scratch*.py
 shared/public_alyx.sql.gz
 data/*
 *.log
+shared/iblenv.lock.yml

@@ -535,7 +535,7 @@ configalyx() {
 			sub(/WSGIDaemonProcess alyx python-path/,"WSGIDaemonProcess alyx user=" USERNAME " group=" GROUPNAME " python-path")
 		} 1' "${IBL_PATH_ALYX}/docs/_static/001-alyx.conf" >/etc/apache2/sites-available/001-alyx.conf
 
-	echo "ServerName localhost" > /etc/apache2/conf-available/servername.conf
+	echo "ServerName $HOSTNAME" > /etc/apache2/conf-available/servername.conf
 	mod_wsgi-express module-config > /etc/apache2/mods-available/wsgi.load
 
 	echo "# =====> configuring .pgpass"
