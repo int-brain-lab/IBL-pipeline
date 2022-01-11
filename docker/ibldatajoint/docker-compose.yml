@@ -33,26 +33,6 @@ x-dj-env-vars: &dj-env-vars
   S3_ROOT_PATH: ${S3_ROOT_PATH:-}
   S3_SECRET: ${S3_SECRET:-}
 
-# x-img-env-vars: &img-env-vars
-#   ALYX_LOGIN: ${ALYX_LOGIN:-}
-#   ALYX_PORT: ${ALYX_PORT:-8000}
-#   ALYX_PWD: ${ALYX_PWD:-}
-#   ALYX_URL: ${ALYX_URL:-}
-#   DJ_HOST: ${DJ_HOST:-datajoint.internationalbrainlab.org}
-#   DJ_MODE: ${DJ_MODE:-test}
-#   DJ_PASS: ${DJ_PASS:-}
-#   DJ_USER: ${DJ_USER:-}
-#   HTTP_DATA_SERVER_LOGIN: ${HTTP_DATA_SERVER_LOGIN:?set HTTP_DATA_SERVER_LOGIN in .env file}
-#   HTTP_DATA_SERVER_PWD: ${HTTP_DATA_SERVER_PWD:?set HTTP_DATA_SERVER_PWD in .env file}
-#   PGDATABASE: ${ALYX_DB_NAME:-alyxdb}
-#   PGHOST: ${PGHOST:-pgserver}
-#   PGPASSWORD: ${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
-#   PGUSER: ${ALYX_DB_USER:-alyxadmin}
-#   S3_ACCESS: ${S3_ACCESS:-}
-#   S3_MIGRATE_BUCKET: ${S3_MIGRATE_BUCKET:-ibl-dj-external}
-#   S3_ROOT_PATH: ${S3_ROOT_PATH:-}
-#   S3_SECRET: ${S3_SECRET:-}
-
 x-ibl-data-volume: &ibl-data-volume
   - type: volume
     source: datacache

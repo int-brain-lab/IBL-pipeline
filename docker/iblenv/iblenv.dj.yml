@@ -10,7 +10,7 @@
 #
 #   - Install environment with:
 #       mamba clean -yiqaf
-#       mamba env create -vvv --force -f iblenv.mamba.yml
+#       mamba env create -vqf iblenv.dj.yml
 name: iblenv
 channels:
   - conda-forge

@@ -58,6 +58,7 @@ coverage.xml
 docker/ibl/.env
 docker/ibl/.one_params
 shared/*.one_params
+shared/*.datajoint_config.json
 root/.one_params
 dj_local_conf.json
 .env*

@@ -2,13 +2,15 @@
 
 This is a containerized IBL environment for ingestion of IBL data from Alyx/flatiron to  DataJoint
 
-## Docker build
+## Docker build and push
 
-The Dockerfile makes use of `buildx`. You may need to set this up before trying to build the image.
+For pushing to docker hub.
+
+The Dockerfile makes use of `buildkit`. To push multiple architectures at a time, you need `buildx`. You may need to set this up before trying to build the image.
 
 ```bash
 docker buildx install
-docker buildx create --use
+docker buildx create --platform linux/arm64,linux/amd64 --name=mrbuilder --use
 ```
 
 Then from the `IBL-pipeline` directory: 
@@ -28,6 +30,13 @@ docker buildx build \
     --build-arg USER_UID=1000 \
     --build-arg CONDA_ENV_FILE=iblenv.dj.yml \
     .
+```
+
+To remove the installed buildx builder
+    
+```bash
+docker buildx rm mrbuilder
+docker buildx uninstall
 ```
 
 <!--
