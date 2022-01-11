@@ -20,6 +20,7 @@ dependencies:
   - pip>=21.1.0                        # no setup.py
   - apptools                           # dev
   - boto3                              # datajoint
+  - black                              # dev
   - click                              # ibllib
   - colorcet                           # ?
   - colorlog                           # ibllib

@@ -1,0 +1,43 @@
+// For format details, see https://aka.ms/devcontainer.json
+{
+	"name": "DataJoint IBL (dev-container)",
+	"dockerComposeFile": "../docker/ibldatajoint/docker-compose.yml",
+	"service": "jupyter",
+	"workspaceFolder": "/int-brain-lab",
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"python.condaPath": "/opt/local/conda/bin/conda",
+		"python.defaultInterpreterPath": "/opt/local/conda/envs/iblenv/bin/python",
+		"python.formatting.provider": "black",
+		"python.formatting.blackArgs": [
+			"--line-length=88"
+		],
+		"python.linting.flake8Enabled": true,
+		"python.linting.flake8Args": [
+			"--max-line-length=88",
+			"--extend-ignore=E203"
+		],
+		"python.sortImports.args": [
+			"--profile",
+			"black"
+		],
+		"python.linting.enabled": true,
+		"python.linting.pylintEnabled": false,
+		"python.terminal.activateEnvInCurrentTerminal": true,
+		"python.terminal.activateEnvironment": true
+	},
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"ms-python.python",
+		"ms-python.vscode-pylance",
+		"ms-toolsai.jupyter",
+		"ms-toolsai.jupyter-renderers",
+		"visualstudioexptteam.vscodeintellicode",
+		"cweijan.vscode-mysql-client2"
+	],
+	"shutdownAction": "stopCompose",
+	"userEnvProbe": "loginInteractiveShell",
+	"features": {
+		"github": "latest"
+	}
+}
