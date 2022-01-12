@@ -85,7 +85,7 @@ EOF
 # Start new conda environment setup ----------------------------------------------------
 
 # setup conda environment as user from root IBL path
-USER ${USER_UID}
+USER ${USER_NAME}
 WORKDIR "${IBL_PATH_ROOT}"
 SHELL [ "/bin/bash", "--login", "-ec" ]
 
@@ -160,10 +160,10 @@ RUN \
         /home/${USER_NAME}/.vscode-server-insiders
 
 # alyx/DataJoint config initialization files saved to root IBL path
-COPY --chown=${USER_UID}:${USER_GID} "${REL_PATH_DOCKFILE}/template.ingest.json" ./
+COPY --chown=${USER_NAME} "${REL_PATH_DOCKFILE}/template.ingest.json" ./
 
 # copy over entrypoint executable scripts to bin dir in PATH
-COPY --chown=${USER_UID}:${USER_GID} \
+COPY --chown=${USER_NAME} \
 		"${REL_PATH_DOCKFILE}/ingest" \
 		"${REL_PATH_DOCKFILE}/alyx" \
 		"${REL_PATH_DOCKFILE}/config_init.py" \

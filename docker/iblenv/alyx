@@ -471,14 +471,6 @@ configalyx() {
 	# custom settings_secret for multiple DBs
 	echo "# ===> configuring settings_*.py"
 
-	# http://alyx:8000
-	cp -f "${IBL_PATH_ALYX}/alyx/alyx/settings_lab_template.py" \
-		"${IBL_PATH_ALYX}/alyx/alyx/settings_lab.py"
-
-	sed -i \
-		-e "s/\['localhost'\]/\['localhost','alyx'\]/" \
-		"${IBL_PATH_ALYX}/alyx/alyx/settings_lab.py"
-
 	sed \
 		-e "s/%SECRET_KEY%/$ALYX_SECRET_KEY/" \
 		-e "s/%DBNAME%/$PGDATABASE/" \
@@ -513,6 +505,14 @@ configalyx() {
 			EMAIL_PORT = 587
 			EMAIL_USE_TLS = True
 		EOF
+
+	# http://alyx:8000
+	awk \
+		-v USERNAME="$PGUSER" \
+		'{
+			sub(/'\''alyx.internationalbrainlab.org'\''/,"\"alyx.internationalbrainlab.org\", \"alyx\"");
+			sub(/'\''root'\'',/,"\"root\", \"" USERNAME "\",");
+		} 1' "${IBL_PATH_ALYX}/alyx/alyx/settings_lab_template.py" >"${IBL_PATH_ALYX}/alyx/alyx/settings_lab.py"
 
 	echo "# ====> configuring apache2"
 	local condaenvpath="/opt/local/conda/envs/${CONDA_ENV_USER}"
