@@ -1,6 +1,5 @@
 version: '2.4'
 services:
-
   pg:
     image: postgres:13.1
     environment:
@@ -10,12 +9,12 @@ services:
       timeout: 5s
       retries: 60
       interval: 1s
-    volumes:
-      - /tmp/postgresql/data:/var/lib/postgresql/data
+#    volumes:
+#      - F:/ibl-postgress:/var/lib/postgresql/data
     networks:
       - ibl-dev
 
-  datajoint-ingest:
+  loaddump:
     build:
       context: .
       dockerfile: Dockerfile.ingest
@@ -36,14 +35,86 @@ services:
       - ./images:/images
       - .:/src/IBL-pipeline
       - ./data:/data
-      - ./root/.one_params:/root/.one_params
       - /tmp/alyx_data:/tmp
-    ports:
-      - "8888:8888"
-      - "8889:8889"
+    healthcheck:
+      test: bash -c "[ -f /src/alyx/alyx/db_loaded ]"
+      timeout: 5s
+      retries: 150
+      interval: 15s
     networks:
       - ibl-dev
-    command: ["dev"]
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        /ingest-entrypoint.sh loaddump
+        tail -f /dev/null
+
+  ingest:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingest
+    env_file: .env
+    init: true
+    depends_on:
+      loaddump:
+        condition: service_healthy
+    environment:
+      - PGUSER=${ALYX_DB_USER?set ALYX_DB_USER in .env}
+      - PGHOST=${ALYX_DB_HOST?set ALYX_DB_HOST in .env}
+      - PGPASSWORD=${ALYX_DB_PASSWORD?set ALYX_DB_PASSWORD in .env}
+      - ALYX_DL_DATE=${ALYX_DL_DATE?set ALYX_DL_DATE in .env}
+      - ALYX_DL_USER=${ALYX_DL_USER?set ALYX_DL_USER in .env}
+      - ALYX_DL_PASSWORD=${ALYX_DL_PASSWORD?set ALYX_DL_PASSWORD in .env}
+    volumes:
+      - ./notebooks:/notebooks
+      - ./images:/images
+      - .:/src/IBL-pipeline
+      - ./data:/data
+      - /tmp/alyx_data:/tmp
+    networks:
+      - ibl-dev
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        /ingest-entrypoint.sh initdb
+        ipython ./IBL-pipeline/entrypoint.py ingest
+        tail -f /dev/null
+    scale: ${WORKER_COUNT:-1}
+  populate:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingest
+    env_file: .env
+    init: true
+    depends_on:
+      loaddump:
+        condition: service_healthy
+    environment:
+      - PGUSER=${ALYX_DB_USER?set ALYX_DB_USER in .env}
+      - PGHOST=${ALYX_DB_HOST?set ALYX_DB_HOST in .env}
+      - PGPASSWORD=${ALYX_DB_PASSWORD?set ALYX_DB_PASSWORD in .env}
+      - ALYX_DL_DATE=${ALYX_DL_DATE?set ALYX_DL_DATE in .env}
+      - ALYX_DL_USER=${ALYX_DL_USER?set ALYX_DL_USER in .env}
+      - ALYX_DL_PASSWORD=${ALYX_DL_PASSWORD?set ALYX_DL_PASSWORD in .env}
+    volumes:
+      - ./notebooks:/notebooks
+      - ./images:/images
+      - .:/src/IBL-pipeline
+      - ./data:/data
+      - /tmp/alyx_data:/tmp
+    networks:
+      - ibl-dev
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        /ingest-entrypoint.sh initdb
+        ipython ./IBL-pipeline/entrypoint.py behavior &
+        ipython ./IBL-pipeline/entrypoint.py wheel &
+        ipython ./IBL-pipeline/entrypoint.py ephys &
+        tail -f /dev/null
 
 networks:
   ibl-dev:

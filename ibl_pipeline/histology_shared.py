@@ -1,21 +1,12 @@
 import datajoint as dj
-from . import reference, subject, acquisition, data, ephys, qc
 import numpy as np
 from .utils import atlas
 from tqdm import tqdm
-from ibllib.pipes.ephys_alignment import EphysAlignment
 import warnings
-from os import environ
 
-try:
-    from oneibl.one import ONE
-    import alf.io
-    one = ONE(silent=True)
-except ImportError:
-    warnings.warn('ONE not installed, cannot use populate')
-    pass
+from . import reference, subject, acquisition, data, ephys, qc
+from . import mode, one
 
-mode = environ.get('MODE')
 
 if mode == 'update':
     schema = dj.schema('ibl_histology')
@@ -118,34 +109,23 @@ class ChannelBrainLocation(dj.Imported):
 
     if mode != 'public':
         key_source = (ProbeTrajectory
-                    & (data.FileRecord & 'dataset_name like "%channels.brainLocationIds%"')
-                    & (data.FileRecord & 'dataset_name like "%channels.mlapdv%"')) - \
+                      & (data.FileRecord & 'dataset_name like "%channels.brainLocationIds%"')
+                      & (data.FileRecord & 'dataset_name like "%channels.mlapdv%"')) - \
             (ephys.ProbeInsertionMissingDataLog & 'missing_data="channels_brain_region"')
 
     def make(self, key):
 
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        dtypes = [
-            'channels.brainLocationIds_ccf_2017',
-            'channels.mlapdv'
-        ]
-
-        files = one.load(eID, dataset_types=dtypes, download_only=True,
-                         clobber=True)
-        ses_path = alf.io.get_session_path(files[0])
-
-        probe_label = (ephys.ProbeInsertion & key).fetch1('probe_label')
-        if not probe_label:
-            probe_label = 'probe0' + key['probe_idx']
+        probe_name = (ephys.ProbeInsertion & key).fetch1('probe_label')
+        probe_name = probe_name or 'probe0' + key['probe_idx']
 
         try:
-            channels = alf.io.load_object(
-                ses_path.joinpath('alf', probe_label), 'channels')
+            channels = one.load_object(eID, obj='channels',
+                                       collection=f'alf/{probe_name}')
         except Exception as e:
             ephys.ProbeInsertionMissingDataLog.insert1(
                 dict(**key, missing_data='channels_brain_region',
-                     error_message=str(e))
-            )
+                     error_message=str(e)))
             return
 
         channel_entries = []
@@ -185,29 +165,16 @@ class ClusterBrainRegion(dj.Imported):
         (data.FileRecord & 'dataset_name like "%clusters.mlapdv%"')
 
     def make(self, key):
-
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        dtypes = [
-            'clusters.brainLocationIds_ccf_2017',
-            'clusters.mlapdv'
-        ]
-
-        files = one.load(eID, dataset_types=dtypes, download_only=True,
-                         clobber=True)
-        ses_path = alf.io.get_session_path(files[0])
-
-        probe_label = (ephys.ProbeInsertion & key).fetch1('probe_label')
-        if not probe_label:
-            probe_label = 'probe0' + key['probe_idx']
+        probe_name = (ephys.ProbeInsertion & key).fetch1('probe_label')
+        probe_name = probe_name or 'probe0' + key['probe_idx']
 
         try:
-            clusters = alf.io.load_object(
-                ses_path.joinpath('alf', probe_label), 'clusters')
+            clusters = one.load_object(eID, obj='clusters', collection=f'alf/{probe_name}')
         except Exception as e:
             ephys.ProbeInsertionMissingDataLog.insert1(
                 dict(**key, missing_data='clusters_brain_region',
-                     error_message=str(e))
-            )
+                     error_message=str(e)))
             return
 
         cluster_entries = []
@@ -227,7 +194,7 @@ class ClusterBrainRegion(dj.Imported):
                 )
             )
 
-        self.insert(cluster_entries)
+        self.insert(cluster_entries, skip_duplicates=True)
 
 
 @schema
@@ -240,9 +207,7 @@ class ProbeBrainRegion(dj.Computed):
     key_source = ProbeTrajectory & ClusterBrainRegion
 
     def make(self, key):
-
         regions = (dj.U('acronym') & (ClusterBrainRegion & key)).fetch('acronym')
-
         associated_regions = [
             atlas.BrainAtlas.get_parents(acronym)
             for acronym in regions] + list(regions)
@@ -257,14 +222,15 @@ class DepthBrainRegion(dj.Computed):
     # For each ProbeTrajectory, assign depth boundaries relative to the probe tip to each brain region covered by the trajectory
     -> ProbeTrajectory
     ---
-    region_boundaries   : blob
-    region_label        : blob
+    region_boundaries   : blob  # 2d numpy array for depths of the boundaries [[20, 40], [40, 60], [60, 120]]
+    region_label        : blob  # ['VISa', 'LGN' ...]
     region_color        : blob
     region_id           : blob
     """
     key_source = ProbeTrajectory & ChannelBrainLocation
 
     def make(self, key):
+        from ibllib.pipes.ephys_alignment import EphysAlignment
 
         x, y, z = (ChannelBrainLocation & key).fetch(
             'channel_ml', 'channel_ap', 'channel_dv')

@@ -8,9 +8,10 @@ from ibl_pipeline import reference, subject, action, acquisition, data, ephys
 import traceback
 import datetime
 import os
+import numpy as np
 
 
-mode = os.environ.get('MODE')
+mode = dj.config.get('custom', {}).get('database.mode', "")
 
 REF_TABLES = (
     'Lab',
@@ -116,13 +117,10 @@ EPHYS_TABLES = (
 def copy_table(target_schema, src_schema, table_name,
                fresh=False, use_uuid=True, backtrack_days=None, **kwargs):
     if '.' in table_name:
-        attrs = table_name.split('.')
-
-        target_table = target_schema
-        src_table = src_schema
-        for a in attrs:
-            target_table = getattr(target_table, a)
-            src_table = getattr(src_table, a)
+        # handling part-table
+        master_name, part_name = table_name.split('.')
+        target_table = getattr(getattr(target_schema, master_name), part_name)
+        src_table = getattr(getattr(src_schema, master_name), part_name)
     else:
         target_table = getattr(target_schema, table_name)
         src_table = getattr(src_schema, table_name)
@@ -138,6 +136,7 @@ def copy_table(target_schema, src_schema, table_name,
             q_src_table = src_table & f'session_start_time > "{date_cutoff}"'
         else:
             q_src_table = src_table
+
         if use_uuid:
             pk = src_table.heading.primary_key
             if len(pk) == 1 and 'uuid' in pk[0]:
@@ -147,18 +146,33 @@ def copy_table(target_schema, src_schema, table_name,
         else:
             q_insert = q_src_table - target_table.proj()
 
-        try:
-            target_table.insert(q_insert, skip_duplicates=True, **kwargs)
+        # keep only records in "q_insert" HAVING entries in the parent tables
+        for parent_table, parent_fk_info in target_table.parents(
+                as_objects=True, foreign_key_info=True):
+            # skipping "nullable" foreign key
+            if np.all([target_table.heading.attributes[attr].nullable
+                       for attr in parent_fk_info['attr_map']]):
+                continue
+            # skipping `BrainRegion` table, collations conflicts
+            if dj.utils.to_camel_case(
+                parent_table.full_table_name.split('.')[-1].replace('`', '')) in ('BrainRegion'):
+                continue
 
+            parent_table = parent_table.proj(**parent_fk_info['attr_map'])
+            q_insert &= parent_table
+
+        kwargs = {**kwargs, 'skip_duplicates': True,
+                  'ignore_extra_fields': True,
+                  'allow_direct_insert': True}
+
+        try:
+            target_table.insert(q_insert, **kwargs)
         except Exception:
-            for t in (q_insert).fetch(as_dict=True):
+            for key in q_insert.fetch('KEY'):
                 try:
-                    if table_name == 'DataSet' and \
-                         not len(t['dataset_created_by']):
-                        t.pop('dataset_created_by')
-                    target_table.insert1(t, skip_duplicates=True, **kwargs)
+                    target_table.insert(q_insert & key, **kwargs)
                 except Exception:
-                    print("Error when inserting {}".format(t))
+                    print("Error when inserting {}".format((q_insert & key).fetch1()))
                     traceback.print_exc()
 
 

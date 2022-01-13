@@ -1,19 +1,15 @@
 import datajoint as dj
 import inspect
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+import plotly.graph_objs as go
+
 from ..analyses import behavior
 from .. import behavior as behavior_ingest
 from .. import reference, subject, action, acquisition, data
 from . import plotting_utils_behavior as putils
-import numpy as np
-import pandas as pd
-from ..utils import psychofit as psy
-import plotly
-import plotly.graph_objs as go
-import statsmodels.stats.proportion as smp
-import datetime
-import matplotlib.pyplot as plt
-import os
-from . import behavior_internal
+from .. import one
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_behavior')
@@ -387,3 +383,27 @@ class DailyLabSummary(dj.Computed):
         data_update_status:          varchar(255)
         subject_summary_ts=CURRENT_TIMESTAMP:      timestamp
         """
+
+    @classmethod
+    def detect_dead_subjects_from_alyx(cls, insert_into_death_table=False):
+        """Helper function to detect all dead subjects that are still in SubjectSummary
+
+        Args:
+            insert_into_death_table (boolean): whether insert the entries into the Death table
+
+        Returns:
+            (list of uuids): list of uuids for dead animals
+        """
+
+        dead_subj_uuids = []
+        for subj in tqdm(cls.SubjectSummary.fetch('KEY')):
+
+            dead_subj = one.alyx.rest('subjects', 'list', id=str(subj['subject_uuid']), alive=False)
+            if dead_subj:
+                dead_subj_uuids.append(subj['subject_uuid'])
+                if insert_into_death_table:
+                    subject.Death.insert1(dict(subject_uuid=subj['subject_uuid'],
+                                               death_date=dead_subj[0]['death_date']),
+                                          skip_duplicates=True)
+
+        return dead_subj_uuids

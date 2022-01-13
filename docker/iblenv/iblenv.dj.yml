@@ -1,0 +1,74 @@
+# conda-forge based environment for pre-built pkgs of other architectures like aarch64
+# NOTES:
+#   - Recommended to install conda-build in base environment first
+#       conda install -qy conda-build
+#   - Recommended to use mambaforge w/ mamba
+#   - Recommended config settings:
+#       conda config --remove-key channels
+#       conda config --append channels conda-forge --append channels defaults
+#       conda config --set channel_priority strict
+#
+#   - Install environment with:
+#       mamba clean -yiqaf
+#       mamba env create -vqf iblenv.dj.yml
+name: iblenv
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9.*                       # minimum python version
+  - pip>=21.1.0                        # no setup.py
+  - apptools                           # dev
+  - boto3                              # datajoint
+  - black                              # dev
+  - click                              # ibllib
+  - colorcet                           # ?
+  - colorlog                           # ibllib
+  - colorlover                         # datajoint
+  - cryptography                       # datajoint
+  - cython                             # ?
+  - dataclasses                        # old python
+  - flake8                             # dev
+  - globus-sdk                         # ibllib
+  - graphviz                           # datajoint
+  - h5py                               # sorting_analysis
+  - imageio                            # datajoint
+  - jupyter                            # ibllib
+  - jupyterlab                         # ibllib
+  - matplotlib                         # ibllib
+  # ! conda-forge has old python as requirement, must be built from GitHub source
+  # - mayavi                             # iblapps
+  - nb_conda                           # ?, pkgs/main
+  - nb_conda_kernels                   # ?, pkgs/main
+  - numba                              # ibllib
+  - numpy>=1.21.0                      # ibllib
+  - pandas                             # ibllib
+  - pillow                             # datajoint
+  - plotly                             # datajoint
+  - pyarrow                            # ibllib
+  - pydot                              # datajoint
+  - pymysql                            # datajoint
+  - pynrrd                             # ibllib
+  - pyopengl                           # dev
+  - pyqt                               # iblapps
+  - pyqtgraph                          # iblapps
+  - pytest                             # dev
+  - requests                           # ibllib
+  - scikit-learn                       # ibllib
+  - scikits-bootstrap                  # datajoint
+  - scipy                              # ibllib
+  - seaborn                            # ibllib
+  # ! pkg has no linux/aarch64 builds and does not use manylinux2014 for pip either
+  #- libsimpleitk                       # iblapps
+  - statsmodels                        # ibllib
+  - tqdm                               # ibllib
+  - vtk                                # mayavi
+  - pip:
+      - datajoint                      # datajoint
+      - easyqc                         # iblapps
+      - iblutil                        # ibllib
+      - mtscomp                        # ibllib
+      - ONE-api                        # ibllib
+      - phylib                         # ibllib
+      - soundfile                      # examples
+      - opencv-python                  # ibllib, tries to rebuild numba if not correct numpy version

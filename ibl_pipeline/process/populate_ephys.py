@@ -6,27 +6,34 @@ Shan Shen, 2019-11-20
 
 Added a number of plotting tables.
 Shan Shen, 2020-08-15
+
+Added histology tables populate
+Thinh Nguyen, 2021-10-15
 '''
 
-from ibl_pipeline.common import *
 import logging
 import time
-
-import datetime
-from uuid import UUID
-
-import os
 import pathlib
 
+from ibl_pipeline import ephys, histology
+from ibl_pipeline import mode
+from ibl_pipeline.analyses import ephys as ephys_analyses
+from ibl_pipeline.plotting import ephys as ephys_plotting
+from ibl_pipeline.plotting import histology as histology_plotting
 
-mode = os.environ.get('MODE')
-logpath = pathlib.Path('/src/IBL-pipeline/ibl_pipeline/process/logs')
+log_path = pathlib.Path(__file__).parent / 'logs'
+log_path.mkdir(parents=True, exist_ok=True)
+log_file = log_path / f'ephys_ingestion{"_public" if mode == "public" else ""}.log'
+log_file.touch(exist_ok=True)
 
-if mode == 'public':
-    log_file = logpath / 'ephys_ingestion_public.log'
-else:
-    log_file = logpath / 'ephys_ingestion.log'
+logging.basicConfig(
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler()],
+    level=30)
 
+logger = logging.getLogger(__name__)
 
 EPHYS_TABLES = [
     ephys.CompleteClusterSession,
@@ -46,37 +53,55 @@ EPHYS_TABLES = [
     ephys_plotting.DepthRasterExampleTrial,
 ]
 
+HISTOLOGY_TABLES = [
+    histology.ProbeTrajectory,
+    histology.ChannelBrainLocation,
+    histology.ClusterBrainRegion,
+    histology_plotting.SubjectSpinningBrain,
+    histology_plotting.ProbeTrajectoryCoronal
+]
 
-def main(exclude_plottings=False):
-    logging.basicConfig(
-        format='%(asctime)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()],
-        level=30)
 
-    logger = logging.getLogger(__name__)
+if mode != 'public':
+    HISTOLOGY_TABLES.extend([
+        histology.ClusterBrainRegionTemp,
+        histology.ProbeBrainRegionTemp,
+        histology.DepthBrainRegionTemp])
 
-    kwargs = dict(display_progress=True, suppress_errors=True)
+
+gkwargs = dict(display_progress=True, suppress_errors=True)
+
+
+def main(exclude_plottings=False, run_duration=3600*3, sleep_duration=60, **kwargs):
 
     start_time = time.time()
+    while ((time.time() - start_time < run_duration)
+           or (run_duration is None)
+           or (run_duration < 0)):
 
-    for table in EPHYS_TABLES:
-        table_start_time = time.time()
-        if exclude_plottings and table.__module__ == 'ibl_pipeline.plotting.ephys':
-            continue
-        logger.log(30, 'Ingesting {}...'.format(table.__name__))
-        table.populate(**kwargs)
-        logger.log(30, 'Ingestion time of {} is {}'.format(
-            table.__name__,
-            time.time()-table_start_time))
+        tstart = time.time()
 
-    end_time = time.time()
-    logger.log(30, 'Total ingestion time {}'.format(
-        end_time-start_time
-    ))
+        logger.log(30, 'Ephys populate')
+
+        for table in EPHYS_TABLES:
+            table_start_time = time.time()
+            if exclude_plottings and table.__module__ == 'ibl_pipeline.plotting.ephys':
+                continue
+            logger.log(30, 'Ingesting {}...'.format(table.__name__))
+            table.populate(**gkwargs)
+            logger.log(30, 'Ingestion time of {} is {}'.format(
+                table.__name__,
+                time.time()-table_start_time))
+
+        logger.log(30, 'Total ingestion time {}'.format(time.time() - tstart))
+
+        logger.log(30, 'Histology populate')
+        for table in HISTOLOGY_TABLES:
+            logger.log(30, f'Populating {table.__name__}...')
+            table.populate(**gkwargs)
+
+        time.sleep(sleep_duration)
 
 
 if __name__ == '__main__':
-
     main()

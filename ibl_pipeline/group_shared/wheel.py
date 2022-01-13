@@ -2,19 +2,25 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 import datajoint as dj
-from ibl_pipeline import acquisition, behavior
+from ibl_pipeline import acquisition, behavior, mode
 import numpy as np
+import pathlib
 
-from oneibl.one import ONE
 import brainbox.behavior.wheel as wh
 from ibllib.io.extractors.training_wheel import extract_wheel_moves, extract_first_movement_times, infer_wheel_units
-from ibllib.io.params import getfile
 
+from .. import one
+
+
+log_path = pathlib.Path(__file__).parent / 'logs'
+log_path.mkdir(parents=True, exist_ok=True)
+log_file = log_path / f'process_wheel{"_public" if mode == "public" else ""}.log'
+log_file.touch(exist_ok=True)
 
 logging.basicConfig(
     format='%(asctime)s - %(message)s',
     handlers=[
-        logging.FileHandler("/src/IBL-pipeline/ibl_pipeline/process/logs/process_wheel.log"),
+        logging.FileHandler(log_file),
         logging.StreamHandler()],
     level=25)
 

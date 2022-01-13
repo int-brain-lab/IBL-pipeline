@@ -35,8 +35,8 @@ def get_uuids(model_name, uuid_name, subject_uuids):
 
             sessions = []
             for subj_uuid, subj in zip(subject_uuids, subjects):
-
-                if os.environ.get('MODE') == 'public':
+                mode = dj.config.get('custom', {}).get('database.mode', os.getenv('MODE', ''))
+                if mode == 'public':
                     session_start, session_end = (
                         public.PublicSubject &
                         (public.PublicSubjectUuid &

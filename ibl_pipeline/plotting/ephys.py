@@ -11,7 +11,7 @@ import pandas as pd
 import plotly
 import plotly.graph_objs as go
 import json
-from os import path, environ
+from os import path
 from tqdm import tqdm
 import boto3
 from brainbox import population
@@ -20,7 +20,7 @@ import seaborn as sns
 import colorlover as cl
 
 
-mode = environ.get('MODE')
+mode = dj.config.get('custom', {}).get('database.mode', "")
 
 if mode == 'public':
     root_path = 'public'
@@ -289,6 +289,7 @@ class Raster(dj.Computed):
     mark_label=null:              varchar(32)
     -> RasterLayoutTemplate
     """
+
     key_source = ephys.DefaultCluster * ValidAlignSort & behavior.TrialSet & \
         ephys.AlignedTrialSpikes & [{'wheel_needed': 0}, wheel.MovementTimes]
 

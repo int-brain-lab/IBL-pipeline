@@ -1,10 +1,9 @@
 import datajoint as dj
-import os
 from . import reference, subject, action
+from . import mode
 
 
 # Map to the correct schema based on mode.
-mode = os.environ.get('MODE')
 if mode == 'update':
     schema = dj.schema('ibl_acquisition')
 else:

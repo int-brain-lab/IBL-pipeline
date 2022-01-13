@@ -1,11 +1,10 @@
-
 from uuid import UUID
 import json
 
 
 def is_valid_uuid(uuid):
     try:
-        UUID(uuid)
+        UUID(str(uuid))
         return True
     except (ValueError, AttributeError):
         return False

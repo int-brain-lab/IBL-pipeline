@@ -1,7 +1,7 @@
 #! /bin/sh
 
 # ingest entrypoint script
-# ======================== 
+# ========================
 
 # globals
 # -------
@@ -24,6 +24,7 @@ err_exit() { echo "error: $*"; exit 1; }
 # ---------
 
 fetchdump() {
+  echo "---- fetchdump() ----"
 	echo "=> fetching dbdump for ${ALYX_DL_DATE}";
 
 	mv -f ${dbdump} ${dbdump}.prev >/dev/null 2>&1;
@@ -38,6 +39,7 @@ fetchdump() {
 # ----
 
 mkdb() {
+  echo "---- mkdb() ----"
 	if [ -f "${dbcreated}" ]; then
 		echo '# => using existing database';
 	else
@@ -57,6 +59,7 @@ mkdb() {
 # ------
 
 loaddb() {
+  echo "---- loaddb() ----"
 	if [ -f "${dbloaded}" ]; then
 		echo '# => database loaded - skipping load.';
 	else
@@ -66,14 +69,25 @@ loaddb() {
 	fi
 }
 
+# reloaddb - redownload sqldump and redo loaddb
+# ------
+
+reloaddb() {
+  echo "---- reloaddb() ----"
+  fetchdump;
+  rm ${dbloaded};
+  loaddb;
+}
+
 # configure alyx/django
 # ---------------------
 
 alyxcfg() {
+	echo '---- alyxcfg() ----'
 	echo '# => configuring alyx'
 
 	if [ ! -f "$sucreated" ]; then
-	
+
 		echo '# ==> configuring settings_secret.py'
 
 		# custom settings_secret for multiple DBs
@@ -108,35 +122,35 @@ alyxcfg() {
 		        'PORT': '5432',
 		    }
 		}
-		
+
 		EMAIL_HOST = 'mail.superserver.net'
 		EMAIL_HOST_USER = 'alyx@awesomedomain.org'
 		EMAIL_HOST_PASSWORD = 'UnbreakablePassword'
 		EMAIL_PORT = 587
 		EMAIL_USE_TLS = True
-		
+
 EOF
-	
+
 		echo '# ==> creating alyx superuser'
-	
+
 		/src/alyx/alyx/manage.py createsuperuser \
 			--no-input \
 			--username admin \
 			--email admin@localhost
-	
+
 		echo '# ==> setting alyx superuser password'
-	
-		# note on superuser create: 
+
+		# note on superuser create:
 		#
 		# - no-input 'createsuperuser' creates without password
 		# - cant set password from cli here or in setpassword command
 		# - so script reset via manage.py shell
-		# - see also: 
+		# - see also:
 		#   https://stackoverflow.com/questions/6358030/\
 		#     how-to-reset-django-admin-password
-	
+
 		/src/alyx/alyx/manage.py shell <<-EOF
-	
+
 		from django.contrib.auth import get_user_model
 		User = get_user_model()
 		admin = User.objects.get(username='admin')
@@ -154,8 +168,10 @@ EOF
 # --------
 
 alyxprep() {
-	echo "# => alyxprep"
+  echo "---- alyxprep() ----"
+	echo "# => makemigrations"
 	/src/alyx/alyx/manage.py makemigrations;
+	echo "# => migrate"
 	/src/alyx/alyx/manage.py migrate;
 }
 
@@ -163,6 +179,7 @@ alyxprep() {
 # ---------
 
 alyxstart() {
+  echo "---- alyxstart() ----"
 	echo '# => starting alyx'
 	/src/alyx/alyx/manage.py runserver --insecure 0.0.0.0:8888;
 }
@@ -171,17 +188,18 @@ alyxstart() {
 # --------
 
 renamedb() {
+  echo "---- renamedb() ----"
 	echo "# => renaming databases:";
 
-	echo "# ==> ... dropping alyx_old"; 
+	echo "# ==> ... dropping alyx_old";
 	dropdb alyx_old || err_exit "couldn't drop alyx_old";
 
-	echo "# ==> ... renaming alyx to alyx_old"; 
+	echo "# ==> ... renaming alyx to alyx_old";
 	psql -c 'alter database alyx rename to alyx_old;' \
 			> /dev/null \
 		|| err_exit "couldn't rename alyx to alyx_old";
 
-	echo "# ==> ... creating new alyx"; 
+	echo "# ==> ... creating new alyx";
 	createdb alyx || err_exit "couldn't rename alyx to alyx_old";
 
 	rm -f ${dbloaded};
@@ -191,25 +209,38 @@ renamedb() {
 }
 
 
-# init
+# initdb
 # ----
-# perform all initialization steps
+# perform all initialization steps to bring up the alyx database
 
-init() {
-	fetchdump;
+initdb() {
 	mkdb;
-	loaddb;
 	alyxcfg;
 	alyxprep;
 }
 
 
-# www 
+# loaddump
 # ---
-# initialize environment and run alyx web 
+# initialize alyx db, download sqldump and load data to alyx db
+
+loaddump() {
+  fetchdump;
+	mkdb;
+  loaddb;
+	alyxcfg;
+	alyxprep;
+}
+
+
+# www
+# ---
+# initialize environment and run alyx web
 
 www() {
-	init;
+  fetchdump;
+	initdb;
+	loaddb;
 	alyxstart;
 }
 
@@ -219,8 +250,9 @@ www() {
 
 dev() {
 	init;
+	echo "starting dev env...";
 	exec tail -f /dev/null;
-} 
+}
 
 # _start:
 
@@ -228,15 +260,17 @@ case "$1" in
 	"fetchdump") fetchdump;;
 	"mkdb") mkdb;;
 	"loaddb") loaddb;;
+  "reloaddb") reloaddb;;
 	"alyxcfg") alyxcfg;;
 	"alyxprep") alyxprep;;
+  "initdb") initdb;;
 	"alyxstart") alyxstart;;
 	"renamedb") renamedb;;
+  "loaddump") loaddump;;
 	"www") www;;
 	"dev") dev;;
 	"sh") exec /bin/sh -c "$*";;
 	"help") \
-		echo "usage: `basename $0` [fetchdump|mkdb|loaddb|alyxcfg|alyxprep|alyxstart|renamedb|www|dev|sh]";;
+		echo "usage: `basename $0` [fetchdump|mkdb|loaddb|reloaddb|alyxcfg|alyxprep|initdb|alyxstart|renamedb|loaddump|www|dev|sh]";;
 	*) ;; # ... sourceable
 esac
-

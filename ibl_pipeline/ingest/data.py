@@ -2,7 +2,7 @@ import datajoint as dj
 import json
 import uuid
 
-from . import alyxraw, reference, acquisition
+from . import alyxraw, reference, acquisition, ShadowIngestionError
 from . import get_raw_field as grf
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
@@ -174,16 +174,21 @@ class DataSet(dj.Computed):
         dataset_uuid="uuid")
 
     def make(self, key):
+        self.insert1(self.create_entry(key))
+
+    @staticmethod
+    def create_entry(key):
+        """
+        For a dataset_uuid from alyx, generate the dictionary
+         to be inserted into this DataSet table
+        """
         key_ds = key.copy()
         key['uuid'] = key['dataset_uuid']
 
         session = grf(key, 'session')
         if not len(acquisition.Session &
                    dict(session_uuid=uuid.UUID(session))):
-            print('Session {} is not in the table acquisition.Session'.format(
-                session))
-            print('dataset_uuid: {}'.format(str(key['uuid'])))
-            return
+            raise ShadowIngestionError('Non existing session: {}'.format(session))
 
         key_ds['subject_uuid'], key_ds['session_start_time'] = \
             (acquisition.Session &
@@ -200,9 +205,14 @@ class DataSet(dj.Computed):
         user = grf(key, 'created_by')
 
         if user != 'None':
-            key_ds['dataset_created_by'] = \
-                (reference.LabMember & dict(user_uuid=uuid.UUID(user))).fetch1(
-                    'user_name')
+            try:
+                key_ds['dataset_created_by'] = \
+                    (reference.LabMember & dict(user_uuid=uuid.UUID(user))).fetch1(
+                        'user_name')
+            except:
+                print(user)
+        else:
+            key_ds['dataset_created_by'] = None
 
         format = grf(key, 'data_format')
         key_ds['format_name'] = \
@@ -212,22 +222,31 @@ class DataSet(dj.Computed):
         key_ds['created_datetime'] = grf(key, 'created_datetime')
 
         software = grf(key, 'generating_software')
-        if software != 'None':
-            key_ds['generating_software'] = software
+        key_ds['generating_software'] = software if software != 'None' else None
 
         directory = grf(key, 'provenance_directory')
-        if directory != 'None':
-            key_ds['provenance_directory'] = directory
+        key_ds['provenance_directory'] = directory if directory != 'None' else None
 
         md5 = grf(key, 'md5')
-        if md5 != 'None':
-            key_ds['md5'] = md5
+        key_ds['md5'] = md5 if md5 != 'None' else None
 
         file_size = grf(key, 'file_size')
-        if file_size != 'None':
-            key_ds['file_size'] = file_size
+        key_ds['file_size'] = file_size if file_size != 'None' else None
 
-        self.insert1(key_ds)
+        return key_ds
+
+    @classmethod
+    def create_session_entries(cls, session_uuid):
+        """
+        For a session_uuid, create a list of dictionaries representing all entries
+         for the given session to be inserted into the DataSet table
+        """
+        alyxraw_dataset_query = (alyxraw.AlyxRaw * alyxraw.AlyxRaw.Field
+                                 & 'model = "data.dataset"'
+                                 & 'fname = "session"' & {'fvalue': session_uuid})
+        alyxraw_dataset_keys = (alyxraw.AlyxRaw & alyxraw_dataset_query.proj()).proj(
+            dataset_uuid="uuid").fetch('KEY')
+        return [cls.create_entry(key) for key in alyxraw_dataset_keys]
 
 
 @schema
@@ -253,15 +272,17 @@ class FileRecord(dj.Computed):
         record_uuid='uuid')
 
     def make(self, key):
+        self.insert1(self.create_entry(key))
+
+    @staticmethod
+    def create_entry(key):
         key_fr = key.copy()
         key['uuid'] = key['record_uuid']
         key_fr['exists'] = True
 
         dataset = grf(key, 'dataset')
         if not len(DataSet & dict(dataset_uuid=uuid.UUID(dataset))):
-            print('Dataset {} is not in the table data.DataSet')
-            print('Record_uuid: {}'.format(str(key['uuid'])))
-            return
+            raise ShadowIngestionError('Dataset is not in the table data.DataSet: {}'.format(str(key['uuid'])))
 
         key_fr['subject_uuid'], key_fr['session_start_time'], \
             key_fr['dataset_name'] = \
@@ -274,4 +295,23 @@ class FileRecord(dj.Computed):
                 'repo_name')
 
         key_fr['relative_path'] = grf(key, 'relative_path')
-        self.insert1(key_fr)
+        return key_fr
+
+    @classmethod
+    def create_session_entries(cls, session_uuid):
+        """
+        For a session_uuid, create a list of dictionaries representing all entries
+         for the given session to be inserted into the FileRecord table
+        """
+        subject_uuid, session_start_time = (acquisition.Session
+                                            & {'session_uuid': session_uuid}).fetch1(
+            'subject_uuid', 'session_start_time')
+        dataset_uuids = (DataSet & {'subject_uuid': subject_uuid,
+                                    'session_start_time': session_start_time}).fetch('dataset_uuid')
+        session_records = (alyxraw.AlyxRaw * alyxraw.AlyxRaw.Field & 'model="data.filerecord"'
+                           & 'fname = "dataset"' & [{'fvalue': str(u)} for u in dataset_uuids])
+
+        alyxraw_filerecord_keys = (cls.key_source
+                                   & session_records.proj(record_uuid='uuid')).fetch('KEY')
+
+        return [cls.create_entry(key) for key in alyxraw_filerecord_keys]

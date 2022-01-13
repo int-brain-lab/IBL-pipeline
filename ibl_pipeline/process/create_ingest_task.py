@@ -20,8 +20,8 @@ EXCLUDED_MODELS = {'auth.group', 'sessions.session',
 
 
 def get_modified_pks(data0, data1):
-    d0 = {_['pk']: json.dumps(_['fields'], sort_keys=True) for _ in data0}
-    d1 = {_['pk']: json.dumps(_['fields'], sort_keys=True) for _ in data1}
+    d0 = {_['pk']: json.dumps(_['fields'], sort_keys=True) for _ in data0 if _['model'] not in EXCLUDED_MODELS}
+    d1 = {_['pk']: json.dumps(_['fields'], sort_keys=True) for _ in data1 if _['model'] not in EXCLUDED_MODELS}
     d0 = {k: v for k, v in d0.items() if k in d1.keys()}
     d1 = {k: v for k, v in d1.items() if k in d0.keys()}
 
@@ -46,7 +46,7 @@ def filter_modified_keys_session(data0, data1, modified_pks):
     sessions_same = dict(sessions0.items() & sessions1.items()).keys()
     return list(set(modified_pks) - set(sessions_same))
 
-
+# TODO: change /data /tmp to use dj.config
 def compare_json_dumps(previous_dump='/data/alyxfull.json',
                        latest_dump='/data/alyxfull.json.last',
                        create_files=True, insert_to_table=True,
@@ -101,6 +101,7 @@ def compare_json_dumps(previous_dump='/data/alyxfull.json',
 
     timezone = get_timezone(t)
 
+    # TODO: change /data /tmp to use dj.config
     if create_files:
         suffix = f'_{latest_modified_time.strftime("%Y-%m-%d")}_{timezone}'
         root_dir = '/data/daily_increments/'

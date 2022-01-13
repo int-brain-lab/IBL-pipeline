@@ -10,7 +10,7 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 
-
+# TODO: change /data /tmp to use dj.config
 keys = get_alyx_entries(models='experiments.brainregion')
 atlas = pd.read_csv('/data/allen_structure_tree.csv')
 

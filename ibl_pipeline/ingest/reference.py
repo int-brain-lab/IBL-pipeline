@@ -6,7 +6,7 @@ from . import get_raw_field as grf
 
 import os
 
-if os.environ.get('MODE') == 'public':
+if dj.config.get('custom', {}).get('database.mode', "") == 'public':
     from .. import public
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
@@ -71,7 +71,7 @@ class LabMember(dj.Computed):
 
         # check the current mode, if public, omit some fields
         user_name = grf(key, 'username')
-        if os.environ.get('MODE') != 'public':
+        if dj.config.get('custom', {}).get('database.mode', "") != 'public':
             key_lab_member['user_name'] = user_name
             key_lab_member['password'] = grf(key, 'password')
             key_lab_member['email'] = grf(key, 'email')

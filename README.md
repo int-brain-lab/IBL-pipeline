@@ -83,7 +83,7 @@ behavior.TrialSet()
 
 # Instruction for developers
 
-1. Email shanshen@vathes.com for a database username and initial password.
+1. Email joseph@vathes.com for a database username and initial password.
 
 2. Install Docker (https://www.docker.com/). Linux users also need to install Docker Compose separately. For Mac: https://docs.docker.com/docker-for-mac/.
 

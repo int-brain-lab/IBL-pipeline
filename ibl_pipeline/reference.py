@@ -1,8 +1,7 @@
 import datajoint as dj
-import os
 from ibl_pipeline.ingest import reference
+from . import mode
 
-mode = os.environ.get('MODE')
 
 if mode == 'update':
     schema = dj.schema('ibl_reference')

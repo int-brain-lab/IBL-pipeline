@@ -1,15 +1,12 @@
-
 import datajoint as dj
 
-
-schema = dj.schema(dj.config.get('database.prefix', '') +
-                   'ibl_ingest_job')
+schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ingest_job')
 
 
 @schema
 class TimeZone(dj.Lookup):
     definition = """
-    timezone:       varchar(16)
+    timezone:      varchar(16)
     """
     contents = zip(['European', 'EST', 'PST', 'other'])
 
@@ -20,13 +17,13 @@ class Job(dj.Manual):
     job_date     : date
     -> TimeZone.proj(job_timezone='timezone')
     ---
-    alyx_current_timestamp  : datetime
-    alyx_previous_timestamp : datetime
-    created_pks   : longblob
-    modified_pks  : longblob
-    deleted_pks   : longblob
-    modified_pks_important=null : longblob
-    session_prefiltered=0: bool
+    alyx_current_timestamp  : datetime          # timestamp of either current json dump or sql dump
+    alyx_previous_timestamp=null : datetime     # timestamp of the previous json dump, null for postgres based ingestion
+    created_pks=null   : longblob               # pks created
+    modified_pks=null  : longblob               # pks where entries were modified
+    deleted_pks=null   : longblob               # deleted pks
+    modified_pks_important=null : longblob      # filtered modified pks, excluded for some job tables, dataset and file record tables.
+    session_prefiltered=0: bool                 # whether session modification is prefiltered.
     job_ts=CURRENT_TIMESTAMP     : timestamp
     """
 
@@ -40,14 +37,16 @@ class Task(dj.Lookup):
     task_description=''     : varchar(1024)
     """
     contents = [
-        ['Delete alyxraw', 1, 'Delete alyxraw and shadow table entries for updated and deleted records'],
-        ['Delete shadow membership', 2, 'Delete shadow membership records for updated and deleted records'],
-        ['Ingest alyxraw', 3, 'Ingest to alyxraw'],
-        ['Ingest shadow', 4, 'Ingest to alyx shadow tables'],
-        ['Ingest shadow membership', 5, 'Ingest to alyx shadow membership tables'],
-        ['Ingest real', 6, 'Ingest to alyx real tables'],
-        ['Update fields', 7, 'Update fields in real tables'],
-        ['Populate behavior', 8, 'Populate behavior tables']
+        ['Ingest to update_alyxraw', 1, 'Ingest selected tables to schema update_alyxraw'],
+        ['Get modified deleted pks', 2, 'Get modified deleted pks'],
+        ['Delete alyxraw', 3, 'Delete alyxraw and shadow table entries for updated and deleted records'],
+        ['Delete shadow membership', 4, 'Delete shadow membership records for updated and deleted records'],
+        ['Ingest alyxraw', 5, 'Ingest to alyxraw'],
+        ['Ingest shadow', 6, 'Ingest to alyx shadow tables'],
+        ['Ingest shadow membership', 7, 'Ingest to alyx shadow membership tables'],
+        ['Ingest real', 8, 'Ingest to alyx real tables'],
+        ['Update fields', 9, 'Update fields in real tables'],
+        ['Populate behavior', 10, 'Populate behavior tables']
     ]
 
 
@@ -57,8 +56,969 @@ class TaskStatus(dj.Manual):
     -> Job
     -> Task
     ---
-    task_start_time         :  datetime
-    task_end_time           :  datetime
-    task_duration           :  float     # in mins
-    task_status_comments='' :  varchar(1000)
+    task_start_time         : datetime
+    task_end_time           : datetime
+    task_duration           : float     # in mins
+    task_status_comments='' : varchar(1000)
     """
+
+    @classmethod
+    def insert_task_status(cls, job_key, task, start, end):
+        cls.insert1(dict(**job_key,
+                         task=task,
+                         task_start_time=start,
+                         task_end_time=end,
+                         task_duration=(end - start).total_seconds() / 60.),
+                    skip_duplicates=True)
+
+
+# ================== Orchestrating the ingestion jobs =============
+import os
+import logging
+import time
+import inspect
+import datetime
+from tqdm import tqdm
+
+import misc as alyx_misc
+import subjects as alyx_subjects
+import actions as alyx_actions
+import data as alyx_data
+import experiments as alyx_experiments
+
+from ibl_pipeline.ingest import QueryBuffer, alyxraw, ShadowIngestionError
+from ibl_pipeline.process import (ingest_alyx_raw_postgres, ingest_membership,
+                                  ingest_real, delete_update_entries)
+
+from ibl_pipeline.ingest import reference as shadow_reference
+from ibl_pipeline.ingest import subject as shadow_subject
+from ibl_pipeline.ingest import action as shadow_action
+from ibl_pipeline.ingest import acquisition as shadow_acquisition
+from ibl_pipeline.ingest import data as shadow_data
+from ibl_pipeline.ingest import ephys as shadow_ephys
+from ibl_pipeline.ingest import qc as shadow_qc
+from ibl_pipeline.ingest import histology as shadow_histology
+
+from ibl_pipeline import (reference, subject, action,
+                          acquisition, data, ephys, qc, histology)
+
+
+logger = logging.getLogger(__name__)
+_backtrack_days = int(os.getenv('BACKTRACK_DAYS', 10))
+
+# --------- Some constants -------
+
+ALYX_MODELS = {
+    'misc.lab': alyx_misc.models.Lab,
+    'misc.lablocation': alyx_misc.models.LabLocation,
+    'misc.labmember': alyx_misc.models.LabMember,
+    'misc.labmembership': alyx_misc.models.LabMembership,
+    'misc.cagetype': alyx_misc.models.CageType,
+    'misc.enrichment': alyx_misc.models.Enrichment,
+    'misc.food': alyx_misc.models.Food,
+    'misc.housing': alyx_misc.models.Housing,
+    'subjects.project': alyx_subjects.models.Project,
+    'subjects.source': alyx_subjects.models.Source,
+    'subjects.species': alyx_subjects.models.Species,
+    'subjects.strain': alyx_subjects.models.Strain,
+    'subjects.sequence': alyx_subjects.models.Sequence,
+    'subjects.allele': alyx_subjects.models.Allele,
+    'subjects.line': alyx_subjects.models.Line,
+    'subjects.subject': alyx_subjects.models.Subject,
+    'subjects.breedingpair': alyx_subjects.models.BreedingPair,
+    'subjects.litter': alyx_subjects.models.Litter,
+    'subjects.genotypetest': alyx_subjects.models.GenotypeTest,
+    'subjects.zygosity': alyx_subjects.models.Zygosity,
+    'actions.proceduretype': alyx_actions.models.ProcedureType,
+    'actions.surgery': alyx_actions.models.Surgery,
+    'actions.cullmethod': alyx_actions.models.CullMethod,
+    'actions.cullreason': alyx_actions.models.CullReason,
+    'actions.cull': alyx_actions.models.Cull,
+    'actions.weighing': alyx_actions.models.Weighing,
+    'actions.watertype': alyx_actions.models.WaterType,
+    'actions.waterrestriction': alyx_actions.models.WaterRestriction,
+    'actions.wateradministration': alyx_actions.models.WaterAdministration,
+    'actions.session': alyx_actions.models.Session,
+    'data.dataformat': alyx_data.models.DataFormat,
+    'data.datarepositorytype': alyx_data.models.DataRepositoryType,
+    'data.datarepository': alyx_data.models.DataRepository,
+    'data.datasettype': alyx_data.models.DatasetType,
+    'data.dataset': alyx_data.models.Dataset,
+    'data.filerecord': alyx_data.models.FileRecord,
+    'experiments.coordinatesystem': alyx_experiments.models.CoordinateSystem,
+    'experiments.probemodel': alyx_experiments.models.ProbeModel,
+    'experiments.probeinsertion': alyx_experiments.models.ProbeInsertion,
+    'experiments.trajectoryestimate': alyx_experiments.models.TrajectoryEstimate,
+    'experiments.channel': alyx_experiments.models.Channel
+}
+
+MEMBERSHIP_ALYX_MODELS = {
+    'subjects.project': ['reference.ProjectLabMember',
+                         'data.ProjectRepository'],
+    'subjects.allele': ['subject.AlleleSequence'],
+    'subjects.line': ['subject.LineAllele'],
+    'actions.surgery': ['action.SurgeryProcedure',
+                        'action.SurgeryUser'],
+    'actions.session': ['acquisition.ChildSession',
+                        'acquisition.SessionUser',
+                        'acquisition.SessionProcedure',
+                        'acquisition.SessionProject',
+                        shadow_qc.SessionQCIngest,
+                        qc.SessionQC,
+                        qc.SessionExtendedQC],
+    'actions.waterrestriction': ['action.WaterRestrictionUser',
+                                 'action.WaterRestrictionProcedure'],
+    'actions.wateradministration': ['acquisition.WaterAdministrationSession'],
+    'experiments.probeinsertion': [shadow_qc.ProbeInsertionQCIngest,
+                                   qc.ProbeInsertionQC,
+                                   qc.ProbeInsertionExtendedQC],
+    'experiments.trajectoryestimate': [histology.ProbeTrajectoryTemp]
+}
+
+DJ_TABLES = {
+    'reference.Lab': {'shadow': shadow_reference.Lab,
+                      'real': reference.Lab},
+    'reference.LabMember': {'shadow': shadow_reference.LabMember,
+                            'real': reference.LabMember},
+    'reference.LabMembership': {'shadow': shadow_reference.LabMembership,
+                                'real': reference.LabMembership},
+    'reference.LabLocation': {'shadow': shadow_reference.LabLocation,
+                              'real': reference.LabLocation},
+    'reference.Project': {'shadow': shadow_reference.Project,
+                          'real': reference.Project},
+    'reference.CoordinateSystem': {'shadow': shadow_reference.CoordinateSystem,
+                                   'real': reference.CoordinateSystem},
+    'subject.Species': {'shadow': shadow_subject.Species,
+                        'real': subject.Species},
+    'subject.Source': {'shadow': shadow_subject.Source,
+                       'real': subject.Source},
+    'subject.Strain': {'shadow': shadow_subject.Strain,
+                       'real': subject.Strain},
+    'subject.Sequence': {'shadow': shadow_subject.Sequence,
+                         'real': subject.Sequence},
+    'subject.Allele': {'shadow': shadow_subject.Allele,
+                       'real': subject.Allele},
+    'subject.Line': {'shadow': shadow_subject.Line,
+                     'real': subject.Line},
+    'subject.Subject': {'shadow': shadow_subject.Subject,
+                        'real': subject.Subject},
+    'subject.BreedingPair': {'shadow': shadow_subject.BreedingPair,
+                             'real': subject.BreedingPair},
+    'subject.Litter': {'shadow': shadow_subject.Litter,
+                       'real': subject.Litter},
+    'subject.LitterSubject': {'shadow': shadow_subject.LitterSubject,
+                              'real': subject.LitterSubject},
+    'subject.SubjectProject': {'shadow': shadow_subject.SubjectProject,
+                               'real': subject.SubjectProject},
+    'subject.SubjectUser': {'shadow': shadow_subject.SubjectUser,
+                            'real': subject.SubjectUser},
+    'subject.SubjectLab': {'shadow': shadow_subject.SubjectLab,
+                           'real': subject.SubjectLab},
+    'subject.Caging': {'shadow': shadow_subject.Caging,
+                       'real': subject.Caging},
+    'subject.UserHistory': {'shadow': shadow_subject.UserHistory,
+                            'real': subject.UserHistory},
+    'subject.Weaning': {'shadow': shadow_subject.Weaning,
+                        'real': subject.Weaning},
+    'subject.Death': {'shadow': shadow_subject.Death,
+                      'real': subject.Death},
+    'subject.GenotypeTest': {'shadow': shadow_subject.GenotypeTest,
+                             'real': subject.GenotypeTest},
+    'subject.Zygosity': {'shadow': shadow_subject.Zygosity,
+                         'real': subject.Zygosity},
+    'action.ProcedureType': {'shadow': shadow_action.ProcedureType,
+                             'real': action.ProcedureType},
+    'acquisition.Session': {'shadow': shadow_acquisition.Session,
+                            'real': acquisition.Session},
+    'data.DataFormat': {'shadow': shadow_data.DataFormat,
+                        'real': data.DataFormat},
+    'data.DataRepositoryType': {'shadow': shadow_data.DataRepositoryType,
+                                'real': data.DataRepositoryType},
+    'data.DataRepository': {'shadow': shadow_data.DataRepository,
+                            'real': data.DataRepository},
+    'data.DataSetType': {'shadow': shadow_data.DataSetType,
+                         'real': data.DataSetType},
+    'data.DataSet': {'shadow': shadow_data.DataSet,
+                     'real': data.DataSet},
+    'data.FileRecord': {'shadow': shadow_data.FileRecord,
+                        'real': data.FileRecord},
+    'subject.SubjectCullMethod': {'shadow': shadow_subject.SubjectCullMethod,
+                                  'real': subject.SubjectCullMethod},
+    'action.Weighing': {'shadow': shadow_action.Weighing,
+                        'real': action.Weighing},
+    'action.WaterType': {'shadow': shadow_action.WaterType,
+                         'real': action.WaterType},
+    'action.WaterAdministration': {'shadow': shadow_action.WaterAdministration,
+                                   'real': action.WaterAdministration},
+    'action.WaterRestriction': {'shadow': shadow_action.WaterRestriction,
+                                'real': action.WaterRestriction},
+    'action.Surgery': {'shadow': shadow_action.Surgery,
+                       'real': action.Surgery},
+    'action.CullMethod': {'shadow': shadow_action.CullMethod,
+                          'real': action.CullMethod},
+    'action.CullReason': {'shadow': shadow_action.CullReason,
+                          'real': action.CullReason},
+    'action.Cull': {'shadow': shadow_action.Cull,
+                    'real': action.Cull},
+    'action.OtherAction': {'shadow': shadow_action.OtherAction,
+                           'real': action.OtherAction},
+    'ephys.ProbeModel': {'shadow': shadow_ephys.ProbeModel,
+                         'real': ephys.ProbeModel},
+    'ephys.ProbeInsertion': {'shadow': shadow_ephys.ProbeInsertion,
+                             'real': ephys.ProbeInsertion},
+    'reference.ProjectLabMember': {'real': reference.ProjectLabMember,
+                                   'shadow': shadow_reference.ProjectLabMember},
+    'subject.AlleleSequence': {'real': subject.AlleleSequence,
+                               'shadow': shadow_subject.AlleleSequence},
+    'subject.LineAllele': {'real': subject.LineAllele,
+                           'shadow': shadow_subject.LineAllele},
+    'action.SurgeryProcedure': {'real': action.SurgeryProcedure,
+                                'shadow': shadow_action.SurgeryProcedure},
+    'acquisition.ChildSession': {'real': acquisition.ChildSession,
+                                 'shadow': shadow_acquisition.ChildSession},
+    'acquisition.SessionUser': {'real': acquisition.SessionUser,
+                                'shadow': shadow_acquisition.SessionUser},
+    'acquisition.SessionProcedure': {'real': acquisition.SessionProcedure,
+                                     'shadow': shadow_acquisition.SessionProcedure},
+    'acquisition.SessionProject': {'real': acquisition.SessionProject,
+                                   'shadow': shadow_acquisition.SessionProject},
+    'data.ProjectRepository': {'real': data.ProjectRepository,
+                               'shadow': shadow_data.ProjectRepository},
+    'action.WaterRestrictionUser': {'real': action.WaterRestrictionUser,
+                                    'shadow': shadow_action.WaterRestrictionUser},
+    'action.WaterRestrictionProcedure': {'real': action.WaterRestrictionProcedure,
+                                         'shadow': shadow_action.WaterRestrictionProcedure},
+    'action.SurgeryUser': {'real': action.SurgeryUser,
+                           'shadow': shadow_action.SurgeryUser},
+    'acquisition.WaterAdministrationSession': {'real': acquisition.WaterAdministrationSession,
+                                               'shadow': shadow_acquisition.WaterAdministrationSession},
+    'qc.SessionQCIngest': {'real': None,
+                           'shadow': shadow_qc.SessionQCIngest},
+    'qc.ProbeInsertionQCIngest': {'real': None,
+                                  'shadow': shadow_qc.ProbeInsertionQCIngest},
+    'histology.ProbeTrajectoryTemp': {'real': histology.ProbeTrajectoryTemp,
+                                      'shadow': shadow_histology.ProbeTrajectoryTemp},
+    'histology.ChannelBrainLocationTemp': {'real': histology.ChannelBrainLocationTemp,
+                                           'shadow': shadow_histology.ChannelBrainLocationTemp}
+}
+
+DJ_SHADOW_MEMBERSHIP = {
+    'reference.ProjectLabMember': {'dj_current_table': shadow_reference.ProjectLabMember,
+                                   'alyx_parent_model': 'subjects.project',
+                                   'alyx_field': 'users',
+                                   'dj_parent_table': shadow_reference.Project,
+                                   'dj_other_table': shadow_reference.LabMember,
+                                   'dj_parent_fields': 'project_name',
+                                   'dj_other_field': 'user_name',
+                                   'dj_parent_uuid_name': 'project_uuid',
+                                   'dj_other_uuid_name': 'user_uuid'},
+    'subject.AlleleSequence': {
+        'dj_current_table': shadow_subject.AlleleSequence,
+        'alyx_parent_model': 'subjects.allele',
+        'alyx_field': 'sequences',
+        'dj_parent_table': shadow_subject.Allele,
+        'dj_other_table': shadow_subject.Sequence,
+        'dj_parent_fields': 'allele_name',
+        'dj_other_field': 'sequence_name',
+        'dj_parent_uuid_name': 'allele_uuid',
+        'dj_other_uuid_name': 'sequence_uuid'},
+    'subject.LineAllele': {'dj_current_table': shadow_subject.LineAllele,
+                           'alyx_parent_model': 'subjects.line',
+                           'alyx_field': 'alleles',
+                           'dj_parent_table': shadow_subject.Line,
+                           'dj_other_table': shadow_subject.Allele,
+                           'dj_parent_fields': 'line_name',
+                           'dj_other_field': 'allele_name',
+                           'dj_parent_uuid_name': 'line_uuid',
+                           'dj_other_uuid_name': 'allele_uuid'},
+    'action.SurgeryProcedure': {
+        'dj_current_table': shadow_action.SurgeryProcedure,
+        'alyx_parent_model': 'actions.surgery',
+        'alyx_field': 'procedures',
+        'dj_parent_table': shadow_action.Surgery,
+        'dj_other_table': shadow_action.ProcedureType,
+        'dj_parent_fields': ['subject_uuid', 'surgery_start_time'],
+        'dj_other_field': 'procedure_type_name',
+        'dj_parent_uuid_name': 'surgery_uuid',
+        'dj_other_uuid_name': 'procedure_type_uuid'},
+    'acquisition.ChildSession': {
+        'dj_current_table': shadow_acquisition.ChildSession,
+        'alyx_parent_model': 'actions.session',
+        'alyx_field': 'parent_session',
+        'dj_parent_table': shadow_acquisition.Session,
+        'dj_other_table': shadow_acquisition.Session,
+        'dj_parent_fields': ['subject_uuid', 'session_start_time'],
+        'dj_other_field': 'session_start_time',
+        'dj_parent_uuid_name': 'session_uuid',
+        'dj_other_uuid_name': 'session_uuid',
+        'renamed_other_field_name': 'parent_session_start_time'},
+    'acquisition.SessionUser': {
+        'dj_current_table': shadow_acquisition.SessionUser,
+        'alyx_parent_model': 'actions.session',
+        'alyx_field': 'users',
+        'dj_parent_table': shadow_acquisition.Session,
+        'dj_other_table': shadow_reference.LabMember,
+        'dj_parent_fields': ['subject_uuid', 'session_start_time'],
+        'dj_other_field': 'user_name',
+        'dj_parent_uuid_name': 'session_uuid',
+        'dj_other_uuid_name': 'user_uuid'},
+    'acquisition.SessionProcedure': {
+        'dj_current_table': shadow_acquisition.SessionProcedure,
+        'alyx_parent_model': 'actions.session',
+        'alyx_field': 'procedures',
+        'dj_parent_table': shadow_acquisition.Session,
+        'dj_other_table': shadow_action.ProcedureType,
+        'dj_parent_fields': ['subject_uuid', 'session_start_time'],
+        'dj_other_field': 'procedure_type_name',
+        'dj_parent_uuid_name': 'session_uuid',
+        'dj_other_uuid_name': 'procedure_type_uuid'},
+    'acquisition.SessionProject': {
+        'dj_current_table': shadow_acquisition.SessionProject,
+        'alyx_parent_model': 'actions.session',
+        'alyx_field': 'project',
+        'dj_parent_table': shadow_acquisition.Session,
+        'dj_other_table': shadow_reference.Project,
+        'dj_parent_fields': ['subject_uuid', 'session_start_time'],
+        'dj_other_field': 'project_name',
+        'dj_parent_uuid_name': 'session_uuid',
+        'dj_other_uuid_name': 'project_uuid',
+        'renamed_other_field_name': 'session_project'},
+    'data.ProjectRepository': {
+        'dj_current_table': shadow_data.ProjectRepository,
+        'alyx_parent_model': 'subjects.project',
+        'alyx_field': 'repositories',
+        'dj_parent_table': shadow_reference.Project,
+        'dj_other_table': shadow_data.DataRepository,
+        'dj_parent_fields': 'project_name',
+        'dj_other_field': 'repo_name',
+        'dj_parent_uuid_name': 'project_uuid',
+        'dj_other_uuid_name': 'repo_uuid'},
+    'action.WaterRestrictionUser': {
+        'dj_current_table': shadow_action.WaterRestrictionUser,
+        'alyx_parent_model': 'actions.waterrestriction',
+        'alyx_field': 'users',
+        'dj_parent_table': shadow_action.WaterRestriction,
+        'dj_other_table': shadow_reference.LabMember,
+        'dj_parent_fields': ['subject_uuid', 'restriction_start_time'],
+        'dj_other_field': 'user_name',
+        'dj_parent_uuid_name': 'restriction_uuid',
+        'dj_other_uuid_name': 'user_uuid'},
+    'action.WaterRestrictionProcedure': {
+        'dj_current_table': shadow_action.WaterRestrictionProcedure,
+        'alyx_parent_model': 'actions.waterrestriction',
+        'alyx_field': 'procedures',
+        'dj_parent_table': shadow_action.WaterRestriction,
+        'dj_other_table': shadow_action.ProcedureType,
+        'dj_parent_fields': ['subject_uuid', 'restriction_start_time'],
+        'dj_other_field': 'procedure_type_name',
+        'dj_parent_uuid_name': 'restriction_uuid',
+        'dj_other_uuid_name': 'procedure_type_uuid'},
+    'action.SurgeryUser': {'dj_current_table': shadow_action.SurgeryUser,
+                           'alyx_parent_model': 'actions.surgery',
+                           'alyx_field': 'users',
+                           'dj_parent_table': shadow_action.Surgery,
+                           'dj_other_table': shadow_reference.LabMember,
+                           'dj_parent_fields': ['subject_uuid', 'surgery_start_time'],
+                           'dj_other_field': 'user_name',
+                           'dj_parent_uuid_name': 'surgery_uuid',
+                           'dj_other_uuid_name': 'user_uuid'},
+    'acquisition.WaterAdministrationSession': {
+        'dj_current_table': shadow_acquisition.WaterAdministrationSession,
+        'alyx_parent_model': 'actions.wateradministration',
+        'alyx_field': 'session',
+        'dj_parent_table': shadow_action.WaterAdministration,
+        'dj_other_table': shadow_acquisition.Session,
+        'dj_parent_fields': ['subject_uuid', 'administration_time'],
+        'dj_other_field': 'session_start_time',
+        'dj_parent_uuid_name': 'wateradmin_uuid',
+        'dj_other_uuid_name': 'session_uuid'}}
+
+DJ_UPDATES = {
+    'reference.Project': {
+        'members': [],
+        'alyx_model': alyx_subjects.models.Project,
+    },
+    'subject.Subject': {
+        'members': ['SubjectLab', 'SubjectUser', 'SubjectProject', 'Death'],
+        'alyx_model': alyx_subjects.models.Subject,
+    },
+    'action.Weighing': {
+        'members': [],
+        'alyx_model': alyx_actions.models.Weighing,
+    },
+    'action.WaterRestriction': {
+        'members': [],
+        'alyx_model': alyx_actions.models.WaterRestriction,
+    },
+    'action.WaterAdministration': {
+        'members': [],
+        'alyx_model': alyx_actions.models.WaterAdministration,
+    },
+    'acquisition.Session': {
+        'members': ['SessionUser', 'SessionProject'],
+        'alyx_model': alyx_actions.models.Session,
+    }
+}
+
+
+# ------ Pipeline for ingestion orchestration ------
+
+@schema
+class IngestionJob(dj.Manual):
+    """
+    Starting point of the ingestion routine
+    There is an external process doing:
+    1. download the latest alyx sql-dump
+    2. load that sql-dump to post-gres DB
+    3. Create and insert an entry into this table
+    """
+    definition = """
+    job_datetime: datetime  # UTC time
+    ---
+    alyx_sql_dump: varchar(36)  # '2021-10-26'
+    job_status: enum('completed', 'on-going', 'terminated')
+    job_endtime=null: datetime  # UTC time
+    """
+
+    @classmethod
+    def create_entry(cls, alyx_sql_dump):
+        with cls.connection.transaction:
+            for key in (cls & 'job_status = "on-going"').fetch('KEY'):
+                (cls & key)._update('job_status', 'terminated')
+                (cls & key)._update('job_endtime', datetime.datetime.utcnow())
+            _clean_up()
+            cls.insert1({'job_datetime': datetime.datetime.utcnow(),
+                         'alyx_sql_dump': alyx_sql_dump,
+                         'job_status': 'on-going'})
+
+    @classmethod
+    def get_on_going_key(cls):
+        return (cls & 'job_status = "on-going"').fetch1('KEY')
+
+    @classmethod
+    def get_latest_key(cls):
+        return cls.fetch('KEY', order_by='job_datetime DESC', limit=1)[0]
+
+
+@schema
+class UpdateAlyxRawModel(dj.Computed):
+    definition = """
+    -> IngestionJob
+    alyx_model_name: varchar(36)
+    """
+
+    key_source = IngestionJob & 'job_status = "on-going"'
+
+    def make(self, key):
+        # delete UpdateAlyxRaw
+        with dj.config(safemode=False):
+            alyxraw.UpdateAlyxRaw.delete()
+        # specify alyx models to be ingested into UpdateAlyxRaw
+        self.insert({**key, 'alyx_model_name': alyx_model_name}
+                    for alyx_model_name in ALYX_MODELS)
+
+
+@schema
+class IngestUpdateAlyxRawModel(dj.Computed):
+    definition = """
+    -> UpdateAlyxRawModel
+    ---
+    record_count: int
+    duration: float
+    """
+
+    key_source = UpdateAlyxRawModel * IngestionJob & 'job_status = "on-going"'
+
+    def make(self, key):
+        logger.info('Populating UpdateAlyxRaw for: {}'.format(key['alyx_model_name']))
+        alyx_model = ALYX_MODELS[key['alyx_model_name']]
+
+        # break transaction here, allowing for partial completion
+        self.connection.cancel_transaction()
+
+        start_time = time.time()
+        ingest_alyx_raw_postgres.insert_alyx_entries_model(alyx_model,
+                                                           AlyxRawTable=alyxraw.UpdateAlyxRaw,
+                                                           backtrack_days=_backtrack_days,
+                                                           skip_existing_alyxraw=True)
+        end_time = time.time()
+
+        self.insert1({**key,
+                      'record_count': len(alyxraw.UpdateAlyxRaw
+                                          & {'model': key['alyx_model_name']}),
+                      'duration': end_time - start_time})
+
+
+@schema
+class AlyxRawDiff(dj.Computed):
+    definition = """
+    -> IngestUpdateAlyxRawModel
+    """
+
+    class CreatedEntry(dj.Part):
+        definition = """
+        -> master
+        uuid: uuid  # pk field (uuid string repr)
+        """
+
+    class DeletedEntry(dj.Part):
+        definition = """
+        -> master
+        uuid: uuid  # pk field (uuid string repr)
+        """
+
+    class ModifiedEntry(dj.Part):
+        definition = """
+        -> master
+        uuid: uuid  # pk field (uuid string repr)
+        """
+
+    key_source = IngestUpdateAlyxRawModel * IngestionJob & 'job_status = "on-going"'
+
+    def make(self, key):
+        self.insert1(key)
+
+        # newly created
+        created_entries = ((alyxraw.UpdateAlyxRaw - alyxraw.AlyxRaw.proj())
+                           & {'model': key['alyx_model_name']})
+        self.CreatedEntry.insert(created_entries.proj(
+            ..., alyx_model_name=f'"{key["alyx_model_name"]}"',
+            job_datetime=f'"{key["job_datetime"]}"'), ignore_extra_fields=True)
+
+        if key['alyx_model_name'] in ('subjects.project',
+                                      'subjects.subject',
+                                      'actions.weighing',
+                                      'actions.waterrestriction',
+                                      'actions.wateradministration',
+                                      'actions.models.session'):
+            # deleted
+            deleted_entries = ((alyxraw.AlyxRaw - alyxraw.UpdateAlyxRaw.proj()) &
+                               {'model': key['alyx_model_name']})
+            self.DeletedEntry.insert(deleted_entries.proj(
+                ..., alyx_model_name=f'"{key["alyx_model_name"]}"',
+                job_datetime=f'"{key["job_datetime"]}"'), ignore_extra_fields=True)
+
+            # updated
+            fields_original = (alyxraw.AlyxRaw.Field
+                               & (alyxraw.AlyxRaw & {'model': key['alyx_model_name']}))
+            fields_update = (alyxraw.UpdateAlyxRaw.Field
+                             & (alyxraw.UpdateAlyxRaw & {'model': key['alyx_model_name']}))
+
+            fields_restriction = {}
+
+            modified_entries = (alyxraw.AlyxRaw &
+                                (fields_update.proj(fvalue_new='fvalue') * fields_original
+                                 & 'fvalue_new != fvalue' & 'fname not in ("json")'
+                                 & fields_restriction))
+            self.ModifiedEntry.insert(modified_entries.proj(
+                ..., alyx_model_name=f'"{key["alyx_model_name"]}"',
+                job_datetime=f'"{key["job_datetime"]}"'), ignore_extra_fields=True)
+
+
+@schema
+class DeleteModifiedAlyxRaw(dj.Computed):
+    definition = """
+    -> AlyxRawDiff
+    """
+
+    key_source = (AlyxRawDiff * IngestionJob
+                  & [AlyxRawDiff.ModifiedEntry, AlyxRawDiff.DeletedEntry]
+                  & 'job_status = "on-going"')
+
+    def make(self, key):
+        """
+        For actions.session, delete only the AlyxRaw.Field of the modified/deleted entries
+        For any other alyx model, delete the AlyxRaw
+        (note: deleting is tricky, beware grid-lock)
+        """
+        entries_to_delete = AlyxRawDiff.ModifiedEntry + AlyxRawDiff.DeletedEntry & key
+        keys_to_delete = entries_to_delete.fetch('KEY')
+
+        logger.info(f'Deletion in AlyxRaw: {key["alyx_model_name"]}'
+                    f' - {len(keys_to_delete)} records')
+
+        # handle AlyxRaw table
+        if key['alyx_model_name'] == 'actions.session':
+            alyxraw_field_buffer = QueryBuffer(
+                alyxraw.AlyxRaw.Field & 'fname!="start_time"'
+                & (alyxraw.AlyxRaw & {'model': key['alyx_model_name']}))
+            for pk in keys_to_delete:
+                alyxraw_field_buffer.add_to_queue1(pk)
+                alyxraw_field_buffer.flush_delete(chunksz=50, quick=True)
+            alyxraw_field_buffer.flush_delete(quick=True)
+        else:
+            alyxraw_buffer = QueryBuffer(alyxraw.AlyxRaw & {'model': key['alyx_model_name']})
+            for pk in keys_to_delete:
+                alyxraw_buffer.add_to_queue1(pk)
+                alyxraw_buffer.flush_delete(chunksz=50, quick=False)
+            alyxraw_buffer.flush_delete(quick=False)
+
+        # handle shadow membership tables
+        if key['alyx_model_name'] in MEMBERSHIP_ALYX_MODELS:
+            for membership_table_name in MEMBERSHIP_ALYX_MODELS[key['alyx_model_name']]:
+                if isinstance(membership_table_name, str):
+                    logger.info(f'\tDeleting shadow membership table: {membership_table_name}')
+
+                    shadow_membership_table = DJ_TABLES[membership_table_name]['shadow']
+                    shadow_parent_table = DJ_SHADOW_MEMBERSHIP[membership_table_name]['dj_parent_table']
+
+                    uuid_attr = next((attr for attr in shadow_parent_table.heading.names
+                                      if attr.endswith('uuid')))
+
+                    with dj.config(safemode=False):
+                        (shadow_membership_table
+                         & (shadow_membership_table * shadow_parent_table
+                            * entries_to_delete.proj(**{uuid_attr: 'uuid'})).fetch('KEY')).delete()
+                elif isinstance(membership_table_name, dj.user_tables.OrderedClass):
+                    related_table = membership_table_name
+                    logger.info(f'\tDeleting related table: {related_table.__name__}')
+                    uuid_attr = next((attr for attr in related_table.heading.names
+                                      if attr.endswith('uuid')))
+                    with dj.config(safemode=False):
+                        (related_table & entries_to_delete.proj(**{uuid_attr: 'uuid'})).delete()
+                else:
+                    raise NotImplementedError
+
+        self.insert1(key)
+
+
+@schema
+class IngestAlyxRawModel(dj.Computed):
+    definition = """
+    -> AlyxRawDiff
+    """
+
+    @property
+    def key_source(self):
+        key_source = (AlyxRawDiff * IngestionJob
+                      & [AlyxRawDiff.CreatedEntry, AlyxRawDiff.ModifiedEntry]
+                      & 'job_status = "on-going"')
+        return ((key_source.proj() - DeleteModifiedAlyxRaw.key_source.proj())
+                + DeleteModifiedAlyxRaw)
+
+    def make(self, key):
+        entries_to_ingest = AlyxRawDiff.CreatedEntry + AlyxRawDiff.ModifiedEntry & key
+
+        logger.info(f'Ingestion to AlyxRaw: {key["alyx_model_name"]}'
+                    f' - {len(entries_to_ingest)} records')
+
+        alyxraw.AlyxRaw.insert(alyxraw.UpdateAlyxRaw & entries_to_ingest, skip_duplicates=True)
+        alyxraw.AlyxRaw.Field.insert(alyxraw.UpdateAlyxRaw.Field & entries_to_ingest)
+
+        self.insert1(key)
+
+
+@schema
+class ShadowTable(dj.Computed):
+    definition = """
+    -> IngestionJob
+    table_name: varchar(48)
+    """
+
+    # this table is populated only after all the
+    # IngestIngestAlyxRawModel and IngestAlyxRawModel populate jobs have finished
+    @property
+    def key_source(self):
+        key_source = IngestionJob & 'job_status = "on-going"'
+        return (
+            key_source
+            & ((key_source.proj().aggr(IngestUpdateAlyxRawModel.key_source, ks_count='count(*)'))
+               * (key_source.proj().aggr(IngestUpdateAlyxRawModel, completed_count='count(*)'))
+               & 'completed_count = ks_count')
+            & ((key_source.proj().aggr(IngestAlyxRawModel.key_source, ks_count='count(*)'))
+               * (key_source.proj().aggr(IngestAlyxRawModel, completed_count='count(*)'))
+               & 'completed_count = ks_count')
+        )
+
+    def make(self, key):
+        self.insert({**key, 'table_name': table_name}
+                    for table_name in DJ_TABLES)
+
+
+@schema
+class PopulateShadowTable(dj.Computed):
+    definition = """
+    -> ShadowTable
+    ---
+    incomplete_count=null: int  # how many to be populated
+    completion_count=null: int  # how many has been populated
+    """
+
+    key_source = ShadowTable * IngestionJob & 'job_status = "on-going"'
+
+    def make(self, key):
+        is_membership = key['table_name'] in DJ_SHADOW_MEMBERSHIP
+
+        shadow_table = DJ_TABLES[key['table_name']]['shadow']
+        before_count, _ = shadow_table.progress() if not is_membership else (None, None)
+
+        if key['table_name'] == 'acquisition.Session':
+            """
+            if a session entry is modified, replace the entry without deleting
+            this is to keep the session entry when uuid is not changed but start time changed
+            by one sec. We don't update start_time in alyxraw in this case.
+            """
+            modified_uuids = (AlyxRawDiff.ModifiedEntry
+                              & {'model': 'actions.session'} & key).fetch('uuid')
+            modified_session_keys = [{'session_uuid': uuid} for uuid in modified_uuids]
+
+            sessions = shadow_table & modified_session_keys
+            if sessions:
+                modified_session_entries = []
+                for key in sessions.fetch('KEY'):
+                    try:
+                        modified_session_entries.append(shadow_table.create_entry(key))
+                    except:
+                        logger.debug(f'Error creating entry for key: {key}')
+                if modified_session_entries:
+                    try:
+                        shadow_table.insert(modified_session_entries,
+                                            allow_direct_insert=True, replace=True)
+                    except dj.DataJointError:
+                        for entry in modified_session_entries:
+                            shadow_table.insert1(entry, allow_direct_insert=True, replace=True)
+
+        if key['table_name'] in ('data.DataSet', 'data.FileRecord'):
+            date_cutoff = (datetime.datetime.now().date() -
+                           datetime.timedelta(days=_backtrack_days)).strftime('%Y-%m-%d')
+            uuid_attr = shadow_table.primary_key[0]
+            key_source = (shadow_table.key_source.proj(uuid=uuid_attr)
+                          & (alyxraw.AlyxRaw * alyxraw.AlyxRaw.Field
+                             & 'fname = "auto_datetime"'
+                             & f'fvalue > "{date_cutoff}"')).proj(**{uuid_attr: 'uuid'})
+
+            query_buffer = QueryBuffer(shadow_table, verbose=True)
+            for k in tqdm((key_source - shadow_table).fetch('KEY')):
+                try:
+                    query_buffer.add_to_queue1(shadow_table.create_entry(k))
+                except ShadowIngestionError:
+                    pass
+                query_buffer.flush_insert(skip_duplicates=True, allow_direct_insert=True,
+                                          chunksz=1000)
+            query_buffer.flush_insert(skip_duplicates=True, allow_direct_insert=True)
+        elif is_membership:
+            tab_args = DJ_SHADOW_MEMBERSHIP[key['table_name']]
+            ingest_membership.ingest_membership_table(**tab_args)
+        else:
+            self.connection.cancel_transaction()
+            shadow_table.populate(reserve_jobs=True,
+                                  display_progress=True,
+                                  suppress_errors=True)
+
+        after_count, _ = shadow_table.progress() if not is_membership else (None, None)
+        self.insert1({**key,
+                      'incomplete_count': before_count,
+                      'completion_count': before_count - after_count if not is_membership else None})
+
+
+@schema
+class CopyRealTable(dj.Computed):
+    definition = """
+    -> PopulateShadowTable
+    """
+
+    _real_tables = [table_name for table_name, v in DJ_TABLES.items() if v['real'] is not None]
+
+    key_source = (PopulateShadowTable * IngestionJob & 'job_status = "on-going"'
+                  & [f'table_name = "{table_name}"' for table_name in _real_tables])
+
+    def make(self, key):
+        shadow_table = DJ_TABLES[key['table_name']]['shadow']
+        real_table = DJ_TABLES[key['table_name']]['real']
+
+        # Ensure the real-table copy routine is "in topologically sorted order"
+        schema_prefix = dj.config.get('database.prefix', '') + 'ibl_'
+        ancestors = [tbl_name.split('.') for tbl_name in real_table.ancestors()]
+        ancestors = [schema_name.strip('`').replace(schema_prefix, '')
+                     + '.' + '.'.join([dj.utils.to_camel_case(s)
+                                       for s in tbl_name.strip('`').split('__') if s])
+                     for schema_name, tbl_name in ancestors]
+
+        ancestors = [n for n in ancestors if n in self._real_tables and n != key['table_name']]
+
+        are_ancestors_copied = (len(self & (IngestionJob & key)
+                                    & [{'table_name': n} for n in ancestors])
+                                == len(ancestors))
+
+        if not are_ancestors_copied:
+            return
+
+        # Do the copying
+        target_module = inspect.getmodule(real_table)
+        source_module = inspect.getmodule(shadow_table)
+
+        ingest_real.copy_table(target_module, source_module, real_table.__name__)
+
+        self.insert1(key)
+
+
+@schema
+class UpdateRealTable(dj.Computed):
+    definition = """
+    -> CopyRealTable
+    """
+
+    key_source = (CopyRealTable * IngestionJob & 'job_status = "on-going"'
+                  & [f'table_name = "{table_name}"' for table_name in DJ_UPDATES])
+
+    def make(self, key):
+        alyx_model_name = ingest_alyx_raw_postgres.get_alyx_model_name(
+            DJ_UPDATES[key['table_name']]['alyx_model'])
+
+        real_table = DJ_TABLES[key['table_name']]['real']
+        shadow_table = DJ_TABLES[key['table_name']]['shadow']
+        target_module = inspect.getmodule(real_table)
+        source_module = inspect.getmodule(shadow_table)
+
+        modified_uuids = (AlyxRawDiff.ModifiedEntry & key
+                          & {'alyx_model_name': alyx_model_name}).fetch('uuid')
+
+        uuid_attr = next((attr for attr in real_table.heading.names
+                          if attr.endswith('uuid')))
+
+        query = real_table & [{uuid_attr: u} for u in modified_uuids]
+
+        if query:
+            delete_update_entries.update_fields(target_module,
+                                                source_module,
+                                                real_table.__name__,
+                                                pks=query.fetch('KEY'),
+                                                log_to_UpdateRecord=False)
+            member_tables = DJ_UPDATES[key['table_name']]['members']
+            for member_table_name in member_tables:
+                member_table = getattr(source_module, member_table_name)
+                if member_table & query:
+                    delete_update_entries.update_fields(
+                        target_module, source_module, member_table_name,
+                        pks=(member_table & query).fetch('KEY'),
+                        log_to_UpdateRecord=True)
+
+        self.insert1(key)
+
+
+# what's next
+"""
+    job.main()
+    populate_behavior.main(backtrack_days=_backtrack_days)
+    populate_wheel.main(backtrack_days=_backtrack_days)
+    populate_ephys.main()
+"""
+
+
+def _check_ingestion_completion():
+    """
+    Check if the current "on-going" job is completed, if so, mark `job_status` to "completed"
+    """
+    on_going_job = (IngestionJob & 'job_status = "on-going"')
+    if not on_going_job:
+        return True
+
+    finished_copy_real, total_copy_real = CopyRealTable.progress(display=False)
+    copy_real_completed = (total_copy_real == len(CopyRealTable._real_tables)
+                           and finished_copy_real == 0)
+
+    finished_update_real, total_update_real = UpdateRealTable.progress(display=False)
+    update_real_completed = (total_update_real == len(DJ_UPDATES)
+                             and finished_update_real == 0)
+
+    if copy_real_completed and update_real_completed:
+        key = on_going_job.fetch1('KEY')
+        (IngestionJob & key)._update('job_status', 'completed')
+        (IngestionJob & key)._update('job_endtime', datetime.datetime.utcnow())
+        logger.info(f'All ingestion jobs completed: {key}')
+        return True
+
+    return False
+
+
+_ingestion_tables = (UpdateAlyxRawModel,
+                     IngestUpdateAlyxRawModel,
+                     AlyxRawDiff,
+                     DeleteModifiedAlyxRaw,
+                     IngestAlyxRawModel,
+                     ShadowTable,
+                     PopulateShadowTable,
+                     CopyRealTable,
+                     UpdateRealTable)
+
+
+def read_db_loaded_file() -> str:
+    # this function may or may not exist here
+    # if it stays here can put imports in import section instead of here
+    from pathlib import Path
+    try:
+        ibl_path_data = dj.config["custom"]["repository.config"]["ibl_path_data"]
+    except KeyError:
+        return ''
+
+    db_loaded = Path(ibl_path_data) / "alyx" / "db_loaded"
+    if not db_loaded.exists():
+        return ''
+
+    with open(db_loaded, "r") as f:
+        dump_file = f.read()
+        dump_file = Path(dump_file.rstrip("\n")).stem
+        dump_file = dump_file.replace(".sql", "")
+        dump_file = dump_file.replace("_alyxfull", "")
+    return dump_file
+
+
+def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60, **kwargs):
+    """
+    Routine to populate all ingestion tables
+    Run in continuous loop for the duration defined in "run_duration" (default 3 hours)
+    """
+    populate_settings = {'display_progress': True,
+                         'reserve_jobs': True,
+                         'suppress_errors': True}
+    start_time = time.time()
+    while ((time.time() - start_time < run_duration)
+           or (run_duration is None)
+           or (run_duration < 0)):
+
+        # create new ingestion job
+        last_job_key = IngestionJob.get_latest_key()
+        last_dump_file = (IngestionJob & last_job_key).fetch1('alyx_sql_dump')
+        latest_sql_dump = read_db_loaded_file()
+        if latest_sql_dump and last_dump_file != latest_sql_dump:
+            IngestionJob.create_entry(latest_sql_dump)
+
+        # check if completed
+        if _check_ingestion_completion():
+            _clean_up()
+        else:
+            for table in _ingestion_tables:
+                logger.info(f'------------- {table.__name__} ---------------')
+                table.populate(**populate_settings)
+
+        (schema.jobs & 'status = "error"').delete()
+
+        time.sleep(sleep_duration)
+
+
+def _clean_up():
+    """
+    Routine to clean up any error jobs of type "ShadowIngestionError"
+     in jobs tables of the shadow schemas
+    """
+    _generic_errors = ["%Deadlock%", "%DuplicateError%", "%Lock wait timeout%",
+                       "%MaxRetryError%", "%KeyboardInterrupt%",
+                       "InternalError: (1205%", "%SIGTERM%",
+                       "LostConnectionError"]
+
+    for shadow_schema in (shadow_reference, shadow_subject,
+                          shadow_action, shadow_acquisition,
+                          shadow_data, shadow_ephys,
+                          shadow_qc, shadow_histology):
+        # clear generic error jobs
+        (shadow_schema.schema.jobs & 'status = "error"'
+         & [f'error_message LIKE "{e}"'
+            for e in _generic_errors + ['%ShadowIngestionError%']]).delete()
+        # clear stale "reserved" jobs
+        stale_jobs = (shadow_schema.schema.jobs & 'status = "reserved"').proj(
+            elapsed_days='TIMESTAMPDIFF(DAY, timestamp, NOW())') & 'elapsed_days > 1'
+        (shadow_schema.schema.jobs & stale_jobs).delete()
+
+
+if __name__ == '__main__':
+    populate_ingestion_tables(run_duration=-1)

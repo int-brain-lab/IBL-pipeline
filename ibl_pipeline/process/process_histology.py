@@ -1,4 +1,5 @@
-from ibl_pipeline.process import ingest_alyx_raw, ingest_real
+import datajoint as dj
+from ibl_pipeline.process import ingest_alyx_raw, ingest_real, ingest_alyx_raw_postgres
 from ibl_pipeline.ingest.common import *
 from ibl_pipeline.ingest import populate_batch, QueryBuffer
 from ibl_pipeline.common import *
@@ -6,19 +7,33 @@ from ibl_pipeline.process import update_utils
 from tqdm import tqdm
 import inspect
 import os
+import pathlib
+import logging
+# alyx models
+import misc, subjects, actions, data, experiments
+
+log_file = pathlib.Path(__file__).parent / 'logs/process_histology.log'
+log_file.parent.mkdir(parents=True, exist_ok=True)
+log_file.touch(exist_ok=True)
+
+logging.basicConfig(
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler()],
+    level=25)
+
+logger = logging.getLogger(__name__)
 
 
-mode = os.environ.get('MODE')
+mode = dj.config.get('custom', {}).get('database.mode', "")
 
 
 ALYX_HISTOLOGY_MODELS = [
-    'misc.lab', 'misc.labmember', 'misc.labmembership', 'misc.lablocation',
-    'subjects.project', 'subjects.species', 'subjects.strain', 'subjects.source',
-    'subjects.allele', 'subjects.sequence', 'subjects.subject',
-    'actions.proceduretype', 'actions.wateradministration', 'actions.session',
-    'experiments.probemodel',
-    'experiments.probeinsertion', 'experiments.coordinatesystem',
-    'experiments.trajectoryestimate', 'experiments.channel']
+    experiments.models.CoordinateSystem,
+    experiments.models.TrajectoryEstimate,
+    experiments.models.Channel
+]
 
 HISTOLOGY_SHADOW_TABLES = [
     reference_ingest.Lab,
@@ -44,24 +59,6 @@ HISTOLOGY_SHADOW_TABLES = [
     ephys_ingest.ProbeInsertion
 ]
 
-if mode != 'public':
-    HISTOLOGY_SHADOW_TABLES.extend([
-        histology_ingest.ProbeTrajectoryTemp,
-        histology_ingest.ChannelBrainLocationTemp
-    ])
-
-
-if mode != 'public':
-    HISTOLOGY_TABLES_FOR_DELETE = [
-        histology.ProbeBrainRegionTemp,
-        histology.ClusterBrainRegionTemp,
-        histology.ChannelBrainLocationTemp,
-        histology.ProbeTrajectoryTemp,
-    ]
-else:
-    HISTOLOGY_TABLES_FOR_DELETE = []
-
-
 HISTOLOGY_TABLES_FOR_POPULATE = [
     histology.ProbeTrajectory,
     histology.ChannelBrainLocation,
@@ -70,36 +67,32 @@ HISTOLOGY_TABLES_FOR_POPULATE = [
     histology_plotting.ProbeTrajectoryCoronal
 ]
 
+HISTOLOGY_TABLES_FOR_DELETE = []
+
+
 if mode != 'public':
-    HISTOLOGY_TABLES_FOR_POPULATE = [
+    HISTOLOGY_SHADOW_TABLES.extend([
+        histology_ingest.ProbeTrajectoryTemp,
+        histology_ingest.ChannelBrainLocationTemp
+    ])
+
+    HISTOLOGY_TABLES_FOR_DELETE.extend([
+        histology.ProbeBrainRegionTemp,
+        histology.ClusterBrainRegionTemp,
+        histology.ChannelBrainLocationTemp,
+        histology.ProbeTrajectoryTemp,
+    ])
+
+    HISTOLOGY_TABLES_FOR_POPULATE.extend([
         histology.ClusterBrainRegionTemp,
         histology.ProbeBrainRegionTemp,
-        histology.DepthBrainRegionTemp] + \
-            HISTOLOGY_TABLES_FOR_POPULATE
-
-
-def process_alyxraw_histology(
-        filename='/data/alyxfull.json', models=ALYX_HISTOLOGY_MODELS):
-
-    '''
-    Ingest all histology entries in a particular alyx dump, regardless of the current status.
-    '''
-    ingest_alyx_raw.insert_to_alyxraw(
-        ingest_alyx_raw.get_alyx_entries(
-            filename=filename,
-            models=models
-        )
-    )
+        histology.DepthBrainRegionTemp
+    ])
 
 
 def populate_shadow_tables():
-
-    kwargs = dict(
-        display_progress=True,
-        suppress_errors=True)
-
+    kwargs = dict(display_progress=True, suppress_errors=True)
     for t in HISTOLOGY_SHADOW_TABLES:
-
         print(f'Populating {t.__name__}...')
         if t.__name__ == 'ChannelBrainLocationTemp':
             populate_batch(t)
@@ -165,9 +158,7 @@ def delete_histology_real():
 
 
 def copy_to_real_tables():
-
     for shadow_table in HISTOLOGY_SHADOW_TABLES:
-
         mod = shadow_table.__module__
         shadow_module = inspect.getmodule(shadow_table)
         real_module = eval(mod.replace('ibl_pipeline.ingest.', ''))
@@ -178,46 +169,50 @@ def copy_to_real_tables():
 
 
 def populate_real_tables():
-
     for t in HISTOLOGY_TABLES_FOR_POPULATE:
         print(f'Populating {t.__name__}...')
         t.populate(suppress_errors=True, display_progress=True)
 
 
-def main(fpath='/data/alyxfull.json'):
+def main():
 
-    print('Insert to update alyxraw...')
-    update_utils.insert_to_update_alyxraw(
-        filename=fpath, delete_tables=True,
-        models=['experiments.trajectoryestimate', 'experiments.channel'])
-    print('Deleting from alyx and shadow...')
+    logger.log(25, 'Histology - Ingesting from Postgres to UpdateAlyxRaw...')
+    ingest_alyx_raw_postgres.insert_to_update_alyxraw_postgres(
+        alyx_models=ALYX_HISTOLOGY_MODELS,
+        delete_UpdateAlyxRaw_first=True, skip_existing_alyxraw=True)
+
+    logger.log(25, 'Histology - Deleting updated/deleted entries from AlyxRaw and shadow tables...')
     delete_histology_alyx_shadow()
-    print('Ingesting new alyxraw...')
-    process_alyxraw_histology(filename=fpath)
-    print('Populating new shadow...')
+
+    logger.log(25, 'Histology - Ingesting from Postgres to AlyxRaw...')
+    for alyx_model in ALYX_HISTOLOGY_MODELS:
+        ingest_alyx_raw_postgres.insert_alyx_entries_model(alyx_model,
+                                                           skip_existing_alyxraw=True)
+
+    logger.log(25, 'Histology - Ingesting into shadow tables...')
     populate_shadow_tables()
-    print('Deleting real table entries...')
+
+    logger.log(25, 'Histology - Deleting updated/deleted entries from real tables...')
     delete_histology_real()
-    print('Copying to real tables...')
+
+    logger.log(25, 'Histology - Ingesting the real tables...')
     copy_to_real_tables()
-    print('Populating real tables...')
+
+    logger.log(25, 'Histology - Populate the histology tables...')
     populate_real_tables()
 
 
-def process_public(fpath='/data/alyxfull.json'):
-
+def process_public():
     from ibl_pipeline import public
 
-    print('Ingesting new alyxraw...')
-    process_alyxraw_histology(filename=fpath)
-    print('Populating new shadow...')
+    for alyx_model in ALYX_HISTOLOGY_MODELS:
+        ingest_alyx_raw_postgres.insert_alyx_entries_model(alyx_model,
+                                                           skip_existing_alyxraw=False)
+
     populate_shadow_tables()
-    print('Copying to real tables...')
     copy_to_real_tables()
     populate_real_tables()
-
 
 
 if __name__ == '__main__':
-
     main()

@@ -57,6 +57,7 @@ class SessionQCIngest(dj.Computed):
     definition = """
     -> alyxraw.AlyxRaw.proj(session_uuid='uuid')
     """
+
     key_source = dj.U('session_uuid') & \
         (alyxraw.AlyxRaw.Field &
          (alyxraw.AlyxRaw & 'model="actions.session"') &
@@ -64,6 +65,12 @@ class SessionQCIngest(dj.Computed):
          'fvalue in ("10", "30", "40", "50")').proj(session_uuid='uuid')
 
     def make(self, key):
+        """
+        For a SessionQC-related entry in alyxraw.AlyxRaw, fetch and insert into the real tables:
+        + SessionQC
+        + SessionExtendedQC
+        + SessionExtendedQC.Field
+        """
 
         self.insert1(key)
 
@@ -106,7 +113,6 @@ class SessionQCIngest(dj.Computed):
 
                 # get the entries for the part table SessionExtendedQC.Field
                 for k, v in qc_extended_alyx.items():
-
                     # for the session qc field, it has the format of '_{qc_type}', e.g. '_task_trial_length'
                     if f'_{qc_type}' in k:
                         qc_field = dict(
@@ -137,6 +143,7 @@ class ProbeInsertionQCIngest(dj.Computed):
     session_start_time  : datetime
     probe_idx           : tinyint
     """
+
     key_source = dj.U('probe_insertion_uuid') & \
         (alyxraw.AlyxRaw.Field &
          (alyxraw.AlyxRaw & 'model="experiments.probeinsertion"') &
@@ -144,6 +151,12 @@ class ProbeInsertionQCIngest(dj.Computed):
          'fvalue like "%qc%"').proj(probe_insertion_uuid='uuid')
 
     def make(self, key):
+        """
+        For a ProbeInsertionQC-related entry in alyxraw.AlyxRaw, fetch and insert into the real tables:
+        + ProbeInsertionQC
+        + ProbeInsertionExtendedQC
+        + ProbeInsertionExtendedQC.Field
+        """
 
         key['uuid'] = key['probe_insertion_uuid']
         json_field = str_to_dict(grf(key, 'json'))

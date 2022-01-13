@@ -1,7 +1,5 @@
-import os
 from .acquisition_shared import *
-
-mode = os.environ.get('MODE')
+from . import mode
 
 if mode != 'public':
     from .acquisition_internal import *

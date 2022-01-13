@@ -2,7 +2,7 @@ import datajoint as dj
 import json
 import uuid
 
-from . import alyxraw, reference, subject, action
+from . import alyxraw, reference, subject, action, ShadowIngestionError
 from .. import acquisition
 from . import get_raw_field as grf
 
@@ -26,19 +26,20 @@ class Session(dj.Computed):
     task_protocol=null:         varchar(255)
     session_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model="actions.session"').proj(
-        session_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & alyxraw.AlyxRaw.Field
+                  & 'model="actions.session"').proj(session_uuid='uuid')
 
     @staticmethod
     def create_entry(key):
+        if not (alyxraw.AlyxRaw.Field & key):
+            raise ShadowIngestionError('No AlyxRaw.Field')
+
         key_session = key.copy()
         key['uuid'] = key['session_uuid']
         key_session['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
 
         if not len(subject.Subject & key_session):
-            print('Subject {} is not in the table subject.Subject'.format(
-                key_session['subject_uuid']))
-            return
+            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key_session["subject_uuid"]}')
 
         session_number = grf(key, 'number')
         if session_number != 'None':
@@ -72,9 +73,7 @@ class Session(dj.Computed):
         return key_session
 
     def make(self, key):
-
-        self.insert1(
-            Session.create_entry(key))
+        self.insert1(Session.create_entry(key))
 
 
 @schema

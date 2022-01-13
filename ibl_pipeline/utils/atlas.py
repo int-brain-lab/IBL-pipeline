@@ -42,7 +42,7 @@ class BrainAtlas:
             parent_list.append(acronym)
 
         return parent_list[::-1]
-
+    # TODO: change /data /tmp to use dj.config
     def to_json(filename='/data/atlas.json'):
 
         with open('atlas.json', 'w') as json_file:

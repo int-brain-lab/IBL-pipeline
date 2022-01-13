@@ -1,22 +1,12 @@
 import datajoint as dj
 import numpy as np
-import pandas as pd
-from os import path, environ
 import datetime
 import logging
-import warnings
 from . import reference, subject, acquisition, data
+from . import mode, one
 
-try:
-    from oneibl.one import ONE
-    import alf.io
-    one = ONE(silent=True)
-except ImportError:
-    warnings.warn('ONE not installed, cannot use populate')
-    pass
 
 logger = logging.getLogger(__name__)
-mode = environ.get('MODE')
 
 if mode == 'update':
     schema = dj.schema('ibl_behavior')
@@ -65,12 +55,8 @@ class Wheel(dj.Imported):
     key_source = CompleteWheelSession()
 
     def make(self, key):
-
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        wheel_position, wheel_velocity, wheel_timestamps = \
-            one.load(eID, dataset_types=['wheel.position',
-                                         'wheel.velocity',
-                                         'wheel.timestamps'])
+        wheel_timestamps = one.load_dataset(eID, '_ibl_wheel.timestamps', clobber=True)
 
         wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
 
@@ -105,31 +91,44 @@ class CompleteTrialSession(dj.Computed):
 
     required_datasets = ["_ibl_trials.feedback_times.npy",
                          "_ibl_trials.feedbackType.npy",
-                         "_ibl_trials.intervals.npy", "_ibl_trials.choice.npy",
+                         "_ibl_trials.intervals.npy",
+                         "_ibl_trials.choice.npy",
                          "_ibl_trials.response_times.npy",
                          "_ibl_trials.contrastLeft.npy",
                          "_ibl_trials.contrastRight.npy",
                          "_ibl_trials.probabilityLeft.npy"]
+    other_datasets = ["_ibl_trials.stimOn_times.npy",
+                      "_ibl_trials.repNum.npy",
+                      "_ibl_trials.repNum.npy",
+                      "_ibl_trials.included.npy",
+                      "_iblrig_ambientSensorData.raw.jsonable",
+                      "_ibl_trials.goCue_times.npy",
+                      "_ibl_trials.goCueTrigger_times.npy",
+                      "_ibl_trials.rewardVolume.npy",
+                      "_ibl_trials.itiDuration.npy"
+                      ]
 
-    def make(self, key):
+    def get_missing_files(self, key):
         datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
                     {'exists': 1}).fetch('dataset_name')
-        is_complete = bool(np.all([req_ds in datasets
-                                   for req_ds in self.required_datasets]))
-        if is_complete is True:
+        missing_files = [req_ds for req_ds in self.required_datasets if req_ds not in datasets]
+        return datasets, missing_files
+
+    def make(self, key):
+        datasets, missing_files = self.get_missing_files(key)
+        if not missing_files:
             if '_ibl_trials.stimOn_times.npy' not in datasets:
                 key['stim_on_times_status'] = 'Missing'
             else:
                 eID = str((acquisition.Session & key).fetch1('session_uuid'))
                 lab_name = (subject.SubjectLab & key).fetch1('lab_name')
                 if lab_name == 'wittenlab':
-                    stimOn_times = np.squeeze(one.load(
-                            eID, dataset_types='trials.stimOn_times',
+                    stimOn_times = np.squeeze(one.load_dataset(
+                            eID, dataset='_ibl_trials.stimOn_times',
                             clobber=True))
                 else:
-                    stimOn_times = one.load(
-                        eID, dataset_types='trials.stimOn_times',
-                        clobber=True)
+                    stimOn_times = one.load_dataset(
+                        eID, dataset='_ibl_trials.stimOn_times', clobber=True)
 
                 if stimOn_times is not None and len(stimOn_times):
                     if (len(stimOn_times)==1 and stimOn_times[0] is None) or \
@@ -142,13 +141,12 @@ class CompleteTrialSession(dj.Computed):
                 else:
                     key['stim_on_times_status'] = 'Missing'
 
-
             if '_ibl_trials.repNum.npy' not in datasets:
                 key['rep_num_status'] = 'Missing'
             else:
                 key['rep_num_status'] = 'Complete'
 
-            if 'ibl_trials.included.npy' not in datasets:
+            if '_ibl_trials.included.npy' not in datasets:
                 key['included_status'] = 'Missing'
             else:
                 key['included_status'] = 'Complete'
@@ -197,36 +195,13 @@ class TrialSet(dj.Imported):
     key_source = acquisition.Session & CompleteTrialSession
 
     def make(self, key):
-
         trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        dtypes = [
-            'trials.feedback_times',
-            'trials.feedbackType',
-            'trials.intervals',
-            'trials.choice',
-            'trials.response_times',
-            'trials.contrastLeft',
-            'trials.contrastRight',
-            'trials.probabilityLeft',
-            'trials.stimOn_times',
-            'trials.repNum',
-            'trials.included',
-            'trials.goCue_times',
-            'trials.goCueTrigger_times',
-            'trials.rewardVolume',
-            'trials.itiDuration'
-            ]
-
-        files = one.load(
-            eID, dataset_types=dtypes, download_only=True, clobber=True)
-        ses_path = alf.io.get_session_path(files[0])
-        trials = alf.io.load_object(
-            ses_path.joinpath('alf'), 'trials')
 
         status = (CompleteTrialSession & key).fetch1()
 
-        lab_name = (subject.SubjectLab & key).fetch1('lab_name')
+        trials = one.load_object(eID, 'trials')
+
         if status['stim_on_times_status'] != 'Missing':
             if len(trials['stimOn_times']) == 1:
                 trials['stimOn_times'] = np.squeeze(trials['stimOn_times'])
@@ -251,8 +226,6 @@ class TrialSet(dj.Imported):
 
         key['trials_start_time'] = trials['intervals'][0, 0]
         key['trials_end_time'] = trials['intervals'][-1, 1]
-
-        self.insert1(key)
 
         trial_entries = []
         for idx_trial in range(len(trials['choice'])):
@@ -303,6 +276,7 @@ class TrialSet(dj.Imported):
 
             trial_entries.append(trial)
 
+        self.insert1(key)
         self.Trial.insert(trial_entries)
 
         logger.info('Populated a TrialSet tuple, \
@@ -366,7 +340,6 @@ class SessionDelay(dj.Imported):
             date.strftime('%Y-%m-%d')))
 
     def make(self, key):
-
         eID = (acquisition.Session & key).fetch1('session_uuid')
         json = one.alyx.get(one.get_details(str(eID))['url'])['json']
 
@@ -409,8 +382,8 @@ class Settings(dj.Imported):
     def make(self, key):
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
         try:
-            setting = one.load(eID, dataset_types='_iblrig_taskSettings.raw',
-                               clobber=True)
+            setting = one.load_dataset(eID, dataset='_iblrig_taskSettings.raw',
+                                       clobber=True)
         except Exception as e:
             key['error_type'] = 'settings not available'
             SettingsAvailability.insert1(key, allow_direct_insert=True)
@@ -450,8 +423,8 @@ class AmbientSensorData(dj.Imported):
     def make(self, key):
         trial_key = key.copy()
         eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        asd = one.load(eID, dataset_types='_iblrig_ambientSensorData.raw',
-                       clobber=True)
+        asd = one.load_dataset(eID, dataset='_iblrig_ambientSensorData.raw',
+                               clobber=True)
 
         if not len(TrialSet.Trial & key) == len(asd[0]):
             print('Size of ambient sensor data does not match the trial number')
