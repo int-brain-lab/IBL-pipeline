@@ -10,16 +10,17 @@
 #
 #   - Install environment with:
 #       mamba clean -yiqaf
-#       mamba env create -vvv --force -f iblenv.mamba.yml
+#       mamba env create -vqf iblenv.dj.yml
 name: iblenv
 channels:
   - conda-forge
   - defaults
 dependencies:
   - python=3.9.*                       # minimum python version
-  - pip>=19.3                          # manylinux2014 version
+  - pip>=21.1.0                        # no setup.py
   - apptools                           # dev
   - boto3                              # datajoint
+  - black                              # dev
   - click                              # ibllib
   - colorcet                           # ?
   - colorlog                           # ibllib
@@ -70,4 +71,4 @@ dependencies:
       - ONE-api                        # ibllib
       - phylib                         # ibllib
       - soundfile                      # examples
-      - opencv-python-headless         # ibllib, tries to rebuild numba if not correct numpy version
+      - opencv-python                  # ibllib, tries to rebuild numba if not correct numpy version

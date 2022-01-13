@@ -256,6 +256,10 @@ while [[ $# -gt 0 ]]; do
 		OPS_SEQ+=("wwwpublic")
 		shift
 		;;
+	"wwwquick")
+		OPS_SEQ+=("wwwquick")
+		shift
+		;;
 	"reloaddb")
 		OPS_SEQ+=("reloaddb")
 		shift
@@ -398,6 +402,15 @@ mkdb() {
 		psql -c "CREATE USER root WITH PASSWORD 'root';"
 		psql -c "CREATE DATABASE root;"
 	fi
+
+	checkdbusr ${PGUSER} -e
+	psql -c "ALTER ROLE ${PGUSER} SET client_encoding TO 'utf8';"
+	psql -c "ALTER ROLE ${PGUSER} SET default_transaction_isolation TO 'read committed';"
+	psql -c "ALTER ROLE ${PGUSER} SET timezone TO 'UTC';"
+	psql -c "GRANT ALL PRIVILEGES ON DATABASE \"${PGDATABASE}\" TO \"${PGUSER}\";"
+	psql -c "ALTER USER ${PGUSER} WITH CREATEROLE;"
+	psql -c "ALTER USER ${PGUSER} WITH SUPERUSER;"
+	psql -c "ALTER USER ${PGUSER} WITH CREATEDB;"
 }
 
 fetchdump() {
@@ -471,19 +484,6 @@ configalyx() {
 	# custom settings_secret for multiple DBs
 	echo "# ===> configuring settings_*.py"
 
-	# http://alyx:8000
-	sed -i \
-		-e "s/\['localhost'\]/\['localhost','alyx'\]/" \
-		"${IBL_PATH_ALYX}/alyx/alyx/settings_lab.py"
-
-	sed -i \
-		-e "s/%SECRET_KEY%/$ALYX_SECRET_KEY/" \
-		-e "s/%DBNAME%/$PGDATABASE/" \
-		-e "s/%DBUSER%/$PGUSER/" \
-		-e "s/%DBPASSWORD%/$PGPASSWORD/" \
-		-e "s/127.0.0.1/$PGHOST/" \
-		"${IBL_PATH_ALYX}/alyx/alyx/settings_secret_template.py"
-
 	sed \
 		-e "s/%SECRET_KEY%/$ALYX_SECRET_KEY/" \
 		-e "s/%DBNAME%/$PGDATABASE/" \
@@ -495,7 +495,7 @@ configalyx() {
 
 			DATABASES  = {
 			    'default': {
-			        'ENGINE': 'django_prometheus.db.backends.postgresql',
+			        'ENGINE': 'django.db.backends.postgresql_psycopg2',
 			        'NAME': '%DBNAME%',
 			        'USER': '%DBUSER%',
 			        'PASSWORD': '%DBPASSWORD%',
@@ -503,7 +503,7 @@ configalyx() {
 			        'PORT': '5432',
 			    },
 			    'old': {
-			        'ENGINE': 'django_prometheus.db.backends.postgresql',
+			        'ENGINE': 'django.db.backends.postgresql_psycopg2',
 			        'NAME': '%DBNAME%_old',
 			        'USER': '%DBUSER%',
 			        'PASSWORD': '%DBPASSWORD%',
@@ -518,6 +518,18 @@ configalyx() {
 			EMAIL_PORT = 587
 			EMAIL_USE_TLS = True
 		EOF
+
+	awk \
+		'{
+			sub(/DEBUG \= False/,"DEBUG = True");
+		} 1' "${IBL_PATH_ALYX}/alyx/alyx/settings_template.py" >"${IBL_PATH_ALYX}/alyx/alyx/settings.py"
+
+	awk \
+		-v USERNAME="$PGUSER" \
+		'{
+			sub(/'\''alyx.internationalbrainlab.org'\''/,"\"alyx.internationalbrainlab.org\", \"alyx\"");
+			sub(/'\''root'\'',/,"\"root\", \"" USERNAME "\",");
+		} 1' "${IBL_PATH_ALYX}/alyx/alyx/settings_lab_template.py" >"${IBL_PATH_ALYX}/alyx/alyx/settings_lab.py"
 
 	echo "# ====> configuring apache2"
 	local condaenvpath="/opt/local/conda/envs/${CONDA_ENV_USER}"
@@ -535,8 +547,8 @@ configalyx() {
 			sub(/WSGIDaemonProcess alyx python-path/,"WSGIDaemonProcess alyx user=" USERNAME " group=" GROUPNAME " python-path")
 		} 1' "${IBL_PATH_ALYX}/docs/_static/001-alyx.conf" >/etc/apache2/sites-available/001-alyx.conf
 
-	echo "ServerName localhost" > /etc/apache2/conf-available/servername.conf
-	mod_wsgi-express module-config > /etc/apache2/mods-available/wsgi.load
+	echo "ServerName $HOSTNAME" >/etc/apache2/conf-available/servername.conf
+	mod_wsgi-express module-config >/etc/apache2/mods-available/wsgi.load
 
 	echo "# =====> configuring .pgpass"
 	rm -f ~/.pgpass
@@ -552,11 +564,13 @@ createsu() {
 			from misc.models import LabMember
 
 			LabMember.objects.create_superuser(
-			    username='$PGUSER', email='info@datajoint.com', password='$PGPASSWORD'
+			    username='$PGUSER', email='info@datajoint.com', password='$PGPASSWORD',
+			    is_stock_manager=True
 			)
 		EOF
-		echo "${PGUSER}" >"${su_created_file}"
 		alyxcmd drf_create_token "${PGUSER}" >/dev/null
+		alyxcmd set_user_permissions
+		echo "${PGUSER}" >"${su_created_file}"
 		set +e
 	else
 		echo "# ===> superuser already exists"
@@ -566,14 +580,6 @@ createsu() {
 updatealyx() {
 	checkdb ${PGDATABASE} -e
 	checkdbusr ${PGUSER} -e
-
-	psql -c "ALTER ROLE ${PGUSER} SET client_encoding TO 'utf8';"
-	psql -c "ALTER ROLE ${PGUSER} SET default_transaction_isolation TO 'read committed';"
-	psql -c "ALTER ROLE ${PGUSER} SET timezone TO 'UTC';"
-	psql -c "GRANT ALL PRIVILEGES ON DATABASE \"${PGDATABASE}\" TO \"${PGUSER}\";"
-	psql -c "ALTER USER ${PGUSER} WITH CREATEROLE;"
-	psql -c "ALTER USER ${PGUSER} WITH SUPERUSER;"
-	psql -c "ALTER USER ${PGUSER} WITH CREATEDB;"
 
 	echo "# => makemigrations"
 	alyxcmd makemigrations
@@ -604,13 +610,18 @@ loaddb() {
 	if [[ -f "${db_loaded_file}" ]]; then
 		echo "# => database already loaded, skipping load"
 	else
-		[[ ! -f "${ALYX_DUMP_FILE}" ]] &&
-			err_exit "dump file '$ALYX_DUMP_FILE' does not exist"
-		echo "# ==> loading database ${ALYX_DUMP_FILE}"
-		gzip -dc ${ALYX_DUMP_FILE} | psql -d "${PGDATABASE}"
-		createsu
-		alyxcmd migrate
-		echo "${ALYX_DUMP_FILE}" >"${db_loaded_file}"
+		if [[ -f "${ALYX_DUMP_FILE}" ]]; then
+			echo "# ==> loading database ${ALYX_DUMP_FILE}"
+			gzip -dc ${ALYX_DUMP_FILE} | psql -d "${PGDATABASE}"
+			createsu
+			alyxcmd makemigrations
+			alyxcmd migrate
+			echo "${ALYX_DUMP_FILE}" >"${db_loaded_file}"
+		else
+			echo "# Warning: DB dump file '$ALYX_DUMP_FILE' does not exist\!" \
+				"Skipping load."
+		fi
+
 	fi
 }
 
@@ -703,7 +714,7 @@ startserver() {
 	sudo a2enmod -q wsgi
 	sudo a2ensite -q 001-alyx
 	sudo service apache2 reload >/dev/null
-	alyxcmd runserver --insecure 0.0.0.0:${ALYX_PORT}
+	alyxcmd runserver 0.0.0.0:${ALYX_PORT}
 }
 
 checkserver() {
@@ -734,6 +745,11 @@ loaddump() {
 
 www() {
 	loaddump
+	startserver
+}
+
+wwwquick() {
+	[[ ! -f "${su_created_file}" ]] && initdb
 	startserver
 }
 

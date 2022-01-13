@@ -1,0 +1,14 @@
+#! /bin/bash
+
+#> cd IBL-pipeline/.devcontainer
+#> chmod +x vscode-open-dev-container
+#> ./vsc*
+
+ws_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." &>/dev/null && pwd)"
+
+if ! command -v devcontainer &>/dev/null; then
+    echo "#! Error: 'devcontainer' CLI not found. https://code.visualstudio.com/docs/remote/devcontainer-cli"
+    exit 1
+fi
+
+devcontainer open "${ws_root}"
