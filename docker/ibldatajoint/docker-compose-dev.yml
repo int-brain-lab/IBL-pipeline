@@ -2,11 +2,11 @@
 # Joseph Burling <joseph@datajoint.com>
 # --------------------------------------------------------------------------------------
 # Basic usage:
-#   docker-compose up --detach
-#   docker-compose down
-#   docker-compose up --detach jupyter
-#   docker-compose down --volumes
+#   EXTERN_VOLUME=~/Datasets/iblalyx docker-compose -f docker-compose-dev.yml up -d
+#   docker-compose -f docker-compose-dev.yml down --volumes
 #
+# alyx --dump_file=/int-brain-lab/shared/2022-01-12_alyxfull.sql.gz initdb loaddb
+
 # Shared properties across services ----------------------------------------------------
 
 version: "2.4"
@@ -40,7 +40,7 @@ x-ibl-data-volume: &ibl-data-volume
 
 x-ibl-shared-mount: &ibl-shared-mount
   - type: bind
-    source: ../../shared
+    source: ${EXTERN_VOLUME:-/tmp}
     target: /int-brain-lab/shared
 
 x-ibl-pipeline-mount: &ibl-pipeline-mount
@@ -53,7 +53,7 @@ x-shared-networks: &shared-networks
     ingestion:
 
 x-ibl-docker-image: &ibl-docker-image
-  image: iamamutt/iblenv_alyx:latest
+  image: iblenv_alyx:latest
 
 x-dj-pipeline-common: &dj-pipeline-common
   <<: *ibl-docker-image
@@ -66,7 +66,7 @@ x-dj-pipeline-common: &dj-pipeline-common
     - ingest
   depends_on:
     alyx:
-      condition: service_healthy
+      condition: service_started
   volumes:
     - <<: *ibl-data-volume
     - <<: *ibl-shared-mount
@@ -107,20 +107,11 @@ services:
     entrypoint:
       - alyx
     command:
-      - www
+      - dev
     container_name: alyx_db_server
     depends_on:
       pgserver:
         condition: service_healthy
-    healthcheck:
-      test:
-        - CMD
-        - alyx
-        - checkserver
-      timeout: 15s
-      interval: 30s
-      retries: 5
-      start_period: 2m0s
     <<: *shared-networks
     ports:
       - ${ALYX_PORT:-8000}:${ALYX_PORT:-8000}
@@ -133,32 +124,27 @@ services:
     command:
       - config_init
       - --alyxhost=dev
-      - populate
-      - ingest
-      - --duration=1
-      - --backtrack=3
-    scale: ${WORKER_COUNT:-1}
+      - dev
 
-  populate_behavior:
-    <<: *dj-pipeline-common
-    command:
-      - config_init
-      - --alyxhost=dev
-      - populate
-      - behavior
-      - --duration=1
-      - --sleep=10
-      - --backtrack=10
-    container_name: populate_behavior
-
-  jupyter:
-    <<: *dj-pipeline-common
-    command:
-      - config_init
-      - jupyterlab
-    container_name: jupyter
+  # Postgres GUI -----------------------------------------------------------------------
+  # http://localhost:8088/
+  # System: PostgreSQL
+  # Server: pgserver
+  # Username: alyxadmin
+  # Password: $ALYX_DB_PASSWORD
+  adminer:
+    environment:
+      ADMINER_DEFAULT_SERVER: ${PGHOST:-pgserver}
+      ADMINER_DESIGN: nette
+    image: adminer
+    <<: *shared-networks
     ports:
-      - ${JUPYTER_PORT:-10000}:${JUPYTER_PORT:-10000}
+      - target: 8080
+        published: 8088
+    restart: always
+    depends_on:
+      alyx:
+        condition: service_started
 
 # Global Networks and Volumes ----------------------------------------------------------
 <<: *shared-networks
