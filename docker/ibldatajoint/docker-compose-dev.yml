@@ -107,8 +107,7 @@ services:
     entrypoint:
       - alyx
     command:
-      - initdb
-      - startserver
+      - wwwquick
     container_name: alyx_db_server
     depends_on:
       pgserver:
