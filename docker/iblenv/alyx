@@ -256,6 +256,10 @@ while [[ $# -gt 0 ]]; do
 		OPS_SEQ+=("wwwpublic")
 		shift
 		;;
+	"wwwquick")
+		OPS_SEQ+=("wwwquick")
+		shift
+		;;
 	"reloaddb")
 		OPS_SEQ+=("reloaddb")
 		shift
@@ -564,8 +568,9 @@ createsu() {
 			    is_stock_manager=True
 			)
 		EOF
-		echo "${PGUSER}" >"${su_created_file}"
 		alyxcmd drf_create_token "${PGUSER}" >/dev/null
+		alyxcmd set_user_permissions
+		echo "${PGUSER}" >"${su_created_file}"
 		set +e
 	else
 		echo "# ===> superuser already exists"
@@ -740,6 +745,11 @@ loaddump() {
 
 www() {
 	loaddump
+	startserver
+}
+
+wwwquick() {
+	[[ ! -f "${su_created_file}" ]] && initdb
 	startserver
 }
 

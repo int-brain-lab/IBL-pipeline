@@ -40,7 +40,7 @@ x-ibl-data-volume: &ibl-data-volume
 
 x-ibl-shared-mount: &ibl-shared-mount
   - type: bind
-    source: ${EXTERN_VOLUME:-/tmp}
+    source: ${EXTERN_VOLUME:-../../shared}
     target: /int-brain-lab/shared
 
 x-ibl-pipeline-mount: &ibl-pipeline-mount
@@ -53,7 +53,7 @@ x-shared-networks: &shared-networks
     ingestion:
 
 x-ibl-docker-image: &ibl-docker-image
-  image: iblenv_alyx:latest
+  image: iamamutt/iblenv_alyx:latest
 
 x-dj-pipeline-common: &dj-pipeline-common
   <<: *ibl-docker-image
@@ -66,7 +66,7 @@ x-dj-pipeline-common: &dj-pipeline-common
     - ingest
   depends_on:
     alyx:
-      condition: service_started
+      condition: service_healthy
   volumes:
     - <<: *ibl-data-volume
     - <<: *ibl-shared-mount
@@ -107,7 +107,8 @@ services:
     entrypoint:
       - alyx
     command:
-      - dev
+      - initdb
+      - startserver
     container_name: alyx_db_server
     depends_on:
       pgserver:
@@ -118,8 +119,17 @@ services:
     volumes:
       - <<: *ibl-data-volume
       - <<: *ibl-shared-mount
+    healthcheck:
+      test:
+        - CMD
+        - alyx
+        - checkserver
+      timeout: 15s
+      interval: 30s
+      retries: 5
+      start_period: 2m0s
 
-  ingest:
+  iblenv:
     <<: *dj-pipeline-common
     command:
       - config_init

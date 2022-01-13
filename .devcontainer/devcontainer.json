@@ -1,13 +1,13 @@
 // For format details, see https://aka.ms/devcontainer.json
 {
 	"name": "DataJoint IBL (dev-container)",
-	"dockerComposeFile": "../docker/ibldatajoint/docker-compose.yml",
-	"service": "jupyter",
-	"workspaceFolder": "/int-brain-lab",
+	"dockerComposeFile": "../docker/ibldatajoint/docker-compose-dev.yml",
+	"service": "iblenv",
+	"workspaceFolder": "/home/ibluser",
 	// Set *default* container specific settings.json values on container create.
 	"settings": {
 		"python.condaPath": "/opt/local/conda/bin/conda",
-		"python.defaultInterpreterPath": "/opt/local/conda/envs/iblenv/bin/python",
+		"python.defaultInterpreterPath": "/home/ibluser/.conda/envs/iblenv/bin/python",
 		"python.formatting.provider": "black",
 		"python.formatting.blackArgs": [
 			"--line-length=88"
@@ -39,5 +39,6 @@
 	"userEnvProbe": "loginInteractiveShell",
 	"features": {
 		"github": "latest"
-	}
+	},
+	"postCreateCommand": "ln -s /int-brain-lab/shared /home/ibluser/shared"
 }
