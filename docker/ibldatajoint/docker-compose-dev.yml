@@ -53,7 +53,7 @@ x-shared-networks: &shared-networks
     ingestion:
 
 x-ibl-docker-image: &ibl-docker-image
-  image: iamamutt/iblenv_alyx:latest
+  image: ghcr.io/iamamutt/iblenv_alyx:latest
 
 x-dj-pipeline-common: &dj-pipeline-common
   <<: *ibl-docker-image

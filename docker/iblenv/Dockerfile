@@ -5,10 +5,10 @@ ARG USER_NAME=ibluser
 ARG USER_UID=1000
 ARG TIMEZONE="America/Chicago"
 ARG IMAGE_CREATED=2021-11-11T11:11:11Z
-ARG IMAGE_VERSION=v0.0.0
+ARG IMAGE_VERSION=v0.0.0a
 
 ## IBL environment build stage =========================================================
-FROM iamamutt/conda_base:latest as conda_base_ibl_env
+FROM ghcr.io/iamamutt/conda_base:latest as conda_base_ibl_env
 
 # inherit from global args
 ARG USER_NAME
