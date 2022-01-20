@@ -23,7 +23,7 @@ Create and start the containers using the services specified in `docker-compose.
 docker-compose up --detach
 ```
 
-The `alyx_db_server` container will likely take a few minutes to download the public database and load in the sql dump.
+The `alyx` service will likely take a few minutes to download the public database and load in the sql dump.
 
 You can set a cron job to periodically download the latest sql dump and load it into the database. For example, create a script called `alyxreload.sh` with the following content:
 

@@ -18,11 +18,10 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Sequence, Union, Optional
+from typing import Optional, Sequence, Union
 
 import one.params
 from one.api import OneAlyx
-
 
 StrVec = Union[list[str], str, None]
 StrPath = Union[str, Path]
@@ -222,6 +221,7 @@ def connect_alyx(base_url: str) -> OneAlyx:
     """
     Initiate an Alyx connection via one.api and return a connection object.
 
+    one = OneAlyx(password="******", username="alyxadmin", base_url="http://alyx:8000", silent=True)
     After the first connection, `OneAlyx` will pull configuration from `~/.one/.<url>`.
      If connecting using a `.one_params` file it must already be in your **home**
      directory, and the file **must** contain:
@@ -290,7 +290,7 @@ def init_one_alyx(host: str = "dev", file: Optional[Path] = None) -> None:
         params["CACHE_DIR"] = None
 
     # make cache dir based on type of host connection
-    if not params.get("CACHE_DIR"):
+    if not params.get("CACHE_DIR", ""):
         cache_dir = Path(IBL_PATH_DATA) / "alyx" / "cache" / host
         cache_dir.mkdir(0o776, True, True)
         params["CACHE_DIR"] = cache_dir.as_posix()
