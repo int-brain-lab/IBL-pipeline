@@ -621,14 +621,21 @@ class DeleteModifiedAlyxRaw(dj.Computed):
     -> AlyxRawDiff
     """
 
+    class HandledDeletedAndModified(dj.Part):
+        definition = """  # entries from AlyxRawDiff.DeletedEntry and AlyxRawDiff.ModifiedEntry that are handled
+        -> master
+        uuid: uuid  # pk field (uuid string repr)
+        """
+
     key_source = (AlyxRawDiff * IngestionJob
                   & [AlyxRawDiff.ModifiedEntry, AlyxRawDiff.DeletedEntry]
                   & 'job_status = "on-going"')
 
     def make(self, key):
         """
-        For actions.session, delete only the AlyxRaw.Field of the modified/deleted entries
-        For any other alyx model, delete the AlyxRaw
+        Delete from AlyxRaw those entries found in ModifiedEntry and DeletedEntry
+            + For actions.session, delete only the AlyxRaw.Field of the modified/deleted entries
+            + For any other alyx model, delete the AlyxRaw
         (note: deleting is tricky, beware grid-lock)
         """
         entries_to_delete = AlyxRawDiff.ModifiedEntry + AlyxRawDiff.DeletedEntry & key
@@ -680,6 +687,7 @@ class DeleteModifiedAlyxRaw(dj.Computed):
                     raise NotImplementedError
 
         self.insert1(key)
+        self.HandledDeletedAndModified.insert(entries_to_delete)
 
 
 @schema
@@ -690,13 +698,21 @@ class IngestAlyxRawModel(dj.Computed):
 
     @property
     def key_source(self):
+        """
+        Only AlyxRawDiff with existing Created or Modified entries
+            wait for DeleteModifiedAlyxRaw to finish
+        """
         key_source = (AlyxRawDiff * IngestionJob
                       & [AlyxRawDiff.CreatedEntry, AlyxRawDiff.ModifiedEntry]
                       & 'job_status = "on-going"')
-        return ((key_source.proj() - DeleteModifiedAlyxRaw.key_source.proj())
-                + DeleteModifiedAlyxRaw)
+        return (key_source.proj()
+                - (DeleteModifiedAlyxRaw.key_source.proj() - DeleteModifiedAlyxRaw))
 
     def make(self, key):
+        """
+        Data copy from UpdateAlyxRaw to AlyxRaw, with `skip_duplicates=True`
+            only for those entries found in ModifiedEntry and DeletedEntry
+        """
         entries_to_ingest = AlyxRawDiff.CreatedEntry + AlyxRawDiff.ModifiedEntry & key
 
         logger.info(f'Ingestion to AlyxRaw: {key["alyx_model_name"]}'
@@ -992,6 +1008,9 @@ def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60, **kwargs):
                 table.populate(**populate_settings)
 
         (schema.jobs & 'status = "error"').delete()
+        stale_jobs = (schema.jobs & 'status = "reserved"').proj(
+            elapsed_days='TIMESTAMPDIFF(DAY, timestamp, NOW())') & 'elapsed_days > 1'
+        (schema.jobs & stale_jobs).delete()
 
         time.sleep(sleep_duration)
 
