@@ -482,14 +482,19 @@ class IngestionJob(dj.Manual):
 
     @classmethod
     def create_entry(cls, alyx_sql_dump):
-        with cls.connection.transaction:
-            for key in (cls & 'job_status = "on-going"').fetch('KEY'):
-                (cls & key)._update('job_status', 'terminated')
-                (cls & key)._update('job_endtime', datetime.datetime.utcnow())
+        try:
+            with cls.connection.transaction:
+                for key in (cls & 'job_status = "on-going"').fetch('KEY'):
+                    (cls & key)._update('job_status', 'terminated')
+                    (cls & key)._update('job_endtime', datetime.datetime.utcnow())
+                cls.insert1({'job_datetime': datetime.datetime.utcnow(),
+                             'alyx_sql_dump': alyx_sql_dump,
+                             'job_status': 'on-going'})
+                assert len(cls & 'job_status = "on-going"') == 1
+        except AssertionError:
+            pass
+        else:
             _clean_up()
-            cls.insert1({'job_datetime': datetime.datetime.utcnow(),
-                         'alyx_sql_dump': alyx_sql_dump,
-                         'job_status': 'on-going'})
 
     @classmethod
     def get_on_going_key(cls):
