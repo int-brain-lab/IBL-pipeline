@@ -848,6 +848,7 @@ class CopyRealTable(dj.Computed):
         real_table = DJ_TABLES[key['table_name']]['real']
 
         # Ensure the real-table copy routine is "in topologically sorted order"
+        # so, if ancestors of this table is not yet copied, exit and retry later
         schema_prefix = dj.config.get('database.prefix', '') + 'ibl_'
         ancestors = [tbl_name.split('.') for tbl_name in real_table.ancestors()]
         ancestors = [schema_name.strip('`').replace(schema_prefix, '')
