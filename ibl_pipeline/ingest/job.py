@@ -753,15 +753,18 @@ class ShadowTable(dj.Computed):
     @property
     def key_source(self):
         key_source = IngestionJob & 'job_status = "on-going"'
-        return (
-            key_source
-            & ((key_source.proj().aggr(IngestUpdateAlyxRawModel.key_source, ks_count='count(*)'))
-               * (key_source.proj().aggr(IngestUpdateAlyxRawModel, completed_count='count(*)'))
-               & 'completed_count = ks_count')
-            & ((key_source.proj().aggr(IngestAlyxRawModel.key_source, ks_count='count(*)'))
-               * (key_source.proj().aggr(IngestAlyxRawModel, completed_count='count(*)'))
-               & 'completed_count = ks_count')
-        )
+        UpdateAlyxRaw_finished = (
+                (key_source.proj().aggr(IngestUpdateAlyxRawModel.key_source, ks_count='count(*)'))
+                * (key_source.proj().aggr(IngestUpdateAlyxRawModel, completed_count='count(*)'))
+                & 'completed_count = ks_count')
+        if IngestAlyxRawModel.key_source:
+            AlyxRaw_finished = (
+                    (key_source.proj().aggr(IngestAlyxRawModel.key_source, ks_count='count(*)'))
+                    * (key_source.proj().aggr(IngestAlyxRawModel, completed_count='count(*)'))
+                    & 'completed_count = ks_count')
+        else:
+            AlyxRaw_finished = {}
+        return key_source & UpdateAlyxRaw_finished & AlyxRaw_finished
 
     def make(self, key):
         self.insert({**key, 'table_name': table_name}
