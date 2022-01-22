@@ -895,7 +895,7 @@ class UpdateRealTable(dj.Computed):
         modified_uuids = (AlyxRawDiff.ModifiedEntry & key
                           & {'alyx_model_name': alyx_model_name}).fetch('uuid')
 
-        uuid_attr = next((attr for attr in real_table.heading.names
+        uuid_attr = next((attr for attr in shadow_table.heading.names
                           if attr.endswith('uuid')))
 
         query = real_table & [{uuid_attr: u} for u in modified_uuids]
