@@ -643,8 +643,15 @@ class DeleteModifiedAlyxRaw(dj.Computed):
             + For any other alyx model, delete the AlyxRaw
         (note: deleting is tricky, beware grid-lock)
         """
-        entries_to_delete = AlyxRawDiff.ModifiedEntry + AlyxRawDiff.DeletedEntry & key
-        keys_to_delete = entries_to_delete.fetch('KEY')
+        # Find all unhandled deleted/modified entries
+        #  include also the unhandled ones from all previous jobs
+        #  upon completion, the unhandled from previous jobs will be marked as handled in this job
+
+        entries_to_delete = (
+                AlyxRawDiff.ModifiedEntry + AlyxRawDiff.DeletedEntry
+                - self.HandledDeletedAndModified
+                & {'alyx_model_name': key['alyx_model_name']})
+        keys_to_delete = [{'uuid': u} for u in entries_to_delete.fetch('uuid')]
 
         logger.info(f'Deletion in AlyxRaw: {key["alyx_model_name"]}'
                     f' - {len(keys_to_delete)} records')
@@ -692,7 +699,7 @@ class DeleteModifiedAlyxRaw(dj.Computed):
                     raise NotImplementedError
 
         self.insert1(key)
-        self.HandledDeletedAndModified.insert(entries_to_delete)
+        self.HandledDeletedAndModified.insert({**key, **k} for k in keys_to_delete)
 
 
 @schema
@@ -716,9 +723,14 @@ class IngestAlyxRawModel(dj.Computed):
     def make(self, key):
         """
         Data copy from UpdateAlyxRaw to AlyxRaw, with `skip_duplicates=True`
-            only for those entries found in ModifiedEntry and DeletedEntry
+            only for those entries found in CreatedEntry and ModifiedEntry
+        For ModifiedEntry, taking from `DeleteModifiedAlyxRaw.HandledDeletedAndModified`
+            instead of `AlyxRawDiff.ModifiedEntry`, as this represents the true set of
+            ModifiedEntries entries that have been deleted from `alyxraw.AlyxRaw`
         """
-        entries_to_ingest = AlyxRawDiff.CreatedEntry + AlyxRawDiff.ModifiedEntry & key
+        entries_to_ingest = (AlyxRawDiff.CreatedEntry
+                             + DeleteModifiedAlyxRaw.HandledDeletedAndModified
+                             & key)
 
         logger.info(f'Ingestion to AlyxRaw: {key["alyx_model_name"]}'
                     f' - {len(entries_to_ingest)} records')
