@@ -776,8 +776,8 @@ class PopulateShadowTable(dj.Computed):
     definition = """
     -> ShadowTable
     ---
-    incomplete_count=null: int  # how many to be populated
-    completion_count=null: int  # how many has been populated
+    incomplete_count=null: int  # how many to be populated before this job
+    completion_count=null: int  # how many has been populated by this job
     """
 
     key_source = ShadowTable * IngestionJob & 'job_status = "on-going"'
