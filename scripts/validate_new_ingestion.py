@@ -1,4 +1,5 @@
 import datajoint as dj
+import pandas as pd
 
 from ibl_pipeline import (reference, subject, action,
                           acquisition, data, ephys, qc, histology)
@@ -25,16 +26,19 @@ for m in (reference, subject, action,
 session_res = 'session_start_time BETWEEN "2022-01-20" AND "2022-01-22"'
 session_keys = (real_vmods['acquisition'].Session & session_res).fetch('KEY')
 
+discrepancy = {}
 for full_table_name, table_detail in job.DJ_TABLES.items():
     real_table = table_detail['real']
     if real_table is None:
         continue
 
-    print(f'Inspecting: {full_table_name} - ', end='')
-
     schema_name, table_name = full_table_name.split('.')
     vm_real_table = getattr(real_vmods[schema_name], table_name)
 
     missing = (vm_real_table & session_keys) - (real_table & session_keys).proj()
+    extra = (real_table & session_keys) - (vm_real_table & session_keys).proj()
 
-    print(f'missing {len(missing)}')
+    discrepancy[full_table_name] = {'missing': len(missing), 'extra': len(extra)}
+
+discrepancy = pd.DataFrame(discrepancy).T
+print(discrepancy)
