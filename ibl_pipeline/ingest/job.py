@@ -871,9 +871,7 @@ class CopyRealTable(dj.Computed):
                                        for s in tbl_name.strip('`').split('__') if s])
                      for schema_name, tbl_name in ancestors]
 
-        ancestors = [n for n in ancestors if n in self._real_tables
-                     and n in (self.key_source - self).fetch('table_name')
-                     and n != key['table_name']]
+        ancestors = [n for n in ancestors if n in self._real_tables and n != key['table_name']]
 
         are_ancestors_copied = (len(self & (IngestionJob & key)
                                     & [{'table_name': n} for n in ancestors])
