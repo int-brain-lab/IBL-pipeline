@@ -851,6 +851,8 @@ class PopulateShadowTable(dj.Computed):
 class CopyRealTable(dj.Computed):
     definition = """
     -> PopulateShadowTable
+    ---
+    transferred_count=null: int
     """
 
     _real_tables = [table_name for table_name, v in DJ_TABLES.items() if v['real'] is not None]
@@ -884,9 +886,9 @@ class CopyRealTable(dj.Computed):
         target_module = inspect.getmodule(real_table)
         source_module = inspect.getmodule(shadow_table)
 
-        ingest_real.copy_table(target_module, source_module, real_table.__name__)
+        transferred_count = ingest_real.copy_table(target_module, source_module, real_table.__name__)
 
-        self.insert1(key)
+        self.insert1({**key, 'transferred_count': transferred_count})
 
 
 @schema

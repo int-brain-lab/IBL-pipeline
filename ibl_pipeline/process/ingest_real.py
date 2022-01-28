@@ -165,6 +165,8 @@ def copy_table(target_schema, src_schema, table_name,
                   'ignore_extra_fields': True,
                   'allow_direct_insert': True}
 
+        transferred_count = len(q_insert)
+
         try:
             target_table.insert(q_insert, **kwargs)
         except Exception:
@@ -172,8 +174,11 @@ def copy_table(target_schema, src_schema, table_name,
                 try:
                     target_table.insert(q_insert & key, **kwargs)
                 except Exception:
+                    transferred_count -= 1
                     print("Error when inserting {}".format((q_insert & key).fetch1()))
                     traceback.print_exc()
+
+        return transferred_count
 
 
 def main(excluded_tables=[]):
