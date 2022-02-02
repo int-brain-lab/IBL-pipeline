@@ -64,9 +64,9 @@ def env_test(
     os.environ["IBL_PATH_SHARED"] = dirs["shared"].as_posix()
 
     # copy template to ibl root
-    tmp_json = dirs["root"] / "template.ingest.json"
+    tmp_json = dirs["root"] / "config.json"
     tmp_json.unlink(True)
-    copyfile(this_dir / "template.ingest.json", tmp_json)
+    copyfile(this_dir / "config.json", tmp_json)
 
     # copy
     tmp_local = dirs["shared"] / "local.one_params"

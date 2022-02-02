@@ -1,0 +1,221 @@
+#! /bin/bash --login
+
+# IBL Ingestion Entrypoint Script
+# ===============================
+
+err_exit() {
+	echo "#! Error: $*"
+	exit 1
+}
+
+script_cmd="${BASH_SOURCE[0]}"
+script_path="$(cd "$(dirname ${script_cmd})" &>/dev/null && pwd)"
+script_file=$(basename "${script_cmd}")
+shell_dir=$PWD
+
+[[ -z "$CONDA_ENV_USER" ]] && CONDA_ENV_USER=base
+[[ -z "${JUPYTER_PORT}" ]] && JUPYTER_PORT=10000
+[[ -z "${JUPYTER_TOKEN}" ]] && JUPYTER_TOKEN=IBLt0k
+
+init_dot_py=/usr/local/bin/config_init.py
+populate_dot_py=/usr/local/bin/populate.py
+
+SHOW_HELP=0
+OPS_SEQ=()
+CFG_INIT_ARGS=()
+POPULATE_ARGS=()
+
+show_help() {
+	echo "usage: $script_file FUNC/ROUTINE [OPTION]... [-- EXEC_CMD]
+
+Entrypoint for ingestion routines
+
+Functions:
+
+dev .............. Initialize parent process and wait indefinitely
+copy_one_params .. Copy 'local.one_params' parameters file from shared to home dir
+config_init ...... Init configuration files for Alyx and DataJoint. Can pass args from
+                   'config_init.py' after specifying this function to run.
+                   See examples section below.
+populate ......... Run the python script ${populate_dot_py}.
+                   Can pass args to script if args are specified after 'populate'.
+                   See examples section below.
+jupyterlab ....... Start a jupyter lab server using the link below.
+                     http://127.0.0.1:${JUPYTER_PORT}/lab?token=${JUPYTER_TOKEN}
+
+
+Environment Variables:
+
+  IBL_PATH_ROOT=$IBL_PATH_ROOT
+  IBL_PATH_ALYX=$IBL_PATH_ALYX
+  IBL_PATH_DATA=$IBL_PATH_DATA
+
+Examples:
+
+ Start a dev container
+   > $script_file dev
+
+ Initialize configuration for Alyx and DataJoint
+   > $script_file config_init --alyxhost=private --djcfg='$IBL_PATH_ROOT/config.json'
+
+ Run a population task
+   > $script_file populate behavior -b 5 --duration=0.5
+
+ Start a jupyter lab server using custom token and port
+   > $script_file jupyterlab --jupytertok=$JUPYTER_TOKEN --jupyterport=$JUPYTER_PORT
+"
+	exit 0
+}
+
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+	"help" | "--help" | "-h" | "--help")
+		SHOW_HELP=1
+		break
+		;;
+	"dev")
+		OPS_SEQ+=("run_dev")
+		shift
+		;;
+	"copy_one_params")
+		OPS_SEQ+=("copy_one_params")
+		shift
+		;;
+	"config_init")
+		OPS_SEQ+=("config_init")
+		shift
+		for arg in "$@"; do
+			case "$1" in
+			--alyxhost=* | --onepar=* | --djcfg=*)
+				echo "config_init.py arg: '$1'"
+				CFG_INIT_ARGS+=("$1")
+				shift
+				;;
+			esac
+		done
+		;;
+	"populate")
+		OPS_SEQ+=("populate")
+		shift
+		for arg in "$@"; do
+			case "$1" in
+			ingest | behavior | wheel | ephys)
+				POPULATE_ARGS+=("$1")
+				shift
+				;;
+			--duration=* | --backtrack=* | --sleep=* | --xtable=* | --xplots)
+				echo "populate.py arg: '$1'"
+				POPULATE_ARGS+=("$1")
+				shift
+				;;
+			-d)
+				echo "populate.py arg: '-d $2'"
+				POPULATE_ARGS+=("--duration=$2")
+				shift
+				shift
+				;;
+			-b)
+				echo "populate.py arg: '-b $2'"
+				POPULATE_ARGS+=("--backtrack=$2")
+				shift
+				shift
+				;;
+			-d)
+				echo "populate.py arg: '-s $2'"
+				POPULATE_ARGS+=("--sleep=$2")
+				shift
+				shift
+				;;
+			-x)
+				echo "populate.py arg: '-x $2'"
+				POPULATE_ARGS+=("--xtable=$2")
+				shift
+				shift
+				;;
+			esac
+		done
+		;;
+	"jupyterlab")
+		OPS_SEQ+=("jupyterlab")
+		shift
+		for arg in "$@"; do
+			case "$1" in
+			--jupytertok=*)
+				JUPYTER_TOKEN="${1#*=}"
+				echo "--jupytertok passed. Using token: '$JUPYTER_TOKEN'"
+				shift
+				;;
+			--jupyterport=*)
+				JUPYTER_PORT="${1#*=}"
+				echo "--jupyterport passed. Using port: '$JUPYTER_PORT'"
+				shift
+				;;
+			esac
+		done
+		;;
+	"--")
+		shift
+		echo "Other command: $*"
+		break
+		;;
+	*)
+		err_exit "Unknown option: $1"
+		;;
+	esac
+done
+
+# show help if asked
+# ------------------
+
+[[ ${SHOW_HELP} -eq 1 ]] && show_help
+
+[[ -z "${IBL_PATH_ROOT}" ]] && err_exit "IBL_PATH_ROOT is empty"
+[[ -z "${IBL_PATH_DATA}" ]] && err_exit "IBL_PATH_DATA is empty"
+[[ -z "${IBL_PATH_SHARED}" ]] && err_exit "IBL_PATH_SHARED is empty"
+
+run_dev() {
+	echo -e "\n$0 > $*\nStarting development environment...\n"
+	exec tail -f /dev/null
+}
+
+run_function_seq() {
+	local fn
+	if [[ $# -gt 0 ]]; then
+		echo "# > operation sequence: $*"
+		for fn in "$@"; do
+			echo "# >> ${fn}()"
+			$fn
+		done
+	fi
+}
+
+copy_one_params() {
+	[[ -f "${IBL_PATH_SHARED}/local.one_params" ]] || alyx oneparams
+	cp -fv "${IBL_PATH_SHARED}/local.one_params" ~/
+}
+
+config_init() {
+	copy_one_params
+	alyx configalyx
+	python $init_dot_py ${CFG_INIT_ARGS[@]}
+}
+
+populate() {
+	python $populate_dot_py ${POPULATE_ARGS[@]}
+}
+
+jupyterlab() {
+	echo "Jupyter link: http://127.0.0.1:${JUPYTER_PORT}/lab?token=${JUPYTER_TOKEN}"
+	jupyter lab -y --no-browser --ip=0.0.0.0 --port=${JUPYTER_PORT} --ServerApp.token="${JUPYTER_TOKEN}"
+}
+
+# Start operations ---------------------------------------------------------------------
+
+# switch to appropriate python environment
+conda activate $CONDA_ENV_USER
+
+# run sequence of operations specified by user
+run_function_seq "${OPS_SEQ[@]}"
+
+# run rest of command
+exec "$@"

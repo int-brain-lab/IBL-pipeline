@@ -4,8 +4,9 @@
 # ==========================
 
 err_exit() {
-	echo "#! Error: $*"
-	exit 1
+	set -e
+	echo "#! Error: $*" >&2
+	return 1
 }
 
 # globals
@@ -20,8 +21,8 @@ shell_dir=$PWD
 # use default dockerfile directory if root path not specified
 [[ -z "${IBL_PATH_ROOT}" ]] && IBL_PATH_ROOT=/int-brain-lab
 
-# get alyx source code directory or default to /var/www/alyx
-[[ -z "${IBL_PATH_ALYX}" ]] && IBL_PATH_ALYX=/var/www/alyx
+# get alyx source code directory or default to /var/www/alyx-main/alyx
+[[ -z "${IBL_PATH_ALYX}" ]] && IBL_PATH_ALYX=/var/www/alyx-main/alyx
 
 # get data directory or default to IBL_PATH_ROOT/data
 [[ -z "${IBL_PATH_DATA}" ]] && IBL_PATH_DATA="${IBL_PATH_ROOT}/data"
@@ -40,6 +41,7 @@ ALYX_DUMP_URL=
 ALYX_DUMP_FILE=
 ALYX_DUMP_EXPIRES=6
 ALYX_DUMP_DIR="${IBL_PATH_DATA}/alyx/dumps"
+DISABLE_MAIL=true
 
 # paths of alyx files used during db setup/interaction steps
 alyx_manager="${IBL_PATH_ALYX}/alyx/manage.py"
@@ -78,7 +80,7 @@ configalyx .... Configure Alyx/django settings. The environment variables
 loaddb ........ Load data from the sql dump into postgres '${PGDATABASE}' db if
                 file '$db_loaded_file' does not already exist
 startserver ... Start Alyx server using port $ALYX_PORT
-renamedb ...... Switch '${PGDATABASE}' to '${PGDATABASE}_old' and create a new empty '${PGDATABASE}' in postgres
+resetdb ...... Switch '${PGDATABASE}' to '${PGDATABASE}_old' and create a new empty '${PGDATABASE}' in postgres
 dumpjson....... Send request to Alyx to perform a JSON dump of the current database
 cleandls ...... Clean up existing sql dumps in sql dump folder. Use with option '--dump_exp'.
 fetchpubdump .. Download the public Alyx database dump from flatiron.
@@ -118,7 +120,6 @@ Environment Variables (available if script is sourced):
 Database File Status:
 
   db_loaded: $(test -f $db_loaded_file && echo "YES" || echo "NO")
-  superuser_created: $(test -f $su_created_file && echo "YES" || echo "NO")
 
 
 Examples:
@@ -185,7 +186,7 @@ while [[ $# -gt 0 ]]; do
 		break
 		;;
 	"dev")
-		OPS_SEQ+=("dev")
+		OPS_SEQ+=("run_dev")
 		shift
 		;;
 	"fetchdump")
@@ -202,6 +203,10 @@ while [[ $# -gt 0 ]]; do
 		;;
 	"configalyx")
 		OPS_SEQ+=("configalyx")
+		shift
+		;;
+	"createsu")
+		OPS_SEQ+=("createsu")
 		shift
 		;;
 	"updatealyx")
@@ -224,16 +229,24 @@ while [[ $# -gt 0 ]]; do
 		OPS_SEQ+=("loaddb")
 		shift
 		;;
-	"renamedb")
-		OPS_SEQ+=("renamedb")
+	"resetdb")
+		OPS_SEQ+=("resetdb")
 		shift
 		;;
 	"dumpjson")
 		OPS_SEQ+=("dumpjson")
 		shift
 		;;
+	"dumpsql")
+		OPS_SEQ+=("dumpsql")
+		shift
+		;;
 	"cleandls")
 		OPS_SEQ+=("cleandls")
+		shift
+		;;
+	"testalyx")
+		OPS_SEQ+=("testalyx")
 		shift
 		;;
 	"initdb")
@@ -375,6 +388,22 @@ alyxcmd() {
 	python "${alyx_manager}" "${acmd}" $*
 }
 
+run_dev() {
+	echo -e "\n$0 > $*\nStarting development environment...\n"
+	exec tail -f /dev/null
+}
+
+run_function_seq() {
+	local fn
+	if [[ $# -gt 0 ]]; then
+		echo "# > operation sequence: $*"
+		for fn in "$@"; do
+			echo "# >> ${fn}()"
+			$fn
+		done
+	fi
+}
+
 # functions for postgres/django operations
 # ----------------------------------------
 
@@ -404,19 +433,20 @@ mkdb() {
 	fi
 
 	checkdbusr ${PGUSER} -e
-	psql -c "ALTER ROLE ${PGUSER} SET client_encoding TO 'utf8';"
-	psql -c "ALTER ROLE ${PGUSER} SET default_transaction_isolation TO 'read committed';"
-	psql -c "ALTER ROLE ${PGUSER} SET timezone TO 'UTC';"
-	psql -c "GRANT ALL PRIVILEGES ON DATABASE \"${PGDATABASE}\" TO \"${PGUSER}\";"
-	psql -c "ALTER USER ${PGUSER} WITH CREATEROLE;"
-	psql -c "ALTER USER ${PGUSER} WITH SUPERUSER;"
-	psql -c "ALTER USER ${PGUSER} WITH CREATEDB;"
+	psql -c "ALTER ROLE ${PGUSER} SET client_encoding TO 'utf8';" >/dev/null
+	psql -c "ALTER ROLE ${PGUSER} SET default_transaction_isolation TO 'read committed';" >/dev/null
+	psql -c "ALTER ROLE ${PGUSER} SET timezone TO 'UTC';" >/dev/null
+	psql -c "GRANT ALL PRIVILEGES ON DATABASE \"${PGDATABASE}\" TO \"${PGUSER}\";" >/dev/null
+	psql -c "ALTER USER ${PGUSER} WITH CREATEROLE;" >/dev/null
+	psql -c "ALTER USER ${PGUSER} WITH SUPERUSER;" >/dev/null
+	psql -c "ALTER USER ${PGUSER} WITH CREATEDB;" >/dev/null
 }
 
 fetchdump() {
 	if [[ -f "${ALYX_DUMP_FILE}" ]]; then
-		echo "alyx dump file '$ALYX_DUMP_FILE' already exists"
-		echo "run 'rm -f $ALYX_DUMP_FILE' to forcibly remove" \
+		echo "Found existing alyx dump file '$ALYX_DUMP_FILE'." \
+			"Will not attempt redownload." \
+			"Run 'rm -f $ALYX_DUMP_FILE' to forcibly remove" \
 			"the file then re-attempt download"
 	else
 		[[ -z "${HTTP_DATA_SERVER_LOGIN}" ]] &&
@@ -469,6 +499,7 @@ cleandls() {
 	local cache_dir="${IBL_PATH_DATA}/alyx/cache"
 	echo "==> cleaning cache files from '$cache_dir'"
 	find "${cache_dir}" -mindepth 1 ! -type d -not -name histology -printf '%s %p\n'
+	sudo whoami >/dev/null
 	sudo find "${cache_dir}" -mindepth 1 ! -type d -not -name histology -delete
 }
 
@@ -520,16 +551,16 @@ configalyx() {
 		EOF
 
 	awk \
-		'{
-			sub(/DEBUG \= False/,"DEBUG = True");
-		} 1' "${IBL_PATH_ALYX}/alyx/alyx/settings_template.py" >"${IBL_PATH_ALYX}/alyx/alyx/settings.py"
-
-	awk \
 		-v USERNAME="$PGUSER" \
 		'{
 			sub(/'\''alyx.internationalbrainlab.org'\''/,"\"alyx.internationalbrainlab.org\", \"alyx\"");
 			sub(/'\''root'\'',/,"\"root\", \"" USERNAME "\",");
 		} 1' "${IBL_PATH_ALYX}/alyx/alyx/settings_lab_template.py" >"${IBL_PATH_ALYX}/alyx/alyx/settings_lab.py"
+
+	awk \
+		'{
+			sub(/DEBUG \= False/,"DEBUG = True");
+		} 1' "${IBL_PATH_ALYX}/alyx/alyx/settings_template.py" >"${IBL_PATH_ALYX}/alyx/alyx/settings.py"
 
 	echo "# ====> configuring apache2"
 	local condaenvpath="/opt/local/conda/envs/${CONDA_ENV_USER}"
@@ -557,24 +588,46 @@ configalyx() {
 }
 
 createsu() {
-	if [[ ! -f "${su_created_file}" ]]; then
-		set -e
-		echo "# ===> creating alyx superuser"
-		alyxcmd shell <<-EOF
-			from misc.models import LabMember
+	echo "# ===> creating alyx superuser"
+	alyxcmd shell <<-EOF
+		try:
+		    from misc.models import LabMember
+		    LabMember.objects.create_superuser(
+		        username="$PGUSER",
+		        email="info@datajoint.com",
+		        password="$PGPASSWORD",
+		        is_stock_manager=True,
+		    )
+		except Exception as e:
+		    print(e)
+	EOF
+	echo "# ====> setting superuser token and user permissions"
+	alyxcmd drf_create_token "${PGUSER}" >/dev/null
+	alyxcmd set_user_permissions
+	echo "${PGUSER}" >"${su_created_file}"
+}
 
-			LabMember.objects.create_superuser(
-			    username='$PGUSER', email='info@datajoint.com', password='$PGPASSWORD',
-			    is_stock_manager=True
-			)
-		EOF
-		alyxcmd drf_create_token "${PGUSER}" >/dev/null
-		alyxcmd set_user_permissions
-		echo "${PGUSER}" >"${su_created_file}"
-		set +e
-	else
-		echo "# ===> superuser already exists"
-	fi
+loadinitfixtures() {
+	local fixture_list=(
+		actions/fixtures/actions.proceduretype.json
+		actions/fixtures/actions.watertype.json
+		actions/fixtures/actions.cullreason.json
+		data/fixtures/data.datarepositorytype.json
+		data/fixtures/data.dataformat.json
+		data/fixtures/data.datasettype.json
+		misc/fixtures/misc.cagetype.json
+		misc/fixtures/misc.enrichment.json
+		misc/fixtures/misc.food.json
+		subjects/fixtures/subjects.source.json
+		experiments/fixtures/experiments.coordinatesystem.json
+		experiments/fixtures/experiments.probemodel.json
+		experiments/fixtures/experiments.brainregion.json
+	)
+
+	local fx
+	for fx in "${fixture_list[@]}"; do
+		alyxcmd loaddata "$IBL_PATH_ALYX/alyx/$fx"
+	done
 }
 
 updatealyx() {
@@ -588,32 +641,63 @@ updatealyx() {
 	alyxcmd migrate
 
 	echo "# ===> loading fixtures"
-	cd $(dirname ${alyx_manager})
-	../scripts/load-init-fixtures.sh
-	cd ${shell_dir}
+	loadinitfixtures
 
 	echo "# ====> setting permissions"
 	alyxcmd set_db_permissions
 	alyxcmd set_user_permissions
 }
 
+testalyx() {
+	(
+		cd "${IBL_PATH_ALYX}/alyx"
+		alyxcmd test --timing --no-input --nomigrations 2>&1 |
+			tee "${IBL_PATH_DATA}/alyx/tests.log"
+	)
+}
+
+sql_dump_load() {
+	local dmp_="${1:-${ALYX_DUMP_FILE}}"
+	local dbs_="${2:-${PGDATABASE}}"
+	gzip -dc "$dmp_" | psql -d "$dbs_"
+}
+
+resetdb() {
+	# alyxcmd reset_db --noinput
+	echo "# => resetting database"
+	checkdb "${PGDATABASE}_old" >/dev/null
+	if [[ ${DB_NAME_EXISTS} -eq 1 ]]; then
+		echo "# ==> dropping ${PGDATABASE}_old"
+		dropdb "${PGDATABASE}_old" || err_exit "couldn't drop ${PGDATABASE}_old"
+	fi
+
+	echo "# ===> renaming ${PGDATABASE} to ${PGDATABASE}_old"
+	psql -d postgres -c "ALTER DATABASE \"${PGDATABASE}\" RENAME TO \"${PGDATABASE}_old\";" >/dev/null ||
+		err_exit "couldn't rename ${PGDATABASE} to ${PGDATABASE}_old"
+
+	rm -f "${db_loaded_file}"
+
+	echo "# ====> creating new ${PGDATABASE}"
+	createdb "${PGDATABASE}" || err_exit "couldn't create ${PGDATABASE} db"
+
+	mkdb
+	updatealyx
+	createsu
+
+	echo "# ======> reset done."
+}
+
 loaddb() {
 	checkdb ${PGDATABASE} -e
 
-	if [[ "$1" == "--reset" ]]; then
-		echo "# => resetting database"
-		alyxcmd reset_db --noinput
-		updatealyx
-		rm -f "${db_loaded_file}" "${su_created_file}"
-	fi
+	[[ "$1" = "--reset" ]] && resetdb
 
 	if [[ -f "${db_loaded_file}" ]]; then
 		echo "# => database already loaded, skipping load"
 	else
 		if [[ -f "${ALYX_DUMP_FILE}" ]]; then
 			echo "# ==> loading database ${ALYX_DUMP_FILE}"
-			gzip -dc ${ALYX_DUMP_FILE} | psql -d "${PGDATABASE}"
-			createsu
+			sql_dump_load
 			alyxcmd makemigrations
 			alyxcmd migrate
 			echo "${ALYX_DUMP_FILE}" >"${db_loaded_file}"
@@ -621,30 +705,7 @@ loaddb() {
 			echo "# Warning: DB dump file '$ALYX_DUMP_FILE' does not exist\!" \
 				"Skipping load."
 		fi
-
 	fi
-}
-
-renamedb() {
-	echo "# => renaming databases"
-
-	checkdb "${PGDATABASE}_old"
-	if [[ ${DB_NAME_EXISTS} -eq 1 ]]; then
-		echo "# ==> dropping ${PGDATABASE}_old"
-		dropdb "${PGDATABASE}_old" || err_exit "couldn't drop ${PGDATABASE}_old"
-	fi
-
-	echo "# ===> renaming ${PGDATABASE} to ${PGDATABASE}_old"
-	psql -c "alter database \"${PGDATABASE}\" rename to \"${PGDATABASE}_old\";" >/dev/null ||
-		err_exit "couldn't rename ${PGDATABASE} to ${PGDATABASE}_old"
-
-	echo "# ====> creating new ${PGDATABASE}"
-	createdb "${PGDATABASE}" || err_exit "couldn't create ${PGDATABASE} db"
-
-	rm -f "${db_loaded_file}"
-	rm -f "${su_created_file}"
-
-	echo "# ======> ok"
 }
 
 dumpjson() {
@@ -696,6 +757,7 @@ oneparams() {
 }
 
 stopserver() {
+	sudo whoami >/dev/null
 	sudo a2dissite -q 001-alyx
 	sudo a2dismod -q wsgi
 	sudo service apache2 stop >/dev/null
@@ -735,11 +797,25 @@ initdb() {
 	createsu
 }
 
+reloaddb() {
+	fetchdump
+	loaddb --reset
+}
+
 loaddump() {
 	fetchdump
 	mkdb
 	configalyx
 	updatealyx
+	loaddb
+}
+
+loadpubdump() {
+	fetchpubdump
+	mkdb
+	configalyx
+	updatealyx
+	rm -f "${db_loaded_file}"
 	loaddb
 }
 
@@ -749,22 +825,8 @@ www() {
 }
 
 wwwquick() {
-	[[ ! -f "${su_created_file}" ]] && initdb
+	initdb
 	startserver
-}
-
-reloaddb() {
-	fetchdump
-	loaddb --reset
-}
-
-loadpubdump() {
-	fetchpubdump
-	mkdb
-	configalyx
-	updatealyx
-	rm -f "${db_loaded_file}" "${su_created_file}"
-	loaddb
 }
 
 wwwpublic() {
@@ -772,29 +834,13 @@ wwwpublic() {
 	startserver
 }
 
-# Development
-# -----------
-
-dev() {
-	echo -e "starting development environment...\n"
-	exec tail -f /dev/null
-}
-
-# Start
-# -----
+# Start operations ---------------------------------------------------------------------
 
 # switch to appropriate python environment
-[[ -z "${CONDA_ENV_USER}" ]] && CONDA_ENV_USER=base
 conda activate $CONDA_ENV_USER
 
 # run sequence of operations specified by user
-if [[ ${#OPS_SEQ[@]} -gt 0 ]]; then
-	echo "# > operation sequence: ${OPS_SEQ[@]}"
-	for fn in ${OPS_SEQ[@]}; do
-		echo "---- ${fn}() ----"
-		$fn
-	done
-fi
+run_function_seq "${OPS_SEQ[@]}"
 
-# run rest of user specified commands
-exec -l "$@"
+# run rest of command
+exec "$@"

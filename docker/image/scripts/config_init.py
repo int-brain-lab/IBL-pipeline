@@ -46,7 +46,7 @@ _alyx_urls = {
 }
 
 # default template file to use to populate config parameters for datajoint and alyx
-_default_json_template = Path(IBL_PATH_ROOT) / "template.ingest.json"
+_default_json_template = Path(IBL_PATH_ROOT) / "config.json"
 _default_local_one_params = Path(IBL_PATH_ROOT) / "shared" / "local.one_params"
 
 # where ONE-api will look for first-time-use parameters
@@ -292,7 +292,7 @@ def init_one_alyx(host: str = "dev", file: Optional[Path] = None) -> None:
     # make cache dir based on type of host connection
     if not params.get("CACHE_DIR", ""):
         cache_dir = Path(IBL_PATH_DATA) / "alyx" / "cache" / host
-        cache_dir.mkdir(0o776, True, True)
+        cache_dir.mkdir(0o1777, True, True)
         params["CACHE_DIR"] = cache_dir.as_posix()
 
     # if CACHE_DIR is pre set in .one_params file, make sure it exists
@@ -326,6 +326,8 @@ def init_dj_config(file: Path) -> None:
     )
     if not config.get("connection.charset"):
         config["connection.charset"] = ""
+    if not config.get("database.prefix"):
+        config["database.prefix"] = ""
     _dest_dj_config_path.unlink(True)
     _dest_dj_config_path.touch(0o664)
     with open(_dest_dj_config_path, "w") as f:

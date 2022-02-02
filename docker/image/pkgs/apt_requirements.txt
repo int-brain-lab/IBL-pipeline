@@ -6,6 +6,7 @@ cron
 git
 htop
 libmagic1
+libxcb-xinerama0
 mesa-utils
 net-tools
 nvi

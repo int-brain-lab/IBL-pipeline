@@ -7,14 +7,18 @@
 #   docker-compose up --detach jupyter
 #   docker-compose down --volumes
 #
-# Shared properties across services ----------------------------------------------------
 
 version: "2.4"
 
-x-alyx-env-vars: &alyx-env-vars
+# Shared properties across services ----------------------------------------------------
+x-image-iblenv: &image-iblenv
+  image: ghcr.io/${GITHUB_USERNAME:-iamamutt}/iblenv_alyx:latest
+
+x-env-vars-alyx: &env-vars-alyx
   ALYX_LOGIN: ${ALYX_LOGIN:-}
   ALYX_PORT: ${ALYX_PORT:-8000}
   ALYX_PWD: ${ALYX_PWD:-}
+  ALYX_SECRET_KEY: ${ALYX_SECRET_KEY:-supersecretalyxkey}
   ALYX_URL: ${ALYX_URL:-}
   HTTP_DATA_SERVER_LOGIN: ${HTTP_DATA_SERVER_LOGIN:?set HTTP_DATA_SERVER_LOGIN in .env file}
   HTTP_DATA_SERVER_PWD: ${HTTP_DATA_SERVER_PWD:?set HTTP_DATA_SERVER_PWD in .env file}
@@ -23,59 +27,63 @@ x-alyx-env-vars: &alyx-env-vars
   PGPASSWORD: ${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
   PGUSER: ${ALYX_DB_USER:-alyxadmin}
 
-x-dj-env-vars: &dj-env-vars
+x-env-vars-dj: &env-vars-dj
   DJ_HOST: ${DJ_HOST:-datajoint.internationalbrainlab.org}
   DJ_MODE: ${DJ_MODE:-test}
-  DJ_PASS: ${DJ_PASS:-}
-  DJ_USER: ${DJ_USER:-}
+  DJ_PASS: ${DJ_PASS:-simple}
+  DJ_USER: ${DJ_USER:-root}
   S3_ACCESS: ${S3_ACCESS:-}
-  S3_MIGRATE_BUCKET: ${S3_MIGRATE_BUCKET:-ibl-dj-external}
+  S3_MIGRATE_BUCKET: ${S3_MIGRATE_BUCKET:-ibl-dj-external-public}
   S3_ROOT_PATH: ${S3_ROOT_PATH:-}
   S3_SECRET: ${S3_SECRET:-}
 
-x-ibl-data-volume: &ibl-data-volume
-  - type: volume
-    source: datacache
-    target: /int-brain-lab/data
+x-volume-mount-data-cache:
+  - &volume-mount-data-cache data_cache:/int-brain-lab/data
 
-x-ibl-shared-mount: &ibl-shared-mount
-  - type: bind
-    source: ../../shared
-    target: /int-brain-lab/shared
+x-volume-bind-shared:
+  - &volume-bind-shared ${LOCAL_SHARED:-../shared}:/int-brain-lab/shared
 
-x-ibl-pipeline-mount: &ibl-pipeline-mount
-  - type: bind
-    source: ../../ibl_pipeline
-    target: /int-brain-lab/IBL-pipeline/ibl_pipeline
+x-volume-bind-ibl-pipeline:
+  - &volume-bind-ibl-pipeline ../ibl_pipeline:/int-brain-lab/IBL-pipeline/ibl_pipeline
 
-x-shared-networks: &shared-networks
-  networks:
-    ingestion:
-
-x-ibl-docker-image: &ibl-docker-image
-  image: ghcr.io/${GITHUB_USERNAME:-iamamutt}/iblenv_alyx:latest
-
-x-dj-pipeline-common: &dj-pipeline-common
-  <<: *ibl-docker-image
+x-service-ibl-common: &service-ibl-common
+  <<: *image-iblenv
   environment:
-    <<: *dj-env-vars
-    <<: *alyx-env-vars
+    <<: *env-vars-alyx
+  volumes:
+    - *volume-bind-shared
+    - *volume-mount-data-cache
+  networks:
+    iblenv:
+  entrypoint: ["bash", "-lc"]
+  command: "tail -f /dev/null"
   init: true
-  <<: *shared-networks
+
+x-service-ibl-pipeline: &service-ibl-pipeline
+  <<: *service-ibl-common
+  environment:
+    <<: *env-vars-alyx
+    <<: *env-vars-dj
   entrypoint:
     - ingest
   depends_on:
     alyx:
       condition: service_healthy
-  volumes:
-    - <<: *ibl-data-volume
-    - <<: *ibl-shared-mount
-    - <<: *ibl-pipeline-mount
+
+# Global Networks and Volumes ----------------------------------------------------------
+networks:
+  iblenv:
+    name: iblenv_alyx_network
+
+volumes:
+  data_cache:
+    name: iblenv_alyx_data_cache
+  pgdata:
+    name: iblenv_alyx_pgdata
 
 services:
   # Postgres Server --------------------------------------------------------------------
   pgserver:
-    container_name: postgres_db_server
     environment:
       POSTGRES_DB: ${ALYX_DB_NAME:-alyxdb}
       POSTGRES_PASSWORD: ${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
@@ -85,11 +93,12 @@ services:
         - CMD-SHELL
         - pg_isready
       timeout: 15s
-      interval: 1m0s
-      retries: 3
-      start_period: 30s
+      interval: 30s
+      retries: 5
+      start_period: 10s
     image: postgres:13-bullseye
-    <<: *shared-networks
+    networks:
+      iblenv:
     ports:
       - "5438:5432"
     volumes:
@@ -100,15 +109,11 @@ services:
 
   # IBL Environment for DataJoint Ingestion --------------------------------------------
   alyx:
-    <<: *ibl-docker-image
-    environment:
-      <<: *alyx-env-vars
-    init: true
+    <<: *service-ibl-common
     entrypoint:
       - alyx
     command:
       - www
-    container_name: alyx_db_server
     depends_on:
       pgserver:
         condition: service_healthy
@@ -121,47 +126,37 @@ services:
       interval: 30s
       retries: 5
       start_period: 2m0s
-    <<: *shared-networks
     ports:
       - ${ALYX_PORT:-8000}:${ALYX_PORT:-8000}
-    volumes:
-      - <<: *ibl-data-volume
-      - <<: *ibl-shared-mount
 
   ingest:
-    <<: *dj-pipeline-common
+    <<: *service-ibl-pipeline
     command:
       - config_init
       - --alyxhost=dev
       - populate
       - ingest
-      - --duration=1
-      - --backtrack=3
-    scale: ${WORKER_COUNT:-1}
+      - --duration=-1
+        --sleep=5
+      - --backtrack=5
 
   populate_behavior:
-    <<: *dj-pipeline-common
+    <<: *service-ibl-pipeline
     command:
       - config_init
       - --alyxhost=dev
       - populate
       - behavior
-      - --duration=1
-      - --sleep=10
+      - --duration=-1
+      - --sleep=5
       - --backtrack=10
-    container_name: populate_behavior
 
-  jupyter:
-    <<: *dj-pipeline-common
-    command:
-      - config_init
-      - jupyterlab
-    container_name: jupyter
+  iblenv:
+    <<: *service-ibl-pipeline
+    volumes:
+      - *volume-bind-ibl-pipeline
+      - *volume-bind-shared
+      - *volume-mount-data-cache
     ports:
       - ${JUPYTER_PORT:-10000}:${JUPYTER_PORT:-10000}
-
-# Global Networks and Volumes ----------------------------------------------------------
-<<: *shared-networks
-volumes:
-  datacache:
-  pgdata:
+    command: "conda info -a"

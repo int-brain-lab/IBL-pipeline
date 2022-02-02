@@ -1,0 +1,73 @@
+# Setup devcontainers for iblenv
+# Joseph Burling <joseph@datajoint.com>
+# --------------------------------------------------------------------------------------
+# Basic usage:
+#   docker-compose -f docker-compose.yml -f docker-compose-dev.yml up -d
+#   docker-compose -f docker-compose.yml -f docker-compose-dev.yml down --volumes --remove-orphans
+#   docker compose -f docker-compose.yml -f docker-compose-dev.yml config
+
+version: "3.9"
+
+x-ibl-docker-image: &ibl-docker-image
+  image: ${DEV_CONTAINER_IMAGE:-ghcr.io/iamamutt/iblenv_alyx:latest}
+
+volumes:
+  vscode-server:
+    name: dev-vscode-server
+
+services:
+  alyx:
+    <<: *ibl-docker-image
+    command:
+      - initdb
+      - dev
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 2s
+
+  iblenv:
+    <<: *ibl-docker-image
+    deploy:
+      mode: global
+    command:
+      - config_init
+      - --alyxhost=dev
+      - jupyterlab
+    volumes:
+      - vscode-server:/home/ibl/.vscode-server/extensions
+
+  # Postgres GUI --------------
+  # http://localhost:8088/
+  # System: PostgreSQL
+  # Server: pgserver
+  # Username: alyxadmin
+  # Password: $ALYX_DB_PASSWORD
+  adminer:
+    environment:
+      ADMINER_DEFAULT_SERVER: ${PGHOST:-pgserver}
+      ADMINER_DESIGN: nette
+    image: adminer
+    networks:
+      iblenv:
+    ports:
+      - target: 8080
+        published: 8088
+    restart: always
+    depends_on:
+      alyx:
+        condition: service_started
+
+  ingest:
+    <<: *ibl-docker-image
+    deploy:
+      mode: replicated
+      replicas: 0
+
+  populate_behavior:
+    <<: *ibl-docker-image
+    deploy:
+      mode: replicated
+      replicas: 0
