@@ -485,7 +485,8 @@ fetchpubdump() {
 }
 
 cleandls() {
-	du -h --max-depth=1 | sort -h
+	echo "=> current disk usage for '${IBL_PATH_DATA}'"
+	du -h --max-depth=2 ${IBL_PATH_DATA} | sort -h
 
 	local old_dumps=$(find "${ALYX_DUMP_DIR}/sql" -type f \
 		-mmin +$((${ALYX_DUMP_EXPIRES} * 60 * 24)) 2>/dev/null)
