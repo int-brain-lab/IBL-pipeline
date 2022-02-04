@@ -56,26 +56,15 @@ class Session(dj.Manual):
                 # If this session is already in AlyxRaw, skip, as it will get inserted into Session in this ingestion cycle
                 continue
 
-            # Insert into AlyxRaw with incomplete info
-            # so it can be updated in the next daily ingestion cycle
-
-            sess = {**sess_key,
-                    'session_uuid': uuid.UUID(sess_uuid),
-                    'session_number': alyx_session['number'],
-                    'session_end_time': None,
-                    'session_lab': alyx_session['lab'],
-                    'session_location': None,
-                    'task_protocol': alyx_session['task_protocol'],
-                    'session_type': None,
-                    'session_narrative': None}
-
-            with cls.connection.transaction:
-                alyxraw.AlyxRaw.insert1({'uuid': uuid.UUID(sess_uuid), 'model': 'actions.session'})
-                alyxraw.AlyxRaw.Field.insert1({'uuid': uuid.UUID(sess_uuid),
-                                               'fname': 'end_time',
-                                               'value_idx': 0,
-                                               'fvalue': ''})
-                cls.insert1(sess)
+            cls.insert1({**sess_key,
+                         'session_uuid': uuid.UUID(sess_uuid),
+                         'session_number': alyx_session['number'],
+                         'session_end_time': None,
+                         'session_lab': alyx_session['lab'],
+                         'session_location': None,
+                         'task_protocol': alyx_session['task_protocol'],
+                         'session_type': None,
+                         'session_narrative': None})
 
 
 @schema
