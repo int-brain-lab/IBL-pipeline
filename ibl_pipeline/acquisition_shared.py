@@ -50,10 +50,14 @@ class Session(dj.Manual):
                 'session_start_time': datetime.datetime.strptime(alyx_session["start_time"], '%Y-%m-%dT%H:%M:%S.%f'),
                 }
 
-            if not cls & sess_key:
+            sess_uuid = alyx_session['url'].split('/')[-1]
+
+            if cls & sess_key or alyxraw.AlyxRaw & {'uuid': sess_uuid}:
+                # If this session is already in AlyxRaw, skip, as it will get inserted into Session in this ingestion cycle
                 continue
 
-            sess_uuid = alyx_session['url'].split('/')[-1]
+            # Insert into AlyxRaw with incomplete info
+            # so it can be updated in the next daily ingestion cycle
 
             sess = {**sess_key,
                     'session_uuid': uuid.UUID(sess_uuid),
@@ -65,30 +69,13 @@ class Session(dj.Manual):
                     'session_type': None,
                     'session_narrative': None}
 
-            if alyxraw.AlyxRaw & {'uuid': sess_uuid}:
-                # If this session is already in AlyxRaw, retrieve some additional information and insert
-                fnames, fvalues = (alyxraw.AlyxRaw.Field & {'uuid': sess_uuid}
-                                   & 'fname in ("end_time", "type", "narrative", "location")').fetch('fname', 'fvalue')
-                additional_info = {k: v for k, v in zip(fnames, fvalues)}
-
-                if additional_info.get('end_time'):
-                    sess['session_end_time'] = datetime.datetime.strptime(additional_info["end_time"], '%Y-%m-%d %H:%M:%S.%f')
-                sess['session_narrative'] = additional_info.get('narrative')
-                sess['session_type'] = additional_info.get('type')
-                if additional_info.get('location'):
-                    sess['session_location'] = (alyxraw.AlyxRaw.Field
-                                                & {'uuid': additional_info['location'], 'fname': 'name'}).fetch1('fvalue')
-                cls.insert1({**sess_key, **sess})
-            else:
-                # If this session is not yet in AlyxRaw, insert into AlyxRaw with incomplete info
-                # so it can be updated in the next daily ingestion cycle
-                with cls.connection.transaction:
-                    alyxraw.AlyxRaw.insert1({'uuid': uuid.UUID(sess_uuid), 'model': 'actions.session'})
-                    alyxraw.AlyxRaw.Field.insert1({'uuid': uuid.UUID(sess_uuid),
-                                                   'fname': 'end_time',
-                                                   'value_idx': 0,
-                                                   'fvalue': ''})
-                    cls.insert1({**sess_key, **sess})
+            with cls.connection.transaction:
+                alyxraw.AlyxRaw.insert1({'uuid': uuid.UUID(sess_uuid), 'model': 'actions.session'})
+                alyxraw.AlyxRaw.Field.insert1({'uuid': uuid.UUID(sess_uuid),
+                                               'fname': 'end_time',
+                                               'value_idx': 0,
+                                               'fvalue': ''})
+                cls.insert1(sess)
 
 
 @schema
