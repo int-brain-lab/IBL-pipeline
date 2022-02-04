@@ -1,0 +1,53 @@
+# Setup only postgres and alyx services for dumping json
+# Joseph Burling <joseph@datajoint.com>
+# --------------------------------------------------------------------------------------
+# Basic usage:
+#   docker-compose -f docker-compose.yml -f docker-compose-json-dump.yml up -d
+#   docker-compose -f docker-compose.yml -f docker-compose-json-dump.yml down --volumes --remove-orphans
+#   docker compose -f docker-compose.yml -f docker-compose-json-dump.yml config
+#
+# alyx --dump_file=/int-brain-lab/shared/public_alyx.sql.gz initdb loaddb
+# alyx --dump_file=/int-brain-lab/shared/2022-01-12_alyxfull.sql.gz reloaddb
+
+version: "3.9"
+
+x-ibl-docker-image: &ibl-docker-image
+  image: ${DEV_CONTAINER_IMAGE:-ghcr.io/iamamutt/iblenv_alyx:latest}
+
+volumes:
+  vscode-server:
+    name: dev-vscode-server
+
+services:
+  alyx:
+    <<: *ibl-docker-image
+    command:
+      - loaddump
+      - dumpjson
+      - dev
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 2s
+    volumes:
+      - vscode-server:/home/ibl/.vscode-server/extensions
+
+  iblenv:
+    <<: *ibl-docker-image
+    deploy:
+      mode: replicated
+      replicas: 0
+
+  ingest:
+    <<: *ibl-docker-image
+    deploy:
+      mode: replicated
+      replicas: 0
+
+  populate_behavior:
+    <<: *ibl-docker-image
+    deploy:
+      mode: replicated
+      replicas: 0
