@@ -42,13 +42,14 @@ populate ......... Run the python script ${populate_dot_py}.
                    See examples section below.
 jupyterlab ....... Start a jupyter lab server using the link below.
                      http://127.0.0.1:${JUPYTER_PORT}/lab?token=${JUPYTER_TOKEN}
-
+oneparams ..... Make a .one_params file and save to shared directory
 
 Environment Variables:
 
   IBL_PATH_ROOT=$IBL_PATH_ROOT
   IBL_PATH_ALYX=$IBL_PATH_ALYX
   IBL_PATH_DATA=$IBL_PATH_DATA
+  IBL_PATH_SHARED=$IBL_PATH_SHARED
 
 Examples:
 
@@ -174,8 +175,10 @@ done
 [[ -z "${IBL_PATH_SHARED}" ]] && err_exit "IBL_PATH_SHARED is empty"
 
 run_dev() {
-	echo -e "\n$0 > $*\nStarting development environment...\n"
-	exec tail -f /dev/null
+	echo -e "\nStarting development environment...\n"
+	while :; do
+		sleep 10
+	done
 }
 
 run_function_seq() {
@@ -189,8 +192,22 @@ run_function_seq() {
 	fi
 }
 
+oneparams() {
+	cat <<-EOF >"${IBL_PATH_SHARED}/local.one_params"
+		{
+		    "ALYX_LOGIN": "${PGUSER}",
+		    "ALYX_PWD": "${PGPASSWORD}",
+		    "ALYX_URL": "http://localhost:${ALYX_PORT}",
+		    "CACHE_DIR": null,
+		    "HTTP_DATA_SERVER_LOGIN": "${HTTP_DATA_SERVER_LOGIN}",
+		    "HTTP_DATA_SERVER_PWD": "${HTTP_DATA_SERVER_PWD}",
+		    "HTTP_DATA_SERVER": "${HTTP_DATA_SERVER}"
+		}
+	EOF
+}
+
 copy_one_params() {
-	[[ -f "${IBL_PATH_SHARED}/local.one_params" ]] || alyx oneparams
+	[[ -f "${IBL_PATH_SHARED}/local.one_params" ]] || oneparams
 	cp -fv "${IBL_PATH_SHARED}/local.one_params" ~/
 }
 

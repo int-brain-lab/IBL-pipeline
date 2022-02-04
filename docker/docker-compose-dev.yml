@@ -4,7 +4,7 @@
 # Basic usage:
 #   docker-compose -f docker-compose.yml -f docker-compose-dev.yml up -d
 #   docker-compose -f docker-compose.yml -f docker-compose-dev.yml down --volumes --remove-orphans
-#   docker compose -f docker-compose.yml -f docker-compose-dev.yml config
+#   docker-compose -f docker-compose.yml -f docker-compose-dev.yml config
 
 version: "3.9"
 
@@ -20,13 +20,13 @@ services:
     <<: *ibl-docker-image
     command:
       - initdb
-      - dev
+      - startserver
     healthcheck:
       test: ["CMD-SHELL", "exit 0"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 2s
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 2m0s
 
   iblenv:
     <<: *ibl-docker-image
@@ -38,13 +38,14 @@ services:
       - jupyterlab
     volumes:
       - vscode-server:/home/ibl/.vscode-server/extensions
+    working_dir: /int-brain-lab/IBL-pipeline
 
   # Postgres GUI --------------
   # http://localhost:8088/
   # System: PostgreSQL
   # Server: pgserver
   # Username: alyxadmin
-  # Password: $ALYX_DB_PASSWORD
+  # Password: $POSTGRES_PASSWORD
   adminer:
     environment:
       ADMINER_DEFAULT_SERVER: ${PGHOST:-pgserver}
@@ -64,10 +65,26 @@ services:
     <<: *ibl-docker-image
     deploy:
       mode: replicated
-      replicas: 0
+      replicas: 1
+    command:
+      - config_init
+      - --alyxhost=private
+      - populate
+      - ingest
+      - --duration=0.1
+        --sleep=5
+      - --backtrack=1
 
   populate_behavior:
     <<: *ibl-docker-image
     deploy:
       mode: replicated
-      replicas: 0
+      replicas: 1
+    command:
+      - config_init
+      - --alyxhost=private
+      - populate
+      - behavior
+      - --duration=0.1
+      - --sleep=5
+      - --backtrack=1

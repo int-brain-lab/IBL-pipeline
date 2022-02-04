@@ -34,7 +34,7 @@ shell_dir=$PWD
 [[ -z "${ALYX_DL_DATE}" ]] && ALYX_DL_DATE=$(date -u +'%Y-%m-%d')
 
 # default flatiron server url
-[[ -z "${HTTP_DATA_SERVER}" ]] && HTTP_DATA_SERVER=https://ibl.flatironinstitute.org
+[[ -z "${FLATIRON_SERVER}" ]] && FLATIRON_SERVER=https://ibl.flatironinstitute.org
 
 # dump/misc variables
 ALYX_DUMP_URL=
@@ -86,7 +86,6 @@ cleandls ...... Clean up existing sql dumps in sql dump folder. Use with option 
 fetchpubdump .. Download the public Alyx database dump from flatiron.
 checkserver ... Check if Alyx is up and running
 stopserver .... Kill process for manage.py runserver command
-oneparams ..... Make a .one_params file and save to shared directory
 
 Routines:
 
@@ -277,10 +276,6 @@ while [[ $# -gt 0 ]]; do
 		OPS_SEQ+=("reloaddb")
 		shift
 		;;
-	"oneparams")
-		OPS_SEQ+=("oneparams")
-		shift
-		;;
 	"--")
 		shift
 		echo "Other command: $*"
@@ -389,8 +384,10 @@ alyxcmd() {
 }
 
 run_dev() {
-	echo -e "\n$0 > $*\nStarting development environment...\n"
-	exec tail -f /dev/null
+	echo -e "\nStarting development environment...\n"
+	while :; do
+		sleep 10
+	done
 }
 
 run_function_seq() {
@@ -449,17 +446,17 @@ fetchdump() {
 			"Run 'rm -f $ALYX_DUMP_FILE' to forcibly remove" \
 			"the file then re-attempt download"
 	else
-		[[ -z "${HTTP_DATA_SERVER_LOGIN}" ]] &&
-			err_exit "HTTP_DATA_SERVER_LOGIN environment variable is not set"
-		[[ -z "${HTTP_DATA_SERVER_PWD}" ]] &&
-			err_exit "HTTP_DATA_SERVER_PWD environment variable is not set"
+		[[ -z "${FLATIRON_SERVER_LOGIN}" ]] &&
+			err_exit "FLATIRON_SERVER_LOGIN environment variable is not set"
+		[[ -z "${FLATIRON_SERVER_PWD}" ]] &&
+			err_exit "FLATIRON_SERVER_PWD environment variable is not set"
 
 		local url="${ALYX_DUMP_URL}"
 		[[ -z "${url}" ]] &&
-			url="${HTTP_DATA_SERVER}/json/${ALYX_DL_DATE}_alyxfull.sql.gz"
+			url="${FLATIRON_SERVER}/json/${ALYX_DL_DATE}_alyxfull.sql.gz"
 
 		checkurl "$url" \
-			--user "${HTTP_DATA_SERVER_LOGIN}" --password "${HTTP_DATA_SERVER_PWD}"
+			--user "${FLATIRON_SERVER_LOGIN}" --password "${FLATIRON_SERVER_PWD}"
 
 		if [[ $CONNECTION_ESTABLISHED -eq 0 ]]; then
 			unset ALYX_DUMP_FILE
@@ -467,8 +464,8 @@ fetchdump() {
 			mkdir -p $(dirname "${ALYX_DUMP_FILE}")
 			echo "==> downloading database dump from '$url' ..."
 			wget -q -O ${ALYX_DUMP_FILE} \
-				--user "$HTTP_DATA_SERVER_LOGIN" \
-				--password "$HTTP_DATA_SERVER_PWD" \
+				--user "$FLATIRON_SERVER_LOGIN" \
+				--password "$FLATIRON_SERVER_PWD" \
 				"${url}"
 			echo "===> download complete, saved to file: '$ALYX_DUMP_FILE'"
 		fi
@@ -478,7 +475,7 @@ fetchdump() {
 fetchpubdump() {
 	local pub_file=public_alyx.sql.gz
 	ALYX_DUMP_FILE="${IBL_PATH_SHARED}/${pub_file}"
-	ALYX_DUMP_URL=${HTTP_DATA_SERVER}/json/${pub_file}
+	ALYX_DUMP_URL=${FLATIRON_SERVER}/json/${pub_file}
 	echo "=> starting fetch of public IBL data," \
 		"setting ALYX_DUMP_URL=$ALYX_DUMP_URL; ALYX_DUMP_FILE=$ALYX_DUMP_FILE"
 	fetchdump
@@ -511,13 +508,13 @@ configalyx() {
 	[[ -z "$PGUSER" ]] && err_exit "PGUSER environment variable is not set"
 	[[ -z "$PGPASSWORD" ]] && err_exit "PGPASSWORD environment variable is not set"
 	[[ -z "$PGHOST" ]] && err_exit "PGHOST environment variable is not set"
-	[[ -z "$ALYX_SECRET_KEY" ]] && err_exit "ALYX_SECRET_KEY environment variable is not set"
+	[[ -z "$DJANGO_SECRET_KEY" ]] && err_exit "DJANGO_SECRET_KEY environment variable is not set"
 
 	# custom settings_secret for multiple DBs
 	echo "# ===> configuring settings_*.py"
 
 	sed \
-		-e "s/%SECRET_KEY%/$ALYX_SECRET_KEY/" \
+		-e "s/%SECRET_KEY%/$DJANGO_SECRET_KEY/" \
 		-e "s/%DBNAME%/$PGDATABASE/" \
 		-e "s/%DBUSER%/$PGUSER/" \
 		-e "s/%DBPASSWORD%/$PGPASSWORD/" \
@@ -743,20 +740,6 @@ dumpsql() {
 	gzip -f "${ALYX_DUMP_DIR}/backup/alyx_full.sql"
 }
 
-oneparams() {
-	cat <<-EOF >"${IBL_PATH_SHARED}/local.one_params"
-		{
-		    "ALYX_LOGIN": "${PGUSER}",
-		    "ALYX_PWD": "${PGPASSWORD}",
-		    "ALYX_URL": "http://localhost:${ALYX_PORT}",
-		    "CACHE_DIR": null,
-		    "HTTP_DATA_SERVER_LOGIN": "${HTTP_DATA_SERVER_LOGIN}",
-		    "HTTP_DATA_SERVER_PWD": "${HTTP_DATA_SERVER_PWD}",
-		    "HTTP_DATA_SERVER": "${HTTP_DATA_SERVER}"
-		}
-	EOF
-}
-
 stopserver() {
 	sudo whoami >/dev/null
 	sudo a2dissite -q 001-alyx
@@ -769,7 +752,6 @@ stopserver() {
 startserver() {
 	echo "# => starting alyx"
 	[[ -z "${ALYX_PORT}" ]] && err_exit "port '${ALYX_PORT}' from ALYX_PORT is empty"
-	oneparams
 	stopserver
 	sudo service apache2 restart >/dev/null
 	source /etc/apache2/envvars

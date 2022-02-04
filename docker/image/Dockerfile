@@ -114,7 +114,8 @@ RUN <<-EOF
 	conda activate ${CONDA_ENV_USER}
 	pip install --no-input -vr ${IBL_PATH_ALYX}/requirements.txt
 	pip install --upgrade --pre "datajoint==0.12.9" # revert to old version
-	mamba develop iblapps/. iblapps/. IBL-pipeline/. ${IBL_PATH_ALYX}/alyx/.
+	mamba develop ${IBL_PATH_ALYX}/alyx/.
+	mamba develop -b iblapps/. iblapps/. IBL-pipeline/.
 	mamba update --all
 EOF
 
@@ -168,17 +169,18 @@ ENV IBL_PATH_ALYX=${ROOT_ALYX_PATH}
 ENV PGUSER=alyxadmin
 ENV PGDATABASE=alyxdb
 ENV PGHOST=pgserver
-ENV ALYX_SECRET_KEY=supersecretalyxkey
-ENV ALYX_PORT=8000
+ENV POSTGRES_PASSWORD=
+
+ENV DJANGO_SECRET_KEY=
 ENV DJANGO_SETTINGS_MODULE=alyx.settings
 ENV DJANGO_ALLOW_ASYNC_UNSAFE=true
 ENV PYTHONPATH=${IBL_PATH_ALYX}/alyx
-ENV PGPASSWORD=supersecretdbpass
 
 # alyx/flatiron access credentials
 ENV HTTP_DATA_SERVER=https://ibl.flatironinstitute.org
 ENV HTTP_DATA_SERVER_LOGIN=
 ENV HTTP_DATA_SERVER_PWD=
+ENV ALYX_PORT=8000
 ENV ALYX_LOGIN=
 ENV ALYX_PWD=
 ENV ALYX_URL=
@@ -190,7 +192,7 @@ ENV DJ_USER=root
 ENV DJ_PASS=simple
 ENV S3_ACCESS=
 ENV S3_SECRET=
-ENV S3_MIGRATE_BUCKET=ibl-dj-external-public
+ENV S3_MIGRATE_BUCKET=
 ENV S3_ROOT_PATH=
 
 # final setup

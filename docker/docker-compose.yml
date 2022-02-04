@@ -14,19 +14,28 @@ version: "2.4"
 x-image-iblenv: &image-iblenv
   image: ghcr.io/${GITHUB_USERNAME:-iamamutt}/iblenv_alyx:latest
 
-x-env-vars-alyx: &env-vars-alyx
+# postgres/flatiron/django related environment variables
+x-env-vars-django-alyx: &env-vars-django-alyx
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-supersecretiblalyxkey}
+  FLATIRON_SERVER_LOGIN: ${HTTP_DATA_SERVER_LOGIN:?set HTTP_DATA_SERVER_LOGIN in .env file}
+  FLATIRON_SERVER_PWD: ${HTTP_DATA_SERVER_PWD:?set HTTP_DATA_SERVER_PWD in .env file}
+  FLATIRON_SERVER: ${HTTP_DATA_SERVER:-https://ibl.flatironinstitute.org}
+  PGDATABASE: ${POSTGRES_DB:-alyxdb}
+  PGHOST: ${PGHOST:-pgserver}
+  PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env file}
+  PGUSER: ${POSTGRES_USER:-alyxadmin}
+
+# ONE alyx/flatiron access and credentials
+x-env-vars-one-alyx: &env-vars-one-alyx
   ALYX_LOGIN: ${ALYX_LOGIN:-}
   ALYX_PORT: ${ALYX_PORT:-8000}
   ALYX_PWD: ${ALYX_PWD:-}
-  ALYX_SECRET_KEY: ${ALYX_SECRET_KEY:-supersecretalyxkey}
   ALYX_URL: ${ALYX_URL:-}
   HTTP_DATA_SERVER_LOGIN: ${HTTP_DATA_SERVER_LOGIN:?set HTTP_DATA_SERVER_LOGIN in .env file}
   HTTP_DATA_SERVER_PWD: ${HTTP_DATA_SERVER_PWD:?set HTTP_DATA_SERVER_PWD in .env file}
-  PGDATABASE: ${ALYX_DB_NAME:-alyxdb}
-  PGHOST: ${PGHOST:-pgserver}
-  PGPASSWORD: ${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
-  PGUSER: ${ALYX_DB_USER:-alyxadmin}
+  HTTP_DATA_SERVER: ${HTTP_DATA_SERVER:-https://ibl.flatironinstitute.org}
 
+# datajoint variables and external store access
 x-env-vars-dj: &env-vars-dj
   DJ_HOST: ${DJ_HOST:-datajoint.internationalbrainlab.org}
   DJ_MODE: ${DJ_MODE:-test}
@@ -44,12 +53,12 @@ x-volume-bind-shared:
   - &volume-bind-shared ${LOCAL_SHARED:-../shared}:/int-brain-lab/shared
 
 x-volume-bind-ibl-pipeline:
-  - &volume-bind-ibl-pipeline ../ibl_pipeline:/int-brain-lab/IBL-pipeline/ibl_pipeline
+  - &volume-bind-ibl-pipeline ${LOCAL_PIPELINE:-../ibl_pipeline}:/int-brain-lab/IBL-pipeline/ibl_pipeline
 
 x-service-ibl-common: &service-ibl-common
   <<: *image-iblenv
   environment:
-    <<: *env-vars-alyx
+    <<: *env-vars-django-alyx
   volumes:
     - *volume-bind-shared
     - *volume-mount-data-cache
@@ -58,11 +67,13 @@ x-service-ibl-common: &service-ibl-common
   entrypoint: ["bash", "-lc"]
   command: "tail -f /dev/null"
   init: true
+  tty: true
 
 x-service-ibl-pipeline: &service-ibl-pipeline
   <<: *service-ibl-common
   environment:
-    <<: *env-vars-alyx
+    <<: *env-vars-django-alyx
+    <<: *env-vars-one-alyx
     <<: *env-vars-dj
   entrypoint:
     - ingest
@@ -85,9 +96,9 @@ services:
   # Postgres Server --------------------------------------------------------------------
   pgserver:
     environment:
-      POSTGRES_DB: ${ALYX_DB_NAME:-alyxdb}
-      POSTGRES_PASSWORD: ${ALYX_DB_PASSWORD:?set ALYX_DB_PASSWORD in .env file}
-      POSTGRES_USER: ${ALYX_DB_USER:-alyxadmin}
+      POSTGRES_DB: ${POSTGRES_DB:-alyxdb}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env file}
+      POSTGRES_USER: ${POSTGRES_USER:-alyxadmin}
     healthcheck:
       test:
         - CMD-SHELL
@@ -113,7 +124,8 @@ services:
     entrypoint:
       - alyx
     command:
-      - www
+      - initdb
+      - startserver
     depends_on:
       pgserver:
         condition: service_healthy
@@ -133,7 +145,7 @@ services:
     <<: *service-ibl-pipeline
     command:
       - config_init
-      - --alyxhost=dev
+      - --alyxhost=private
       - populate
       - ingest
       - --duration=-1
@@ -144,7 +156,7 @@ services:
     <<: *service-ibl-pipeline
     command:
       - config_init
-      - --alyxhost=dev
+      - --alyxhost=private
       - populate
       - behavior
       - --duration=-1
