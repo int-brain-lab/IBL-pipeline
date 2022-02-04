@@ -84,8 +84,8 @@ RUN init-apt-deps
 
 # Download package source code ---------------------------------------------------------
 RUN <<-EOF
-	git clone https://github.com/int-brain-lab/iblapps.git --branch develop --single-branch ${IBL_PATH_ROOT}/ibllib-repo
-	git clone https://github.com/int-brain-lab/ibllib.git --branch develop --single-branch
+	git clone https://github.com/int-brain-lab/iblapps.git --branch develop --single-branch
+	git clone https://github.com/int-brain-lab/ibllib.git --branch develop --single-branch ${IBL_PATH_ROOT}/ibllib-repo
 	git clone https://github.com/cortex-lab/alyx.git --branch dev --single-branch ${IBL_PATH_ALYX}/
 EOF
 
