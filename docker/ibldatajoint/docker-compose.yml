@@ -147,7 +147,7 @@ services:
       - populate
       - behavior
       - --duration=-1
-      - --sleep=10
+      - --sleep=1800
       - --backtrack=10
     container_name: populate_behavior
 
