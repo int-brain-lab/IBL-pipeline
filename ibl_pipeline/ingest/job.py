@@ -909,11 +909,22 @@ class UpdateRealTable(dj.Computed):
         target_module = inspect.getmodule(real_table)
         source_module = inspect.getmodule(shadow_table)
 
+        # per-attribute comparison between real and shadow table
+        shadow_attrs_rename = {f's_{attr}': attr for attr in shadow_table.heading.secondary_attributes
+                               if attr not in real_table.primary_key}
+
+        modified_entries = (real_table * shadow_table.proj(..., **shadow_attrs_rename)
+                            & [f'{r} != {s}' for s, r in shadow_attrs_rename.items() if not r.endswith('_ts')])
+
+        # modified uuids from AlyxRawDiff
         modified_uuids = (AlyxRawDiff.ModifiedEntry & key
                           & {'alyx_model_name': alyx_model_name}).fetch('uuid')
 
         uuid_attr = next((attr for attr in shadow_table.heading.names
                           if attr.endswith('uuid')))
+
+        # combined modified_uuids
+        modified_uuids = set(list(modified_uuids) + list(modified_entries.fetch(uuid_attr)))
 
         query = real_table & [{uuid_attr: u} for u in modified_uuids]
 
