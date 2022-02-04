@@ -55,19 +55,15 @@ coverage.xml
 .ipynb_checkpoints
 
 # credential files
-docker/ibl/.env
-docker/ibl/.one_params
-shared/*.one_params
-shared/*.datajoint_config.json
-root/.one_params
-dj_local_conf.json
-.env*
+**/*.datajoint_config.json
+**/*dj_local_conf.json
+**/*.env
+**/*.one_params
+!docker/template.env
 
 # others
 *.log
 scratch_*/*
 scratch*.py
 data/*
-shared/data/*
-shared/iblenv.lock.yml
-shared/explore.py
+shared/*

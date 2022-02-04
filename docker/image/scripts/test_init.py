@@ -44,9 +44,10 @@ def make_dirs(ibl_path_root=None, remove=False, host="private"):
     }
 
 
-def env_test(
-    ibl_path_root="~/Datasets/int-brain-lab", env_file="", host="private", remove=False
-):
+def env_test(ibl_path_root=None, env_file="", host="private", remove=False):
+    if not ibl_path_root:
+        ibl_path_root = os.getenv("TEST_IBL_PATH_ROOT", "~/int-brain-lab")
+
     this_dir = Path(__file__).parent
 
     # load environment variables from .env file
@@ -64,12 +65,12 @@ def env_test(
     os.environ["IBL_PATH_SHARED"] = dirs["shared"].as_posix()
 
     # copy template to ibl root
-    tmp_json = dirs["root"] / "template.ingest.json"
+    tmp_json = dirs["root"] / "config.json"
     tmp_json.unlink(True)
-    copyfile(this_dir / "template.ingest.json", tmp_json)
+    copyfile(this_dir / "config.json", tmp_json)
 
     # copy
-    tmp_local = dirs["shared"] / "local.one_params"
+    tmp_local = dirs["root"] / "local.one_params"
     tmp_local.unlink(True)
     local_one_params = this_dir / ".." / ".." / "shared" / "local.one_params"
     copyfile(local_one_params, tmp_local)

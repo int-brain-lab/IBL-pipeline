@@ -4,26 +4,26 @@ A set of containers to run a local Alyx server and run the DataJoint ingestion r
 
 ## Initial setup
 
-From the IBL-pipeline repo directory, navigate to the docker datajoint directory.
+After cloning, navigate to the IBL-pipeline repository directory (this is one directory back from this README file).
 
 ```bash
-cd docker/datajoint
+cd IBL-pipeline
 ```
 
-Setup the required environment variables to connect to Alyx and DataJoint by using the `template.env` file. Fill out the variables in `.env` copied over from `template.env`.
+Setup the required environment variables to connect to Alyx and DataJoint by using the `template.env` file. The `.env` should be at the root of the repository content directory. Fill out the variables in `.env` copied over from `template.env`.
 
 ```bash
 touch .env
-cat template.env >> .env
+cat docker/template.env >> .env
 ```
 
-Create and start the containers using the services specified in `docker-compose.yml`.
+Create and start the containers using the services specified in [`docker-compose.yml`](docker-compose.yml).
 
 ```bash
-docker-compose up --detach
+docker/docker-compose up --detach
 ```
 
-The `alyx` service will likely take a few minutes to download the public database and load in the sql dump.
+The `alyx` service will likely take a few minutes to initialize the database and load in the latest sql dump.
 
 You can set a cron job to periodically download the latest sql dump and load it into the database. For example, create a script called `alyxreload.sh` with the following content:
 
@@ -31,7 +31,7 @@ You can set a cron job to periodically download the latest sql dump and load it 
 #! /bin/sh
 echo "#! Script `basename $0` started at `date`"
 
-ALYX_CONTAINER=alyx_db_server
+ALYX_CONTAINER=alyx_alyx
 SQL_DUMP_EXPIRES=4
 
 err_exit() {
@@ -42,7 +42,7 @@ err_exit() {
 ALYX_CID="`docker ps -a -q -f name=$ALYX_CONTAINER`"
 [ -z "$ALYX_CID" ] && err_exit "Cannot find alyx container."
 
-echo "#! Fetch started at `date`"
+echo "#! Fetchdump started at `date`"
 docker exec -t $ALYX_CID alyx reloaddb 
 
 echo "#! Cleanup started at `date`"

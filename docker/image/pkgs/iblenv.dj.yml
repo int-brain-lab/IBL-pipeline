@@ -36,8 +36,6 @@ dependencies:
   - jupyter                            # ibllib
   - jupyterlab                         # ibllib
   - matplotlib                         # ibllib
-  # ! conda-forge has old python as requirement, must be built from GitHub source
-  # - mayavi                             # iblapps
   - nb_conda                           # ?, pkgs/main
   - nb_conda_kernels                   # ?, pkgs/main
   - numba                              # ibllib
@@ -63,12 +61,15 @@ dependencies:
   - statsmodels                        # ibllib
   - tqdm                               # ibllib
   - vtk                                # mayavi
+  - envisage                           # mayavi
   - pip:
       - datajoint                      # datajoint
       - easyqc                         # iblapps
       - iblutil                        # ibllib
       - mtscomp                        # ibllib
+      - mod_wsgi                       # alyx
       - ONE-api                        # ibllib
       - phylib                         # ibllib
       - soundfile                      # examples
       - opencv-python                  # ibllib, tries to rebuild numba if not correct numpy version
+      - mayavi                         # iblapps
