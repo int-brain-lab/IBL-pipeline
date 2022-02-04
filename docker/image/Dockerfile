@@ -41,7 +41,7 @@ ENV IBL_PATH_ALYX=${ROOT_ALYX_PATH}
 RUN <<-EOF
 	mkdir -p -m 6775 \
 		${IBL_PATH_ALYX} \
-		${IBL_PATH_DATA}/alyx \
+		${IBL_PATH_DATA}/alyx/cache \
 		${IBL_PATH_SHARED}/data
 	chown -R root:${NEW_USER_GROUP} ${IBL_PATH_ROOT}
 EOF
@@ -84,7 +84,7 @@ RUN init-apt-deps
 
 # Download package source code ---------------------------------------------------------
 RUN <<-EOF
-	git clone https://github.com/int-brain-lab/iblapps.git --branch develop --single-branch
+	git clone https://github.com/int-brain-lab/iblapps.git --branch develop --single-branch ${IBL_PATH_ROOT}/ibllib-repo
 	git clone https://github.com/int-brain-lab/ibllib.git --branch develop --single-branch
 	git clone https://github.com/cortex-lab/alyx.git --branch dev --single-branch ${IBL_PATH_ALYX}/
 EOF
@@ -114,8 +114,14 @@ RUN <<-EOF
 	conda activate ${CONDA_ENV_USER}
 	pip install --no-input -vr ${IBL_PATH_ALYX}/requirements.txt
 	pip install --upgrade --pre "datajoint==0.12.9" # revert to old version
-	mamba develop ${IBL_PATH_ALYX}/alyx/.
-	mamba develop -b iblapps/. iblapps/. IBL-pipeline/.
+	cd ${IBL_PATH_ALYX}/alyx
+	mamba develop .
+	cd ${IBL_PATH_ROOT}/ibllib-repo
+	mamba develop .
+	cd ${IBL_PATH_ROOT}/iblapps
+	mamba develop .
+	cd ${IBL_PATH_ROOT}/IBL-pipeline/.
+	mamba develop .
 	mamba update --all
 EOF
 
