@@ -69,7 +69,7 @@ def env_test(
     copyfile(this_dir / "config.json", tmp_json)
 
     # copy
-    tmp_local = dirs["shared"] / "local.one_params"
+    tmp_local = dirs["root"] / "local.one_params"
     tmp_local.unlink(True)
     local_one_params = this_dir / ".." / ".." / "shared" / "local.one_params"
     copyfile(local_one_params, tmp_local)

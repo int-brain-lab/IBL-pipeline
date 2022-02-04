@@ -27,9 +27,6 @@ shell_dir=$PWD
 # get data directory or default to IBL_PATH_ROOT/data
 [[ -z "${IBL_PATH_DATA}" ]] && IBL_PATH_DATA="${IBL_PATH_ROOT}/data"
 
-# get shared data directory or default to IBL_PATH_ROOT/shared
-[[ -z "${IBL_PATH_SHARED}" ]] && IBL_PATH_SHARED="${IBL_PATH_ROOT}/shared"
-
 # get current date as default
 [[ -z "${ALYX_DL_DATE}" ]] && ALYX_DL_DATE=$(date -u +'%Y-%m-%d')
 
@@ -133,7 +130,7 @@ Examples:
 
  Load public data dump
 
-   $script_file --dump_file=$IBL_PATH_SHARED/public_alyx.sql.gz loaddump
+   $script_file --dump_file=/int-brain-lab/shared/public_alyx.sql.gz loaddump
 
  Clean existing sql dumps older than 3 days
 
@@ -313,10 +310,6 @@ fi
 [[ -d "${IBL_PATH_DATA}" ]] ||
 	err_exit "path '${IBL_PATH_DATA}' from IBL_PATH_DATA does not exist"
 
-# check that IBL shared path is a directory that exists
-[[ -d "${IBL_PATH_SHARED}" ]] ||
-	err_exit "path '${IBL_PATH_SHARED}' from IBL_PATH_SHARED does not exist"
-
 # check for django python script manager
 [[ -f "${alyx_manager}" ]] ||
 	err_exit "can't locate '$alyx_manager'," \
@@ -473,8 +466,9 @@ fetchdump() {
 }
 
 fetchpubdump() {
+	local public_dmp_dir="${IBL_PATH_SHARED:-${IBL_PATH_ROOT}/shared}"
 	local pub_file=public_alyx.sql.gz
-	ALYX_DUMP_FILE="${IBL_PATH_SHARED}/${pub_file}"
+	ALYX_DUMP_FILE="${public_dmp_dir}/${pub_file}"
 	ALYX_DUMP_URL=${FLATIRON_SERVER}/json/${pub_file}
 	echo "=> starting fetch of public IBL data," \
 		"setting ALYX_DUMP_URL=$ALYX_DUMP_URL; ALYX_DUMP_FILE=$ALYX_DUMP_FILE"

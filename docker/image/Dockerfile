@@ -39,11 +39,15 @@ ENV IBL_PATH_ALYX=${ROOT_ALYX_PATH}
 
 # make files/folders for IBL data and alyx then change ownership
 RUN <<-EOF
-	mkdir -p -m 6775 \
+	mkdir -p \
 		${IBL_PATH_ALYX} \
 		${IBL_PATH_DATA}/alyx/cache \
+		${IBL_PATH_DATA}/alyx/dumps/sql \
+		${IBL_PATH_DATA}/alyx/dumps/json \
+		${IBL_PATH_DATA}/alyx/dumps/backup \
 		${IBL_PATH_SHARED}/data
-	chown -R root:${NEW_USER_GROUP} ${IBL_PATH_ROOT}
+	chown -R ${NEW_USER_NAME}:${NEW_USER_GROUP} ${IBL_PATH_ROOT}
+	chmod -R 2775 ${IBL_PATH_ROOT}
 EOF
 
 WORKDIR ${IBL_PATH_ROOT}
@@ -86,12 +90,12 @@ RUN init-apt-deps
 RUN <<-EOF
 	git clone https://github.com/int-brain-lab/iblapps.git --branch develop --single-branch
 	git clone https://github.com/int-brain-lab/ibllib.git --branch develop --single-branch ${IBL_PATH_ROOT}/ibllib-repo
-	git clone https://github.com/cortex-lab/alyx.git --branch dev --single-branch ${IBL_PATH_ALYX}/
+	git clone https://github.com/cortex-lab/alyx.git --branch dev --single-branch ${IBL_PATH_ALYX}
 EOF
 
 # add alyx related files and permissions
 RUN <<-EOF
-	mkdir -p -m 6775 ${IBL_PATH_ALYX}/../uploaded
+	mkdir -p -m 2775 ${IBL_PATH_ALYX}/../uploaded
 	chown -R ${NEW_USER_NAME}:${NEW_USER_GROUP} ${IBL_PATH_ALYX}/..
 	chmod -R g+rwX ${IBL_PATH_ALYX}/..
 	chown www-data:www-data /var/www ${IBL_PATH_ALYX}/../uploaded
@@ -114,15 +118,20 @@ RUN <<-EOF
 	conda activate ${CONDA_ENV_USER}
 	pip install --no-input -vr ${IBL_PATH_ALYX}/requirements.txt
 	pip install --upgrade --pre "datajoint==0.12.9" # revert to old version
-	cd ${IBL_PATH_ALYX}/alyx
-	mamba develop .
-	cd ${IBL_PATH_ROOT}/ibllib-repo
-	mamba develop .
-	cd ${IBL_PATH_ROOT}/iblapps
-	mamba develop .
-	cd ${IBL_PATH_ROOT}/IBL-pipeline/.
-	mamba develop .
-	mamba update --all
+	mamba develop \
+		${IBL_PATH_ALYX}/alyx \
+		${IBL_PATH_ROOT}/ibllib-repo \
+		${IBL_PATH_ROOT}/iblapps \
+		${IBL_PATH_ROOT}/IBL-pipeline
+	# cd ${IBL_PATH_ALYX}/alyx
+	# mamba develop .
+	# cd ${IBL_PATH_ROOT}/ibllib-repo
+	# mamba develop .
+	# cd ${IBL_PATH_ROOT}/iblapps
+	# mamba develop .
+	# cd ${IBL_PATH_ROOT}/IBL-pipeline
+	# mamba develop .
+	mamba update -qy --all
 EOF
 
 USER root:condauser

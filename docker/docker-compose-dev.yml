@@ -11,16 +11,9 @@ version: "3.9"
 x-ibl-docker-image: &ibl-docker-image
   image: ${DEV_CONTAINER_IMAGE:-ghcr.io/iamamutt/iblenv_alyx:latest}
 
-volumes:
-  vscode-server:
-    name: dev-vscode-server
-
 services:
   alyx:
     <<: *ibl-docker-image
-    command:
-      - initdb
-      - startserver
     healthcheck:
       test: ["CMD-SHELL", "exit 0"]
       interval: 30s
@@ -32,13 +25,6 @@ services:
     <<: *ibl-docker-image
     deploy:
       mode: global
-    command:
-      - config_init
-      - --alyxhost=dev
-      - jupyterlab
-    volumes:
-      - vscode-server:/home/ibl/.vscode-server/extensions
-    working_dir: /int-brain-lab/IBL-pipeline
 
   # Postgres GUI --------------
   # http://localhost:8088/
@@ -65,7 +51,7 @@ services:
     <<: *ibl-docker-image
     deploy:
       mode: replicated
-      replicas: 1
+      replicas: 0
     command:
       - config_init
       - --alyxhost=private
@@ -79,7 +65,7 @@ services:
     <<: *ibl-docker-image
     deploy:
       mode: replicated
-      replicas: 1
+      replicas: 0
     command:
       - config_init
       - --alyxhost=private

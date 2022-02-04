@@ -55,6 +55,9 @@ x-volume-bind-shared:
 x-volume-bind-ibl-pipeline:
   - &volume-bind-ibl-pipeline ${LOCAL_PIPELINE:-../ibl_pipeline}:/int-brain-lab/IBL-pipeline/ibl_pipeline
 
+x-volume-mount-vscode-server:
+  - &volume-mount-vscode-server vscode-server:/home/ibl/.vscode-server/extensions
+
 x-service-ibl-common: &service-ibl-common
   <<: *image-iblenv
   environment:
@@ -91,6 +94,8 @@ volumes:
     name: iblenv_alyx_data_cache
   pgdata:
     name: iblenv_alyx_pgdata
+  vscode-server:
+    name: dev-vscode-server
 
 services:
   # Postgres Server --------------------------------------------------------------------
@@ -166,9 +171,14 @@ services:
   iblenv:
     <<: *service-ibl-pipeline
     volumes:
-      - *volume-bind-ibl-pipeline
-      - *volume-bind-shared
       - *volume-mount-data-cache
+      - *volume-bind-shared
+      - *volume-bind-ibl-pipeline
+      - *volume-mount-vscode-server
     ports:
       - ${JUPYTER_PORT:-10000}:${JUPYTER_PORT:-10000}
-    command: "conda info -a"
+    command:
+      - config_init
+      - --alyxhost=dev
+      - jupyterlab
+    working_dir: /int-brain-lab/IBL-pipeline
