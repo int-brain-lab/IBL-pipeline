@@ -14,12 +14,6 @@ x-ibl-docker-image: &ibl-docker-image
 services:
   alyx:
     <<: *ibl-docker-image
-    healthcheck:
-      test: ["CMD-SHELL", "exit 0"]
-      interval: 30s
-      timeout: 5s
-      retries: 10
-      start_period: 2m0s
 
   iblenv:
     <<: *ibl-docker-image

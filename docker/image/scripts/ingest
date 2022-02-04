@@ -45,9 +45,9 @@ dev .............. Wait indefinitely
 
 Environment Variables:
 
-  IBL_PATH_ROOT=$IBL_PATH_ROOT
-  IBL_PATH_ALYX=$IBL_PATH_ALYX
-  IBL_PATH_DATA=$IBL_PATH_DATA
+  IBL_PATH_ROOT=${IBL_PATH_ROOT}
+  IBL_PATH_ALYX=${IBL_PATH_ALYX}
+  IBL_PATH_DATA=${IBL_PATH_DATA}
   IBL_PATH_SHARED=$IBL_PATH_SHARED
 
 Examples:
@@ -56,7 +56,7 @@ Examples:
    > $script_file dev
 
  Initialize configuration for Alyx and DataJoint
-   > $script_file config_init --alyxhost=private --djcfg='$IBL_PATH_ROOT/config.json'
+   > $script_file config_init --alyxhost=private --djcfg='${IBL_PATH_ROOT}/config.json'
 
  Run a populate task
    > $script_file populate behavior -b 5 --duration=0.5

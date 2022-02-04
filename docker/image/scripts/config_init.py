@@ -20,7 +20,6 @@ import sys
 from pathlib import Path
 from typing import Optional, Sequence, Union
 
-import one.params
 from one.api import OneAlyx
 
 StrVec = Union[list[str], str, None]

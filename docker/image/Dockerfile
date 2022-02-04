@@ -55,8 +55,9 @@ WORKDIR ${IBL_PATH_ROOT}
 # Copy IBL-pipeline package content ----------------------------------------------------
 
 # set path to where repo content will be then copy over content and chown to new user
+#    the .dockerignore file only copies over the ibl_pipeline and docker subdirs
 ENV IBL_PKG_DJ=${IBL_PATH_ROOT}/IBL-pipeline
-COPY --chown=${NEW_USER_NAME}:${NEW_USER_GROUP} ./ ${IBL_PKG_DJ}/
+COPY --chown=${NEW_USER_NAME}:${NEW_USER_GROUP} . ${IBL_PKG_DJ}/
 
 # file for custom python environment relative to context root,
 #   defaults to DataJoint version of iblenv file
@@ -76,9 +77,13 @@ RUN <<-EOF
 	cp -f \
 		${IBL_PKG_DJ}/docker/image/config.json \
 		${IBL_PATH_ROOT}/config.json
+	cp -f \
+		${IBL_PKG_DJ}/docker/image/int-brain-lab.code-workspace \
+		${IBL_PATH_ROOT}/int-brain-lab.code-workspace
 	cp -fR ${IBL_PKG_DJ}/docker/image/scripts/* /usr/local/bin
 	chmod 775 /usr/local/bin/*
 	chown ${NEW_USER_NAME}:${NEW_USER_GROUP} /usr/local/bin/*
+	rm -rf ${IBL_PKG_DJ}/docker /usr/local/bin/test_*
 EOF
 
 # Install debian package dependencies  -------------------------------------------------
@@ -119,18 +124,10 @@ RUN <<-EOF
 	pip install --no-input -vr ${IBL_PATH_ALYX}/requirements.txt
 	pip install --upgrade --pre "datajoint==0.12.9" # revert to old version
 	mamba develop \
+		${IBL_PKG_DJ} \
 		${IBL_PATH_ALYX}/alyx \
 		${IBL_PATH_ROOT}/ibllib-repo \
-		${IBL_PATH_ROOT}/iblapps \
-		${IBL_PATH_ROOT}/IBL-pipeline
-	# cd ${IBL_PATH_ALYX}/alyx
-	# mamba develop .
-	# cd ${IBL_PATH_ROOT}/ibllib-repo
-	# mamba develop .
-	# cd ${IBL_PATH_ROOT}/iblapps
-	# mamba develop .
-	# cd ${IBL_PATH_ROOT}/IBL-pipeline
-	# mamba develop .
+		${IBL_PATH_ROOT}/iblapps
 	mamba update -qy --all
 EOF
 
@@ -140,7 +137,7 @@ RUN <<-EOF
 	rm -f /home/${NEW_USER_NAME}/*.lock.yml
 	conda activate ${CONDA_ENV_USER}
 	mamba clean -qya
-	mamba env export --no-builds > ${CONDA_ENV_USER}.lock.yml
+	mamba env export --no-builds >${CONDA_ENV_USER}.lock.yml
 	chgrp -fc ${NEW_USER_GROUP} ${CONDA_ENV_USER}.lock.yml
 	mkdir -p \
 		/home/${NEW_USER_NAME}/.vscode-server/extensions \

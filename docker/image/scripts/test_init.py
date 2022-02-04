@@ -44,9 +44,10 @@ def make_dirs(ibl_path_root=None, remove=False, host="private"):
     }
 
 
-def env_test(
-    ibl_path_root="~/Datasets/int-brain-lab", env_file="", host="private", remove=False
-):
+def env_test(ibl_path_root=None, env_file="", host="private", remove=False):
+    if not ibl_path_root:
+        ibl_path_root = os.getenv("TEST_IBL_PATH_ROOT", "~/int-brain-lab")
+
     this_dir = Path(__file__).parent
 
     # load environment variables from .env file
