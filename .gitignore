@@ -58,6 +58,7 @@ coverage.xml
 **/*.datajoint_config.json
 **/*dj_local_conf.json
 **/*.env
+**/*.env*
 **/*.one_params
 !docker/template.env
 
