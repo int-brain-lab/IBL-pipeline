@@ -135,7 +135,7 @@ services:
       - --alyxhost=dev
       - populate
       - ingest
-      - --duration=1
+      - --duration=-1
       - --backtrack=3
     scale: ${WORKER_COUNT:-1}
 
@@ -146,8 +146,8 @@ services:
       - --alyxhost=dev
       - populate
       - behavior
-      - --duration=1
-      - --sleep=10
+      - --duration=-1
+      - --sleep=1800
       - --backtrack=10
     container_name: populate_behavior
 

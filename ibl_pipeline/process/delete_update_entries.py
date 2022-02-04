@@ -192,13 +192,18 @@ def update_fields(real_schema, shadow_schema, table_name, pks, log_to_UpdateReco
     fields_to_update = [f for f in real_table.heading.secondary_attributes
                         if not f.endswith('_ts')]
 
+    try:
+        ts_field = next(f for f in real_table.heading.names if '_ts' in f)
+    except StopIteration:
+        ts_field = None
+        log_to_UpdateRecord = False
+
     # do the updating
     for key in (real_table & pks).fetch('KEY'):
         pk_hash = UUID(dj.hash.key_hash(key))
 
         if not shadow_table & key:
             real_record = (real_table & key).fetch1()
-            ts_field = [f for f in real_table.heading.names if '_ts' in f][0]
             if log_to_UpdateRecord:
                 update_record = dict(
                     table=real_table.__module__ + '.' + real_table.__name__,
@@ -224,7 +229,6 @@ def update_fields(real_schema, shadow_schema, table_name, pks, log_to_UpdateReco
         # if there are more than 1 record
         elif len(shadow_table & key) > 1:
             # delete the older record
-            ts_field = [f for f in shadow_table.heading.names if '_ts' in f][0]
             lastest_record = dj.U().aggr(shadow_table & key, session_ts='max(session_ts)').fetch()
 
             with dj.config(safemode=False):

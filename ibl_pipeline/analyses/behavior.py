@@ -707,6 +707,7 @@ class SessionTrainingStatus(dj.Computed):
         # if has reached 'trained_1a' before, mark the current session 'trained_1a' as well
         if len(status) and np.any(status == 'trained_1a'):
             key['training_status'] = 'trained_1a'
+            # TODO: check also for `trained_1a_4sess`
             self.insert1(key)
             return
 
