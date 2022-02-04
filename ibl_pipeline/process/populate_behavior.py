@@ -51,9 +51,11 @@ def main(backtrack_days=30, excluded_tables=None, run_duration=3600*3, sleep_dur
            or (run_duration is None)
            or (run_duration < 0)):
 
-        if backtrack_days:
-            date_cutoff = (datetime.datetime.now().date() -
-                           datetime.timedelta(days=backtrack_days)).strftime('%Y-%m-%d')
+        # Try inserting new sessions from querying directly the live alyx db
+        acquisition.Session.insert_with_alyx_rest(backtrack_days=1)
+
+        date_cutoff = (datetime.datetime.now().date() -
+                       datetime.timedelta(days=backtrack_days)).strftime('%Y-%m-%d')
 
         # ingest those dataset and file records where exists=False when json gets dumped
         # only check those sessions where required datasets are missing.

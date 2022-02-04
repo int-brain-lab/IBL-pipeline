@@ -482,14 +482,19 @@ class IngestionJob(dj.Manual):
 
     @classmethod
     def create_entry(cls, alyx_sql_dump):
-        with cls.connection.transaction:
-            for key in (cls & 'job_status = "on-going"').fetch('KEY'):
-                (cls & key)._update('job_status', 'terminated')
-                (cls & key)._update('job_endtime', datetime.datetime.utcnow())
+        try:
+            with cls.connection.transaction:
+                for key in (cls & 'job_status = "on-going"').fetch('KEY'):
+                    (cls & key)._update('job_status', 'terminated')
+                    (cls & key)._update('job_endtime', datetime.datetime.utcnow())
+                cls.insert1({'job_datetime': datetime.datetime.utcnow(),
+                             'alyx_sql_dump': alyx_sql_dump,
+                             'job_status': 'on-going'})
+                assert len(cls & 'job_status = "on-going"') == 1
+        except AssertionError:
+            pass
+        else:
             _clean_up()
-            cls.insert1({'job_datetime': datetime.datetime.utcnow(),
-                         'alyx_sql_dump': alyx_sql_dump,
-                         'job_status': 'on-going'})
 
     @classmethod
     def get_on_going_key(cls):
@@ -621,18 +626,32 @@ class DeleteModifiedAlyxRaw(dj.Computed):
     -> AlyxRawDiff
     """
 
+    class HandledDeletedAndModified(dj.Part):
+        definition = """  # entries from AlyxRawDiff.DeletedEntry and AlyxRawDiff.ModifiedEntry that are handled
+        -> master
+        uuid: uuid  # pk field (uuid string repr)
+        """
+
     key_source = (AlyxRawDiff * IngestionJob
                   & [AlyxRawDiff.ModifiedEntry, AlyxRawDiff.DeletedEntry]
                   & 'job_status = "on-going"')
 
     def make(self, key):
         """
-        For actions.session, delete only the AlyxRaw.Field of the modified/deleted entries
-        For any other alyx model, delete the AlyxRaw
+        Delete from AlyxRaw those entries found in ModifiedEntry and DeletedEntry
+            + For actions.session, delete only the AlyxRaw.Field of the modified/deleted entries
+            + For any other alyx model, delete the AlyxRaw
         (note: deleting is tricky, beware grid-lock)
         """
-        entries_to_delete = AlyxRawDiff.ModifiedEntry + AlyxRawDiff.DeletedEntry & key
-        keys_to_delete = entries_to_delete.fetch('KEY')
+        # Find all unhandled deleted/modified entries
+        #  include also the unhandled ones from all previous jobs
+        #  upon completion, the unhandled from previous jobs will be marked as handled in this job
+
+        entries_to_delete = (
+                AlyxRawDiff.ModifiedEntry + AlyxRawDiff.DeletedEntry
+                - self.HandledDeletedAndModified
+                & {'alyx_model_name': key['alyx_model_name']})
+        keys_to_delete = [{'uuid': u} for u in entries_to_delete.fetch('uuid')]
 
         logger.info(f'Deletion in AlyxRaw: {key["alyx_model_name"]}'
                     f' - {len(keys_to_delete)} records')
@@ -680,6 +699,7 @@ class DeleteModifiedAlyxRaw(dj.Computed):
                     raise NotImplementedError
 
         self.insert1(key)
+        self.HandledDeletedAndModified.insert({**key, **k} for k in keys_to_delete)
 
 
 @schema
@@ -690,14 +710,27 @@ class IngestAlyxRawModel(dj.Computed):
 
     @property
     def key_source(self):
+        """
+        Only AlyxRawDiff with existing Created or Modified entries
+            wait for DeleteModifiedAlyxRaw to finish
+        """
         key_source = (AlyxRawDiff * IngestionJob
                       & [AlyxRawDiff.CreatedEntry, AlyxRawDiff.ModifiedEntry]
                       & 'job_status = "on-going"')
-        return ((key_source.proj() - DeleteModifiedAlyxRaw.key_source.proj())
-                + DeleteModifiedAlyxRaw)
+        return (key_source.proj()
+                - (DeleteModifiedAlyxRaw.key_source.proj() - DeleteModifiedAlyxRaw))
 
     def make(self, key):
-        entries_to_ingest = AlyxRawDiff.CreatedEntry + AlyxRawDiff.ModifiedEntry & key
+        """
+        Data copy from UpdateAlyxRaw to AlyxRaw, with `skip_duplicates=True`
+            only for those entries found in CreatedEntry and ModifiedEntry
+        For ModifiedEntry, taking from `DeleteModifiedAlyxRaw.HandledDeletedAndModified`
+            instead of `AlyxRawDiff.ModifiedEntry`, as this represents the true set of
+            ModifiedEntries entries that have been deleted from `alyxraw.AlyxRaw`
+        """
+        entries_to_ingest = (AlyxRawDiff.CreatedEntry
+                             + DeleteModifiedAlyxRaw.HandledDeletedAndModified
+                             & key)
 
         logger.info(f'Ingestion to AlyxRaw: {key["alyx_model_name"]}'
                     f' - {len(entries_to_ingest)} records')
@@ -720,15 +753,18 @@ class ShadowTable(dj.Computed):
     @property
     def key_source(self):
         key_source = IngestionJob & 'job_status = "on-going"'
-        return (
-            key_source
-            & ((key_source.proj().aggr(IngestUpdateAlyxRawModel.key_source, ks_count='count(*)'))
-               * (key_source.proj().aggr(IngestUpdateAlyxRawModel, completed_count='count(*)'))
-               & 'completed_count = ks_count')
-            & ((key_source.proj().aggr(IngestAlyxRawModel.key_source, ks_count='count(*)'))
-               * (key_source.proj().aggr(IngestAlyxRawModel, completed_count='count(*)'))
-               & 'completed_count = ks_count')
-        )
+        UpdateAlyxRaw_finished = (
+                (key_source.proj().aggr(IngestUpdateAlyxRawModel.key_source, ks_count='count(*)'))
+                * (key_source.proj().aggr(IngestUpdateAlyxRawModel, completed_count='count(*)'))
+                & 'completed_count = ks_count')
+        if IngestAlyxRawModel.key_source:
+            AlyxRaw_finished = (
+                    (key_source.proj().aggr(IngestAlyxRawModel.key_source, ks_count='count(*)'))
+                    * (key_source.proj().aggr(IngestAlyxRawModel, completed_count='count(*)'))
+                    & 'completed_count = ks_count')
+        else:
+            AlyxRaw_finished = {}
+        return key_source & UpdateAlyxRaw_finished & AlyxRaw_finished
 
     def make(self, key):
         self.insert({**key, 'table_name': table_name}
@@ -740,8 +776,8 @@ class PopulateShadowTable(dj.Computed):
     definition = """
     -> ShadowTable
     ---
-    incomplete_count=null: int  # how many to be populated
-    completion_count=null: int  # how many has been populated
+    incomplete_count=null: int  # how many to be populated before this job
+    completion_count=null: int  # how many has been populated by this job
     """
 
     key_source = ShadowTable * IngestionJob & 'job_status = "on-going"'
@@ -815,6 +851,8 @@ class PopulateShadowTable(dj.Computed):
 class CopyRealTable(dj.Computed):
     definition = """
     -> PopulateShadowTable
+    ---
+    transferred_count=null: int
     """
 
     _real_tables = [table_name for table_name, v in DJ_TABLES.items() if v['real'] is not None]
@@ -827,6 +865,7 @@ class CopyRealTable(dj.Computed):
         real_table = DJ_TABLES[key['table_name']]['real']
 
         # Ensure the real-table copy routine is "in topologically sorted order"
+        # so, if ancestors of this table is not yet copied, exit and retry later
         schema_prefix = dj.config.get('database.prefix', '') + 'ibl_'
         ancestors = [tbl_name.split('.') for tbl_name in real_table.ancestors()]
         ancestors = [schema_name.strip('`').replace(schema_prefix, '')
@@ -847,9 +886,9 @@ class CopyRealTable(dj.Computed):
         target_module = inspect.getmodule(real_table)
         source_module = inspect.getmodule(shadow_table)
 
-        ingest_real.copy_table(target_module, source_module, real_table.__name__)
+        transferred_count = ingest_real.copy_table(target_module, source_module, real_table.__name__)
 
-        self.insert1(key)
+        self.insert1({**key, 'transferred_count': transferred_count})
 
 
 @schema
@@ -870,11 +909,22 @@ class UpdateRealTable(dj.Computed):
         target_module = inspect.getmodule(real_table)
         source_module = inspect.getmodule(shadow_table)
 
+        # per-attribute comparison between real and shadow table
+        shadow_attrs_rename = {f's_{attr}': attr for attr in shadow_table.heading.secondary_attributes
+                               if attr not in real_table.primary_key}
+
+        modified_entries = (real_table * shadow_table.proj(..., **shadow_attrs_rename)
+                            & [f'{r} != {s}' for s, r in shadow_attrs_rename.items() if not r.endswith('_ts')])
+
+        # modified uuids from AlyxRawDiff
         modified_uuids = (AlyxRawDiff.ModifiedEntry & key
                           & {'alyx_model_name': alyx_model_name}).fetch('uuid')
 
-        uuid_attr = next((attr for attr in real_table.heading.names
+        uuid_attr = next((attr for attr in shadow_table.heading.names
                           if attr.endswith('uuid')))
+
+        # combined modified_uuids
+        modified_uuids = set(list(modified_uuids) + list(modified_entries.fetch(uuid_attr)))
 
         query = real_table & [{uuid_attr: u} for u in modified_uuids]
 
@@ -992,6 +1042,9 @@ def populate_ingestion_tables(run_duration=3600*3, sleep_duration=60, **kwargs):
                 table.populate(**populate_settings)
 
         (schema.jobs & 'status = "error"').delete()
+        stale_jobs = (schema.jobs & 'status = "reserved"').proj(
+            elapsed_days='TIMESTAMPDIFF(DAY, timestamp, NOW())') & 'elapsed_days > 1'
+        (schema.jobs & stale_jobs).delete()
 
         time.sleep(sleep_duration)
 

@@ -2,7 +2,7 @@ import datajoint as dj
 import json
 import uuid
 
-from . import alyxraw, reference
+from . import alyxraw, reference, ShadowIngestionError
 from . import get_raw_field as grf
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
@@ -289,6 +289,9 @@ class SubjectCullMethod(dj.Computed):
         subject_uuid='uuid')
 
     def make(self, key):
+        if not len(Subject & key):
+            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+
         key_c = key.copy()
         key['uuid'] = key['subject_uuid']
         self.insert1(dict(
@@ -412,6 +415,9 @@ class LitterSubject(dj.Computed):
         subject_uuid='uuid')
 
     def make(self, key):
+        if not len(Subject & key):
+            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+
         key_ls = key.copy()
         key['uuid'] = key['subject_uuid']
         litter = grf(key, 'litter')
@@ -436,6 +442,9 @@ class SubjectProject(dj.Computed):
         subject_uuid='uuid')
 
     def make(self, key):
+        if not len(Subject & key):
+            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+
         key_s = key.copy()
         key['uuid'] = key['subject_uuid']
 
@@ -468,6 +477,9 @@ class SubjectUser(dj.Computed):
         subject_uuid='uuid')
 
     def make(self, key):
+        if not len(Subject & key):
+            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+
         key_su = key.copy()
         key['uuid'] = key['subject_uuid']
 
@@ -488,6 +500,9 @@ class SubjectLab(dj.Computed):
     """
 
     def make(self, key):
+        if not len(Subject & key):
+            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+
         key_sl = key.copy()
         key['uuid'] = key['subject_uuid']
         lab = grf(key, 'lab')
@@ -511,6 +526,9 @@ class Caging(dj.Computed):
     def make(self, key):
         key_cage = key.copy()
         key['uuid'] = key['subject_uuid']
+
+        if not len(Subject & key):
+            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
 
         key_cage['cage_name'] = grf(key, 'cage')
         json_content = grf(key, 'json')
@@ -548,6 +566,9 @@ class UserHistory(dj.Computed):
     key_source = subjects.proj(subject_uuid='uuid')
 
     def make(self, key):
+        if not len(Subject & key):
+            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+
         key_user = key.copy()
         key['uuid'] = key['subject_uuid']
 
@@ -595,6 +616,9 @@ class Weaning(dj.Computed):
         subject_uuid='uuid')
 
     def make(self, key):
+        if not len(Subject & key):
+            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+
         key_weaning = key.copy()
         key['uuid'] = key['subject_uuid']
 
@@ -616,6 +640,9 @@ class Death(dj.Computed):
         subject_uuid='uuid')
 
     def make(self, key):
+        if not len(Subject & key):
+            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+
         key_death = key.copy()
         key['uuid'] = key['subject_uuid']
         key_death['death_date'] = grf(key, 'death_date')
@@ -879,6 +906,9 @@ class Implant(dj.Computed):
         subject_uuid='uuid')
 
     def make(self, key):
+        if not len(Subject & key):
+            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+
         key_implant = key.copy()
         key['uuid'] = key['subject_uuid']
 

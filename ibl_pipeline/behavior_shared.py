@@ -74,6 +74,21 @@ class Wheel(dj.Imported):
 
 
 @schema
+class IncompleteTrialSession(dj.Computed):
+    definition = """
+    -> acquisition.Session
+    ---
+    reason: varchar(1000)
+    """
+
+    class MissingFile(dj.Part):
+        definition = """
+        -> master
+        missing_file: varchar(128)
+        """
+
+
+@schema
 class CompleteTrialSession(dj.Computed):
     definition = """
     # sessions that are complete with trial information and thus may be ingested
@@ -116,6 +131,11 @@ class CompleteTrialSession(dj.Computed):
 
     def make(self, key):
         datasets, missing_files = self.get_missing_files(key)
+
+        if key in IncompleteTrialSession:
+            with dj.config(safemode=False):
+                (IncompleteTrialSession & key).delete()
+
         if not missing_files:
             if '_ibl_trials.stimOn_times.npy' not in datasets:
                 key['stim_on_times_status'] = 'Missing'
@@ -177,6 +197,9 @@ class CompleteTrialSession(dj.Computed):
                 key['iti_duration_status'] = 'Complete'
 
             self.insert1(key)
+        else:
+            IncompleteTrialSession.insert1({**key, 'reason': 'missing required files'})
+            IncompleteTrialSession.insert([{**key, 'missing_file': f} for f in missing_files])
 
 
 @schema
