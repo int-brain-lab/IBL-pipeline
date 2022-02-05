@@ -84,7 +84,7 @@ RUN <<-EOF
 	chmod 775 /usr/local/bin/*
 	chown ${NEW_USER_NAME}:${NEW_USER_GROUP} /usr/local/bin/*
 	rm -rf ${IBL_PKG_DJ}/docker
-	rm -rf ${IBL_PKG_DJ}/docker /usr/local/bin/test_init.py
+	rm -rf /usr/local/bin/test_init.py
 EOF
 
 # Install debian package dependencies  -------------------------------------------------
