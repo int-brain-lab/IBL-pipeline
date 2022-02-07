@@ -35,7 +35,7 @@ class Session(dj.Manual):
     """
 
     @classmethod
-    def insert_with_alyx_rest(cls, backtrack_days=1):
+    def insert_with_alyx_rest(cls, backtrack_days=1, verbose=False):
         """Helper function that inserts new sessions by query alyx with rest api
         Args:
             backtrack_days (int): the number of days back to search for new sessions
@@ -45,9 +45,13 @@ class Session(dj.Manual):
         alyx_sessions = one.alyx.rest('sessions', 'list', django=f'start_time__gte,{date_cutoff}')
 
         for alyx_session in tqdm(alyx_sessions):
+            if not subject.Subject & {'subject_nickname': alyx_session['subject']}:
+                continue
+
             sess_key = {
                 'subject_uuid': (subject.Subject & {'subject_nickname': alyx_session['subject']}).fetch1('subject_uuid'),
-                'session_start_time': datetime.datetime.strptime(alyx_session["start_time"], '%Y-%m-%dT%H:%M:%S.%f'),
+                'session_start_time': datetime.datetime.strptime(
+                    alyx_session["start_time"], '%Y-%m-%dT%H:%M:%S.%f').strftime('%Y-%m-%d %H:%M:%S'),
                 }
 
             sess_uuid = alyx_session['url'].split('/')[-1]
@@ -65,6 +69,9 @@ class Session(dj.Manual):
                          'task_protocol': alyx_session['task_protocol'],
                          'session_type': None,
                          'session_narrative': None})
+
+            if verbose:
+                print(f'Inserted new session directly from Alyx: {alyx_session["subject"]}, {sess_key["session_start_time"]}')
 
 
 @schema

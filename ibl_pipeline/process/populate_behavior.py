@@ -52,7 +52,7 @@ def main(backtrack_days=30, excluded_tables=None, run_duration=3600*3, sleep_dur
            or (run_duration < 0)):
 
         # Try inserting new sessions from querying directly the live alyx db
-        acquisition.Session.insert_with_alyx_rest(backtrack_days=1)
+        acquisition.Session.insert_with_alyx_rest(backtrack_days=1, verbose=True)
 
         date_cutoff = (datetime.datetime.now().date() -
                        datetime.timedelta(days=backtrack_days)).strftime('%Y-%m-%d')
