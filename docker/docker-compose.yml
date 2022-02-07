@@ -154,6 +154,7 @@ services:
       - --duration=-1
       - --sleep=5
       - --backtrack=5
+    scale: ${WORKER_COUNT:-1}
 
   populate_behavior:
     <<: *service-ibl-pipeline
