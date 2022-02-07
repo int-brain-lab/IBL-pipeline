@@ -60,6 +60,9 @@ class Session(dj.Manual):
                 # If this session is already in AlyxRaw, skip, as it will get inserted into Session in this ingestion cycle
                 continue
 
+            if verbose:
+                print(f'\tInserting new session directly from Alyx: {alyx_session["subject"]}, {sess_key["session_start_time"]}')
+
             cls.insert1({**sess_key,
                          'session_uuid': uuid.UUID(sess_uuid),
                          'session_number': alyx_session['number'],
@@ -69,9 +72,6 @@ class Session(dj.Manual):
                          'task_protocol': alyx_session['task_protocol'],
                          'session_type': None,
                          'session_narrative': None})
-
-            if verbose:
-                print(f'Inserted new session directly from Alyx: {alyx_session["subject"]}, {sess_key["session_start_time"]}')
 
 
 @schema
