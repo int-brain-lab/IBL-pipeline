@@ -1083,7 +1083,7 @@ def _terminate_all():
 
     terminated_count = 0
     if len(reserved_connections):
-        restriction_str = ','.join(reserved_connections)
+        restriction_str = ','.join(reserved_connections.astype(str))
         terminated_count = dj.admin.kill_quick(restriction=f'ID in ({restriction_str})')
     print(f'{terminated_count} connections killed')
 
