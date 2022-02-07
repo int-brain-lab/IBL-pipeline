@@ -129,6 +129,8 @@ def task_runner(task: str, **kwargs) -> None:
         populate_wheel.main(**kwargs)
     elif task == "ephys":
         populate_ephys.main(**kwargs)
+    elif task == "terminate_all":
+        job._terminate_all()
     else:
         raise NotImplementedError(
             f"The task '{task}' is not implemented. "

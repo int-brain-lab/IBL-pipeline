@@ -1073,5 +1073,20 @@ def _clean_up():
         (shadow_schema.schema.jobs & stale_jobs).delete()
 
 
+def _terminate_all():
+    with IngestionJob.connection.transaction:
+        for key in (IngestionJob & 'job_status = "on-going"').fetch('KEY'):
+            (IngestionJob & key)._update('job_status', 'terminated')
+            (IngestionJob & key)._update('job_endtime', datetime.datetime.utcnow())
+
+    reserved_connections = (schema.jobs & 'status = "reserved"').fetch('connection_id')
+
+    terminated_count = 0
+    if len(reserved_connections):
+        restriction_str = ','.join(reserved_connections)
+        terminated_count = dj.admin.kill_quick(restriction=f'ID in ({restriction_str})')
+    print(f'{terminated_count} connections killed')
+
+
 if __name__ == '__main__':
     populate_ingestion_tables(run_duration=-1)
