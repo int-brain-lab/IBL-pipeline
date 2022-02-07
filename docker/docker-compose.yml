@@ -127,10 +127,8 @@ services:
   alyx:
     <<: *service-ibl-common
     entrypoint:
-      - alyx
-    command:
-      - initdb
-      - startserver
+      - alyx_entrypoint
+    command: ""
     depends_on:
       pgserver:
         condition: service_healthy
@@ -154,7 +152,7 @@ services:
       - populate
       - ingest
       - --duration=-1
-        --sleep=5
+      - --sleep=5
       - --backtrack=5
 
   populate_behavior:

@@ -45,13 +45,13 @@ services:
     <<: *ibl-docker-image
     deploy:
       mode: replicated
-      replicas: 0
+      replicas: 1
     command:
       - config_init
-      - --alyxhost=private
+      - --alyxhost=dev
       - populate
       - ingest
-      - --duration=0.1
+      - --duration=2
         --sleep=5
       - --backtrack=1
 
@@ -59,12 +59,12 @@ services:
     <<: *ibl-docker-image
     deploy:
       mode: replicated
-      replicas: 0
+      replicas: 1
     command:
       - config_init
-      - --alyxhost=private
+      - --alyxhost=dev
       - populate
       - behavior
-      - --duration=0.1
+      - --duration=2
       - --sleep=5
       - --backtrack=1
