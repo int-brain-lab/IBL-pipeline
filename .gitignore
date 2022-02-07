@@ -68,3 +68,4 @@ scratch_*/*
 scratch*.py
 data/*
 shared/*
+!docker/image/int-brain-lab.code-workspace

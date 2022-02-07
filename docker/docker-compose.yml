@@ -127,10 +127,8 @@ services:
   alyx:
     <<: *service-ibl-common
     entrypoint:
-      - alyx
-    command:
-      - initdb
-      - startserver
+      - alyx_entrypoint
+    command: ""
     depends_on:
       pgserver:
         condition: service_healthy
