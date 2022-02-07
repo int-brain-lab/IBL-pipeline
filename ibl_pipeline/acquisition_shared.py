@@ -52,7 +52,7 @@ class Session(dj.Manual):
 
             sess_uuid = alyx_session['url'].split('/')[-1]
 
-            if cls & sess_key or alyxraw.AlyxRaw & {'uuid': sess_uuid}:
+            if (cls & sess_key) or (alyxraw.AlyxRaw & {'uuid': sess_uuid}):
                 # If this session is already in AlyxRaw, skip, as it will get inserted into Session in this ingestion cycle
                 continue
 
