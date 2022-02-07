@@ -1,0 +1,4 @@
+#! /bin/bash
+
+nohup alyx initdb startserver 2>&1 | tee -a /int-brain-lab/alyx_start_server.out &
+alyx dev

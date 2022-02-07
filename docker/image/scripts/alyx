@@ -177,6 +177,11 @@ while [[ $# -gt 0 ]]; do
 		echo "--dump_exp passed. Using dump expiration: '${ALYX_DUMP_EXPIRES}' days"
 		shift
 		;;
+	--reset_db_loaded_file)
+		rm -f "${db_loaded_file}"
+		echo "--reset_db_loaded_file passed. Removing '${db_loaded_file}'"
+		shift
+		;;
 	"help" | "--help" | "-h" | "--help")
 		SHOW_HELP=1
 		break
@@ -580,7 +585,6 @@ configalyx() {
 }
 
 createsu() {
-	echo "# ===> creating alyx superuser"
 	alyxcmd shell <<-EOF
 		try:
 		    from misc.models import LabMember
@@ -593,8 +597,8 @@ createsu() {
 		except Exception as e:
 		    print(e)
 	EOF
-	echo "# ====> setting superuser token and user permissions"
-	alyxcmd drf_create_token "${PGUSER}" >/dev/null
+	echo "# => setting superuser token and user permissions"
+	alyxcmd drf_create_token "${PGUSER}"
 	alyxcmd set_user_permissions
 	echo "${PGUSER}" >"${su_created_file}"
 }
@@ -638,6 +642,9 @@ updatealyx() {
 	echo "# ====> setting permissions"
 	alyxcmd set_db_permissions
 	alyxcmd set_user_permissions
+
+	echo "# =====> creating alyx superuser"
+	createsu
 }
 
 testalyx() {
@@ -654,35 +661,37 @@ sql_dump_load() {
 	gzip -dc "$dmp_" | psql -d "$dbs_"
 }
 
-resetdb() {
-	# alyxcmd reset_db --noinput
-	echo "# => resetting database"
+rename_dbs() {
 	checkdb "${PGDATABASE}_old" >/dev/null
 	if [[ ${DB_NAME_EXISTS} -eq 1 ]]; then
 		echo "# ==> dropping ${PGDATABASE}_old"
 		dropdb "${PGDATABASE}_old" || err_exit "couldn't drop ${PGDATABASE}_old"
 	fi
 
+	# psql -d postgres -c "DROP DATABASE alyxdb WITH (FORCE)"
 	echo "# ===> renaming ${PGDATABASE} to ${PGDATABASE}_old"
 	psql -d postgres -c "ALTER DATABASE \"${PGDATABASE}\" RENAME TO \"${PGDATABASE}_old\";" >/dev/null ||
-		err_exit "couldn't rename ${PGDATABASE} to ${PGDATABASE}_old"
-
-	rm -f "${db_loaded_file}"
+		echo "couldn't rename ${PGDATABASE} to ${PGDATABASE}_old"
 
 	echo "# ====> creating new ${PGDATABASE}"
 	createdb "${PGDATABASE}" || err_exit "couldn't create ${PGDATABASE} db"
+}
 
-	mkdb
-	updatealyx
-	createsu
-
-	echo "# ======> reset done."
+resetdb() {
+	rm -f "${db_loaded_file}"
+	alyxcmd reset_db --noinput -v 3
 }
 
 loaddb() {
 	checkdb ${PGDATABASE} -e
+	local db_was_loaded=false
+	local do_db_reset=false
+	[[ "$1" = "--reset" ]] && do_db_reset=true
 
-	[[ "$1" = "--reset" ]] && resetdb
+	if [[ ${do_db_reset} = true ]]; then
+		echo "# => resetting database"
+		resetdb
+	fi
 
 	if [[ -f "${db_loaded_file}" ]]; then
 		echo "# => database already loaded, skipping load"
@@ -690,14 +699,19 @@ loaddb() {
 		if [[ -f "${ALYX_DUMP_FILE}" ]]; then
 			echo "# ==> loading database ${ALYX_DUMP_FILE}"
 			sql_dump_load
-			alyxcmd makemigrations
-			alyxcmd migrate
-			echo "${ALYX_DUMP_FILE}" >"${db_loaded_file}"
+			db_was_loaded=true
 		else
 			echo "# Warning: DB dump file '${ALYX_DUMP_FILE}' does not exist\!" \
 				"Skipping load."
 		fi
 	fi
+
+	if [[ ${db_was_loaded} = true ]] || [[ ${do_db_reset} = true ]]; then
+		updatealyx
+		touch ${IBL_PATH_ALYX}/alyx/alyx/settings.py
+	fi
+
+	[[ ${db_was_loaded} = true ]] && echo "${ALYX_DUMP_FILE}" >"${db_loaded_file}"
 }
 
 dumpjson() {
@@ -739,21 +753,23 @@ stopserver() {
 	sudo a2dissite -q 001-alyx
 	sudo a2dismod -q wsgi
 	sudo service apache2 stop >/dev/null
-	sudo pkill -f "manage.py runserver"
+	sudo pkill -f "runserver 0.0.0.0:${ALYX_PORT}"
+	rm -vf "${IBL_PATH_ROOT}/alyx_start_server."*
 	ps auxw | grep runserver
 }
 
 startserver() {
 	echo "# => starting alyx"
 	[[ -z "${ALYX_PORT}" ]] && err_exit "port '${ALYX_PORT}' from ALYX_PORT is empty"
-	stopserver
 	sudo service apache2 restart >/dev/null
 	source /etc/apache2/envvars
 	sudo a2enconf servername
 	sudo a2enmod -q wsgi
 	sudo a2ensite -q 001-alyx
 	sudo service apache2 reload >/dev/null
-	alyxcmd runserver 0.0.0.0:${ALYX_PORT}
+	sleep 3
+	touch "${IBL_PATH_ROOT}/alyx_start_server.out"
+	alyxcmd runserver --insecure 0.0.0.0:${ALYX_PORT}
 }
 
 checkserver() {
@@ -762,6 +778,8 @@ checkserver() {
 	alyxcmd check
 	[[ $(netstat -ano | grep "0.0.0.0:${ALYX_PORT}") ]] ||
 		err_exit "server not running at 0.0.0.0:${ALYX_PORT}"
+	[[ -f "${IBL_PATH_ROOT}/alyx_start_server.out" ]] ||
+		err_exit "alyx_start_server file not found."
 }
 
 # Routines
@@ -771,7 +789,6 @@ initdb() {
 	mkdb
 	configalyx
 	updatealyx
-	createsu
 }
 
 reloaddb() {
@@ -780,18 +797,14 @@ reloaddb() {
 }
 
 loaddump() {
+	initdb
 	fetchdump
-	mkdb
-	configalyx
-	updatealyx
 	loaddb
 }
 
 loadpubdump() {
 	fetchpubdump
-	mkdb
-	configalyx
-	updatealyx
+	initdb
 	rm -f "${db_loaded_file}"
 	loaddb
 }

@@ -25,40 +25,71 @@ docker/docker-compose up --detach
 
 The `alyx` service will likely take a few minutes to initialize the database and load in the latest sql dump.
 
-You can set a cron job to periodically download the latest sql dump and load it into the database. For example, create a script called `alyxreload.sh` with the following content:
+You can set a cron job to periodically download the latest sql dump and load it into the database. For example, create a script called `reload_alyx` with the following content:
 
 ```bash
-#! /bin/sh
-echo "#! Script `basename $0` started at `date`"
+#! /bin/bash
 
-ALYX_CONTAINER=alyx_alyx
-SQL_DUMP_EXPIRES=4
+XSH_SRC=${BASH_SOURCE[0]:-${(%):-%x}}
+script_dir=$(cd "$(dirname "${XSH_SRC}")" &>/dev/null && pwd)
+script_file=$(basename "${XSH_SRC}")
+
+echo "#>> Script $script_file started at $(date +'%Z %Y-%m-%d %H:%M:%S')"
+
+ALYX_CONTAINER_NAME=${1:-alyx_alyx}
+SQL_DUMP_EXPIRES=3
 
 err_exit() {
-	echo "#! Error: $*"
-	exit 1
+	set -e
+	echo "#! Error: $*" >&2
+	return 1
 }
 
-ALYX_CID="`docker ps -a -q -f name=$ALYX_CONTAINER`"
+ALYX_CID="$(docker ps -a -q --no-trunc -f name=$ALYX_CONTAINER_NAME)"
+echo "# INFO: Container name: $ALYX_CONTAINER_NAME"
+echo "# INFO: Container id: $ALYX_CID"
 [ -z "$ALYX_CID" ] && err_exit "Cannot find alyx container."
 
-echo "#! Fetchdump started at `date`"
-docker exec -t $ALYX_CID alyx reloaddb 
+echo "#> Database reload started at $(date +'%Z %Y-%m-%d %H:%M:%S')"
+docker exec -t $ALYX_CID alyx --reset_db_loaded_file loaddb
 
-echo "#! Cleanup started at `date`"
+echo "#> Cleanup started at $(date +'%Z %Y-%m-%d %H:%M:%S')"
 docker exec -t $ALYX_CID alyx --dump_exp=$SQL_DUMP_EXPIRES cleandls
+find "${script_dir}/logs/${script_file}_"*.log -type f -mtime +6 -delete 2>/dev/null
 
-echo "#! Script `basename $0` finished at `date`"
+echo "#<< Script $script_file finished at $(date +'%Z %Y-%m-%d %H:%M:%S')"
 ```
 
 Use `crontab -e` to add the last line to your cron jobs to run the above script everyday at 00:45. 
 
-```
+```bash
+# Edit this file to introduce tasks to be run by cron.
+#
+# Each task to run has to be defined through a single line
+# indicating with different fields when the task will be run
+# and what command to run for the task
+#
+# To define the time you can provide concrete values for
+# minute (m), hour (h), day of month (dom), month (mon),
+# and day of week (dow) or use '*' in these fields (for 'any').
+#
+# Notice that tasks will be started based on the cron's system
+# daemon's notion of time and timezones.
+#
+# Output of the crontab jobs (including errors) is sent through
+# email to the user the crontab file belongs to (unless redirected).
+#
+# For example, you can run a backup of all your user accounts
+# at 5 a.m every week with:
+# 0 5 * * 1 tar -zcf /var/backups/home.tgz /home/
+#
+# For more information see the manual pages of crontab(5) and cron(8)
+#
 # %M=min (0-59)
 # %H=hour (0-23)
 # %d=day of month (1-31)
 # %m=month (1-12)
 # %w=day of week (0-6, sun=0)
 # %M %H %d %m %w command
-45 0 * * * /home/user/alyxreload.sh >> "/tmp/alyxreload_$(date +'\%Y-\%m-\%d_\%H').log" 2>&1
+45 0 * * * /home/ubuntu/docker_ingest/scripts/reload_alyx >>"/home/ubuntu/docker_ingest/scripts/logs/reload_alyx_$(date +'\%Y-\%m-\%d_\%H_\%M').log" 2>&1
 ```
