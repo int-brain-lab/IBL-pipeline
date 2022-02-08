@@ -37,6 +37,8 @@ script_file=$(basename "${XSH_SRC}")
 echo "#>> Script $script_file started at $(date +'%Z %Y-%m-%d %H:%M:%S')"
 
 ALYX_CONTAINER_NAME=${1:-alyx_alyx}
+POPULATE_CONTAINER_NAME=${1:-alyx_ingest}
+
 SQL_DUMP_EXPIRES=3
 
 err_exit() {
@@ -46,9 +48,18 @@ err_exit() {
 }
 
 ALYX_CID="$(docker ps -a -q --no-trunc -f name=$ALYX_CONTAINER_NAME)"
-echo "# INFO: Container name: $ALYX_CONTAINER_NAME"
-echo "# INFO: Container id: $ALYX_CID"
+echo "# INFO: Alyx container name: $ALYX_CONTAINER_NAME"
+echo "# INFO: Alyx container id: $ALYX_CID"
 [ -z "$ALYX_CID" ] && err_exit "Cannot find alyx container."
+
+INGEST_CID="$(docker ps -a -q --no-trunc -f name=$POPULATE_CONTAINER_NAME)"
+echo "# INFO: Populate/Ingest container name: $POPULATE_CONTAINER_NAME"
+echo "# INFO: Populate/Ingest container id: $INGEST_CID"
+[ -z "$INGEST_CID" ] && err_exit "Cannot find ingestion container."
+
+echo "#> Ingestion jobs terminate started at $(date +'%Z %Y-%m-%d %H:%M:%S')"
+docker exec -t $INGEST_CID ingest terminate
+sleep 15
 
 echo "#> Database reload started at $(date +'%Z %Y-%m-%d %H:%M:%S')"
 docker exec -t $ALYX_CID alyx reloaddb
