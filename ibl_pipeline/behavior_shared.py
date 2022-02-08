@@ -199,7 +199,7 @@ class CompleteTrialSession(dj.Computed):
             self.insert1(key)
         else:
             IncompleteTrialSession.insert1({**key, 'reason': 'missing required files'}, allow_direct_insert=True)
-            IncompleteTrialSession.insert([{**key, 'missing_file': f} for f in missing_files], allow_direct_insert=True)
+            IncompleteTrialSession.MissingFile.insert([{**key, 'missing_file': f} for f in missing_files], allow_direct_insert=True)
 
 
 @schema
