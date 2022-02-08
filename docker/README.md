@@ -37,7 +37,7 @@ script_file=$(basename "${XSH_SRC}")
 echo "#>> Script $script_file started at $(date +'%Z %Y-%m-%d %H:%M:%S')"
 
 ALYX_CONTAINER_NAME=${1:-alyx_alyx}
-POPULATE_CONTAINER_NAME=${1:-alyx_ingest}
+POPULATE_CONTAINER_NAME=${2:-alyx_ingest_1}
 
 SQL_DUMP_EXPIRES=3
 
