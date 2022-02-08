@@ -55,7 +55,7 @@ def parse_args(args: list[str]) -> argparse.Namespace:
         "task",
         help="The type of ingestion task to run.",
         type=str,
-        choices=["ingest", "behavior", "wheel", "ephys"],
+        choices=["ingest", "behavior", "wheel", "ephys", "terminate"],
     )
 
     parser.add_argument(
@@ -129,7 +129,7 @@ def task_runner(task: str, **kwargs) -> None:
         populate_wheel.main(**kwargs)
     elif task == "ephys":
         populate_ephys.main(**kwargs)
-    elif task == "terminate_all":
+    elif task == "terminate":
         job._terminate_all()
     else:
         raise NotImplementedError(

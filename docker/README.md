@@ -51,7 +51,7 @@ echo "# INFO: Container id: $ALYX_CID"
 [ -z "$ALYX_CID" ] && err_exit "Cannot find alyx container."
 
 echo "#> Database reload started at $(date +'%Z %Y-%m-%d %H:%M:%S')"
-docker exec -t $ALYX_CID alyx --reset_db_loaded_file loaddb
+docker exec -t $ALYX_CID alyx reloaddb
 
 echo "#> Cleanup started at $(date +'%Z %Y-%m-%d %H:%M:%S')"
 docker exec -t $ALYX_CID alyx --dump_exp=$SQL_DUMP_EXPIRES cleandls
