@@ -2,6 +2,7 @@
 # Joseph Burling <joseph@datajoint.com>
 # --------------------------------------------------------------------------------------
 # Basic usage:
+#   docker image rm ghcr.io/iamamutt/iblenv_alyx
 #   docker-compose up --detach
 #   docker-compose down
 #   docker-compose up --detach jupyter

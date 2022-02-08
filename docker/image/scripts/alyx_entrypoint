@@ -6,8 +6,8 @@ parse_entrypoint_args() {
 	local arg
 	if [[ $# -gt 0 ]]; then
 		for arg in "$@"; do
-			if [[ "${arg}" = "startserver" ]]; then
-				echo "'startserver' is turned on by default"
+			if ([[ "${arg}" = "startserver" ]] || [[ "${arg}" = "initdb" ]]) || [[ "${arg}" = "dev" ]]; then
+				echo "'initdb', 'startserver' and 'dev' are turned on by default"
 			else
 				ALYX_ENTRY_ARGS+=("${arg}")
 			fi
@@ -16,7 +16,6 @@ parse_entrypoint_args() {
 }
 
 parse_entrypoint_args "$@"
-ALYX_ENTRY_ARGS+=("startserver")
 
-nohup alyx "${ALYX_ENTRY_ARGS[@]}" 2>&1 | tee -a /int-brain-lab/alyx_start_server.out &
-alyx dev
+nohup alyx initdb startserver 2>&1 | tee -a /int-brain-lab/alyx_start_server.out &
+alyx "${ALYX_ENTRY_ARGS[@]}" dev

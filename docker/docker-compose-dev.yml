@@ -15,7 +15,7 @@ services:
   alyx:
     <<: *ibl-docker-image
     command:
-      - initdb
+      - ""
 
   iblenv:
     <<: *ibl-docker-image
