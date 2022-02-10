@@ -39,6 +39,7 @@ config_init ...... Init configuration files for Alyx and DataJoint. Can pass arg
 populate ......... Run the python script '${populate_dot_py}'.
                    Can pass args to script if args are specified after 'populate'.
                    See examples section below.
+terminate ........ Terminate all running database connection jobs.
 jupyterlab ....... Start a jupyter lab server using the following link:
                    http://127.0.0.1:${JUPYTER_PORT}/lab?token=${JUPYTER_TOKEN}
 dev .............. Wait indefinitely
@@ -89,6 +90,10 @@ while [[ $# -gt 0 ]]; do
 				;;
 			esac
 		done
+		;;
+	"terminate")
+		OPS_SEQ+=("terminate_jobs")
+		shift
 		;;
 	"populate")
 		OPS_SEQ+=("populate")
@@ -208,6 +213,10 @@ config_init() {
 
 populate() {
 	python $populate_dot_py ${POPULATE_ARGS[@]}
+}
+
+terminate_jobs() {
+	python $populate_dot_py "terminate"
 }
 
 jupyterlab() {

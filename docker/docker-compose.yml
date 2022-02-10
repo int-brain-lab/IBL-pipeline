@@ -2,6 +2,7 @@
 # Joseph Burling <joseph@datajoint.com>
 # --------------------------------------------------------------------------------------
 # Basic usage:
+#   docker image rm ghcr.io/iamamutt/iblenv_alyx
 #   docker-compose up --detach
 #   docker-compose down
 #   docker-compose up --detach jupyter
@@ -128,7 +129,8 @@ services:
     <<: *service-ibl-common
     entrypoint:
       - alyx_entrypoint
-    command: ""
+    command:
+      - loaddump
     depends_on:
       pgserver:
         condition: service_healthy
@@ -154,7 +156,6 @@ services:
       - --duration=-1
       - --sleep=5
       - --backtrack=5
-    scale: ${WORKER_COUNT:-1}
 
   populate_behavior:
     <<: *service-ibl-pipeline
