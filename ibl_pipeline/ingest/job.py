@@ -595,7 +595,7 @@ class AlyxRawDiff(dj.Computed):
                                       'actions.weighing',
                                       'actions.waterrestriction',
                                       'actions.wateradministration',
-                                      'actions.models.session'):
+                                      'actions.session'):
             # deleted
             deleted_entries = ((alyxraw.AlyxRaw - alyxraw.UpdateAlyxRaw.proj()) &
                                {'model': key['alyx_model_name']})

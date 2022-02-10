@@ -15,7 +15,6 @@ from ibl_pipeline.ingest import histology as shadow_histology
 
 from ibl_pipeline.ingest import job
 
-
 real_vmods = {}
 for m in (reference, subject, action,
           acquisition, data, ephys, qc, histology):
@@ -23,22 +22,37 @@ for m in (reference, subject, action,
     schema_name = m.__name__.split('.')[-1]
     real_vmods[schema_name] = dj.create_virtual_module(schema_name, m.schema.database[5:])
 
-session_res = 'session_start_time BETWEEN "2022-01-20" AND "2022-01-22"'
-session_keys = (real_vmods['acquisition'].Session & session_res).fetch('KEY')
 
-discrepancy = {}
-for full_table_name, table_detail in job.DJ_TABLES.items():
-    real_table = table_detail['real']
-    if real_table is None:
-        continue
+def main(start='2022-01-20', end='2022-01-22', verbose=True):
+    session_res = f'session_start_time BETWEEN "{start}" AND "{end}"'
 
-    schema_name, table_name = full_table_name.split('.')
-    vm_real_table = getattr(real_vmods[schema_name], table_name)
+    vm_session_keys_for_missing = (real_vmods['acquisition'].Session & session_res).fetch('KEY')
+    session_keys_for_missing = (acquisition.Session & [{'session_uuid': u} for u in (
+            real_vmods['acquisition'].Session & session_res).fetch('session_uuid')]).fetch('KEY')
 
-    missing = (vm_real_table & session_keys) - (real_table & session_keys).proj()
-    extra = (real_table & session_keys) - (vm_real_table & session_keys).proj()
+    session_keys_for_extra = (acquisition.Session & session_res).fetch('KEY')
+    vm_session_keys_for_extra = (real_vmods['acquisition'].Session & [{'session_uuid': u} for u in (
+            acquisition.Session & session_res).fetch('session_uuid')]).fetch('KEY')
 
-    discrepancy[full_table_name] = {'missing': len(missing), 'extra': len(extra)}
+    discrepancy = {}
+    for full_table_name, table_detail in job.DJ_TABLES.items():
+        real_table = table_detail['real']
+        if real_table is None:
+            continue
 
-discrepancy = pd.DataFrame(discrepancy).T
-print(discrepancy)
+        schema_name, table_name = full_table_name.split('.')
+        vm_real_table = getattr(real_vmods[schema_name], table_name)
+
+        if table_name in ('Session'):
+            missing = len(vm_real_table & vm_session_keys_for_missing) - len(real_table & session_keys_for_missing)
+            extra = len(real_table & session_keys_for_extra) - len(vm_real_table & vm_session_keys_for_extra)
+        else:
+            missing = len((vm_real_table & vm_session_keys_for_missing) - (real_table & session_keys_for_missing).proj())
+            extra = len((real_table & session_keys_for_extra) - (vm_real_table & vm_session_keys_for_extra).proj())
+
+        discrepancy[full_table_name] = {'missing': missing, 'extra': extra}
+
+    discrepancy = pd.DataFrame(discrepancy).T
+    if verbose:
+        print(discrepancy)
+    return discrepancy
