@@ -78,7 +78,7 @@ def env_test(ibl_path_root=None, env_file="", host="private", remove=False):
     if not this_dir.as_posix() in sys.path:
         sys.path.append(this_dir.as_posix())
 
-    from config_init import (
+    from configure import (
         _dest_dj_config_path,
         _dest_one_params_path,
         dj_config_mappings,

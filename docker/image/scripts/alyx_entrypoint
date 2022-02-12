@@ -1,21 +1,28 @@
-#! /bin/bash
+#!/bin/bash --login
 
+[[ -z "${IBL_PATH_ROOT}" ]] && IBL_PATH_ROOT=/int-brain-lab
+export alyx_server_start_file="${IBL_PATH_ROOT}/alyx_start_server.out"
 export ALYX_ENTRY_ARGS=()
 
 parse_entrypoint_args() {
+	local ignore_args=(start_server init_db www www_no_load dev)
 	local arg
+
 	if [[ $# -gt 0 ]]; then
 		for arg in "$@"; do
-			if ([[ "${arg}" = "startserver" ]] || [[ "${arg}" = "initdb" ]]) || [[ "${arg}" = "dev" ]]; then
-				echo "'initdb', 'startserver' and 'dev' are turned on by default"
+			if [[ " ${ignore_args[@]} " =~ " ${arg} " ]]; then
+				echo "'$arg' is already turned on by default."
 			else
 				ALYX_ENTRY_ARGS+=("${arg}")
 			fi
 		done
+	else
+		ALYX_ENTRY_ARGS+=("-")
 	fi
 }
 
 parse_entrypoint_args "$@"
+ALYX_ENTRY_ARGS+=(dev)
 
-nohup alyx initdb startserver 2>&1 | tee -a /int-brain-lab/alyx_start_server.out &
-alyx "${ALYX_ENTRY_ARGS[@]}" dev
+nohup alyx www_no_load 2>&1 | tee -a "${alyx_server_start_file}" &
+alyx "${ALYX_ENTRY_ARGS[@]}"

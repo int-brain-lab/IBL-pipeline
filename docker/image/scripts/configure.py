@@ -4,11 +4,11 @@ Initialize configuration files for DataJoint and ONE and their connections.
 
 Usage as a script:
 
-    python config_init.py ...
+    python configure.py ...
 
 See script help messages:
 
-    python config_init.py --help
+    python configure.py --help
 
 (or the functions `init_dj_config` or `init_one_alyx` can be imported directly)
 """

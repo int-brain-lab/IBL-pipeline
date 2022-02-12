@@ -7,7 +7,7 @@
 #   docker-compose down
 #   docker-compose up --detach jupyter
 #   docker-compose down --volumes
-#
+#   docker compose config
 
 version: "2.4"
 
@@ -130,7 +130,7 @@ services:
     entrypoint:
       - alyx_entrypoint
     command:
-      - loaddump
+      - fetch_and_load_db
     depends_on:
       pgserver:
         condition: service_healthy
@@ -138,7 +138,7 @@ services:
       test:
         - CMD
         - alyx
-        - checkserver
+        - check_server
       timeout: 15s
       interval: 30s
       retries: 5
@@ -149,8 +149,8 @@ services:
   ingest:
     <<: *service-ibl-pipeline
     command:
-      - config_init
-      - --alyxhost=private
+      - configure
+      - --alyxhost=dev
       - populate
       - ingest
       - --duration=-1
@@ -160,8 +160,8 @@ services:
   populate_behavior:
     <<: *service-ibl-pipeline
     command:
-      - config_init
-      - --alyxhost=private
+      - configure
+      - --alyxhost=dev
       - populate
       - behavior
       - --duration=-1
@@ -171,14 +171,14 @@ services:
   iblenv:
     <<: *service-ibl-pipeline
     volumes:
+      - *volume-mount-vscode-server
       - *volume-mount-data-cache
       - *volume-bind-shared
       - *volume-bind-ibl-pipeline
-      - *volume-mount-vscode-server
     ports:
       - ${JUPYTER_PORT:-10000}:${JUPYTER_PORT:-10000}
     command:
-      - config_init
+      - configure
       - --alyxhost=dev
       - jupyterlab
     working_dir: /int-brain-lab/IBL-pipeline
