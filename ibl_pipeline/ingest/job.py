@@ -1,3 +1,9 @@
+import datetime
+import inspect
+import logging
+import os
+import time
+
 import datajoint as dj
 
 schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ingest_job")
@@ -89,47 +95,41 @@ class TaskStatus(dj.Manual):
 
 
 # ================== Orchestrating the ingestion jobs =============
-import os
-import logging
-import time
-import inspect
-import datetime
-from tqdm import tqdm
 
+
+import actions as alyx_actions
+import experiments as alyx_experiments
 import misc as alyx_misc
 import subjects as alyx_subjects
-import actions as alyx_actions
-import data as alyx_data
-import experiments as alyx_experiments
-
-from ibl_pipeline.ingest import QueryBuffer, alyxraw, ShadowIngestionError
+from ibl_pipeline import (
+    acquisition,
+    action,
+    data,
+    ephys,
+    histology,
+    qc,
+    reference,
+    subject,
+)
+from ibl_pipeline.ingest import QueryBuffer, ShadowIngestionError
+from ibl_pipeline.ingest import acquisition as shadow_acquisition
+from ibl_pipeline.ingest import action as shadow_action
+from ibl_pipeline.ingest import alyxraw
+from ibl_pipeline.ingest import data as shadow_data
+from ibl_pipeline.ingest import ephys as shadow_ephys
+from ibl_pipeline.ingest import histology as shadow_histology
+from ibl_pipeline.ingest import qc as shadow_qc
+from ibl_pipeline.ingest import reference as shadow_reference
+from ibl_pipeline.ingest import subject as shadow_subject
 from ibl_pipeline.process import (
+    delete_update_entries,
     ingest_alyx_raw_postgres,
     ingest_membership,
     ingest_real,
-    delete_update_entries,
 )
+from tqdm import tqdm
 
-from ibl_pipeline.ingest import reference as shadow_reference
-from ibl_pipeline.ingest import subject as shadow_subject
-from ibl_pipeline.ingest import action as shadow_action
-from ibl_pipeline.ingest import acquisition as shadow_acquisition
-from ibl_pipeline.ingest import data as shadow_data
-from ibl_pipeline.ingest import ephys as shadow_ephys
-from ibl_pipeline.ingest import qc as shadow_qc
-from ibl_pipeline.ingest import histology as shadow_histology
-
-from ibl_pipeline import (
-    reference,
-    subject,
-    action,
-    acquisition,
-    data,
-    ephys,
-    qc,
-    histology,
-)
-
+import data as alyx_data
 
 logger = logging.getLogger(__name__)
 _backtrack_days = int(os.getenv("BACKTRACK_DAYS", 10))

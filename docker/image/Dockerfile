@@ -124,10 +124,10 @@ RUN <<-EOF
 	pip install --no-input -vr ${IBL_PATH_ALYX}/requirements.txt
 	pip install --upgrade --pre "datajoint==0.12.9" # revert to old version
 	mamba develop \
-		${IBL_PKG_DJ} \
 		${IBL_PATH_ALYX}/alyx \
 		${IBL_PATH_ROOT}/ibllib-repo \
 		${IBL_PATH_ROOT}/iblapps
+	pip install -e ${IBL_PKG_DJ}
 	mamba update -qy --all
 EOF
 

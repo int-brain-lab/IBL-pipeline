@@ -776,7 +776,6 @@ start_server() {
 	[[ -z "${ALYX_PORT}" ]] && err_exit "port '${ALYX_PORT}' from ALYX_PORT is empty"
 	sudo service apache2 restart >/dev/null
 	source /etc/apache2/envvars
-	sudo a2enconf servername
 	sudo a2enmod -q wsgi
 	sudo a2ensite -q 001-alyx
 	sudo service apache2 reload >/dev/null

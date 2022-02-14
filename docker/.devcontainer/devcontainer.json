@@ -46,5 +46,5 @@
 		"python.terminal.activateEnvironment": true
 	},
 	"shutdownAction": "none",
-	"workspaceFolder": "/int-brain-lab"
+	"workspaceFolder": "/int-brain-lab/IBL-pipeline"
 }

@@ -3,7 +3,7 @@
 # --------------------------------------------------------------------------------------
 # Basic usage:
 #   docker-compose -f docker-compose.yml -f docker-compose-dev.yml up -d
-#   docker-compose -f docker-compose.yml -f docker-compose-dev.yml down --volumes --remove-orphans
+#   docker-compose -f docker-compose.yml -f docker-compose-dev.yml down --remove-orphans --volumes
 #   docker-compose -f docker-compose.yml -f docker-compose-dev.yml config
 
 version: "3.9"
@@ -48,7 +48,7 @@ services:
     <<: *ibl-docker-image
     deploy:
       mode: replicated
-      replicas: 1
+      replicas: 0
     command:
       - configure
       - --alyxhost=dev
@@ -62,7 +62,7 @@ services:
     <<: *ibl-docker-image
     deploy:
       mode: replicated
-      replicas: 1
+      replicas: 0
     command:
       - configure
       - --alyxhost=dev
