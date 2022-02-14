@@ -43,10 +43,9 @@ DISABLE_MAIL=true
 # paths of alyx files used during db setup/interaction steps
 alyx_manager="${IBL_PATH_ALYX}/alyx/manage.py"
 db_loaded_file="${IBL_PATH_DATA}/alyx/db_loaded"
-su_created_file="${IBL_PATH_DATA}/alyx/superuser_created"
 alyx_server_start_file="${alyx_server_start_file:-${IBL_PATH_ROOT}/alyx_start_server.out}"
 alyx_lock_file="/tmp/._alyx.lock"
-alyx_token_fixture="${IBL_PATH_DATA}/alyx/auth.token.backup.json"
+su_token_fixture="${IBL_PATH_DATA}/alyx/authtoken.su.json"
 
 # help documentation
 # ------------------
@@ -64,7 +63,7 @@ Options:
 --dump_file=ALYX_DUMP_FILE ..... Path to store or load local copy of SQL dump, defaults
                                  to file formed via ALYX_DL_DATE.
 --dump_exp=ALYX_DUMP_EXPIRES ... Number of days for dumps to be considered expired when
-                                 using function 'clean_dls'.
+                                 using the function 'clean_dls'.
                                  Default is ${ALYX_DUMP_EXPIRES} days.
 
 
@@ -74,27 +73,27 @@ create_dbs ..... Create new, empty '${PGDATABASE}' and '${PGDATABASE}_old' postg
                  databases if they do not already exist.
 config_alyx .... Configure Alyx/django settings. The environment variables
                  PGUSER PGHOST and PGPASSWORD are required.
-update_alyx .... Make migrations, migrate, load fixtures, set permissions, create su.
+update_alyx .... Make migrations, migrate, load fixtures, set permissions.
 fetch_dump ..... Download Alyx database dump from the date set in env variable
                  ALYX_DL_DATE or from the option --dump_url.
 load_db ........ Load data from the sql dump into postgres '${PGDATABASE}' database if
                  file '${db_loaded_file}' does not already exist.
-dump_json ...... Send request to Alyx to perform a JSON dump of the current database.
+dump_json ...... Send request to perform a JSON dump of the current database.
                  Database stored at '${ALYX_DUMP_DIR}/json'
-dump_sql ....... Send request to Alyx to perform a SQL dump of the current database.
+dump_sql ....... Send request to perform a SQL dump of the current database.
                  Database stored at '${ALYX_DUMP_DIR}/sql'
 clean_dls ...... Clean up existing sql dumps in sql dump folder.
                  Use with option '--dump_exp'.
 reset_alyx ..... Reset '${PGDATABASE}' to empty. Won't load database.
-start_server ... Start Alyx server using port '${ALYX_PORT}'.
-check_server ... Check if Alyx is up and running.
-kill_server .... Kill process for the 'manage.py runserver' command.
+start_server ... Start Alyx web server using port '${ALYX_PORT}'.
+check_server ... Check if Alyx web server is up and running.
+kill_server .... Kill process for the web server command 'manage.py runserver'.
 
 Routines:
 
 init_db ............... Routine that performs all initialization steps to bring up the
                         '${PGDATABASE}' database by running: create_dbs, ...
-                        config_alyx, update_alyx.
+                        config_alyx, update_alyx, create_su.
 fetch_and_load_db ..... Routine that inserts the latest sql dump into the postgres
                         '${PGDATABASE}' database by running: fetch_dump, load_db.
 fetch_and_reload_db ... Routine that inserts the latest sql dump and resets
@@ -587,7 +586,7 @@ config_alyx() {
 }
 
 create_su() {
-	if [[ ! -f "${su_created_file}" ]]; then
+	if [[ ! -f "${su_token_fixture}" ]]; then
 		echo "# => creating superuser"
 
 		manage_alyx shell <<-EOF
@@ -609,45 +608,42 @@ create_su() {
 		echo "# ==> setting user permissions"
 		manage_alyx set_user_permissions
 
-		echo "# ==> dumping tokens for db reset"
-		manage_alyx dumpdata --indent 1 misc.labmember authtoken >"${alyx_token_fixture}"
-
-		echo "${PGUSER}" >"${su_created_file}"
+		echo "# ==> dumping su token for use after db reset"
+		manage_alyx dumpdata --indent 1 misc.labmember authtoken >"${su_token_fixture}"
 	fi
 }
 
 load_alyx_fixtures() {
 	echo "# => loading fixtures"
 	local fixture_list=(
+		actions/fixtures/actions.cullmethod.json
+		actions/fixtures/actions.cullreason.json
 		actions/fixtures/actions.proceduretype.json
 		actions/fixtures/actions.watertype.json
-		actions/fixtures/actions.cullreason.json
-		data/fixtures/data.datarepositorytype.json
 		data/fixtures/data.dataformat.json
+		data/fixtures/data.datarepositorytype.json
 		data/fixtures/data.datasettype.json
+		experiments/fixtures/experiments.brainregion.json
+		experiments/fixtures/experiments.coordinatesystem.json
+		experiments/fixtures/experiments.probemodel.json
 		misc/fixtures/misc.cagetype.json
 		misc/fixtures/misc.enrichment.json
 		misc/fixtures/misc.food.json
+		misc/fixtures/misc.lab.json
 		subjects/fixtures/subjects.source.json
-		experiments/fixtures/experiments.coordinatesystem.json
-		experiments/fixtures/experiments.probemodel.json
-		experiments/fixtures/experiments.brainregion.json
 	)
-
-	[[ -f "${alyx_token_fixture}" ]] && fixture_list+=("${alyx_token_fixture}")
 
 	local fx
 	for fx in "${fixture_list[@]}"; do
 		manage_alyx loaddata "${IBL_PATH_ALYX}/alyx/$fx"
 	done
+
+	# load previous su credentials
+	[[ -f "${su_token_fixture}" ]] && manage_alyx loaddata "${su_token_fixture}"
 }
 
 update_alyx() {
-	echo "# => updating Alyx"
-
-	check_db ${PGDATABASE} -e
-	check_db_usr ${PGUSER} -e
-
+	echo "# => Updating Alyx"
 	echo "# ==> makemigrations"
 	manage_alyx makemigrations
 
@@ -697,6 +693,7 @@ reset_alyx() {
 	echo "# => resetting database"
 	rm -f "${db_loaded_file}"
 	manage_alyx reset_db --noinput -v 3
+	update_alyx
 }
 
 load_db() {
@@ -704,10 +701,7 @@ load_db() {
 	local db_was_loaded=false
 	local do_db_reset=false
 	[[ "$1" = "--reset" ]] && do_db_reset=true
-
-	if [[ ${do_db_reset} = true ]]; then
-		reset_alyx
-	fi
+	[[ ${do_db_reset} = true ]] && reset_alyx
 
 	if [[ -f "${db_loaded_file}" ]]; then
 		echo "# => database already loaded, skipping load"
@@ -715,6 +709,7 @@ load_db() {
 		if [[ -f "${ALYX_DUMP_FILE}" ]]; then
 			echo "# => loading database ${ALYX_DUMP_FILE}"
 			sql_dump_load
+			echo "${ALYX_DUMP_FILE}" >"${db_loaded_file}"
 			db_was_loaded=true
 		else
 			echo "# Warning: DB dump file '${ALYX_DUMP_FILE}' does not exist\!" \
@@ -722,12 +717,10 @@ load_db() {
 		fi
 	fi
 
+	# reset web server if database changed
 	if [[ ${db_was_loaded} = true ]] || [[ ${do_db_reset} = true ]]; then
-		update_alyx
 		touch ${IBL_PATH_ALYX}/alyx/alyx/settings.py
 	fi
-
-	[[ ${db_was_loaded} = true ]] && echo "${ALYX_DUMP_FILE}" >"${db_loaded_file}"
 }
 
 dump_json() {
@@ -741,16 +734,19 @@ dump_json() {
 
 		echo "# => dumping db as JSON to ${json_dump_file}"
 		manage_alyx dumpdata \
-			-e contenttypes -e auth.permission \
-			-e reversion.version -e reversion.revision -e admin.logentry \
 			-e actions.ephyssession \
 			-e actions.notification \
 			-e actions.notificationrule \
 			-e actions.virusinjection \
+			-e admin.logentry \
+			-e auth.permission \
+			-e contenttypes \
 			-e data.download \
 			-e experiments.brainregion \
 			-e jobs.task \
 			-e misc.note \
+			-e reversion.revision \
+			-e reversion.version \
 			-e subjects.subjectrequest \
 			--indent 1 -o "${json_dump_file}"
 	fi

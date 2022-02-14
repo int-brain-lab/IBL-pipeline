@@ -15,8 +15,8 @@ services:
   alyx:
     <<: *ibl-docker-image
     command:
-      #- "-"
-      - fetch_and_load_db
+      - "-"
+      # - fetch_and_load_db
 
   iblenv:
     <<: *ibl-docker-image
