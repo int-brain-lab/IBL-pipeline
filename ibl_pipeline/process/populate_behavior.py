@@ -145,7 +145,7 @@ def process_daily_summary():
         behavior_plotting.DailyLabSummary.populate(**kwargs)
 
 
-def main(backtrack_days=30, excluded_tables=[]):
+def main(backtrack_days=10, excluded_tables=[]):
 
     if backtrack_days:
         date_cutoff = \
@@ -157,7 +157,7 @@ def main(backtrack_days=30, excluded_tables=[]):
     # populate CompleteTrialSession first with existing file records
     behavior.CompleteTrialSession.populate(f'session_start_time > "{date_cutoff}"', **kwargs)
     sessions_missing = (acquisition.Session - behavior.CompleteTrialSession) & \
-            f'session_start_time > "{(datetime.datetime.now().date() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")}"'
+            f'session_start_time > "{(datetime.datetime.now().date() - datetime.timedelta(days=backtrack_days)).strftime("%Y-%m-%d")}"'
 
     uuids = [str(u) for u in sessions_missing.fetch('session_uuid')]
 

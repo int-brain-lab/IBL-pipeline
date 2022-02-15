@@ -173,7 +173,7 @@ def insert_alyx_entries_model(alyx_model, backtrack_days=None):
         logger.log(25, 'Inserted all remaining raw field tuples')
 
 
-def main(backtrack_days=3):
+def main(backtrack_days=10):
 
     for t in TABLES_OF_INTEREST:
         logger.log(25, 'Ingesting alyx table {} into datajoint alyxraw...'.format(t._meta.db_table))
