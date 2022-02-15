@@ -9,7 +9,7 @@
 #   docker-compose down --volumes
 #   docker compose config
 
-version: "2.4"
+version: "3.9"
 
 # Shared properties across services ----------------------------------------------------
 x-image-iblenv: &image-iblenv
@@ -24,7 +24,7 @@ x-env-vars-django-alyx: &env-vars-django-alyx
   PGDATABASE: ${POSTGRES_DB:-alyxdb}
   PGHOST: ${PGHOST:-pgserver}
   PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env file}
-  PGUSER: ${POSTGRES_USER:-alyxadmin}
+  PGUSER: ${POSTGRES_USER:-djsu}
 
 # ONE alyx/flatiron access and credentials
 x-env-vars-one-alyx: &env-vars-one-alyx
@@ -104,7 +104,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-alyxdb}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env file}
-      POSTGRES_USER: ${POSTGRES_USER:-alyxadmin}
+      POSTGRES_USER: ${POSTGRES_USER:-djsu}
     healthcheck:
       test:
         - CMD-SHELL
@@ -150,23 +150,29 @@ services:
     <<: *service-ibl-pipeline
     command:
       - configure
-      - --alyxhost=dev
+      - --alyxhost=private
       - populate
       - ingest
       - --duration=-1
       - --sleep=5
       - --backtrack=5
+    deploy:
+      mode: replicated
+      replicas: ${WORKER_COUNT:-1}
 
   populate_behavior:
     <<: *service-ibl-pipeline
     command:
       - configure
-      - --alyxhost=dev
+      - --alyxhost=private
       - populate
       - behavior
       - --duration=-1
       - --sleep=5
       - --backtrack=10
+    deploy:
+      mode: replicated
+      replicas: 1
 
   iblenv:
     <<: *service-ibl-pipeline
@@ -182,3 +188,6 @@ services:
       - --alyxhost=dev
       - jupyterlab
     working_dir: /int-brain-lab/IBL-pipeline
+    deploy:
+      mode: replicated
+      replicas: 0

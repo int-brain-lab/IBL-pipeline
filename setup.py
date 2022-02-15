@@ -7,9 +7,9 @@ here = path.abspath(path.dirname(__file__))
 setup(
     name="ibl-pipeline",
     version="0.9.5",
-    description="Datajoint schemas for IBL",
-    author="Vathes",
-    author_email="support@datajoint.com",
+    description="DataJoint schemas for IBL",
+    author="DataJoint",
+    author_email="info@datajoint.com",
     packages=find_packages(exclude=[]),
     install_requires=[
         "boto3",

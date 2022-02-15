@@ -9,8 +9,7 @@
 	"extensions": [
 		"ms-python.python",
 		"ms-python.vscode-pylance",
-		"ms-toolsai.jupyter",
-		"ms-toolsai.jupyter-renderers"
+		"ms-toolsai.jupyter"
 	],
 	"features": {
 		"github": "latest"

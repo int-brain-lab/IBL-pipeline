@@ -180,7 +180,7 @@ ENV IBL_PATH_SHARED=${IBL_PATH_ROOT}/shared
 ENV IBL_PATH_ALYX=${ROOT_ALYX_PATH}
 
 # postgres/alyx/django related environment variables
-ENV PGUSER=alyxadmin
+ENV PGUSER=djsu
 ENV PGDATABASE=alyxdb
 ENV PGHOST=pgserver
 ENV POSTGRES_PASSWORD=

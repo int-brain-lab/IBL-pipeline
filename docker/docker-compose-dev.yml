@@ -27,7 +27,7 @@ services:
   # http://localhost:8088/
   # System: PostgreSQL
   # Server: pgserver
-  # Username: alyxadmin
+  # Username: djsu
   # Password: $POSTGRES_PASSWORD
   adminer:
     environment:

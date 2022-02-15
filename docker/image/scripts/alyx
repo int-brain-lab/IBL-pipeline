@@ -380,24 +380,27 @@ run_function_seq() {
 	if [[ $# -gt 0 ]]; then
 		echo "# > operation sequence: $*"
 		for fn in "$@"; do
-			echo "# >> ${fn}()"
+			echo -e "\n# >> ${fn}()"
+			echo "====================================================================="
 			$fn
 		done
 	fi
 }
 
-lock_alyx_op() {
-	if [[ "${1}" = "-c" ]]; then
-		local ts_now=$(date +"%s")
-		local break_after=${2:-600}
-		while [[ -f "${alyx_lock_file}" ]]; do
-			echo "... waiting for end of running alyx process"
-			sleep 10
-			[[ $(($(date +"%s") - $ts_now)) -gt ${break_after} ]] && break
-		done
-	elif [[ "${1}" = "-r" ]]; then
+alyx_op_wait_lock() {
+	if [[ "${1}" = "--release" ]]; then
 		rm -vf "${alyx_lock_file}"
 	else
+		local break_after=3600
+		local ts_now=$(date +"%s")
+		[[ "${1}" = "--timeout" ]] && break_after=${2:-${break_after}}
+
+		while [[ -f "${alyx_lock_file}" ]]; do
+			echo "... waiting for end of running alyx process"
+			sleep 15
+			[[ $(($(date +"%s") - $ts_now)) -gt ${break_after} ]] && break
+		done
+
 		touch "${alyx_lock_file}"
 	fi
 }
@@ -489,7 +492,7 @@ clean_dls() {
 	local cache_dir="${IBL_PATH_DATA}/alyx/cache"
 	echo "# ==> cleaning cache files from '$cache_dir'"
 	find "${cache_dir}" -mindepth 1 ! -type d -not -name histology -printf '%s %p\n'
-	sudo whoami >/dev/null
+	sudo whoami >/dev/null 2>&1
 	sudo find "${cache_dir}" -mindepth 1 ! -type d -not -name histology -delete
 }
 
@@ -571,7 +574,7 @@ config_alyx() {
 		} 1' "${IBL_PATH_ALYX}/docs/_static/001-alyx.conf" >/etc/apache2/sites-available/001-alyx.conf
 
 	if [[ ! $(cat /etc/apache2/apache2.conf | grep ${HOSTNAME}) ]]; then
-		sudo whoami >/dev/null
+		sudo whoami >/dev/null 2>&1
 		sudo chmod a+w /etc/apache2/apache2.conf
 		echo "ServerName ${HOSTNAME}" >>/etc/apache2/apache2.conf
 		sudo chmod 644 /etc/apache2/apache2.conf
@@ -762,7 +765,7 @@ dump_sql() {
 
 kill_server() {
 	echo "# => stopping alyx"
-	sudo whoami >/dev/null
+	sudo whoami >/dev/null 2>&1
 	sudo a2dissite -q 001-alyx
 	sudo a2dismod -q wsgi
 	sudo service apache2 stop >/dev/null
@@ -798,24 +801,26 @@ check_server() {
 # --------
 
 init_db() {
-	lock_alyx_op
+	alyx_op_wait_lock
 	create_dbs
 	config_alyx
 	update_alyx
 	create_su
-	lock_alyx_op -r
+	alyx_op_wait_lock --release
 }
 
 fetch_and_load_db() {
-	lock_alyx_op -c
+	alyx_op_wait_lock
 	fetch_dump
 	load_db
+	alyx_op_wait_lock --release
 }
 
 fetch_and_reload_db() {
-	lock_alyx_op -c
+	alyx_op_wait_lock
 	fetch_dump
 	load_db --reset
+	alyx_op_wait_lock --release
 }
 
 www() {
