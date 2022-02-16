@@ -636,13 +636,19 @@ load_alyx_fixtures() {
 		subjects/fixtures/subjects.source.json
 	)
 
+	# load previous su credentials
+	if [[ -f "${su_token_fixture}" ]]; then
+		echo "# ==> loading fixture: '${su_token_fixture}'"
+		manage_alyx loaddata "${su_token_fixture}"
+	fi
+
 	local fx
 	for fx in "${fixture_list[@]}"; do
+		echo "# ==> loading fixture: '${fx}'"
 		manage_alyx loaddata "${IBL_PATH_ALYX}/alyx/$fx"
 	done
 
-	# load previous su credentials
-	[[ -f "${su_token_fixture}" ]] && manage_alyx loaddata "${su_token_fixture}"
+
 }
 
 update_alyx() {
