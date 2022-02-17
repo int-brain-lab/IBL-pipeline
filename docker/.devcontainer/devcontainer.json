@@ -9,8 +9,7 @@
 	"extensions": [
 		"ms-python.python",
 		"ms-python.vscode-pylance",
-		"ms-toolsai.jupyter",
-		"ms-toolsai.jupyter-renderers"
+		"ms-toolsai.jupyter"
 	],
 	"features": {
 		"github": "latest"
@@ -46,5 +45,5 @@
 		"python.terminal.activateEnvironment": true
 	},
 	"shutdownAction": "none",
-	"workspaceFolder": "/int-brain-lab"
+	"workspaceFolder": "/int-brain-lab/IBL-pipeline"
 }

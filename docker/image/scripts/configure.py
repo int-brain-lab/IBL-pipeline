@@ -4,11 +4,11 @@ Initialize configuration files for DataJoint and ONE and their connections.
 
 Usage as a script:
 
-    python config_init.py ...
+    python configure.py ...
 
 See script help messages:
 
-    python config_init.py --help
+    python configure.py --help
 
 (or the functions `init_dj_config` or `init_one_alyx` can be imported directly)
 """
@@ -220,7 +220,7 @@ def connect_alyx(base_url: str) -> OneAlyx:
     """
     Initiate an Alyx connection via one.api and return a connection object.
 
-    one = OneAlyx(password="******", username="alyxadmin", base_url="http://alyx:8000", silent=True)
+    one = OneAlyx(password="******", username="djsu", base_url="http://alyx:8000", silent=True)
     After the first connection, `OneAlyx` will pull configuration from `~/.one/.<url>`.
      If connecting using a `.one_params` file it must already be in your **home**
      directory, and the file **must** contain:

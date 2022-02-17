@@ -62,10 +62,10 @@ docker exec -t $INGEST_CID ingest terminate
 sleep 15
 
 echo "#> Database reload started at $(date +'%Z %Y-%m-%d %H:%M:%S')"
-docker exec -t $ALYX_CID alyx reloaddb
+docker exec -t $ALYX_CID alyx fetch_and_reload_db
 
 echo "#> Cleanup started at $(date +'%Z %Y-%m-%d %H:%M:%S')"
-docker exec -t $ALYX_CID alyx --dump_exp=$SQL_DUMP_EXPIRES cleandls
+docker exec -t $ALYX_CID alyx --dump_exp=$SQL_DUMP_EXPIRES clean_dls
 find "${script_dir}/logs/${script_file}_"*.log -type f -mtime +6 -delete 2>/dev/null
 
 echo "#<< Script $script_file finished at $(date +'%Z %Y-%m-%d %H:%M:%S')"

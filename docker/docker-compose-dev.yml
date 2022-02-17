@@ -3,7 +3,7 @@
 # --------------------------------------------------------------------------------------
 # Basic usage:
 #   docker-compose -f docker-compose.yml -f docker-compose-dev.yml up -d
-#   docker-compose -f docker-compose.yml -f docker-compose-dev.yml down --volumes --remove-orphans
+#   docker-compose -f docker-compose.yml -f docker-compose-dev.yml down --remove-orphans --volumes
 #   docker-compose -f docker-compose.yml -f docker-compose-dev.yml config
 
 version: "3.9"
@@ -15,7 +15,8 @@ services:
   alyx:
     <<: *ibl-docker-image
     command:
-      - ""
+      - "-"
+      # - fetch_and_load_db
 
   iblenv:
     <<: *ibl-docker-image
@@ -26,7 +27,7 @@ services:
   # http://localhost:8088/
   # System: PostgreSQL
   # Server: pgserver
-  # Username: alyxadmin
+  # Username: djsu
   # Password: $POSTGRES_PASSWORD
   adminer:
     environment:
@@ -47,26 +48,26 @@ services:
     <<: *ibl-docker-image
     deploy:
       mode: replicated
-      replicas: 1
+      replicas: 0
     command:
-      - config_init
+      - configure
       - --alyxhost=dev
       - populate
       - ingest
-      - --duration=2
-        --sleep=5
+      - --duration=0.10
+        --sleep=1
       - --backtrack=1
 
   populate_behavior:
     <<: *ibl-docker-image
     deploy:
       mode: replicated
-      replicas: 1
+      replicas: 0
     command:
-      - config_init
+      - configure
       - --alyxhost=dev
       - populate
       - behavior
-      - --duration=2
-      - --sleep=5
+      - --duration=0.10
+      - --sleep=1
       - --backtrack=1

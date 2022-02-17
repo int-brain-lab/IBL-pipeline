@@ -1,11 +1,12 @@
-#! /bin/bash --login
+#!/bin/bash --login
 
 # IBL Ingestion Entrypoint Script
 # ===============================
 
 err_exit() {
-	echo "#! Error: $*"
-	exit 1
+	set -e
+	echo "#! Error: $*" >&2
+	return 1
 }
 
 script_cmd="${BASH_SOURCE[0]}"
@@ -17,7 +18,7 @@ shell_dir=$PWD
 [[ -z "${JUPYTER_PORT}" ]] && JUPYTER_PORT=10000
 [[ -z "${JUPYTER_TOKEN}" ]] && JUPYTER_TOKEN=IBLt0k
 
-config_init_dot_py=/usr/local/bin/config_init.py
+config_init_dot_py=/usr/local/bin/configure.py
 populate_dot_py=/usr/local/bin/populate.py
 
 SHOW_HELP=0
@@ -32,9 +33,9 @@ Entrypoint for iblenv or ingestion routines
 
 Functions:
 
-one_params ....... Create a 'local.one_params' parameters file and save to home dir
-config_init ...... Init configuration files for Alyx and DataJoint. Can pass args from
-                   '${config_init_dot_py}' after command, e.g., config_init [OPTION]...
+one_params ....... Create a 'local.one_params' parameters file and save to home dir.
+configure ........ Init configuration files for Alyx and DataJoint. Can pass args from
+                   '${config_init_dot_py}' after command, e.g., configure [OPTION]...
                    See examples section below.
 populate ......... Run the python script '${populate_dot_py}'.
                    Can pass args to script if args are specified after 'populate'.
@@ -42,7 +43,7 @@ populate ......... Run the python script '${populate_dot_py}'.
 terminate ........ Terminate all running database connection jobs.
 jupyterlab ....... Start a jupyter lab server using the following link:
                    http://127.0.0.1:${JUPYTER_PORT}/lab?token=${JUPYTER_TOKEN}
-dev .............. Wait indefinitely
+dev .............. Wait indefinitely.
 
 Environment Variables:
 
@@ -57,7 +58,7 @@ Examples:
    > $script_file dev
 
  Initialize configuration for Alyx and DataJoint
-   > $script_file config_init --alyxhost=private --djcfg='${IBL_PATH_ROOT}/config.json'
+   > $script_file configure --alyxhost=private --djcfg='${IBL_PATH_ROOT}/config.json'
 
  Run a populate task
    > $script_file populate behavior -b 5 --duration=0.5
@@ -78,13 +79,13 @@ while [[ $# -gt 0 ]]; do
 		OPS_SEQ+=("run_dev")
 		shift
 		;;
-	"config_init")
-		OPS_SEQ+=("config_init")
+	"configure")
+		OPS_SEQ+=("configure")
 		shift
 		for arg in "$@"; do
 			case "$1" in
 			--alyxhost=* | --onepar=* | --djcfg=*)
-				echo "config_init.py arg: '$1'"
+				echo "configure.py arg: '$1'"
 				CFG_INIT_ARGS+=("$1")
 				shift
 				;;
@@ -205,18 +206,18 @@ one_params() {
 	EOF
 }
 
-config_init() {
-	alyx configalyx
+configure() {
+	alyx config_alyx
 	one_params
-	python $config_init_dot_py ${CFG_INIT_ARGS[@]}
+	$config_init_dot_py ${CFG_INIT_ARGS[@]}
 }
 
 populate() {
-	python $populate_dot_py ${POPULATE_ARGS[@]}
+	$populate_dot_py ${POPULATE_ARGS[@]}
 }
 
 terminate_jobs() {
-	python $populate_dot_py "terminate"
+	$populate_dot_py "terminate"
 }
 
 jupyterlab() {

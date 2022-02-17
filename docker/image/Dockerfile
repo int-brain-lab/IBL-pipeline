@@ -84,7 +84,7 @@ RUN <<-EOF
 	chmod 775 /usr/local/bin/*
 	chown ${NEW_USER_NAME}:${NEW_USER_GROUP} /usr/local/bin/*
 	rm -rf ${IBL_PKG_DJ}/docker
-	rm -rf /usr/local/bin/test_init.py
+	rm -rf /usr/local/bin/test_configure.py
 EOF
 
 # Install debian package dependencies  -------------------------------------------------
@@ -106,7 +106,6 @@ RUN <<-EOF
 	chmod -R g+rwX ${IBL_PATH_ALYX}/..
 	chown www-data:www-data /var/www ${IBL_PATH_ALYX}/../uploaded
 	usermod -a -G adm ${NEW_USER_NAME}
-	install -m 770 /dev/null /etc/apache2/conf-available/servername.conf
 	install -m 770 /dev/null /etc/apache2/mods-available/wsgi.load
 	install -m 770 /dev/null /etc/apache2/sites-available/001-alyx.conf
 	install -m 770 /dev/null /var/log/alyx_json.log
@@ -125,10 +124,10 @@ RUN <<-EOF
 	pip install --no-input -vr ${IBL_PATH_ALYX}/requirements.txt
 	pip install --upgrade --pre "datajoint==0.12.9" # revert to old version
 	mamba develop \
-		${IBL_PKG_DJ} \
 		${IBL_PATH_ALYX}/alyx \
 		${IBL_PATH_ROOT}/ibllib-repo \
 		${IBL_PATH_ROOT}/iblapps
+	pip install -e ${IBL_PKG_DJ}
 	mamba update -qy --all
 EOF
 
@@ -136,6 +135,8 @@ USER root:condauser
 RUN <<-EOF
 	source /home/${NEW_USER_NAME}/.bash_profile
 	rm -f /home/${NEW_USER_NAME}/*.lock.yml
+	sed -i "1i#\!/usr/bin/env -S conda run -n $CONDA_ENV_USER python\n" /usr/local/bin/configure.py
+	sed -i "1i#\!/usr/bin/env -S conda run -n $CONDA_ENV_USER python\n" /usr/local/bin/populate.py
 	conda activate ${CONDA_ENV_USER}
 	mamba clean -qya
 	mamba env export --no-builds >${CONDA_ENV_USER}.lock.yml
@@ -179,7 +180,7 @@ ENV IBL_PATH_SHARED=${IBL_PATH_ROOT}/shared
 ENV IBL_PATH_ALYX=${ROOT_ALYX_PATH}
 
 # postgres/alyx/django related environment variables
-ENV PGUSER=alyxadmin
+ENV PGUSER=djsu
 ENV PGDATABASE=alyxdb
 ENV PGHOST=pgserver
 ENV POSTGRES_PASSWORD=
