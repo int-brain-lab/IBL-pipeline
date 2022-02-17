@@ -33,6 +33,7 @@ BEHAVIOR_TABLES = [
     behavior_plotting.DatePsychCurve,
     behavior_plotting.DateReactionTimeContrast,
     behavior_plotting.DateReactionTimeTrialNumber,
+    behavior.SessionTag
 ]
 
 if mode != 'public':
