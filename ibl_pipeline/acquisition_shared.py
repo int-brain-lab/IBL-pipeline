@@ -112,3 +112,49 @@ class SessionProject(dj.Manual):
     -> reference.Project.proj(session_project='project_name')
     sessionproject_ts=CURRENT_TIMESTAMP:   timestamp
     """
+
+
+@schema
+class Tag(dj.Lookup):
+    definition = """
+    tag: varchar(32)
+    ---
+    description='': varchar(32)  
+    """
+
+    contents = [('Repeated-Site-2022', 'move-to-public'),
+                ('Behavior-2022', 'move-to-public')]
+
+
+@schema
+class SessionTag(dj.Computed):
+    definition = """
+    -> Session
+    """
+
+    class Tag(dj.Part):
+        definition = """
+        -> master
+        -> Tag
+        """
+
+    def make(self, key):
+        sess_uuid = (Session & key).fetch1('session_uuid')
+
+        # code block to auto retrieve from one.alyx.rest()
+        all_tags = []
+        for d in one.alyx.rest('datasets', 'list', session=str(sess_uuid)):
+            all_tags.extend(d['tags'])
+
+        Tag.insert([{'tag': tag, 'description': 'alyx'} for tag in set(all_tags)], skip_duplicates=True)
+
+        # custom code block to determine additional tags a session may have
+        if 'Repeated site' in all_tags:
+            all_tags.append('Repeated-Site-2022')
+        if 'Behaviour Paper' in all_tags:
+            all_tags.append('Behavior-2022')
+
+        self.insert1(key)
+        self.Tag.insert([{**key, 'tag': tag} for tag in set(all_tags)])
+
+
