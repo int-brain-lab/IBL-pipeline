@@ -33,7 +33,7 @@ Entrypoint for iblenv or ingestion routines
 
 Functions:
 
-one_params ....... Create a 'local.one_params' parameters file and save to home dir.
+one_params ....... Create a 'alyx.one_params' parameters file and save to home dir.
 configure ........ Init configuration files for Alyx and DataJoint. Can pass args from
                    '${config_init_dot_py}' after command, e.g., configure [OPTION]...
                    See examples section below.
@@ -193,7 +193,7 @@ run_function_seq() {
 }
 
 one_params() {
-	cat <<-EOF >~/local.one_params
+	cat <<-EOF >"${IBL_PATH_ROOT}/shared/alyx.one_params"
 		{
 		    "ALYX_LOGIN": "${PGUSER}",
 		    "ALYX_PWD": "${PGPASSWORD}",

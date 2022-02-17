@@ -70,9 +70,9 @@ def env_test(ibl_path_root=None, env_file="", host="private", remove=False):
     copyfile(this_dir / "config.json", tmp_json)
 
     # copy
-    tmp_local = dirs["root"] / "local.one_params"
+    tmp_local = dirs["root"] / "alyx.one_params"
     tmp_local.unlink(True)
-    local_one_params = this_dir / ".." / ".." / "shared" / "local.one_params"
+    local_one_params = this_dir / ".." / ".." / "shared" / "alyx.one_params"
     copyfile(local_one_params, tmp_local)
 
     if not this_dir.as_posix() in sys.path:

@@ -46,7 +46,7 @@ _alyx_urls = {
 
 # default template file to use to populate config parameters for datajoint and alyx
 _default_json_template = Path(IBL_PATH_ROOT) / "config.json"
-_default_local_one_params = Path(IBL_PATH_ROOT) / "shared" / "local.one_params"
+_default_local_one_params = Path(IBL_PATH_ROOT) / "shared" / "alyx.one_params"
 
 # where ONE-api will look for first-time-use parameters
 _dest_one_params_path = Path.home() / ".one_params"
