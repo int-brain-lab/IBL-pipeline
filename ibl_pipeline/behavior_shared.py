@@ -1,17 +1,17 @@
-import datajoint as dj
-import numpy as np
 import datetime
 import logging
-from . import reference, subject, acquisition, data
-from . import mode, one
 
+import datajoint as dj
+import numpy as np
+
+from . import acquisition, data, mode, one, reference, subject
 
 logger = logging.getLogger(__name__)
 
-if mode == 'update':
-    schema = dj.schema('ibl_behavior')
+if mode == "update":
+    schema = dj.schema("ibl_behavior")
 else:
-    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_behavior')
+    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_behavior")
 
 
 @schema
@@ -24,18 +24,21 @@ class CompleteWheelSession(dj.Computed):
     """
 
     flatiron = 'repo_name like "%flatiron%"'
-    key_source = acquisition.Session & \
-        (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.position.npy"') & \
-        (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.timestamps.npy"')
+    key_source = (
+        acquisition.Session
+        & (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.position.npy"')
+        & (data.FileRecord & flatiron & 'dataset_name="_ibl_wheel.timestamps.npy"')
+    )
 
     def make(self, key):
-        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
-                    {'exists': 1}).fetch('dataset_name')
+        datasets = (
+            data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {"exists": 1}
+        ).fetch("dataset_name")
 
-        if '_ibl_wheel.velocity.npy' in datasets:
-            key['wheel_velocity_status'] = 'Complete'
+        if "_ibl_wheel.velocity.npy" in datasets:
+            key["wheel_velocity_status"] = "Complete"
         else:
-            key['wheel_velocity_status'] = 'Missing'
+            key["wheel_velocity_status"] = "Missing"
 
         self.insert1(key)
 
@@ -55,22 +58,26 @@ class Wheel(dj.Imported):
     key_source = CompleteWheelSession()
 
     def make(self, key):
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        wheel_timestamps = one.load_dataset(eID, '_ibl_wheel.timestamps', clobber=True)
+        eID = str((acquisition.Session & key).fetch1("session_uuid"))
+        wheel_timestamps = one.load_dataset(eID, "_ibl_wheel.timestamps", clobber=True)
 
         wheel_sampling_rate = 1 / np.median(np.diff(wheel_timestamps))
 
         if np.ndim(wheel_timestamps) == 2:
             wheel_timestamps = wheel_timestamps[:, 1]
 
-        key['wheel_start_time'] = wheel_timestamps[0]
-        key['wheel_end_time'] = wheel_timestamps[-1]
-        key['wheel_duration'] = wheel_timestamps[-1] - wheel_timestamps[0]
-        key['wheel_sampling_rate'] = wheel_sampling_rate
+        key["wheel_start_time"] = wheel_timestamps[0]
+        key["wheel_end_time"] = wheel_timestamps[-1]
+        key["wheel_duration"] = wheel_timestamps[-1] - wheel_timestamps[0]
+        key["wheel_sampling_rate"] = wheel_sampling_rate
 
         self.insert1(key)
-        logger.info('Populated a Wheel tuple for subject {subject_uuid} \
-            in session on {session_start_time}'.format(**key))
+        logger.info(
+            "Populated a Wheel tuple for subject {subject_uuid} \
+            in session on {session_start_time}".format(
+                **key
+            )
+        )
 
 
 @schema
@@ -104,29 +111,35 @@ class CompleteTrialSession(dj.Computed):
     iti_duration_status:            enum('Complete', 'Missing')
     """
 
-    required_datasets = ["_ibl_trials.feedback_times.npy",
-                         "_ibl_trials.feedbackType.npy",
-                         "_ibl_trials.intervals.npy",
-                         "_ibl_trials.choice.npy",
-                         "_ibl_trials.response_times.npy",
-                         "_ibl_trials.contrastLeft.npy",
-                         "_ibl_trials.contrastRight.npy",
-                         "_ibl_trials.probabilityLeft.npy"]
-    other_datasets = ["_ibl_trials.stimOn_times.npy",
-                      "_ibl_trials.repNum.npy",
-                      "_ibl_trials.repNum.npy",
-                      "_ibl_trials.included.npy",
-                      "_iblrig_ambientSensorData.raw.jsonable",
-                      "_ibl_trials.goCue_times.npy",
-                      "_ibl_trials.goCueTrigger_times.npy",
-                      "_ibl_trials.rewardVolume.npy",
-                      "_ibl_trials.itiDuration.npy"
-                      ]
+    required_datasets = [
+        "_ibl_trials.feedback_times.npy",
+        "_ibl_trials.feedbackType.npy",
+        "_ibl_trials.intervals.npy",
+        "_ibl_trials.choice.npy",
+        "_ibl_trials.response_times.npy",
+        "_ibl_trials.contrastLeft.npy",
+        "_ibl_trials.contrastRight.npy",
+        "_ibl_trials.probabilityLeft.npy",
+    ]
+    other_datasets = [
+        "_ibl_trials.stimOn_times.npy",
+        "_ibl_trials.repNum.npy",
+        "_ibl_trials.repNum.npy",
+        "_ibl_trials.included.npy",
+        "_iblrig_ambientSensorData.raw.jsonable",
+        "_ibl_trials.goCue_times.npy",
+        "_ibl_trials.goCueTrigger_times.npy",
+        "_ibl_trials.rewardVolume.npy",
+        "_ibl_trials.itiDuration.npy",
+    ]
 
     def get_missing_files(self, key):
-        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
-                    {'exists': 1}).fetch('dataset_name')
-        missing_files = [req_ds for req_ds in self.required_datasets if req_ds not in datasets]
+        datasets = (
+            data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {"exists": 1}
+        ).fetch("dataset_name")
+        missing_files = [
+            req_ds for req_ds in self.required_datasets if req_ds not in datasets
+        ]
         return datasets, missing_files
 
     def make(self, key):
@@ -137,70 +150,78 @@ class CompleteTrialSession(dj.Computed):
                 (IncompleteTrialSession & key).delete()
 
         if not missing_files:
-            if '_ibl_trials.stimOn_times.npy' not in datasets:
-                key['stim_on_times_status'] = 'Missing'
+            if "_ibl_trials.stimOn_times.npy" not in datasets:
+                key["stim_on_times_status"] = "Missing"
             else:
-                eID = str((acquisition.Session & key).fetch1('session_uuid'))
-                lab_name = (subject.SubjectLab & key).fetch1('lab_name')
-                if lab_name == 'wittenlab':
-                    stimOn_times = np.squeeze(one.load_dataset(
-                            eID, dataset='_ibl_trials.stimOn_times',
-                            clobber=True))
+                eID = str((acquisition.Session & key).fetch1("session_uuid"))
+                lab_name = (subject.SubjectLab & key).fetch1("lab_name")
+                if lab_name == "wittenlab":
+                    stimOn_times = np.squeeze(
+                        one.load_dataset(
+                            eID, dataset="_ibl_trials.stimOn_times", clobber=True
+                        )
+                    )
                 else:
                     stimOn_times = one.load_dataset(
-                        eID, dataset='_ibl_trials.stimOn_times', clobber=True)
+                        eID, dataset="_ibl_trials.stimOn_times", clobber=True
+                    )
 
                 if stimOn_times is not None and len(stimOn_times):
-                    if (len(stimOn_times)==1 and stimOn_times[0] is None) or \
-                            np.all(np.isnan(np.array(stimOn_times))):
-                        key['stim_on_times_status'] = 'Missing'
+                    if (len(stimOn_times) == 1 and stimOn_times[0] is None) or np.all(
+                        np.isnan(np.array(stimOn_times))
+                    ):
+                        key["stim_on_times_status"] = "Missing"
                     elif np.any(np.isnan(np.array(stimOn_times))):
-                        key['stim_on_times_status'] = 'Partial'
+                        key["stim_on_times_status"] = "Partial"
                     else:
-                        key['stim_on_times_status'] = 'Complete'
+                        key["stim_on_times_status"] = "Complete"
                 else:
-                    key['stim_on_times_status'] = 'Missing'
+                    key["stim_on_times_status"] = "Missing"
 
-            if '_ibl_trials.repNum.npy' not in datasets:
-                key['rep_num_status'] = 'Missing'
+            if "_ibl_trials.repNum.npy" not in datasets:
+                key["rep_num_status"] = "Missing"
             else:
-                key['rep_num_status'] = 'Complete'
+                key["rep_num_status"] = "Complete"
 
-            if '_ibl_trials.included.npy' not in datasets:
-                key['included_status'] = 'Missing'
+            if "_ibl_trials.included.npy" not in datasets:
+                key["included_status"] = "Missing"
             else:
-                key['included_status'] = 'Complete'
+                key["included_status"] = "Complete"
 
-            if '_iblrig_ambientSensorData.raw.jsonable' not in datasets:
-                key['ambient_sensor_data_status'] = 'Missing'
+            if "_iblrig_ambientSensorData.raw.jsonable" not in datasets:
+                key["ambient_sensor_data_status"] = "Missing"
             else:
-                key['ambient_sensor_data_status'] = 'Complete'
+                key["ambient_sensor_data_status"] = "Complete"
 
-            if '_ibl_trials.goCue_times.npy' not in datasets:
-                key['go_cue_times_status'] = 'Missing'
+            if "_ibl_trials.goCue_times.npy" not in datasets:
+                key["go_cue_times_status"] = "Missing"
             else:
-                key['go_cue_times_status'] = 'Complete'
+                key["go_cue_times_status"] = "Complete"
 
-            if '_ibl_trials.goCueTrigger_times.npy' not in datasets:
-                key['go_cue_trigger_times_status'] = 'Missing'
+            if "_ibl_trials.goCueTrigger_times.npy" not in datasets:
+                key["go_cue_trigger_times_status"] = "Missing"
             else:
-                key['go_cue_trigger_times_status'] = 'Complete'
+                key["go_cue_trigger_times_status"] = "Complete"
 
-            if '_ibl_trials.rewardVolume.npy' not in datasets:
-                key['reward_volume_status'] = 'Missing'
+            if "_ibl_trials.rewardVolume.npy" not in datasets:
+                key["reward_volume_status"] = "Missing"
             else:
-                key['reward_volume_status'] = 'Complete'
+                key["reward_volume_status"] = "Complete"
 
-            if '_ibl_trials.itiDuration.npy' not in datasets:
-                key['iti_duration_status'] = 'Missing'
+            if "_ibl_trials.itiDuration.npy" not in datasets:
+                key["iti_duration_status"] = "Missing"
             else:
-                key['iti_duration_status'] = 'Complete'
+                key["iti_duration_status"] = "Complete"
 
             self.insert1(key)
         else:
-            IncompleteTrialSession.insert1({**key, 'reason': 'missing required files'}, allow_direct_insert=True)
-            IncompleteTrialSession.MissingFile.insert([{**key, 'missing_file': f}
-                                                       for f in missing_files], allow_direct_insert=True)
+            IncompleteTrialSession.insert1(
+                {**key, "reason": "missing required files"}, allow_direct_insert=True
+            )
+            IncompleteTrialSession.MissingFile.insert(
+                [{**key, "missing_file": f} for f in missing_files],
+                allow_direct_insert=True,
+            )
 
 
 @schema
@@ -220,93 +241,121 @@ class TrialSet(dj.Imported):
 
     def make(self, key):
         trial_key = key.copy()
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
+        eID = str((acquisition.Session & key).fetch1("session_uuid"))
 
         status = (CompleteTrialSession & key).fetch1()
 
-        trials = one.load_object(eID, 'trials')
+        trials = one.load_object(eID, "trials")
 
-        if status['stim_on_times_status'] != 'Missing':
-            if len(trials['stimOn_times']) == 1:
-                trials['stimOn_times'] = np.squeeze(trials['stimOn_times'])
+        if status["stim_on_times_status"] != "Missing":
+            if len(trials["stimOn_times"]) == 1:
+                trials["stimOn_times"] = np.squeeze(trials["stimOn_times"])
 
-        assert len(np.unique(np.array([len(trials['feedback_times']),
-                                       len(trials['feedbackType']),
-                                       len(trials['intervals']),
-                                       len(trials['choice']),
-                                       len(trials['response_times']),
-                                       len(trials['contrastLeft']),
-                                       len(trials['contrastRight']),
-                                       len(trials['probabilityLeft'])
-                                       ]))) == 1
-        'Loaded trial files do not have the same length'
+        assert (
+            len(
+                np.unique(
+                    np.array(
+                        [
+                            len(trials["feedback_times"]),
+                            len(trials["feedbackType"]),
+                            len(trials["intervals"]),
+                            len(trials["choice"]),
+                            len(trials["response_times"]),
+                            len(trials["contrastLeft"]),
+                            len(trials["contrastRight"]),
+                            len(trials["probabilityLeft"]),
+                        ]
+                    )
+                )
+            )
+            == 1
+        )
+        "Loaded trial files do not have the same length"
 
-        key['n_trials'] = len(trials['choice'])
-        key['n_correct_trials'] = \
-            sum((np.squeeze(trials['choice']) == 1) &
-                (np.squeeze(trials['contrastLeft']) > 0)) \
-            + sum((np.squeeze(trials['choice']) == -1) &
-                  (np.squeeze(trials['contrastRight']) > 0))
+        key["n_trials"] = len(trials["choice"])
+        key["n_correct_trials"] = sum(
+            (np.squeeze(trials["choice"]) == 1)
+            & (np.squeeze(trials["contrastLeft"]) > 0)
+        ) + sum(
+            (np.squeeze(trials["choice"]) == -1)
+            & (np.squeeze(trials["contrastRight"]) > 0)
+        )
 
-        key['trials_start_time'] = trials['intervals'][0, 0]
-        key['trials_end_time'] = trials['intervals'][-1, 1]
+        key["trials_start_time"] = trials["intervals"][0, 0]
+        key["trials_end_time"] = trials["intervals"][-1, 1]
 
         trial_entries = []
-        for idx_trial in range(len(trials['choice'])):
+        for idx_trial in range(len(trials["choice"])):
 
-            if np.any(np.isnan([trials['intervals'][idx_trial, 1],
-                                trials['choice'][idx_trial],
-                                trials['probabilityLeft'][idx_trial]])):
+            if np.any(
+                np.isnan(
+                    [
+                        trials["intervals"][idx_trial, 1],
+                        trials["choice"][idx_trial],
+                        trials["probabilityLeft"][idx_trial],
+                    ]
+                )
+            ):
                 continue
 
             trial = trial_key.copy()
-            c_left = trials['contrastLeft'][idx_trial]
-            c_right = trials['contrastRight'][idx_trial]
+            c_left = trials["contrastLeft"][idx_trial]
+            c_right = trials["contrastRight"][idx_trial]
             trial.update(
-                trial_id=idx_trial+1,
-                trial_start_time=float(trials['intervals'][idx_trial, 0]),
-                trial_end_time=float(trials['intervals'][idx_trial, 1]),
-                trial_response_time=float(trials['response_times'][idx_trial]),
+                trial_id=idx_trial + 1,
+                trial_start_time=float(trials["intervals"][idx_trial, 0]),
+                trial_end_time=float(trials["intervals"][idx_trial, 1]),
+                trial_response_time=float(trials["response_times"][idx_trial]),
                 trial_stim_contrast_left=0 if np.isnan(c_left) else float(c_left),
                 trial_stim_contrast_right=0 if np.isnan(c_right) else float(c_right),
-                trial_feedback_time=float(trials['feedback_times'][idx_trial]),
-                trial_feedback_type=int(trials['feedbackType'][idx_trial]),
-                trial_stim_prob_left=float(trials['probabilityLeft'][idx_trial]),
-                trial_stim_on_time=float(trials['stimOn_times'][idx_trial])
-                if status['stim_on_times_status'] != 'Missing' else None,
-                trial_rep_num=int(trials['repNum'][idx_trial])
-                if status['rep_num_status'] != 'Missing' else None,
-                trial_included=bool(trials['included'][idx_trial])
-                if status['included_status'] != 'Missing' else None,
-                trial_go_cue_time=float(trials['goCue_times'][idx_trial])
-                if status['go_cue_times_status'] != 'Missing' else None,
-                trial_go_cue_trigger_time=float(
-                    trials['goCueTrigger_times'][idx_trial])
-                if status['go_cue_trigger_times_status'] != 'Missing' else None,
-                trial_reward_volume=float(trials['rewardVolume'][idx_trial])
-                if status['reward_volume_status'] != 'Missing' else None,
-                trial_iti_duration=float(trials['itiDuration'][idx_trial])
-                if status['iti_duration_status'] != 'Missing' else None
+                trial_feedback_time=float(trials["feedback_times"][idx_trial]),
+                trial_feedback_type=int(trials["feedbackType"][idx_trial]),
+                trial_stim_prob_left=float(trials["probabilityLeft"][idx_trial]),
+                trial_stim_on_time=float(trials["stimOn_times"][idx_trial])
+                if status["stim_on_times_status"] != "Missing"
+                else None,
+                trial_rep_num=int(trials["repNum"][idx_trial])
+                if status["rep_num_status"] != "Missing"
+                else None,
+                trial_included=bool(trials["included"][idx_trial])
+                if status["included_status"] != "Missing"
+                else None,
+                trial_go_cue_time=float(trials["goCue_times"][idx_trial])
+                if status["go_cue_times_status"] != "Missing"
+                else None,
+                trial_go_cue_trigger_time=float(trials["goCueTrigger_times"][idx_trial])
+                if status["go_cue_trigger_times_status"] != "Missing"
+                else None,
+                trial_reward_volume=float(trials["rewardVolume"][idx_trial])
+                if status["reward_volume_status"] != "Missing"
+                else None,
+                trial_iti_duration=float(trials["itiDuration"][idx_trial])
+                if status["iti_duration_status"] != "Missing"
+                else None,
             )
 
-            if trials['choice'][idx_trial] == -1:
-                trial['trial_response_choice'] = "CCW"
-            elif trials['choice'][idx_trial] == 0:
-                trial['trial_response_choice'] = "No Go"
-            elif trials['choice'][idx_trial] == 1:
-                trial['trial_response_choice'] = "CW"
+            if trials["choice"][idx_trial] == -1:
+                trial["trial_response_choice"] = "CCW"
+            elif trials["choice"][idx_trial] == 0:
+                trial["trial_response_choice"] = "No Go"
+            elif trials["choice"][idx_trial] == 1:
+                trial["trial_response_choice"] = "CW"
             else:
-                raise ValueError('Invalid reponse choice.')
+                raise ValueError("Invalid reponse choice.")
 
             trial_entries.append(trial)
 
         self.insert1(key)
         self.Trial.insert(trial_entries)
 
-        logger.info('Populated a TrialSet tuple, \
+        logger.info(
+            "Populated a TrialSet tuple, \
             all Trial tuples and Excluded Trial tuples for \
             subject {subject_uuid} in session started at \
-            {session_start_time}'.format(**trial_key))
+            {session_start_time}".format(
+                **trial_key
+            )
+        )
 
     class Trial(dj.Part):
         # all times are in absolute seconds, rather than relative to trial onset
@@ -359,25 +408,28 @@ class SessionDelay(dj.Imported):
 
     # only check missing data within 5 days
     date = datetime.datetime.today() - datetime.timedelta(days=5)
-    key_source = TrialSet() - \
-        (SessionDelayAvailability() & 'session_start_time < "{}"'.format(
-            date.strftime('%Y-%m-%d')))
+    key_source = TrialSet() - (
+        SessionDelayAvailability()
+        & 'session_start_time < "{}"'.format(date.strftime("%Y-%m-%d"))
+    )
 
     def make(self, key):
-        eID = (acquisition.Session & key).fetch1('session_uuid')
-        json = one.alyx.get(one.get_details(str(eID))['url'])['json']
+        eID = (acquisition.Session & key).fetch1("session_uuid")
+        json = one.alyx.get(one.get_details(str(eID))["url"])["json"]
 
-        if 'SESSION_START_DELAY_SEC' in json.keys():
-            self.insert1(dict(
-                **key,
-                session_delay_in_secs=json['SESSION_START_DELAY_SEC'],
-                session_delay_in_mins=json['SESSION_START_DELAY_SEC'] / 60
-            ))
+        if "SESSION_START_DELAY_SEC" in json.keys():
+            self.insert1(
+                dict(
+                    **key,
+                    session_delay_in_secs=json["SESSION_START_DELAY_SEC"],
+                    session_delay_in_mins=json["SESSION_START_DELAY_SEC"] / 60
+                )
+            )
         else:
-            key['error_type'] = 'delay not available'
+            key["error_type"] = "delay not available"
             SessionDelayAvailability.insert1(
-                key, allow_direct_insert=True,
-                skip_duplicates=True)
+                key, allow_direct_insert=True, skip_duplicates=True
+            )
 
 
 @schema
@@ -399,37 +451,39 @@ class Settings(dj.Imported):
 
     # only check missing data within 5 days
     date = datetime.datetime.today() - datetime.timedelta(days=5)
-    key_source = TrialSet() - \
-        (SettingsAvailability() & 'session_start_time < "{}"'.format(
-            date.strftime('%Y-%m-%d')))
+    key_source = TrialSet() - (
+        SettingsAvailability()
+        & 'session_start_time < "{}"'.format(date.strftime("%Y-%m-%d"))
+    )
 
     def make(self, key):
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
+        eID = str((acquisition.Session & key).fetch1("session_uuid"))
         try:
-            setting = one.load_dataset(eID, dataset='_iblrig_taskSettings.raw',
-                                       clobber=True)
+            setting = one.load_dataset(
+                eID, dataset="_iblrig_taskSettings.raw", clobber=True
+            )
         except Exception as e:
-            key['error_type'] = 'settings not available'
+            key["error_type"] = "settings not available"
             SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
 
         if setting is None:
-            key['error_type'] = 'settings not available'
+            key["error_type"] = "settings not available"
             SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
         elif not len(setting):
-            key['error_type'] = 'settings not available'
+            key["error_type"] = "settings not available"
             SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
         elif setting[0] is None:
-            key['error_type'] = 'settings not available'
+            key["error_type"] = "settings not available"
             SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
-        elif setting[0]['PYBPOD_BOARD'] is None:
-            key['error_type'] = 'settings not available'
+        elif setting[0]["PYBPOD_BOARD"] is None:
+            key["error_type"] = "settings not available"
             SettingsAvailability.insert1(key, allow_direct_insert=True)
             return
-        key['pybpod_board'] = setting[0]['PYBPOD_BOARD']
+        key["pybpod_board"] = setting[0]["PYBPOD_BOARD"]
         self.insert1(key)
 
 
@@ -446,19 +500,20 @@ class AmbientSensorData(dj.Imported):
 
     def make(self, key):
         trial_key = key.copy()
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        asd = one.load_dataset(eID, dataset='_iblrig_ambientSensorData.raw',
-                               clobber=True)
+        eID = str((acquisition.Session & key).fetch1("session_uuid"))
+        asd = one.load_dataset(
+            eID, dataset="_iblrig_ambientSensorData.raw", clobber=True
+        )
 
         if not len(TrialSet.Trial & key) == len(asd[0]):
-            print('Size of ambient sensor data does not match the trial number')
+            print("Size of ambient sensor data does not match the trial number")
             return
 
         for idx_trial, asd_trial in enumerate(asd[0]):
-            trial_key['trial_id'] = idx_trial + 1
-            trial_key['temperature_c'] = asd_trial['Temperature_C'][0]
-            trial_key['air_pressure_mb'] = asd_trial['AirPressure_mb'][0]
-            trial_key['relative_humidity'] = asd_trial['RelativeHumidity'][0]
+            trial_key["trial_id"] = idx_trial + 1
+            trial_key["temperature_c"] = asd_trial["Temperature_C"][0]
+            trial_key["air_pressure_mb"] = asd_trial["AirPressure_mb"][0]
+            trial_key["relative_humidity"] = asd_trial["RelativeHumidity"][0]
             self.insert1(trial_key)
 
 
@@ -470,17 +525,19 @@ class Tag(dj.Lookup):
     definition = """
     tag: varchar(32)
     ---
-    description='': varchar(32)  
+    description='': varchar(32)
     """
 
-    contents = [('Repeated-Site-2022', 'move-to-public'),
-                ('Behavior-2022', 'move-to-public')]
+    contents = [
+        ("Repeated-Site-2022", "move-to-public"),
+        ("Behavior-2022", "move-to-public"),
+    ]
 
 
 @schema
 class SessionTag(dj.Computed):
     definition = """
-    -> Session
+    -> acquisition.Session
     """
 
     class Tag(dj.Part):
@@ -492,22 +549,24 @@ class SessionTag(dj.Computed):
     key_source = acquisition.Session & CompleteTrialSession
 
     def make(self, key):
-        sess_uuid = (acquisition.Session & key).fetch1('session_uuid')
+        self.insert1(key)
+        sess_uuid = (acquisition.Session & key).fetch1("session_uuid")
 
         # code block to auto retrieve from one.alyx.rest()
         all_tags = []
-        for d in one.alyx.rest('datasets', 'list', session=str(sess_uuid)):
-            all_tags.extend(d['tags'])
+        for d in one.alyx.rest("datasets", "list", session=str(sess_uuid)):
+            all_tags.extend(d["tags"])
 
-        Tag.insert([{'tag': tag, 'description': 'alyx'} for tag in set(all_tags)], skip_duplicates=True)
+        tag_lookup_data = [{"tag": tag, "description": "alyx"} for tag in set(all_tags)]
+        if tag_lookup_data:
+            Tag.insert(tag_lookup_data, skip_duplicates=True)
 
         # custom code block to determine additional tags a session may have
-        if 'Repeated site' in all_tags:
-            all_tags.append('Repeated-Site-2022')
-        if 'Behaviour Paper' in all_tags:
-            all_tags.append('Behavior-2022')
+        if "Repeated site" in all_tags:
+            all_tags.append("Repeated-Site-2022")
+        if "Behaviour Paper" in all_tags:
+            all_tags.append("Behavior-2022")
 
-        self.insert1(key)
-        self.Tag.insert([{**key, 'tag': tag} for tag in set(all_tags)])
-
-
+        tag_part_data = [{**key, "tag": tag} for tag in set(all_tags)]
+        if tag_part_data:
+            self.Tag.insert(tag_part_data)
