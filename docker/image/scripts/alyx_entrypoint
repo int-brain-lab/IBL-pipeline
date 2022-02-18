@@ -10,7 +10,7 @@ parse_entrypoint_args() {
 
 	if [[ $# -gt 0 ]]; then
 		for arg in "$@"; do
-			if [[ " ${ignore_args[@]} " =~ " ${arg} " ]]; then
+			if [[ " ${ignore_args[*]} " =~ " ${arg} " ]]; then
 				echo "'$arg' is already turned on by default."
 			else
 				ALYX_ENTRY_ARGS+=("${arg}")

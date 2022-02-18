@@ -14,7 +14,7 @@ err_exit() {
 
 # get this script file and its parent directory name (no symlink resolution)
 script_cmd="${BASH_SOURCE[0]}"
-script_path="$(cd "$(dirname ${script_cmd})" &>/dev/null && pwd)"
+script_path="$(cd "$(dirname "${script_cmd}")" &>/dev/null && pwd)"
 script_file=$(basename "${script_cmd}")
 shell_dir=$PWD
 
@@ -38,7 +38,7 @@ ALYX_DUMP_URL=
 ALYX_DUMP_FILE=
 ALYX_DUMP_EXPIRES=6
 ALYX_DUMP_DIR="${IBL_PATH_DATA}/alyx/dumps"
-DISABLE_MAIL=true
+export DISABLE_MAIL=true
 
 # paths of alyx files used during db setup/interaction steps
 alyx_manager="${IBL_PATH_ALYX}/alyx/manage.py"
@@ -180,7 +180,7 @@ while [[ $# -gt 0 ]]; do
 		echo "--reset_db_loaded_file passed. Removing '${db_loaded_file}'"
 		shift
 		;;
-	"help" | "--help" | "-h" | "--help")
+	"help" | "--help" | "-h")
 		SHOW_HELP=1
 		break
 		;;
@@ -351,13 +351,16 @@ check_url() {
 	shift
 	[[ -z "${chkurl}" ]] && err_exit "check_url() requires at least 1 input arg"
 	echo "# => checking for a valid flatiron URL: $chkurl"
-	local response=$(wget --server-response --spider $chkurl "$@" 2>&1)
-	CONNECTION_ESTABLISHED=1
-	if [[ ! $(echo "$response" 2>&1 | grep 'HTTP/1.1 200 OK') ]] ||
-		[[ ! $(echo "$response" 2>&1 | grep 'Connection: Keep-Alive') ]]; then
+	local response
+	response=$(wget --server-response --spider "$chkurl" "$@" 2>&1)
+	CONNECTION_ESTABLISHED=0
+
+	if echo "$response" | grep -q 'HTTP/1.1 200 OK'; then
+		CONNECTION_ESTABLISHED=1
+		echo "# ==> valid URL found."
+	else
 		echo "#~ Warning: could not connect to: '$chkurl' w/ '$*'"
 		echo "$response"
-		CONNECTION_ESTABLISHED=0
 	fi
 }
 
@@ -392,13 +395,17 @@ alyx_op_wait_lock() {
 		rm -vf "${alyx_lock_file}"
 	else
 		local break_after=3600
-		local ts_now=$(date +"%s")
+		local ts_start
+		local ts_now
+
 		[[ "${1}" = "--timeout" ]] && break_after=${2:-${break_after}}
 
+		ts_start=$(date +"%s")
 		while [[ -f "${alyx_lock_file}" ]]; do
 			echo "... waiting for end of running alyx process"
 			sleep 15
-			[[ $(($(date +"%s") - $ts_now)) -gt ${break_after} ]] && break
+			ts_now=$(date +"%s")
+			[[ $((ts_now - ts_start)) -gt ${break_after} ]] && break
 		done
 
 		touch "${alyx_lock_file}"
@@ -433,7 +440,7 @@ create_dbs() {
 		psql -c "CREATE DATABASE root;"
 	fi
 
-	check_db_usr ${PGUSER} -e
+	check_db_usr "${PGUSER}" -e
 	psql -c "ALTER ROLE ${PGUSER} SET client_encoding TO 'utf8';" >/dev/null
 	psql -c "ALTER ROLE ${PGUSER} SET default_transaction_isolation TO 'read committed';" >/dev/null
 	psql -c "ALTER ROLE ${PGUSER} SET timezone TO 'UTC';" >/dev/null
@@ -459,15 +466,14 @@ fetch_dump() {
 		[[ -z "${url}" ]] &&
 			url="${FLATIRON_SERVER}/json/${ALYX_DL_DATE}_alyxfull.sql.gz"
 
-		check_url "$url" \
-			--user "${FLATIRON_SERVER_LOGIN}" --password "${FLATIRON_SERVER_PWD}"
+		check_url "${url}" --user "${FLATIRON_SERVER_LOGIN}" --password "${FLATIRON_SERVER_PWD}"
 
 		if [[ $CONNECTION_ESTABLISHED -eq 0 ]]; then
 			unset ALYX_DUMP_FILE
 		else
-			mkdir -p $(dirname "${ALYX_DUMP_FILE}")
+			mkdir -p "$(dirname "${ALYX_DUMP_FILE}")"
 			echo "# => Downloading database dump from '$url' ..."
-			wget -q -O ${ALYX_DUMP_FILE} \
+			wget -q -O "${ALYX_DUMP_FILE}" \
 				--user "$FLATIRON_SERVER_LOGIN" \
 				--password "$FLATIRON_SERVER_PWD" \
 				"${url}"
@@ -477,23 +483,30 @@ fetch_dump() {
 }
 
 clean_dls() {
+	sudo whoami >/dev/null 2>&1
+
 	echo "# => current disk usage for '${IBL_PATH_DATA}'"
 	du -h --max-depth=2 ${IBL_PATH_DATA} | sort -h
 
-	local old_dumps=$(find "${ALYX_DUMP_DIR}/sql" -type f \
-		-mmin +$((${ALYX_DUMP_EXPIRES} * 60 * 24)) 2>/dev/null)
-	if [[ ! -z ${old_dumps} ]]; then
-		echo "# => cleaning sql dumps ${old_dumps}"
-		rm -f ${old_dumps}
+	local old_dumps
+	local exp_sec
+	exp_sec=$((ALYX_DUMP_EXPIRES * 60 * 24))
+
+	IFS=$'\n'
+	old_dumps=($(find "${ALYX_DUMP_DIR}/sql" -type f -mmin +"${exp_sec}" 2>/dev/null))
+	unset IFS
+
+	if [[ ${old_dumps[#]} -gt 0 ]]; then
+		echo "# => cleaning sql dumps ${old_dumps[*]}"
+		rm -f "${old_dumps[@]}"
 	else
 		echo "# => no sql dumps to clean from $(ls -lh ${ALYX_DUMP_DIR}/sql)"
 	fi
 
 	local cache_dir="${IBL_PATH_DATA}/alyx/cache"
 	echo "# ==> cleaning cache files from '$cache_dir'"
-	find "${cache_dir}" -mindepth 1 ! -type d -not -name histology -printf '%s %p\n'
-	sudo whoami >/dev/null 2>&1
-	sudo find "${cache_dir}" -mindepth 1 ! -type d -not -name histology -delete
+	find "${cache_dir}" -mindepth 1 ! -type d -mmin +"${exp_sec}" -not -name histology -printf '%s %p\n'
+	sudo find "${cache_dir}" -mindepth 1 ! -type d -mmin +"${exp_sec}" -not -name histology -delete
 }
 
 config_alyx() {
@@ -561,7 +574,7 @@ config_alyx() {
 
 	awk \
 		-v USERNAME="$(id -un)" \
-		-v GROUPNAME=$(id -Gn) \
+		-v GROUPNAME="$(id -Gn)" \
 		-v CENVPTH="${condaenvpath}" \
 		-v ALYXROOT="${IBL_PATH_ALYX}" \
 		-v CENVPKG="${condaenvpkgs}" '{
@@ -612,7 +625,7 @@ create_su() {
 		manage_alyx set_user_permissions
 
 		echo "# ==> dumping su token for use after db reset"
-		manage_alyx dumpdata --indent 1 misc.labmember authtoken >"${su_token_fixture}"
+		manage_alyx dumpdata --indent 1 auth.group authtoken misc.labmember >"${su_token_fixture}"
 	fi
 }
 
@@ -647,7 +660,6 @@ load_alyx_fixtures() {
 		echo "# ==> loading fixture: '${fx}'"
 		manage_alyx loaddata "${IBL_PATH_ALYX}/alyx/$fx"
 	done
-
 
 }
 
@@ -706,7 +718,7 @@ reset_alyx() {
 }
 
 load_db() {
-	check_db ${PGDATABASE} -e
+	check_db "${PGDATABASE}" -e
 	local db_was_loaded=false
 	local do_db_reset=false
 	[[ "$1" = "--reset" ]] && do_db_reset=true
@@ -717,7 +729,7 @@ load_db() {
 	else
 		if [[ -f "${ALYX_DUMP_FILE}" ]]; then
 			echo "# => loading database ${ALYX_DUMP_FILE}"
-			sql_dump_load
+			sql_dump_load "${ALYX_DUMP_FILE}" "${PGDATABASE}"
 			echo "${ALYX_DUMP_FILE}" >"${db_loaded_file}"
 			db_was_loaded=true
 		else
@@ -763,7 +775,7 @@ dump_json() {
 
 dump_sql() {
 	echo "# => performing sql backup"
-	pg_dump -cOx -U ${PGUSER} -h ${PGHOST} -d ${PGDATABASE} \
+	pg_dump -cOx -U "${PGUSER}" -h "${PGHOST}" -d "${PGDATABASE}" \
 		-f "${ALYX_DUMP_DIR}/backup/alyx_full.sql"
 	echo "# ==> zipping sql backup"
 	gzip -f "${ALYX_DUMP_DIR}/backup/alyx_full.sql"
@@ -790,7 +802,7 @@ start_server() {
 	sudo service apache2 reload >/dev/null
 	sleep 3
 	touch "${alyx_server_start_file}"
-	manage_alyx runserver --insecure 0.0.0.0:${ALYX_PORT}
+	manage_alyx runserver --insecure "0.0.0.0:${ALYX_PORT}"
 }
 
 check_server() {
@@ -843,7 +855,7 @@ www_no_load() {
 # Start operations ---------------------------------------------------------------------
 
 # switch to appropriate python environment
-conda activate ${CONDA_ENV_USER}
+conda activate "${CONDA_ENV_USER}"
 
 # run sequence of operations specified by user
 run_function_seq "${OPS_SEQ[@]}"

@@ -71,7 +71,7 @@ Examples:
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
-	"help" | "--help" | "-h" | "--help")
+	"help" | "--help" | "-h")
 		SHOW_HELP=1
 		break
 		;;
@@ -122,7 +122,7 @@ while [[ $# -gt 0 ]]; do
 				shift
 				shift
 				;;
-			-d)
+			-s)
 				echo "populate.py arg: '-s $2'"
 				POPULATE_ARGS+=("--sleep=$2")
 				shift
@@ -209,11 +209,11 @@ one_params() {
 configure() {
 	alyx config_alyx
 	one_params
-	$config_init_dot_py ${CFG_INIT_ARGS[@]}
+	$config_init_dot_py "${CFG_INIT_ARGS[@]}"
 }
 
 populate() {
-	$populate_dot_py ${POPULATE_ARGS[@]}
+	$populate_dot_py "${POPULATE_ARGS[@]}"
 }
 
 terminate_jobs() {
@@ -223,7 +223,7 @@ terminate_jobs() {
 jupyterlab() {
 	echo "Jupyter link: http://127.0.0.1:${JUPYTER_PORT}/lab?token=${JUPYTER_TOKEN}"
 	jupyter lab -y --no-browser --ip=0.0.0.0 \
-		--port=${JUPYTER_PORT} --ServerApp.token="${JUPYTER_TOKEN}"
+		--port="${JUPYTER_PORT}" --ServerApp.token="${JUPYTER_TOKEN}"
 }
 
 # Start operations ---------------------------------------------------------------------
