@@ -27,7 +27,7 @@ services:
       retries: 3
       start_period: 2s
     volumes:
-      - vscode-server:/home/ibl/.vscode-server/extensions
+      - vscode-ext:/home/ibl/.vscode-server/extensions
 
   iblenv:
     <<: *ibl-docker-image

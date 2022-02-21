@@ -48,7 +48,7 @@ x-env-vars-dj: &env-vars-dj
   S3_SECRET: ${S3_SECRET:-}
 
 x-volume-mount-data-cache:
-  - &volume-mount-data-cache data_cache:/int-brain-lab/data
+  - &volume-mount-data-cache data-cache:/int-brain-lab/data
 
 x-volume-bind-shared:
   - &volume-bind-shared ${LOCAL_SHARED:-../shared}:/int-brain-lab/shared
@@ -56,8 +56,8 @@ x-volume-bind-shared:
 x-volume-bind-ibl-pipeline:
   - &volume-bind-ibl-pipeline ${LOCAL_PIPELINE:-../ibl_pipeline}:/int-brain-lab/IBL-pipeline/ibl_pipeline
 
-x-volume-mount-vscode-server:
-  - &volume-mount-vscode-server vscode-server:/home/ibl/.vscode-server/extensions
+x-volume-mount-vscode-ext:
+  - &volume-mount-vscode-ext vscode-ext:/home/ibl/.vscode-server/extensions
 
 x-service-ibl-common: &service-ibl-common
   <<: *image-iblenv
@@ -88,15 +88,15 @@ x-service-ibl-pipeline: &service-ibl-pipeline
 # Global Networks and Volumes ----------------------------------------------------------
 networks:
   iblenv:
-    name: iblenv_alyx_network
+    name: iblenv-alyx-network
 
 volumes:
-  data_cache:
-    name: iblenv_alyx_data_cache
+  data-cache:
+    name: iblenv-data-cache
   pgdata:
-    name: iblenv_alyx_pgdata
-  vscode-server:
-    name: dev-vscode-server
+    name: iblenv-pgdata
+  vscode-ext:
+    name: vscode-server-extensions
 
 services:
   # Postgres Server --------------------------------------------------------------------
@@ -177,7 +177,7 @@ services:
   iblenv:
     <<: *service-ibl-pipeline
     volumes:
-      - *volume-mount-vscode-server
+      - *volume-mount-vscode-ext
       - *volume-mount-data-cache
       - *volume-bind-shared
       - *volume-bind-ibl-pipeline
