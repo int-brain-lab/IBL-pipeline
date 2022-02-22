@@ -506,12 +506,12 @@ class SessionTag(dj.Computed):
     key_source = acquisition.Session & CompleteTrialSession
 
     def make(self, key):
-        self.insert1(key)
+        self.insert1(key, skip_duplicates=True)
         sess_uuid = (acquisition.Session & key).fetch1("session_uuid")
 
         # code block to auto retrieve from one.alyx.rest()
         all_tags = []
-        for d in one.alyx.rest("datasets", "list", session=str(sess_uuid)):
+        for d in one.alyx.rest("datasets", "list", session=str(sess_uuid), silent=True):
             all_tags.extend(d["tags"])
 
         tag_lookup_data = [{"tag": tag, "description": "alyx"} for tag in set(all_tags)]
@@ -526,4 +526,5 @@ class SessionTag(dj.Computed):
 
         tag_part_data = [{**key, "tag": tag} for tag in set(all_tags)]
         if tag_part_data:
-            self.Tag.insert(tag_part_data)
+            [print("Tagging: ", tag) for tag in tag_part_data]
+            self.Tag.insert(tag_part_data, skip_duplicates=True)
