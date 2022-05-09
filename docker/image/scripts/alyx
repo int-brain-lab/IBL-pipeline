@@ -496,7 +496,7 @@ clean_dls() {
 	old_dumps=($(find "${ALYX_DUMP_DIR}/sql" -type f -mmin +"${exp_sec}" 2>/dev/null))
 	unset IFS
 
-	if [[ ${old_dumps[#]} -gt 0 ]]; then
+	if [[ ${#old_dumps[@]} -gt 0 ]]; then
 		echo "# => cleaning sql dumps ${old_dumps[*]}"
 		rm -f "${old_dumps[@]}"
 	else
@@ -617,7 +617,7 @@ create_su() {
 			except Exception as e:
 			    print(e)
 		EOF
-
+		set -e
 		echo "# ==> creating superuser token"
 		manage_alyx drf_create_token "${PGUSER}"
 
@@ -626,6 +626,7 @@ create_su() {
 
 		echo "# ==> dumping su token for use after db reset"
 		manage_alyx dumpdata --indent 1 auth.group authtoken misc.labmember >"${su_token_fixture}"
+		set +e
 	fi
 }
 
