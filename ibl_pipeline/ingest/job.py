@@ -3,6 +3,7 @@ import inspect
 import logging
 import os
 import time
+from pathlib import Path
 
 import datajoint as dj
 
@@ -1240,26 +1241,36 @@ _ingestion_tables = (
 )
 
 
-def read_db_loaded_file() -> str:
-    # this function may or may not exist here
-    # if it stays here can put imports in import section instead of here
-    from pathlib import Path
+def read_db_loaded_file(local_alyx_name="") -> str:
+    try:
+        alyx_db_name = dj.config["custom"]["database.alyx.name"]
+    except KeyError:
+        logger.error("dj.config doesn't have key 'database.alyx.name'")
+        return ""
+
+    local_alyx_name = local_alyx_name or os.getenv("PGDATABASE", "alyxlocal")
+    if alyx_db_name != local_alyx_name:
+        logger.debug(f"Connected to remote alyx postgres database '{alyx_db_name}'.")
+        return datetime.datetime.utcnow().strftime("%Y-%m-%d")
 
     try:
-        ibl_path_data = dj.config["custom"]["repository.config"]["ibl_path_data"]
+        alyx_src_path = dj.config["custom"]["repository.config"]["alyx_src_path"]
     except KeyError:
+        logger.error("dj.config doesn't have key 'alyx_src_path'")
         return ""
 
-    db_loaded = Path(ibl_path_data) / "alyx" / "db_loaded"
-    if not db_loaded.exists():
+    db_loaded_file = Path(alyx_src_path) / "shared" / "remote" / "db_loaded.out"
+    if not db_loaded_file.exists():
+        logger.error(f"db_loaded file not found: '{db_loaded_file}'")
         return ""
 
-    with open(db_loaded, "r") as f:
+    with open(db_loaded_file, "r") as f:
         dump_file = f.read()
-        dump_file = Path(dump_file.rstrip("\n")).stem
-        dump_file = dump_file.replace(".sql", "")
-        dump_file = dump_file.replace("_alyxfull", "")
-    return dump_file
+
+    dump_stem = Path(dump_file.rstrip("\n")).stem
+    backup_date = dump_stem.replace(".sql", "")
+    backup_date = backup_date.replace("_alyxfull", "")
+    return backup_date
 
 
 def populate_ingestion_tables(run_duration=3600 * 3, sleep_duration=60, **kwargs):

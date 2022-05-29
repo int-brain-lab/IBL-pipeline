@@ -50,7 +50,7 @@ dj.config["stores"] = {
         access_key=access_key,
         secret_key=secret_key,
         bucket=bucket,
-        location=root + "/ephys",
+        location=f"{root}/ephys",
     ),
     "plotting": dict(
         protocol="s3",
@@ -58,7 +58,7 @@ dj.config["stores"] = {
         access_key=access_key,
         secret_key=secret_key,
         bucket=bucket,
-        location=root + "/plotting",
+        location=f"{root}/plotting",
     ),
 }
 
@@ -69,8 +69,11 @@ except ImportError:
     print("ONE-api not set up")
     one = False
 else:
+    base_url = dj.config.get("custom", {}).get(
+        "database.alyx.url", os.getenv("ALYX_URL", None)
+    )
     try:
-        one = OneAlyx(silent=True)
+        one = OneAlyx(base_url=base_url, silent=True)
     except ConnectionError:
         # by-pass error in removing the old format .one_params
-        one = OneAlyx(silent=True)
+        one = OneAlyx(base_url=base_url, silent=True)
