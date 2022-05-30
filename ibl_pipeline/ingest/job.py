@@ -1241,14 +1241,13 @@ _ingestion_tables = (
 )
 
 
-def read_db_loaded_file(local_alyx_name="") -> str:
+def read_db_loaded_file(local_alyx_name="alyxlocal") -> str:
     try:
         alyx_db_name = dj.config["custom"]["database.alyx.name"]
     except KeyError:
         logger.error("dj.config doesn't have key 'database.alyx.name'")
         return ""
 
-    local_alyx_name = local_alyx_name or os.getenv("PGDATABASE", "alyxlocal")
     if alyx_db_name != local_alyx_name:
         logger.debug(f"Connected to remote alyx postgres database '{alyx_db_name}'.")
         return datetime.datetime.utcnow().strftime("%Y-%m-%d")
