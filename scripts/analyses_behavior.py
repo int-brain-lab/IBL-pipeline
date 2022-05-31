@@ -1,18 +1,17 @@
 from ibl_pipeline.analyses import behavior
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     kwargs = dict(display_progress=True, suppress_errors=True)
 
-    print('----------- Populating PsychResults ------------')
+    print("----------- Populating PsychResults ------------")
     behavior.PsychResults.populate(**kwargs)
-    print('--------- Populating PsychResultsBlock ---------')
+    print("--------- Populating PsychResultsBlock ---------")
     behavior.PsychResultsBlock.populate(**kwargs)
-    print('----------- Populating ReactionTime ------------')
+    print("----------- Populating ReactionTime ------------")
     behavior.ReactionTime.populate(**kwargs)
-    print('----- Populating ReactionTimeContrastBlock -----')
+    print("----- Populating ReactionTimeContrastBlock -----")
     behavior.ReactionTimeContrastBlock.populate(**kwargs)
-    print('------- Populating SessionTrainingStatus -------')
+    print("------- Populating SessionTrainingStatus -------")
     behavior.SessionTrainingStatus.populate(**kwargs)
-    print('------ Populating BehavioralSummaryByDate ------')
+    print("------ Populating BehavioralSummaryByDate ------")
     behavior.BehavioralSummaryByDate.populate(**kwargs)

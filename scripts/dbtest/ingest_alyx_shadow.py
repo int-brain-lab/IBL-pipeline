@@ -1,16 +1,14 @@
-'''
+"""
 This script inserts tuples in the alyxraw table into the shadow tables \
 via auto-populating.
-'''
+"""
 
 import datajoint as dj
-from ibl_pipeline.ingest import \
-    (alyxraw, reference, subject, action, acquisition)
 
-if __name__ == '__main__':
-    kwargs = dict(
-        display_progress=True,
-        suppress_errors=True)
+from ibl_pipeline.ingest import acquisition, action, alyxraw, reference, subject
+
+if __name__ == "__main__":
+    kwargs = dict(display_progress=True, suppress_errors=True)
 
     tables = [
         reference.Lab,
@@ -45,8 +43,8 @@ if __name__ == '__main__':
         action.Surgery,
         action.OtherAction,
         acquisition.Session,
-        ]
+    ]
 
     for table in tables:
-        print('Populating {}...'.format(table.__name__))
+        print("Populating {}...".format(table.__name__))
         table.populate(**kwargs)

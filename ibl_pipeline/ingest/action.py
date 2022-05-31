@@ -1,12 +1,13 @@
+import uuid
+
 import datajoint as dj
 from datajoint.errors import DataJointError
-import uuid
-from ibl_pipeline.ingest import alyxraw, reference, subject, ShadowIngestionError
+
+from ibl_pipeline.ingest import ShadowIngestionError, alyxraw
 from ibl_pipeline.ingest import get_raw_field as grf
+from ibl_pipeline.ingest import reference, subject
 
-
-schema = dj.schema(dj.config.get('database.prefix', '') +
-                   'ibl_ingest_action')
+schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ingest_action")
 
 
 @schema
@@ -20,16 +21,17 @@ class ProcedureType(dj.Computed):
     """
 
     key_source = (alyxraw.AlyxRaw & 'model="actions.proceduretype"').proj(
-        procedure_type_uuid='uuid')
+        procedure_type_uuid="uuid"
+    )
 
     def make(self, key):
         key_pt = key.copy()
-        key['uuid'] = key['procedure_type_uuid']
-        key_pt['procedure_type_name'] = grf(key, 'name')
+        key["uuid"] = key["procedure_type_uuid"]
+        key_pt["procedure_type_name"] = grf(key, "name")
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_pt['procedure_type_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_pt["procedure_type_description"] = description
 
         self.insert1(key_pt)
 
@@ -46,29 +48,31 @@ class Weighing(dj.Computed):
     weighing_user=null: varchar(255)
     weighing_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model="actions.weighing"').proj(
-        weigh_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model="actions.weighing"').proj(weigh_uuid="uuid")
 
     def make(self, key):
         key_weigh = key.copy()
-        key['uuid'] = key['weigh_uuid']
-        key_weigh['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
+        key["uuid"] = key["weigh_uuid"]
+        key_weigh["subject_uuid"] = uuid.UUID(grf(key, "subject"))
 
         if not len(subject.Subject & key_weigh):
-            raise ShadowIngestionError('subject {} is not in the Subject table'.format(
-                key_weigh['subject_uuid']))
+            raise ShadowIngestionError(
+                "subject {} is not in the Subject table".format(
+                    key_weigh["subject_uuid"]
+                )
+            )
 
-        key_weigh['weighing_time'] = grf(key, 'date_time')
+        key_weigh["weighing_time"] = grf(key, "date_time")
 
-        weight = grf(key, 'weight')
-        if weight != 'None':
-            key_weigh['weight'] = float(weight)
+        weight = grf(key, "weight")
+        if weight != "None":
+            key_weigh["weight"] = float(weight)
 
-        user_uuid = grf(key, 'user')
-        if user_uuid != 'None':
-            key_weigh['weighing_user'] = \
-                (reference.LabMember &
-                 dict(user_uuid=uuid.UUID(user_uuid))).fetch1('user_name')
+        user_uuid = grf(key, "user")
+        if user_uuid != "None":
+            key_weigh["weighing_user"] = (
+                reference.LabMember & dict(user_uuid=uuid.UUID(user_uuid))
+            ).fetch1("user_name")
 
         self.insert1(key_weigh)
 
@@ -82,13 +86,14 @@ class WaterType(dj.Computed):
     watertype_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.watertype"').proj(
-        watertype_uuid='uuid')
+        watertype_uuid="uuid"
+    )
 
     def make(self, key):
         key_type = key.copy()
-        key['uuid'] = key['watertype_uuid']
+        key["uuid"] = key["watertype_uuid"]
 
-        key_type['watertype_name'] = grf(key, 'name')
+        key_type["watertype_name"] = grf(key, "name")
         self.insert1(key_type)
 
 
@@ -106,38 +111,40 @@ class WaterAdministration(dj.Computed):
     adlib:                          boolean
     wateradministration_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & alyxraw.AlyxRaw.Field
-                  & 'model = "actions.wateradministration"').proj(
-        wateradmin_uuid='uuid')
+    key_source = (
+        alyxraw.AlyxRaw
+        & alyxraw.AlyxRaw.Field
+        & 'model = "actions.wateradministration"'
+    ).proj(wateradmin_uuid="uuid")
 
     def make(self, key):
         key_wa = key.copy()
-        key['uuid'] = key['wateradmin_uuid']
+        key["uuid"] = key["wateradmin_uuid"]
 
-        key_wa['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
+        key_wa["subject_uuid"] = uuid.UUID(grf(key, "subject"))
 
         if not len(subject.Subject & key_wa):
-            raise ShadowIngestionError('subject {} is not in the Subject table'.format(
-                key_wa['subject_uuid']))
+            raise ShadowIngestionError(
+                "subject {} is not in the Subject table".format(key_wa["subject_uuid"])
+            )
 
-        key_wa['administration_time'] = grf(key, 'date_time')
-        wa = grf(key, 'water_administered')
-        if wa != 'None':
-            key_wa['water_administered'] = wa
+        key_wa["administration_time"] = grf(key, "date_time")
+        wa = grf(key, "water_administered")
+        if wa != "None":
+            key_wa["water_administered"] = wa
 
-        water_type = grf(key, 'water_type')
-        key_wa['watertype_name'] = \
-            (WaterType &
-             dict(watertype_uuid=uuid.UUID(water_type))).fetch1(
-                 'watertype_name')
+        water_type = grf(key, "water_type")
+        key_wa["watertype_name"] = (
+            WaterType & dict(watertype_uuid=uuid.UUID(water_type))
+        ).fetch1("watertype_name")
 
-        user_uuid = grf(key, 'user')
-        if user_uuid != 'None':
-            key_wa['administration_user'] = \
-                (reference.LabMember &
-                 dict(user_uuid=uuid.UUID(user_uuid))).fetch1('user_name')
+        user_uuid = grf(key, "user")
+        if user_uuid != "None":
+            key_wa["administration_user"] = (
+                reference.LabMember & dict(user_uuid=uuid.UUID(user_uuid))
+            ).fetch1("user_name")
 
-        key_wa['adlib'] = grf(key, 'adlib') == 'True'
+        key_wa["adlib"] = grf(key, "adlib") == "True"
 
         self.insert1(key_wa)
 
@@ -158,35 +165,36 @@ class WaterRestriction(dj.Computed):
     waterrestriction_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.waterrestriction"').proj(
-        restriction_uuid='uuid')
+        restriction_uuid="uuid"
+    )
 
     def make(self, key):
         key_res = key.copy()
-        key['uuid'] = key['restriction_uuid']
+        key["uuid"] = key["restriction_uuid"]
 
-        key_res['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
+        key_res["subject_uuid"] = uuid.UUID(grf(key, "subject"))
         if not (subject.Subject & key_res):
-            raise ShadowIngestionError('subject {} is not in the Subject table'.format(
-                key_res['subject_uuid']))
+            raise ShadowIngestionError(
+                "subject {} is not in the Subject table".format(key_res["subject_uuid"])
+            )
 
-        key_res['restriction_start_time'] = grf(key, 'start_time')
+        key_res["restriction_start_time"] = grf(key, "start_time")
 
-        end_time = grf(key, 'end_time')
-        if end_time != 'None':
-            key_res['restriction_end_time'] = end_time
+        end_time = grf(key, "end_time")
+        if end_time != "None":
+            key_res["restriction_end_time"] = end_time
 
-        narrative = grf(key, 'narrative')
-        if narrative and narrative != 'None':
-            key_res['restriction_narrative'] = narrative
+        narrative = grf(key, "narrative")
+        if narrative and narrative != "None":
+            key_res["restriction_narrative"] = narrative
 
-        location_uuid = grf(key, 'location')
-        if location_uuid != 'None':
-            key_res['restriction_lab'], key_res['restriction_location'] = \
-                (reference.LabLocation &
-                 dict(location_uuid=uuid.UUID(location_uuid))).fetch1(
-                     'lab_name', 'location_name')
+        location_uuid = grf(key, "location")
+        if location_uuid != "None":
+            key_res["restriction_lab"], key_res["restriction_location"] = (
+                reference.LabLocation & dict(location_uuid=uuid.UUID(location_uuid))
+            ).fetch1("lab_name", "location_name")
 
-        key_res['reference_weight'] = grf(key, 'reference_weight')
+        key_res["reference_weight"] = grf(key, "reference_weight")
 
         self.insert1(key_res)
 
@@ -229,35 +237,38 @@ class Surgery(dj.Computed):
     surgery_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.surgery"').proj(
-        surgery_uuid='uuid')
+        surgery_uuid="uuid"
+    )
 
     def make(self, key):
         key_surgery = key.copy()
-        key['uuid'] = key['surgery_uuid']
+        key["uuid"] = key["surgery_uuid"]
 
-        key_surgery['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
+        key_surgery["subject_uuid"] = uuid.UUID(grf(key, "subject"))
         if not len(subject.Subject & key_surgery):
-            raise ShadowIngestionError('Subject {} is not in the table subject.Subject'.format(
-                key_surgery['subject_uuid']))
+            raise ShadowIngestionError(
+                "Subject {} is not in the table subject.Subject".format(
+                    key_surgery["subject_uuid"]
+                )
+            )
 
-        key_surgery['surgery_start_time'] = grf(key, 'start_time')
+        key_surgery["surgery_start_time"] = grf(key, "start_time")
 
-        end_time = grf(key, 'end_time')
-        if end_time != 'None':
-            key_surgery['surgery_end_time'] = end_time
+        end_time = grf(key, "end_time")
+        if end_time != "None":
+            key_surgery["surgery_end_time"] = end_time
 
-        key_surgery['surgery_outcome_type'] = grf(key, 'outcome_type')
+        key_surgery["surgery_outcome_type"] = grf(key, "outcome_type")
 
-        narrative = grf(key, 'narrative')
-        if narrative != 'None':
-            key_surgery['surgery_narrative'] = narrative
+        narrative = grf(key, "narrative")
+        if narrative != "None":
+            key_surgery["surgery_narrative"] = narrative
 
-        location_uuid = grf(key, 'location')
-        if location_uuid != 'None':
-            key_surgery['surgery_lab'], key_surgery['surgery_location'] = \
-                (reference.LabLocation &
-                 dict(location_uuid=uuid.UUID(location_uuid))).fetch1(
-                     'lab_name', 'location_name')
+        location_uuid = grf(key, "location")
+        if location_uuid != "None":
+            key_surgery["surgery_lab"], key_surgery["surgery_location"] = (
+                reference.LabLocation & dict(location_uuid=uuid.UUID(location_uuid))
+            ).fetch1("lab_name", "location_name")
 
         self.insert1(key_surgery)
 
@@ -314,29 +325,32 @@ class OtherAction(dj.Computed):
     otheraction_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "actions.otheraction"').proj(
-        other_action_uuid='uuid')
+        other_action_uuid="uuid"
+    )
 
     def make(self, key):
         key_other = key.copy()
-        key['uuid'] = key['other_action_uuid']
-        key_other['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
+        key["uuid"] = key["other_action_uuid"]
+        key_other["subject_uuid"] = uuid.UUID(grf(key, "subject"))
 
         if not len(subject.Subject & key_other):
-            raise ShadowIngestionError('subject {} is not in the table subject.Subject'.format(
-                key_other['subject_uuid']))
+            raise ShadowIngestionError(
+                "subject {} is not in the table subject.Subject".format(
+                    key_other["subject_uuid"]
+                )
+            )
 
-        key_other['other_action_start_time'] = grf(key, 'start_time')
+        key_other["other_action_start_time"] = grf(key, "start_time")
 
-        end_time = grf(key, 'end_time')
-        if end_time != 'None':
-            key_other['other_action_end_time'] = end_time
+        end_time = grf(key, "end_time")
+        if end_time != "None":
+            key_other["other_action_end_time"] = end_time
 
-        location_uuid = grf(key, 'location')
-        if location_uuid != 'None':
-            key_other['other_action_lab'], key_other['other_action_location'] = \
-                (reference.LabLocation &
-                 dict(location_uuid=uuid.UUID(location_uuid))).fetch1(
-                     'lab_name', 'location_name')
+        location_uuid = grf(key, "location")
+        if location_uuid != "None":
+            key_other["other_action_lab"], key_other["other_action_location"] = (
+                reference.LabLocation & dict(location_uuid=uuid.UUID(location_uuid))
+            ).fetch1("lab_name", "location_name")
 
         self.insert1(key_other)
 
@@ -373,16 +387,17 @@ class CullMethod(dj.Computed):
     cull_method_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="actions.cullmethod"').proj(
-        cull_method_uuid='uuid')
+        cull_method_uuid="uuid"
+    )
 
     def make(self, key):
         key_cm = key.copy()
-        key['uuid'] = key['cull_method_uuid']
-        key_cm['cull_method'] = grf(key, 'name')
+        key["uuid"] = key["cull_method_uuid"]
+        key_cm["cull_method"] = grf(key, "name")
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_cm['cull_method_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_cm["cull_method_description"] = description
 
         self.insert1(key_cm)
 
@@ -397,16 +412,17 @@ class CullReason(dj.Computed):
     cull_reason_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="actions.cullreason"').proj(
-        cull_reason_uuid='uuid')
+        cull_reason_uuid="uuid"
+    )
 
     def make(self, key):
         key_cr = key.copy()
-        key['uuid'] = key['cull_reason_uuid']
-        key_cr['cull_reason'] = grf(key, 'name')
+        key["uuid"] = key["cull_reason_uuid"]
+        key_cr["cull_reason"] = grf(key, "name")
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_cr['cull_reason_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_cr["cull_reason_description"] = description
 
         self.insert1(key_cr)
 
@@ -424,37 +440,42 @@ class Cull(dj.Computed):
     cull_description='':            varchar(1024)
     cull_ts=CURRENT_TIMESTAMP:      timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model = "actions.cull"').proj(
-        cull_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model = "actions.cull"').proj(cull_uuid="uuid")
 
     def make(self, key):
         key_cull = key.copy()
-        key['uuid'] = key['cull_uuid']
+        key["uuid"] = key["cull_uuid"]
 
-        key_cull['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
+        key_cull["subject_uuid"] = uuid.UUID(grf(key, "subject"))
         if not len(subject.Subject & key_cull):
-            raise ShadowIngestionError('Subject {} is not in the table subject.Subject'.format(
-                key_cull['subject_uuid']))
+            raise ShadowIngestionError(
+                "Subject {} is not in the table subject.Subject".format(
+                    key_cull["subject_uuid"]
+                )
+            )
 
-        user_uuid = grf(key, 'user')
-        if user_uuid != 'None':
-            key_cull['cull_user'] = (
-                reference.LabMember & {'user_uuid': user_uuid}).fetch1('user_name')
+        user_uuid = grf(key, "user")
+        if user_uuid != "None":
+            key_cull["cull_user"] = (
+                reference.LabMember & {"user_uuid": user_uuid}
+            ).fetch1("user_name")
 
-        cull_method_uuid = grf(key, 'cull_method')
-        if cull_method_uuid != 'None':
-            key_cull['cull_method'] = (
-                CullMethod & {'cull_method_uuid': cull_method_uuid}).fetch1('cull_method')
+        cull_method_uuid = grf(key, "cull_method")
+        if cull_method_uuid != "None":
+            key_cull["cull_method"] = (
+                CullMethod & {"cull_method_uuid": cull_method_uuid}
+            ).fetch1("cull_method")
 
-        cull_reason_uuid = grf(key, 'cull_reason')
-        if cull_reason_uuid != 'None':
-            key_cull['cull_reason'] = (
-                CullReason & {'cull_reason_uuid': cull_reason_uuid}).fetch1('cull_reason')
+        cull_reason_uuid = grf(key, "cull_reason")
+        if cull_reason_uuid != "None":
+            key_cull["cull_reason"] = (
+                CullReason & {"cull_reason_uuid": cull_reason_uuid}
+            ).fetch1("cull_reason")
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_cull['cull_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_cull["cull_description"] = description
 
-        key_cull['cull_date'] = grf(key, 'date')
+        key_cull["cull_date"] = grf(key, "date")
 
         self.insert1(key_cull)

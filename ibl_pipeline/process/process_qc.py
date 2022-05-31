@@ -1,55 +1,56 @@
+import logging
 import pathlib
 
-from ibl_pipeline.process import update_utils, ingest_alyx_raw_postgres
-from ibl_pipeline.ingest import alyxraw
-from ibl_pipeline import acquisition, ephys, qc
-from ibl_pipeline.ingest import qc as qc_ingest
+import actions
+import data
+import experiments
 
 # alyx models
-import misc, subjects, actions, data, experiments
+import misc
+import subjects
 
-import logging
+from ibl_pipeline import acquisition, ephys, qc
+from ibl_pipeline.ingest import alyxraw
+from ibl_pipeline.ingest import qc as qc_ingest
+from ibl_pipeline.process import ingest_alyx_raw_postgres, update_utils
 
-log_file = pathlib.Path(__file__).parent / 'logs/process_qc.log'
+log_file = pathlib.Path(__file__).parent / "logs/process_qc.log"
 log_file.parent.mkdir(parents=True, exist_ok=True)
 log_file.touch(exist_ok=True)
 
 logging.basicConfig(
-    format='%(asctime)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file),
-        logging.StreamHandler()],
-    level=25)
+    format="%(asctime)s - %(message)s",
+    handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
+    level=25,
+)
 
 logger = logging.getLogger(__name__)
 
 QC_MODELS_TO_UPDATE = {
-    'actions.session':
-    {
-        'alyx_model': actions.models.Session,
-        'ref_table': acquisition.Session,
-        'alyx_fields': ['qc', 'extended_qc'],
-        'uuid_name': 'session_uuid',
-        'ingestion_tables': [qc_ingest.SessionQCIngest],
-        'real_tables': [
+    "actions.session": {
+        "alyx_model": actions.models.Session,
+        "ref_table": acquisition.Session,
+        "alyx_fields": ["qc", "extended_qc"],
+        "uuid_name": "session_uuid",
+        "ingestion_tables": [qc_ingest.SessionQCIngest],
+        "real_tables": [
             qc.SessionExtendedQC.Field,
             qc.SessionExtendedQC,
-            qc.SessionQC
+            qc.SessionQC,
         ],  # in the order of delete_quick()
     },
-    'experiments.probeinsertion':
-    {
-        'alyx_model': experiments.models.ProbeInsertion,
-        'ref_table': ephys.ProbeInsertion,
-        'alyx_fields': ['json'],
-        'uuid_name': 'probe_insertion_uuid',
-        'ingestion_tables': [qc_ingest.ProbeInsertionQCIngest],
-        'real_tables': [
+    "experiments.probeinsertion": {
+        "alyx_model": experiments.models.ProbeInsertion,
+        "ref_table": ephys.ProbeInsertion,
+        "alyx_fields": ["json"],
+        "uuid_name": "probe_insertion_uuid",
+        "ingestion_tables": [qc_ingest.ProbeInsertionQCIngest],
+        "real_tables": [
             qc.ProbeInsertionExtendedQC.Field,
             qc.ProbeInsertionExtendedQC,
-            qc.ProbeInsertionQC
-        ]  # in the order of delete_quick()
-    }
+            qc.ProbeInsertionQC,
+        ],  # in the order of delete_quick()
+    },
 }
 
 
@@ -62,48 +63,62 @@ def delete_qc_entries(alyx_model_name):
     """
     model_info = QC_MODELS_TO_UPDATE[alyx_model_name]
 
-    qc_keys = update_utils.get_deleted_keys(alyx_model_name) + \
-              update_utils.get_updated_keys(alyx_model_name, fields=['qc', 'extended_qc'])
+    qc_keys = update_utils.get_deleted_keys(
+        alyx_model_name
+    ) + update_utils.get_updated_keys(alyx_model_name, fields=["qc", "extended_qc"])
 
-    logger.log(25, f'Deleting updated entries for {alyx_model_name} from alyxraw fields...')
-    (alyxraw.AlyxRaw.Field &
-     [dict(fname=f) for f in model_info['alyx_fields']]
-     & qc_keys).delete_quick()
+    logger.log(
+        25, f"Deleting updated entries for {alyx_model_name} from alyxraw fields..."
+    )
+    (
+        alyxraw.AlyxRaw.Field
+        & [dict(fname=f) for f in model_info["alyx_fields"]]
+        & qc_keys
+    ).delete_quick()
 
-    logger.log(25, f'Deleting updated qc and extended_qc for {alyx_model_name} from shadow tables...')
-    uuids_dict_list = [{model_info['uuid_name']: k['uuid']} for k in qc_keys]
-    for ingestion_table in model_info['ingestion_tables']:
+    logger.log(
+        25,
+        f"Deleting updated qc and extended_qc for {alyx_model_name} from shadow tables...",
+    )
+    uuids_dict_list = [{model_info["uuid_name"]: k["uuid"]} for k in qc_keys]
+    for ingestion_table in model_info["ingestion_tables"]:
         (ingestion_table & uuids_dict_list).delete_quick()
 
-    logger.log(25, f'Deleting updated qc and extended_qc for {alyx_model_name} from real tables...')
-    q_real = model_info['ref_table'] & uuids_dict_list
-    for real_table in model_info['real_tables']:
+    logger.log(
+        25,
+        f"Deleting updated qc and extended_qc for {alyx_model_name} from real tables...",
+    )
+    q_real = model_info["ref_table"] & uuids_dict_list
+    for real_table in model_info["real_tables"]:
         (real_table & q_real).delete_quick()
 
 
 def main():
     alyx_model_names = list(QC_MODELS_TO_UPDATE.keys())
-    alyx_models = [v['alyx_model'] for v in QC_MODELS_TO_UPDATE.values()]
+    alyx_models = [v["alyx_model"] for v in QC_MODELS_TO_UPDATE.values()]
 
-    logger.log(25, 'QC - Ingesting into UpdateAlyxRaw...')
+    logger.log(25, "QC - Ingesting into UpdateAlyxRaw...")
     ingest_alyx_raw_postgres.insert_to_update_alyxraw_postgres(
         alyx_models=alyx_models,
-        delete_UpdateAlyxRaw_first=True, skip_existing_alyxraw=True)
+        delete_UpdateAlyxRaw_first=True,
+        skip_existing_alyxraw=True,
+    )
 
-    logger.log(25, 'QC - Deleting updated/deleted entries...')
+    logger.log(25, "QC - Deleting updated/deleted entries...")
     for alyx_model_name in alyx_model_names:
         delete_qc_entries(alyx_model_name)
 
-    logger.log(25, 'QC - Ingesting from Postgres Alyx to AlyxRaw...')
+    logger.log(25, "QC - Ingesting from Postgres Alyx to AlyxRaw...")
     for alyx_model in alyx_models:
-        ingest_alyx_raw_postgres.insert_alyx_entries_model(alyx_model,
-                                                           skip_existing_alyxraw=False)
+        ingest_alyx_raw_postgres.insert_alyx_entries_model(
+            alyx_model, skip_existing_alyxraw=False
+        )
 
-    logger.log(25, 'QC - Calling the populate on the QC-ingestion table...')
+    logger.log(25, "QC - Calling the populate on the QC-ingestion table...")
     for alyx_model_name in alyx_model_names:
-        for ingestion_table in QC_MODELS_TO_UPDATE[alyx_model_name]['ingestion_tables']:
+        for ingestion_table in QC_MODELS_TO_UPDATE[alyx_model_name]["ingestion_tables"]:
             ingestion_table.populate(display_progress=True, suppress_errors=True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,16 +1,16 @@
+import json
+import re
+import uuid
+
 import datajoint as dj
 from datajoint.errors import DataJointError
-import json
-import uuid
-import re
-
-from ibl_pipeline.ingest import alyxraw, reference, acquisition, ShadowIngestionError
-from ibl_pipeline.ingest import get_raw_field as grf
 
 from ibl_pipeline import acquisition as acquisition_real
+from ibl_pipeline.ingest import ShadowIngestionError, acquisition, alyxraw
+from ibl_pipeline.ingest import get_raw_field as grf
+from ibl_pipeline.ingest import reference
 
-schema = dj.schema(dj.config.get('database.prefix', '') +
-                   'ibl_ingest_ephys')
+schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ingest_ephys")
 
 
 @schema
@@ -25,20 +25,22 @@ class ProbeModel(dj.Imported):
     probe_model_ts=CURRENT_TIMESTAMP    : timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="experiments.probemodel"').proj(
-        probe_uuid='uuid')
+        probe_uuid="uuid"
+    )
 
     def make(self, key):
         key_probe = key.copy()
-        key['uuid'] = key['probe_uuid']
+        key["uuid"] = key["probe_uuid"]
 
         key_probe.update(
-            probe_name=grf(key, 'name'),
-            probe_model=grf(key, 'probe_model'),
-            probe_manufacturer=grf(key, 'probe_manufacturer'))
+            probe_name=grf(key, "name"),
+            probe_model=grf(key, "probe_model"),
+            probe_manufacturer=grf(key, "probe_manufacturer"),
+        )
 
-        probe_description = grf(key, 'description')
-        if probe_description != 'None':
-            key_probe['probe_description'] = probe_description
+        probe_description = grf(key, "description")
+        if probe_description != "None":
+            key_probe["probe_description"] = probe_description
 
         self.insert1(key_probe)
 
@@ -59,49 +61,44 @@ class ProbeInsertion(dj.Imported):
     probe_insertion_ts=CURRENT_TIMESTAMP :   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="experiments.probeinsertion"').proj(
-        probe_insertion_uuid='uuid')
+        probe_insertion_uuid="uuid"
+    )
 
     def make(self, key):
         key_pi = key.copy()
-        key['uuid'] = key['probe_insertion_uuid']
+        key["uuid"] = key["probe_insertion_uuid"]
 
-        session_uuid = grf(key, 'session')
+        session_uuid = grf(key, "session")
         session_key = dict(session_uuid=session_uuid)
 
-        if (acquisition_real.Session & session_key):
-            subject_uuid, session_start_time = \
-                (acquisition_real.Session & session_key).fetch1(
-                    'subject_uuid', 'session_start_time')
-        elif (acquisition.Session & session_key):
-            subject_uuid, session_start_time = \
-                (acquisition.Session & session_key).fetch1(
-                    'subject_uuid', 'session_start_time')
+        if acquisition_real.Session & session_key:
+            subject_uuid, session_start_time = (
+                acquisition_real.Session & session_key
+            ).fetch1("subject_uuid", "session_start_time")
+        elif acquisition.Session & session_key:
+            subject_uuid, session_start_time = (
+                acquisition.Session & session_key
+            ).fetch1("subject_uuid", "session_start_time")
         else:
-            raise ShadowIngestionError('Non existing session: {}'.format(session_uuid))
+            raise ShadowIngestionError("Non existing session: {}".format(session_uuid))
 
-        key_pi.update(
-            subject_uuid=subject_uuid,
-            session_start_time=session_start_time)
+        key_pi.update(subject_uuid=subject_uuid, session_start_time=session_start_time)
 
-        probe_uuid = grf(key, 'model')
-        if probe_uuid != 'None':
-            key_pi['probe_name'] = \
-                (ProbeModel & dict(probe_uuid=probe_uuid)).fetch1(
-                'probe_name')
+        probe_uuid = grf(key, "model")
+        if probe_uuid != "None":
+            key_pi["probe_name"] = (ProbeModel & dict(probe_uuid=probe_uuid)).fetch1(
+                "probe_name"
+            )
 
-        key_pi['probe_label'] = grf(key, 'name')
+        key_pi["probe_label"] = grf(key, "name")
 
-        if re.search('[Pp]robe.?0([0-3])',
-                     key_pi['probe_label']):
-            key_pi['probe_idx'] = \
-                re.search('[Pp]robe.?0([0-3])',
-                          key_pi['probe_label']).group(1)
-        elif re.search('g([0-3])',
-                       key_pi['probe_label']):
-            key_pi['probe_idx'] = \
-                re.search('g([0-3])',
-                          key_pi['probe_label']).group(1)
+        if re.search("[Pp]robe.?0([0-3])", key_pi["probe_label"]):
+            key_pi["probe_idx"] = re.search(
+                "[Pp]robe.?0([0-3])", key_pi["probe_label"]
+            ).group(1)
+        elif re.search("g([0-3])", key_pi["probe_label"]):
+            key_pi["probe_idx"] = re.search("g([0-3])", key_pi["probe_label"]).group(1)
         else:
-            key_pi['probe_idx'] = probe_mapping[key_pi['probe_label']]
+            key_pi["probe_idx"] = probe_mapping[key_pi["probe_label"]]
 
         self.insert1(key_pi)

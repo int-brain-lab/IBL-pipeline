@@ -1,20 +1,21 @@
-import datajoint as dj
 import datetime
-from tqdm import tqdm
 import uuid
 
-from ibl_pipeline import reference, subject, action
-from ibl_pipeline import mode, one
+import datajoint as dj
+from tqdm import tqdm
 
+from ibl_pipeline import action, mode, one, reference, subject
 
-alyxraw = dj.create_virtual_module('alyxraw', dj.config.get('database.prefix', '') + 'ibl_alyxraw')
+alyxraw = dj.create_virtual_module(
+    "alyxraw", dj.config.get("database.prefix", "") + "ibl_alyxraw"
+)
 
 
 # Map to the correct schema based on mode.
-if mode == 'update':
-    schema = dj.schema('ibl_acquisition')
+if mode == "update":
+    schema = dj.schema("ibl_acquisition")
 else:
-    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_acquisition')
+    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_acquisition")
 
 
 @schema
@@ -42,36 +43,47 @@ class Session(dj.Manual):
         """
         date_cutoff = datetime.datetime.now() - datetime.timedelta(days=backtrack_days)
 
-        alyx_sessions = one.alyx.rest('sessions', 'list', django=f'start_time__gte,{date_cutoff}')
+        alyx_sessions = one.alyx.rest(
+            "sessions", "list", django=f"start_time__gte,{date_cutoff}"
+        )
 
         for alyx_session in tqdm(alyx_sessions):
-            if not subject.Subject & {'subject_nickname': alyx_session['subject']}:
+            if not subject.Subject & {"subject_nickname": alyx_session["subject"]}:
                 continue
 
             sess_key = {
-                'subject_uuid': (subject.Subject & {'subject_nickname': alyx_session['subject']}).fetch1('subject_uuid'),
-                'session_start_time': datetime.datetime.strptime(
-                    alyx_session["start_time"], '%Y-%m-%dT%H:%M:%S.%f').strftime('%Y-%m-%d %H:%M:%S'),
-                }
+                "subject_uuid": (
+                    subject.Subject & {"subject_nickname": alyx_session["subject"]}
+                ).fetch1("subject_uuid"),
+                "session_start_time": datetime.datetime.strptime(
+                    alyx_session["start_time"], "%Y-%m-%dT%H:%M:%S.%f"
+                ).strftime("%Y-%m-%d %H:%M:%S"),
+            }
 
-            sess_uuid = alyx_session['url'].split('/')[-1]
+            sess_uuid = alyx_session["url"].split("/")[-1]
 
-            if (cls & sess_key) or (alyxraw.AlyxRaw & {'uuid': sess_uuid}):
+            if (cls & sess_key) or (alyxraw.AlyxRaw & {"uuid": sess_uuid}):
                 # If this session is already in AlyxRaw, skip, as it will get inserted into Session in this ingestion cycle
                 continue
 
             if verbose:
-                print(f'\tInserting new session directly from Alyx: {alyx_session["subject"]}, {sess_key["session_start_time"]}')
+                print(
+                    f'\tInserting new session directly from Alyx: {alyx_session["subject"]}, {sess_key["session_start_time"]}'
+                )
 
-            cls.insert1({**sess_key,
-                         'session_uuid': uuid.UUID(sess_uuid),
-                         'session_number': alyx_session['number'],
-                         'session_end_time': None,
-                         'session_lab': alyx_session['lab'],
-                         'session_location': None,
-                         'task_protocol': alyx_session['task_protocol'],
-                         'session_type': None,
-                         'session_narrative': None})
+            cls.insert1(
+                {
+                    **sess_key,
+                    "session_uuid": uuid.UUID(sess_uuid),
+                    "session_number": alyx_session["number"],
+                    "session_end_time": None,
+                    "session_lab": alyx_session["lab"],
+                    "session_location": None,
+                    "task_protocol": alyx_session["task_protocol"],
+                    "session_type": None,
+                    "session_narrative": None,
+                }
+            )
 
 
 @schema

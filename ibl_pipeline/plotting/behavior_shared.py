@@ -8,6 +8,7 @@ import pandas as pd
 import plotly
 import plotly.graph_objs as go
 import statsmodels.stats.proportion as smp
+
 from ibl_pipeline import acquisition, action
 from ibl_pipeline import behavior as behavior_ingest
 from ibl_pipeline import data, reference, subject

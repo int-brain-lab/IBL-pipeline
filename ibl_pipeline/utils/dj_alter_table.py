@@ -12,7 +12,9 @@ at https://github.com/datajoint/datajoint-python/issues/110.
 """
 
 
-def add_column(table, name, dtype, default_value=None, use_keyword_default=False, comment=None):
+def add_column(
+    table, name, dtype, default_value=None, use_keyword_default=False, comment=None
+):
     """
     A (hacky) convenience function to add a new column into an existing table.
 
@@ -25,23 +27,27 @@ def add_column(table, name, dtype, default_value=None, use_keyword_default=False
         comment (str, optional): comment for the new column
     """
     full_table_name = table.full_table_name
-    if default_value is None or default_value.strip().lower() == 'null':
-        query = 'ALTER TABLE {} ADD {} {}'.format(full_table_name, name, dtype)
+    if default_value is None or default_value.strip().lower() == "null":
+        query = "ALTER TABLE {} ADD {} {}".format(full_table_name, name, dtype)
     elif use_keyword_default:
         # if using MySQL keyword, don't parse the string
-        query = 'ALTER TABLE {} ADD {} {} NOT NULL DEFAULT {}'.format(full_table_name, name, dtype, default_value)
+        query = "ALTER TABLE {} ADD {} {} NOT NULL DEFAULT {}".format(
+            full_table_name, name, dtype, default_value
+        )
     else:
-        query = 'ALTER TABLE {} ADD {} {} NOT NULL DEFAULT {}'.format(full_table_name, name, dtype, repr(default_value))
+        query = "ALTER TABLE {} ADD {} {} NOT NULL DEFAULT {}".format(
+            full_table_name, name, dtype, repr(default_value)
+        )
 
     if comment is not None:
         query += ' COMMENT "{}"'.format(comment)
 
     print(query)
     table.connection.query(query)
-    print('Be sure to add following entry to your table definition')
-    definition = '{}={}: {}'.format(name, repr(default_value), dtype)
+    print("Be sure to add following entry to your table definition")
+    definition = "{}={}: {}".format(name, repr(default_value), dtype)
     if comment is not None:
-        definition += ' # {}'.format(comment)
+        definition += " # {}".format(comment)
     print(definition)
     table.__class__._heading = None
 
@@ -59,19 +65,22 @@ def alter_column(table, name, dtype, default_value=None, comment=None):
         comment (str, optional): (new) comment for the new column
     """
     full_table_name = table.full_table_name
-    if default_value is None or default_value.strip().lower() == 'null':
-        query = 'ALTER TABLE {} MODIFY {} {}'.format(full_table_name, name, dtype)
+    if default_value is None or default_value.strip().lower() == "null":
+        query = "ALTER TABLE {} MODIFY {} {}".format(full_table_name, name, dtype)
     else:
-        query = 'ALTER TABLE {} MODIFY {} {} NOT NULL DEFAULT {}'.format(full_table_name, name, dtype, repr(default_value))
+        query = "ALTER TABLE {} MODIFY {} {} NOT NULL DEFAULT {}".format(
+            full_table_name, name, dtype, repr(default_value)
+        )
     if comment is not None:
         query += ' COMMENT "{}"'.format(comment)
     table.connection.query(query)
-    print('Be sure to alter the column definition as follows')
-    definition = '{}={}: {}'.format(name, repr(default_value), dtype)
+    print("Be sure to alter the column definition as follows")
+    definition = "{}={}: {}".format(name, repr(default_value), dtype)
     if comment is not None:
-        definition += ' # {}'.format(comment)
+        definition += " # {}".format(comment)
     print(definition)
     table.__class__._heading = None
+
 
 def drop_column(table, name):
     """
@@ -84,16 +93,18 @@ def drop_column(table, name):
         name (str): name of the attribute to be dropped. Cannot be a primary key attribute.
     """
     from datajoint.utils import user_choice
+
     if name in table.primary_key:
-        raise ValueError('You cannot drop a primary key attribute')
+        raise ValueError("You cannot drop a primary key attribute")
     if name not in table.heading.attributes:
-        raise AttributeError('column {} not found in the table'.format(name))
-    choice = user_choice('You are about to drop the column "{}". Proceed?'.format(name),
-                         default='no')
-    if choice == 'yes':
-        query = 'ALTER TABLE {} DROP COLUMN {}'.format(table.full_table_name, name)
+        raise AttributeError("column {} not found in the table".format(name))
+    choice = user_choice(
+        'You are about to drop the column "{}". Proceed?'.format(name), default="no"
+    )
+    if choice == "yes":
+        query = "ALTER TABLE {} DROP COLUMN {}".format(table.full_table_name, name)
         table.connection.query(query)
         table.__class__._heading = None
         print('Dropeed column "{}"'.format(name))
     else:
-        print('Aborting column drop')
+        print("Aborting column drop")

@@ -99,9 +99,12 @@ class TaskStatus(dj.Manual):
 
 
 import actions as alyx_actions
+import data as alyx_data
 import experiments as alyx_experiments
 import misc as alyx_misc
 import subjects as alyx_subjects
+from tqdm import tqdm
+
 from ibl_pipeline import (
     acquisition,
     action,
@@ -128,9 +131,6 @@ from ibl_pipeline.process import (
     ingest_membership,
     ingest_real,
 )
-from tqdm import tqdm
-
-import data as alyx_data
 
 logger = logging.getLogger(__name__)
 _backtrack_days = int(os.getenv("BACKTRACK_DAYS", 10))

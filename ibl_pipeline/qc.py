@@ -1,17 +1,16 @@
 import datajoint as dj
+
+from ibl_pipeline import acquisition, ephys, mode, one
 from ibl_pipeline.utils import str_to_dict
-from ibl_pipeline import acquisition, ephys
-from ibl_pipeline import mode, one
 
-
-if mode == 'update':
-    schema = dj.schema('ibl_qc')
+if mode == "update":
+    schema = dj.schema("ibl_qc")
 else:
-    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_qc')
+    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_qc")
 
-if mode != 'public':
-    qc_ingest = dj.create_virtual_module('qc_ingest', 'ibl_ingest_qc')
-    alyxraw = dj.create_virtual_module('alyxraw', 'ibl_alyxraw')
+if mode != "public":
+    qc_ingest = dj.create_virtual_module("qc_ingest", "ibl_ingest_qc")
+    alyxraw = dj.create_virtual_module("alyxraw", "ibl_alyxraw")
 
 
 @schema
@@ -24,11 +23,11 @@ class QCChoice(dj.Lookup):
     """
 
     contents = [
-        (0, 'NOT_SET'),
-        (10, 'PASS'),
-        (30, 'WARNING'),
-        (40, 'FAIL'),
-        (50, 'CRITICAL'),
+        (0, "NOT_SET"),
+        (10, "PASS"),
+        (30, "WARNING"),
+        (40, "FAIL"),
+        (50, "CRITICAL"),
     ]
 
 
@@ -37,7 +36,7 @@ class QCLevel(dj.Lookup):
     definition = """
     qc_level : varchar(32)
     """
-    contents = zip(['session', 'probe_insertion'])
+    contents = zip(["session", "probe_insertion"])
 
 
 @schema
@@ -51,15 +50,15 @@ class QCType(dj.Lookup):
     """
 
     contents = [
-        ['experimenter', 'session', 'Manual labeling of a session by user'],
-        ['task', 'session', 'Quality check when running the task'],
-        ['behavior', 'session', 'Behavior criteria'],
-        ['videoBody', 'session', 'Quality check for video recording of body camera'],
-        ['videoLeft', 'session', 'Quality check for video recording of left camera'],
-        ['videoRight', 'session', 'Quality check for video recording of right camera'],
-        ['dlc', 'session', 'Deep lab cut processing on behavioral video data'],
-        ['tracing_exists', 'probe_insertion', 'Histology tracing'],
-        ['alignment_resolved', 'probe_insertion', 'Ephys alignment with histology']
+        ["experimenter", "session", "Manual labeling of a session by user"],
+        ["task", "session", "Quality check when running the task"],
+        ["behavior", "session", "Behavior criteria"],
+        ["videoBody", "session", "Quality check for video recording of body camera"],
+        ["videoLeft", "session", "Quality check for video recording of left camera"],
+        ["videoRight", "session", "Quality check for video recording of right camera"],
+        ["dlc", "session", "Deep lab cut processing on behavioral video data"],
+        ["tracing_exists", "probe_insertion", "Histology tracing"],
+        ["alignment_resolved", "probe_insertion", "Ephys alignment with histology"],
     ]
 
 
@@ -140,12 +139,13 @@ class ProbeInsertionExtendedQC(dj.Manual):
             (list): list of either the problematic key (deep=False) or problematic key with the debugging message.
         """
         resolved = one.alyx.rest(
-            'insertions', 'list',
-            django='json__extended_qc__alignment_resolved,True')
+            "insertions", "list", django="json__extended_qc__alignment_resolved,True"
+        )
 
-        uuids_alyx = [r['id'] for r in resolved]
-        uuids = (ephys.ProbeInsertion &
-                 (cls & 'qc_type="alignment_resolved"')).fetch('probe_insertion_uuid')
+        uuids_alyx = [r["id"] for r in resolved]
+        uuids = (ephys.ProbeInsertion & (cls & 'qc_type="alignment_resolved"')).fetch(
+            "probe_insertion_uuid"
+        )
         uuids_dj = [str(uuid) for uuid in uuids]
 
         missing_uuids = list(set(uuids_alyx) - set(uuids_dj))
@@ -153,21 +153,29 @@ class ProbeInsertionExtendedQC(dj.Manual):
         if deep:
             messages = []
             for uuid in missing_uuids:
-                if not (alyxraw.AlyxRaw.Field & {'uuid': uuid} & 'fname="json"'):
-                    msg = 'No json entry in alyxraw'
+                if not (alyxraw.AlyxRaw.Field & {"uuid": uuid} & 'fname="json"'):
+                    msg = "No json entry in alyxraw"
                 else:
-                    json = str_to_dict((alyxraw.AlyxRaw.Field & {'uuid': uuid} & 'fname="json"').fetch1('fvalue'))
-                    if 'extended_qc' in json and \
-                            'alignment_resolved' in json['extended_qc'] and \
-                            json['extended_qc']['alignment_resolved']:
+                    json = str_to_dict(
+                        (
+                            alyxraw.AlyxRaw.Field & {"uuid": uuid} & 'fname="json"'
+                        ).fetch1("fvalue")
+                    )
+                    if (
+                        "extended_qc" in json
+                        and "alignment_resolved" in json["extended_qc"]
+                        and json["extended_qc"]["alignment_resolved"]
+                    ):
 
-                        if ephys.ProbeInsertion & {'probe_insertion_uuid': uuid}:
-                            if qc_ingest.ProbeInsertionQCIngest & {'probe_insertion_uuid': uuid}:
-                                msg = 'Entries exist in both ProbeInsertion and ProbeInsertionQCIngest'
+                        if ephys.ProbeInsertion & {"probe_insertion_uuid": uuid}:
+                            if qc_ingest.ProbeInsertionQCIngest & {
+                                "probe_insertion_uuid": uuid
+                            }:
+                                msg = "Entries exist in both ProbeInsertion and ProbeInsertionQCIngest"
                             else:
-                                msg = 'Probe ingest did not run or alyx dump outdated.'
+                                msg = "Probe ingest did not run or alyx dump outdated."
                         else:
-                            msg = 'Missing entry in ephys.ProbeInsertion.'
+                            msg = "Missing entry in ephys.ProbeInsertion."
                 messages.append((uuid, msg))
             return messages
         else:

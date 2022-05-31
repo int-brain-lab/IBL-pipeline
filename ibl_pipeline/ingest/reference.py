@@ -1,16 +1,15 @@
-import datajoint as dj
+import os
 import uuid
+
+import datajoint as dj
 
 from ibl_pipeline.ingest import alyxraw
 from ibl_pipeline.ingest import get_raw_field as grf
 
-import os
-
-if dj.config.get('custom', {}).get('database.mode', "") == 'public':
+if dj.config.get("custom", {}).get("database.mode", "") == "public":
     from ibl_pipeline import public
 
-schema = dj.schema(dj.config.get('database.prefix', '') +
-                   'ibl_ingest_reference')
+schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ingest_reference")
 
 
 @schema
@@ -27,17 +26,17 @@ class Lab(dj.Computed):
     zscore_weight_pct:      float
     lab_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model = "misc.lab"').proj(lab_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model = "misc.lab"').proj(lab_uuid="uuid")
 
     def make(self, key):
         key_lab = key.copy()
-        key['uuid'] = key['lab_uuid']
-        key_lab['lab_name'] = grf(key, 'name')
-        key_lab['institution'] = grf(key, 'institution')
-        key_lab['address'] = grf(key, 'address')
-        key_lab['time_zone'] = grf(key, 'timezone')
-        key_lab['reference_weight_pct'] = grf(key, 'reference_weight_pct')
-        key_lab['zscore_weight_pct'] = grf(key, 'zscore_weight_pct')
+        key["uuid"] = key["lab_uuid"]
+        key_lab["lab_name"] = grf(key, "name")
+        key_lab["institution"] = grf(key, "institution")
+        key_lab["address"] = grf(key, "address")
+        key_lab["time_zone"] = grf(key, "timezone")
+        key_lab["reference_weight_pct"] = grf(key, "reference_weight_pct")
+        key_lab["zscore_weight_pct"] = grf(key, "zscore_weight_pct")
         self.insert1(key_lab)
 
 
@@ -62,48 +61,47 @@ class LabMember(dj.Computed):
     is_stock_manager:       boolean         # stock manager status
     labmember_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model = "misc.labmember"').proj(
-        user_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model = "misc.labmember"').proj(user_uuid="uuid")
 
     def make(self, key):
         key_lab_member = key.copy()
-        key['uuid'] = key['user_uuid']
+        key["uuid"] = key["user_uuid"]
 
         # check the current mode, if public, omit some fields
-        user_name = grf(key, 'username')
-        if dj.config.get('custom', {}).get('database.mode', "") != 'public':
-            key_lab_member['user_name'] = user_name
-            key_lab_member['password'] = grf(key, 'password')
-            key_lab_member['email'] = grf(key, 'email')
-            first_name = grf(key, 'first_name')
-            if first_name != 'None':
-                key_lab_member['first_name'] = first_name
+        user_name = grf(key, "username")
+        if dj.config.get("custom", {}).get("database.mode", "") != "public":
+            key_lab_member["user_name"] = user_name
+            key_lab_member["password"] = grf(key, "password")
+            key_lab_member["email"] = grf(key, "email")
+            first_name = grf(key, "first_name")
+            if first_name != "None":
+                key_lab_member["first_name"] = first_name
 
-            last_name = grf(key, 'last_name')
-            if last_name != 'None':
-                key_lab_member['last_name'] = last_name
+            last_name = grf(key, "last_name")
+            if last_name != "None":
+                key_lab_member["last_name"] = last_name
         else:
-            key_lab_member['user_name'] = (public.UserMap &
-                                           {'user_name': user_name}).fetch1(
-                                               'pseudo_name')
+            key_lab_member["user_name"] = (
+                public.UserMap & {"user_name": user_name}
+            ).fetch1("pseudo_name")
 
-        last_login = grf(key, 'last_login')
-        if last_login != 'None':
-            key_lab_member['last_login'] = last_login
+        last_login = grf(key, "last_login")
+        if last_login != "None":
+            key_lab_member["last_login"] = last_login
 
-        key_lab_member['date_joined'] = grf(key, 'date_joined')
+        key_lab_member["date_joined"] = grf(key, "date_joined")
 
-        is_active = grf(key, 'is_active')
-        key_lab_member['is_active'] = is_active == 'True'
+        is_active = grf(key, "is_active")
+        key_lab_member["is_active"] = is_active == "True"
 
-        is_staff = grf(key, 'is_staff')
-        key_lab_member['is_staff'] = is_staff == 'True'
+        is_staff = grf(key, "is_staff")
+        key_lab_member["is_staff"] = is_staff == "True"
 
-        is_superuser = grf(key, 'is_superuser')
-        key_lab_member['is_superuser'] = is_superuser == 'True'
+        is_superuser = grf(key, "is_superuser")
+        key_lab_member["is_superuser"] = is_superuser == "True"
 
-        is_stock_manager = grf(key, 'is_stock_manager')
-        key_lab_member['is_stock_manager'] = is_stock_manager == 'True'
+        is_stock_manager = grf(key, "is_stock_manager")
+        key_lab_member["is_stock_manager"] = is_stock_manager == "True"
 
         self.insert1(key_lab_member)
 
@@ -121,32 +119,34 @@ class LabMembership(dj.Computed):
     labmembership_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="misc.labmembership"').proj(
-        lab_membership_uuid='uuid')
+        lab_membership_uuid="uuid"
+    )
 
     def make(self, key):
         key_mem = key.copy()
-        key['uuid'] = key['lab_membership_uuid']
+        key["uuid"] = key["lab_membership_uuid"]
 
-        lab_uuid = grf(key, 'lab')
-        key_mem['lab_name'] = \
-            (Lab & dict(lab_uuid=uuid.UUID(lab_uuid))).fetch1('lab_name')
+        lab_uuid = grf(key, "lab")
+        key_mem["lab_name"] = (Lab & dict(lab_uuid=uuid.UUID(lab_uuid))).fetch1(
+            "lab_name"
+        )
 
-        user_uuid = grf(key, 'user')
-        key_mem['user_name'] = \
-            (LabMember & dict(user_uuid=uuid.UUID(user_uuid))).fetch1(
-                'user_name')
+        user_uuid = grf(key, "user")
+        key_mem["user_name"] = (
+            LabMember & dict(user_uuid=uuid.UUID(user_uuid))
+        ).fetch1("user_name")
 
-        role = grf(key, 'role')
-        if role != 'None':
-            key_mem['role'] = role
+        role = grf(key, "role")
+        if role != "None":
+            key_mem["role"] = role
 
-        start_date = grf(key, 'start_date')
-        if start_date != 'None':
-            key_mem['mem_start_date'] = start_date
+        start_date = grf(key, "start_date")
+        if start_date != "None":
+            key_mem["mem_start_date"] = start_date
 
-        end_date = grf(key, 'end_date')
-        if end_date != 'None':
-            key_mem['mem_end_date'] = end_date
+        end_date = grf(key, "end_date")
+        if end_date != "None":
+            key_mem["mem_end_date"] = end_date
 
         self.insert1(key_mem)
 
@@ -161,19 +161,20 @@ class LabLocation(dj.Computed):
     lablocation_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "misc.lablocation"').proj(
-        location_uuid='uuid')
+        location_uuid="uuid"
+    )
 
     def make(self, key):
         key_loc = key.copy()
-        key['uuid'] = key['location_uuid']
-        key_loc['location_name'] = grf(key, 'name')
-        lab_uuid = grf(key, 'lab')
-        if lab_uuid == 'None':
-            key_loc['lab_name'] = 'cortexlab'
+        key["uuid"] = key["location_uuid"]
+        key_loc["location_name"] = grf(key, "name")
+        lab_uuid = grf(key, "lab")
+        if lab_uuid == "None":
+            key_loc["lab_name"] = "cortexlab"
         else:
-            key_loc['lab_name'] = \
-                (Lab & dict(lab_uuid=uuid.UUID(lab_uuid))).fetch1(
-                    'lab_name')
+            key_loc["lab_name"] = (Lab & dict(lab_uuid=uuid.UUID(lab_uuid))).fetch1(
+                "lab_name"
+            )
 
         self.insert1(key_loc)
 
@@ -188,14 +189,15 @@ class Project(dj.Computed):
     project_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.project"').proj(
-        project_uuid='uuid')
+        project_uuid="uuid"
+    )
 
     def make(self, key):
         key_proj = key.copy()
-        key['uuid'] = key['project_uuid']
+        key["uuid"] = key["project_uuid"]
 
-        key_proj['project_name'] = grf(key, 'name')
-        key_proj['project_description'] = grf(key, 'description')
+        key_proj["project_name"] = grf(key, "name")
+        key_proj["project_description"] = grf(key, "description")
         self.insert1(key_proj)
 
 
@@ -217,14 +219,15 @@ class CoordinateSystem(dj.Imported):
     coordinate_system_description=null: varchar(2048)
     """
     key_source = (alyxraw.AlyxRaw & 'model="experiments.coordinatesystem"').proj(
-        coordinate_system_uuid='uuid')
+        coordinate_system_uuid="uuid"
+    )
 
     def make(self, key):
         key_coord = key.copy()
-        key['uuid'] = key['coordinate_system_uuid']
+        key["uuid"] = key["coordinate_system_uuid"]
 
-        key_coord['coordinate_system_name'] = grf(key, 'name')
-        key_coord['coordinate_system_description'] = grf(key, 'description')
+        key_coord["coordinate_system_name"] = grf(key, "name")
+        key_coord["coordinate_system_description"] = grf(key, "description")
         self.insert1(key_coord)
 
 

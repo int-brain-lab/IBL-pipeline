@@ -1,21 +1,24 @@
-'''
+"""
 This script delete the rasters and psth plots from the old ephys sessions, and repopulate,
 from most recent to oldest
-'''
+"""
 
+
+import datetime
+from uuid import UUID
 
 import datajoint as dj
+from tqdm import tqdm
+
 from ibl_pipeline import ephys
 from ibl_pipeline.plotting import ephys as ephys_plotting
-from tqdm import tqdm
-from uuid import UUID
-import datetime
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-    keys = (ephys.CompleteClusterSession &
-            (ephys_plotting.RasterLinkS3 & 'session_start_time < "2019-12-07 16:00:00"')).fetch(
-                'KEY', order_by='session_start_time desc')
+    keys = (
+        ephys.CompleteClusterSession
+        & (ephys_plotting.RasterLinkS3 & 'session_start_time < "2019-12-07 16:00:00"')
+    ).fetch("KEY", order_by="session_start_time desc")
 
     # keys = \
     #     [{'subject_uuid': UUID('221b68e7-0014-46ae-b8af-308665d8b478'),
@@ -27,29 +30,27 @@ if __name__ == '__main__':
         for key in tqdm(keys, position=0):
             print(key)
             # delete tables
-            print('deleting entries from TrialSpikes cluster by cluster...')
+            print("deleting entries from TrialSpikes cluster by cluster...")
             # delete from TrialSpikes cluster by cluster
-            clusters = (ephys.Cluster & key).fetch('KEY')
+            clusters = (ephys.Cluster & key).fetch("KEY")
 
             for cluster in tqdm(clusters, position=0):
                 (ephys.TrialSpikes & cluster).delete()
 
-            print('repopulating TrialSpikes...')
-            ephys.TrialSpikes.populate(
-                key, display_progress=True,
-                suppress_errors=True)
+            print("repopulating TrialSpikes...")
+            ephys.TrialSpikes.populate(key, display_progress=True, suppress_errors=True)
 
-            print('deleting entries from Raster...')
+            print("deleting entries from Raster...")
             (ephys_plotting.RasterLinkS3 & key).delete()
 
-            print('repopulating Raster...')
+            print("repopulating Raster...")
             ephys_plotting.RasterLinkS3.populate(
-                key, display_progress=True,
-                suppress_errors=True)
+                key, display_progress=True, suppress_errors=True
+            )
 
-            print('deleting entries from Psth...')
+            print("deleting entries from Psth...")
             (ephys_plotting.PsthDataVarchar & key).delete()
 
             ephys_plotting.PsthDataVarchar.populate(
-                key, display_progress=True,
-                suppress_errors=True)
+                key, display_progress=True, suppress_errors=True
+            )

@@ -1,53 +1,58 @@
-'''
+"""
 This module contains functions to help tear down the testing environment
-'''
+"""
 
 import datajoint as dj
 
-
 # alyxraw schemas
-alyxraw = dj.create_virtual_module('alyxraw', 'test_ibl_alyxraw')
-alyxraw_update = dj.create_virtual_module('alyxraw', 'test_update_ibl_alyxraw')
+alyxraw = dj.create_virtual_module("alyxraw", "test_ibl_alyxraw")
+alyxraw_update = dj.create_virtual_module("alyxraw", "test_update_ibl_alyxraw")
 
 # shadow schemas
-reference_shadow = dj.create_virtual_module('reference_shadow', 'test_ibl_ingest_reference')
-subject_shadow = dj.create_virtual_module('subject_shadow', 'test_ibl_ingest_subject')
-action_shadow = dj.create_virtual_module('action_shadow', 'test_ibl_ingest_action')
-acquisition_shadow = dj.create_virtual_module('acquisition_shadow', 'test_ibl_ingest_acquisition')
-data_shadow = dj.create_virtual_module('data_shadow', 'test_ibl_ingest_data')
-ephys_shadow = dj.create_virtual_module('ephys_shadow', 'test_ibl_ingest_ephys')
-histology_shadow = dj.create_virtual_module('histology_shadow', 'test_ibl_ingest_histology')
+reference_shadow = dj.create_virtual_module(
+    "reference_shadow", "test_ibl_ingest_reference"
+)
+subject_shadow = dj.create_virtual_module("subject_shadow", "test_ibl_ingest_subject")
+action_shadow = dj.create_virtual_module("action_shadow", "test_ibl_ingest_action")
+acquisition_shadow = dj.create_virtual_module(
+    "acquisition_shadow", "test_ibl_ingest_acquisition"
+)
+data_shadow = dj.create_virtual_module("data_shadow", "test_ibl_ingest_data")
+ephys_shadow = dj.create_virtual_module("ephys_shadow", "test_ibl_ingest_ephys")
+histology_shadow = dj.create_virtual_module(
+    "histology_shadow", "test_ibl_ingest_histology"
+)
 
 # real schemas
-reference = dj.create_virtual_module('reference', 'test_ibl_reference')
-subject = dj.create_virtual_module('subject', 'test_ibl_subject')
-action = dj.create_virtual_module('action', 'test_ibl_action')
-acquisition = dj.create_virtual_module('acquisition', 'test_ibl_acquisition')
-data = dj.create_virtual_module('data', 'test_ibl_data')
-behavior = dj.create_virtual_module('behavior', 'test_ibl_behavior')
-ephys = dj.create_virtual_module('ephys', 'test_ibl_ephys')
-histology = dj.create_virtual_module('histology', 'test_ibl_histology')
-qc = dj.create_virtual_module('qc', 'test_ibl_qc')
-wheel = dj.create_virtual_module('wheel', 'test_group_shared_wheel')
+reference = dj.create_virtual_module("reference", "test_ibl_reference")
+subject = dj.create_virtual_module("subject", "test_ibl_subject")
+action = dj.create_virtual_module("action", "test_ibl_action")
+acquisition = dj.create_virtual_module("acquisition", "test_ibl_acquisition")
+data = dj.create_virtual_module("data", "test_ibl_data")
+behavior = dj.create_virtual_module("behavior", "test_ibl_behavior")
+ephys = dj.create_virtual_module("ephys", "test_ibl_ephys")
+histology = dj.create_virtual_module("histology", "test_ibl_histology")
+qc = dj.create_virtual_module("qc", "test_ibl_qc")
+wheel = dj.create_virtual_module("wheel", "test_group_shared_wheel")
 
-behavior_analyses = dj.create_virtual_module('behavior_analyses', 'test_ibl_analyses_behavior')
-ephys_analyses = dj.create_virtual_module('ephys_analyses', 'test_ibl_analyses_ephys')
+behavior_analyses = dj.create_virtual_module(
+    "behavior_analyses", "test_ibl_analyses_behavior"
+)
+ephys_analyses = dj.create_virtual_module("ephys_analyses", "test_ibl_analyses_ephys")
 
-behavior_plotting = dj.create_virtual_module('behavior_plotting', 'test_ibl_plotting_behavior')
-ephys_plotting = dj.create_virtual_module('ephys_plotting', 'test_ibl_plotting_ephys')
-histology_plotting = dj.create_virtual_module('histology_plotting', 'test_ibl_plotting_histology')
+behavior_plotting = dj.create_virtual_module(
+    "behavior_plotting", "test_ibl_plotting_behavior"
+)
+ephys_plotting = dj.create_virtual_module("ephys_plotting", "test_ibl_plotting_ephys")
+histology_plotting = dj.create_virtual_module(
+    "histology_plotting", "test_ibl_plotting_histology"
+)
 
 
-ALYX_RAW_TABLES = [
-    alyxraw.AlyxRaw,
-    alyxraw.AlyxRaw.Field
-]
+ALYX_RAW_TABLES = [alyxraw.AlyxRaw, alyxraw.AlyxRaw.Field]
 
 
-ALYX_RAW_UPDATE_TABLES = [
-    alyxraw_update.AlyxRaw,
-    alyxraw_update.AlyxRaw.Field
-]
+ALYX_RAW_UPDATE_TABLES = [alyxraw_update.AlyxRaw, alyxraw_update.AlyxRaw.Field]
 
 
 ALYX_SHADOW_TABLES = [
@@ -93,7 +98,7 @@ ALYX_SHADOW_TABLES = [
     data_shadow.DataRepository,
     data_shadow.DataSetType,
     data_shadow.DataSet,
-    data_shadow.FileRecord
+    data_shadow.FileRecord,
 ]
 
 
@@ -174,7 +179,7 @@ ALYX_TABLES = [
     data.ProjectRepository,
     data.DataSetType,
     data.DataSet,
-    data.FileRecord
+    data.FileRecord,
 ]
 
 
@@ -209,19 +214,12 @@ BEHAVIOR_TABLES = [
     behavior_plotting.CumulativeSummary.ContrastHeatmap,
     behavior_plotting.CumulativeSummary.FitPars,
     behavior_plotting.DailyLabSummary,
-    behavior_plotting.DailyLabSummary.SubjectSummary
+    behavior_plotting.DailyLabSummary.SubjectSummary,
 ]
 
-WHEEL_TABLES = [
-    behavior.CompleteWheelSession,
-    wheel.WheelMoveSet,
-    wheel.MovementTimes
-]
+WHEEL_TABLES = [behavior.CompleteWheelSession, wheel.WheelMoveSet, wheel.MovementTimes]
 
-EPHYS_SHADOW_TABLES = [
-    ephys_shadow.ProbeModel,
-    ephys_shadow.ProbeInsertion
-]
+EPHYS_SHADOW_TABLES = [ephys_shadow.ProbeModel, ephys_shadow.ProbeInsertion]
 
 
 EPHYS_TABLES = [
@@ -239,14 +237,14 @@ EPHYS_TABLES = [
     ephys_plotting.SpikeAmpTime,
     ephys_plotting.AutoCorrelogram,
     ephys_plotting.Waveform,
-    ephys_plotting.DepthRasterExampleTrial
+    ephys_plotting.DepthRasterExampleTrial,
 ]
 
 
 HISTOLOGY_SHADOW_TABLES = [
     histology_shadow.Provenance,
     histology_shadow.ProbeTrajectoryTemp,
-    histology_shadow.ChannelBrainLocationTemp
+    histology_shadow.ChannelBrainLocationTemp,
 ]
 
 
@@ -259,7 +257,7 @@ HISTOLOGY_TABLES = [
     histology.ChannelBrainLocation,
     histology.ClusterBrainRegion,
     histology_plotting.SubjectSpinningBrain,
-    histology_plotting.ProbeTrajectoryCoronal
+    histology_plotting.ProbeTrajectoryCoronal,
 ]
 
 QC_TABLES = [
@@ -275,19 +273,30 @@ QC_TABLES = [
 def delete_tables(tables):
 
     for t in tables[::-1]:
-        print(f'Deleting table {t.__name__}...')
+        print(f"Deleting table {t.__name__}...")
         t.delete_quick()
 
 
 def delete_real_all():
-    """Delete real tables in graphical order
-    """
-    tables = ALYX_TABLES + BEHAVIOR_TABLES + WHEEL_TABLES + EPHYS_TABLES + HISTOLOGY_TABLES + QC_TABLES
+    """Delete real tables in graphical order"""
+    tables = (
+        ALYX_TABLES
+        + BEHAVIOR_TABLES
+        + WHEEL_TABLES
+        + EPHYS_TABLES
+        + HISTOLOGY_TABLES
+        + QC_TABLES
+    )
     delete_tables(tables)
 
 
 def delete_shadow():
-    tables = ALYX_SHADOW_TABLES + ALYX_SHADOW_MEMBERSHIP_TABLES + EPHYS_SHADOW_TABLES + HISTOLOGY_SHADOW_TABLES
+    tables = (
+        ALYX_SHADOW_TABLES
+        + ALYX_SHADOW_MEMBERSHIP_TABLES
+        + EPHYS_SHADOW_TABLES
+        + HISTOLOGY_SHADOW_TABLES
+    )
     delete_tables(tables)
 
 

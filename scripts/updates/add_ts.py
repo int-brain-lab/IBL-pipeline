@@ -1,27 +1,32 @@
-'''
+"""
 This script add ts field to the tables.
-'''
+"""
 
 import datajoint as dj
+import tables_with_ts as tables
+
+from ibl_pipeline import acquisition, action, data, reference, subject
+from ibl_pipeline.ingest import acquisition as acquisition_ingest
+from ibl_pipeline.ingest import action as action_ingest
+from ibl_pipeline.ingest import data as data_ingest
 from ibl_pipeline.ingest import reference as reference_ingest
 from ibl_pipeline.ingest import subject as subject_ingest
-from ibl_pipeline.ingest import action as action_ingest
-from ibl_pipeline.ingest import acquisition as acquisition_ingest
-from ibl_pipeline.ingest import data as data_ingest
-from ibl_pipeline import reference, subject, action, acquisition, data
 from ibl_pipeline.utils import dj_alter_table
-import tables_with_ts as tables
 
 
 def table_add_column(schema, table_name):
-    print('Altering' + table_name + '...')
+    print("Altering" + table_name + "...")
     table = getattr(schema, table_name)
     dj_alter_table.add_column(
-        table, table_name.lower()+'_ts', dtype='timestamp',
-        default_value='CURRENT_TIMESTAMP', use_keyword_default=True)
+        table,
+        table_name.lower() + "_ts",
+        dtype="timestamp",
+        default_value="CURRENT_TIMESTAMP",
+        use_keyword_default=True,
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     tables.init()
 

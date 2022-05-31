@@ -1,19 +1,26 @@
-'''
+"""
 This script inserts tuples in the alyxraw table into the shadow tables \
 via auto-populating.
-'''
+"""
 
 import datajoint as dj
-from ibl_pipeline.ingest import \
-    (alyxraw, reference, subject, action, acquisition, data, ephys, histology)
 
-if __name__ == '__main__':
-    kargs = dict(
-        display_progress=True,
-        suppress_errors=True)
+from ibl_pipeline.ingest import (
+    acquisition,
+    action,
+    alyxraw,
+    data,
+    ephys,
+    histology,
+    reference,
+    subject,
+)
+
+if __name__ == "__main__":
+    kargs = dict(display_progress=True, suppress_errors=True)
 
     # reference tables
-    print('---------- Ingesting reference tables ---------')
+    print("---------- Ingesting reference tables ---------")
     reference.Lab.populate(**kargs)
     reference.LabMember.populate(**kargs)
     reference.LabMembership.populate(**kargs)
@@ -22,7 +29,7 @@ if __name__ == '__main__':
     reference.CoordinateSystem.populate(**kargs)
 
     # subject tables
-    print('---------- Ingesting subject tables ---------')
+    print("---------- Ingesting subject tables ---------")
     subject.Species.populate(**kargs)
     subject.Source.populate(**kargs)
     subject.Strain.populate(**kargs)
@@ -45,7 +52,7 @@ if __name__ == '__main__':
     subject.Zygosity.populate(**kargs)
 
     # action tables
-    print('---------- Ingesting action tables ---------')
+    print("---------- Ingesting action tables ---------")
     action.ProcedureType.populate(**kargs)
     action.Weighing.populate(**kargs)
     action.WaterType.populate(**kargs)
@@ -55,11 +62,11 @@ if __name__ == '__main__':
     action.OtherAction.populate(**kargs)
 
     # acquisition tables
-    print('---------- Ingesting acquisition tables ---------')
+    print("---------- Ingesting acquisition tables ---------")
     acquisition.Session.populate(**kargs)
 
     # data tables
-    print('---------- Ingesting data tables ---------')
+    print("---------- Ingesting data tables ---------")
     data.DataFormat.populate(**kargs)
     data.DataRepositoryType.populate(**kargs)
     data.DataRepository.populate(**kargs)
@@ -68,10 +75,10 @@ if __name__ == '__main__':
     # data.FileRecord.populate(**kargs)
 
     # ephys tables
-    print('------------ Ingesting ephys tables -----------')
+    print("------------ Ingesting ephys tables -----------")
     ephys.ProbeModel.populate(**kargs)
     ephys.ProbeInsertion.populate(**kargs)
 
     # histology tables
-    print('------------ Ingesting histology tables -----------')
+    print("------------ Ingesting histology tables -----------")
     histology.ProbeTrajectory.populate(**kargs)

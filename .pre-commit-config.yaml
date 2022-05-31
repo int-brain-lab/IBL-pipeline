@@ -1,0 +1,56 @@
+default_language_version:
+  python: python3.9
+# files: "^(tests|src\/brain_lab)\/.*$"
+exclude: "^$"
+default_stages: [commit]
+repos:
+  # for debugging hook input arguments
+  - repo: meta
+    hooks:
+      - id: identity
+        exclude: (devcontainer\.json|\.code-workspace)$
+
+  # out-of-the-box hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.2.0
+    hooks:
+      - id: check-case-conflict
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: ["--maxkb=25000"]
+      - id: end-of-file-fixer
+        exclude: "^LICENSE|\\.csv$"
+      - id: mixed-line-ending
+        args: ["--fix=lf"] # replace 'auto' with 'lf' to enforce Linux/Mac line endings or 'crlf' for Windows
+        exclude: "^LICENSE|\\.csv$"
+
+  # run black code formatter on python files
+  - repo: https://github.com/psf/black
+    rev: 22.3.0
+    hooks:
+      - id: black
+        args:
+          - "--line-length"
+          - "88"
+
+  # run isort on python files to sort imports
+  - repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+      - id: isort
+        args:
+          - "--profile"
+          - "black"
+
+  # run black on python code blocks in documentation files.
+  - repo: https://github.com/asottile/blacken-docs
+    rev: v1.12.1
+    hooks:
+      - id: blacken-docs
+        additional_dependencies: [black]
+
+  # strip out metadata for notebooks
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.5.0
+    hooks:
+      - id: nbstripout

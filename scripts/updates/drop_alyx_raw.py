@@ -1,16 +1,15 @@
 import datajoint as dj
-from ibl_pipeline.ingest import alyxraw, reference, subject, \
-    action, acquisition, data
 
+from ibl_pipeline.ingest import acquisition, action, alyxraw, data, reference, subject
 
 with dj.config(safemode=False):
 
     # delete alyxraw for data.filerecord if exists = 0
-    print('Deleting all alyx raw...')
+    print("Deleting all alyx raw...")
     alyxraw.AlyxRaw.delete()
 
     # delete shadow membership tables
-    print('Deleting membership tables...')
+    print("Deleting membership tables...")
 
     # reference tables
     reference.ProjectLabMember.delete()

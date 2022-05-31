@@ -1,5 +1,6 @@
 import datajoint as dj
 from tqdm import tqdm
+
 from ibl_pipeline.ingest import alyxraw
 
 
@@ -13,8 +14,9 @@ def get_created_keys(model):
     Returns:
         created_pks [list]: list of created uuids, existing in update_ibl_alyxraw but not ibl_alyxraw
     """
-    return ((alyxraw.UpdateAlyxRaw - alyxraw.AlyxRaw.proj()) &
-            f'model="{model}"').fetch('KEY')
+    return (
+        (alyxraw.UpdateAlyxRaw - alyxraw.AlyxRaw.proj()) & f'model="{model}"'
+    ).fetch("KEY")
 
 
 def get_deleted_keys(model):
@@ -27,8 +29,9 @@ def get_deleted_keys(model):
     Returns:
         deleted_pks [list]: list of deleted uuids, existing in the current ibl_alyxraw but not update_ibl_alyxraw
     """
-    return ((alyxraw.AlyxRaw - alyxraw.UpdateAlyxRaw.proj()) &
-            f'model="{model}"').fetch('KEY')
+    return (
+        (alyxraw.AlyxRaw - alyxraw.UpdateAlyxRaw.proj()) & f'model="{model}"'
+    ).fetch("KEY")
 
 
 def get_updated_keys(model, fields=None):
@@ -43,13 +46,21 @@ def get_updated_keys(model, fields=None):
         modified_pks [list]: list of deleted uuids, existing in the AlyxRaw but not UpdateAlyxRaw
     """
     fields_original = alyxraw.AlyxRaw.Field & (alyxraw.AlyxRaw & f'model="{model}"')
-    fields_update = alyxraw.UpdateAlyxRaw.Field & (alyxraw.UpdateAlyxRaw & f'model="{model}"')
+    fields_update = alyxraw.UpdateAlyxRaw.Field & (
+        alyxraw.UpdateAlyxRaw & f'model="{model}"'
+    )
 
-    fields_restr = [{'fname': f} for f in fields] if fields else {}
+    fields_restr = [{"fname": f} for f in fields] if fields else {}
 
-    return (alyxraw.AlyxRaw &
-            (fields_update.proj(fvalue_new='fvalue') * fields_original &
-             'fvalue_new != fvalue' & 'fname not in ("json")' & fields_restr)).fetch('KEY')
+    return (
+        alyxraw.AlyxRaw
+        & (
+            fields_update.proj(fvalue_new="fvalue") * fields_original
+            & "fvalue_new != fvalue"
+            & 'fname not in ("json")'
+            & fields_restr
+        )
+    ).fetch("KEY")
 
 
 def delete_from_alyxraw(keys):

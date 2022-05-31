@@ -1,19 +1,18 @@
-import datajoint as dj
-import numpy as np
-from ibl_pipeline.utils import atlas
-from tqdm import tqdm
 import warnings
 
-from ibl_pipeline import reference, subject, acquisition, data, ephys, qc
-from ibl_pipeline import mode, one
+import datajoint as dj
+import numpy as np
+from tqdm import tqdm
 
+from ibl_pipeline import acquisition, data, ephys, mode, one, qc, reference, subject
+from ibl_pipeline.utils import atlas
 
-if mode == 'update':
-    schema = dj.schema('ibl_histology')
+if mode == "update":
+    schema = dj.schema("ibl_histology")
 else:
-    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_histology')
+    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_histology")
 
-if mode != 'public':
+if mode != "public":
     from ibl_pipeline.histology_internal import ProbeTrajectoryTemp
 
 
@@ -35,25 +34,32 @@ class ProbeTrajectory(dj.Imported):
     trajectory_ts=CURRENT_TIMESTAMP:      timestamp
     """
 
-    if mode != 'public':
-        key_source = ephys.ProbeInsertion & \
-            (qc.ProbeInsertionExtendedQC & 'qc_type="alignment_resolved"') & \
-            (ProbeTrajectoryTemp & 'provenance=70')
+    if mode != "public":
+        key_source = (
+            ephys.ProbeInsertion
+            & (qc.ProbeInsertionExtendedQC & 'qc_type="alignment_resolved"')
+            & (ProbeTrajectoryTemp & "provenance=70")
+        )
 
     def make(self, key):
 
-        if mode != 'public':
+        if mode != "public":
             # get the result from temp
-            probe_trajectory = (ProbeTrajectoryTemp & 'provenance=70' & key).fetch1()
-            probe_trajectory.pop('provenance')
+            probe_trajectory = (ProbeTrajectoryTemp & "provenance=70" & key).fetch1()
+            probe_trajectory.pop("provenance")
         else:
-            subject_nickname = (subject.Subject & key).fetch1('subject_nickname')
-            probe_insertion_uuid = str((ephys.ProbeInsertion & key).fetch1('probe_insertion_uuid'))
+            subject_nickname = (subject.Subject & key).fetch1("subject_nickname")
+            probe_insertion_uuid = str(
+                (ephys.ProbeInsertion & key).fetch1("probe_insertion_uuid")
+            )
             # get the result from Alyx with ONE
             traj = one.alyx.rest(
-                'trajectories', 'list', subject=subject_nickname,
+                "trajectories",
+                "list",
+                subject=subject_nickname,
                 probe_insertion=probe_insertion_uuid,
-                provenance='Ephys aligned histology track')[0]
+                provenance="Ephys aligned histology track",
+            )[0]
             # here is an example data returned by ONE
             # [{'id': 'c652f72e-e1f4-4067-8961-1a61235f0dbc',
             # 'probe_insertion': 'da8dfec1-d265-44e8-84ce-6ae9c109b8bd',
@@ -85,11 +91,13 @@ class ProbeTrajectory(dj.Imported):
             #     0.0017561732283464578,
             #     1.0978058600524505],
             #     'PASS: None']}}]
-            kept_fields = ['x', 'y', 'z', 'depth', 'theta', 'phi', 'roll']
+            kept_fields = ["x", "y", "z", "depth", "theta", "phi", "roll"]
             probe_trajectory = dict(
-                **key, **{f: traj[f] for f in kept_fields},
-                coordinate_system_name=traj['coordinate_system'],
-                probe_trajectory_uuid=traj['id'])
+                **key,
+                **{f: traj[f] for f in kept_fields},
+                coordinate_system_name=traj["coordinate_system"],
+                probe_trajectory_uuid=traj["id"],
+            )
 
         self.insert1(probe_trajectory)
 
@@ -107,41 +115,47 @@ class ChannelBrainLocation(dj.Imported):
     -> reference.BrainRegion
     """
 
-    if mode != 'public':
-        key_source = (ProbeTrajectory
-                      & (data.FileRecord & 'dataset_name like "%channels.brainLocationIds%"')
-                      & (data.FileRecord & 'dataset_name like "%channels.mlapdv%"')) - \
-            (ephys.ProbeInsertionMissingDataLog & 'missing_data="channels_brain_region"')
+    if mode != "public":
+        key_source = (
+            ProbeTrajectory
+            & (data.FileRecord & 'dataset_name like "%channels.brainLocationIds%"')
+            & (data.FileRecord & 'dataset_name like "%channels.mlapdv%"')
+        ) - (
+            ephys.ProbeInsertionMissingDataLog & 'missing_data="channels_brain_region"'
+        )
 
     def make(self, key):
 
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        probe_name = (ephys.ProbeInsertion & key).fetch1('probe_label')
-        probe_name = probe_name or 'probe0' + key['probe_idx']
+        eID = str((acquisition.Session & key).fetch1("session_uuid"))
+        probe_name = (ephys.ProbeInsertion & key).fetch1("probe_label")
+        probe_name = probe_name or "probe0" + key["probe_idx"]
 
         try:
-            channels = one.load_object(eID, obj='channels',
-                                       collection=f'alf/{probe_name}')
+            channels = one.load_object(
+                eID, obj="channels", collection=f"alf/{probe_name}"
+            )
         except Exception as e:
             ephys.ProbeInsertionMissingDataLog.insert1(
-                dict(**key, missing_data='channels_brain_region',
-                     error_message=str(e)))
+                dict(**key, missing_data="channels_brain_region", error_message=str(e))
+            )
             return
 
         channel_entries = []
         for ichannel, (brain_loc_id, loc) in tqdm(
-                enumerate(zip(channels['brainLocationIds_ccf_2017'],
-                              channels['mlapdv']))):
-            brain_region_key = (reference.BrainRegion &
-                                {'brain_region_pk': brain_loc_id}).fetch1('KEY')
+            enumerate(zip(channels["brainLocationIds_ccf_2017"], channels["mlapdv"]))
+        ):
+            brain_region_key = (
+                reference.BrainRegion & {"brain_region_pk": brain_loc_id}
+            ).fetch1("KEY")
 
             channel_entries.append(
                 dict(
                     channel_idx=ichannel,
-                    **key, **brain_region_key,
+                    **key,
+                    **brain_region_key,
                     channel_ml=loc[0],
                     channel_ap=loc[1],
-                    channel_dv=loc[2]
+                    channel_dv=loc[2],
                 )
             )
 
@@ -160,37 +174,43 @@ class ClusterBrainRegion(dj.Imported):
     cluster_dv      : decimal(6, 1)  # (um) dorso-ventral coordinate relative to Bregma, ventral negative
     -> reference.BrainRegion
     """
-    key_source = ProbeTrajectory & \
-        (data.FileRecord & 'dataset_name like "%clusters.brainLocationIds%"') & \
-        (data.FileRecord & 'dataset_name like "%clusters.mlapdv%"')
+    key_source = (
+        ProbeTrajectory
+        & (data.FileRecord & 'dataset_name like "%clusters.brainLocationIds%"')
+        & (data.FileRecord & 'dataset_name like "%clusters.mlapdv%"')
+    )
 
     def make(self, key):
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        probe_name = (ephys.ProbeInsertion & key).fetch1('probe_label')
-        probe_name = probe_name or 'probe0' + key['probe_idx']
+        eID = str((acquisition.Session & key).fetch1("session_uuid"))
+        probe_name = (ephys.ProbeInsertion & key).fetch1("probe_label")
+        probe_name = probe_name or "probe0" + key["probe_idx"]
 
         try:
-            clusters = one.load_object(eID, obj='clusters', collection=f'alf/{probe_name}')
+            clusters = one.load_object(
+                eID, obj="clusters", collection=f"alf/{probe_name}"
+            )
         except Exception as e:
             ephys.ProbeInsertionMissingDataLog.insert1(
-                dict(**key, missing_data='clusters_brain_region',
-                     error_message=str(e)))
+                dict(**key, missing_data="clusters_brain_region", error_message=str(e))
+            )
             return
 
         cluster_entries = []
         for icluster, (brain_loc_id, loc) in tqdm(
-                enumerate(zip(clusters['brainLocationIds_ccf_2017'],
-                              clusters['mlapdv']))):
-            brain_region_key = (reference.BrainRegion &
-                                {'brain_region_pk': brain_loc_id}).fetch1('KEY')
+            enumerate(zip(clusters["brainLocationIds_ccf_2017"], clusters["mlapdv"]))
+        ):
+            brain_region_key = (
+                reference.BrainRegion & {"brain_region_pk": brain_loc_id}
+            ).fetch1("KEY")
 
             cluster_entries.append(
                 dict(
                     cluster_id=icluster,
-                    **key, **brain_region_key,
+                    **key,
+                    **brain_region_key,
                     cluster_ml=loc[0],
                     cluster_ap=loc[1],
-                    cluster_dv=loc[2]
+                    cluster_dv=loc[2],
                 )
             )
 
@@ -207,13 +227,17 @@ class ProbeBrainRegion(dj.Computed):
     key_source = ProbeTrajectory & ClusterBrainRegion
 
     def make(self, key):
-        regions = (dj.U('acronym') & (ClusterBrainRegion & key)).fetch('acronym')
+        regions = (dj.U("acronym") & (ClusterBrainRegion & key)).fetch("acronym")
         associated_regions = [
-            atlas.BrainAtlas.get_parents(acronym)
-            for acronym in regions] + list(regions)
+            atlas.BrainAtlas.get_parents(acronym) for acronym in regions
+        ] + list(regions)
 
-        self.insert([dict(**key, ontology='CCF 2017', acronym=region)
-                     for region in np.unique(np.hstack(associated_regions))])
+        self.insert(
+            [
+                dict(**key, ontology="CCF 2017", acronym=region)
+                for region in np.unique(np.hstack(associated_regions))
+            ]
+        )
 
 
 @schema
@@ -233,15 +257,20 @@ class DepthBrainRegion(dj.Computed):
         from ibllib.pipes.ephys_alignment import EphysAlignment
 
         x, y, z = (ChannelBrainLocation & key).fetch(
-            'channel_ml', 'channel_ap', 'channel_dv')
+            "channel_ml", "channel_ap", "channel_dv"
+        )
 
-        coords = (ephys.ChannelGroup & key).fetch1('channel_local_coordinates')
+        coords = (ephys.ChannelGroup & key).fetch1("channel_local_coordinates")
 
         xyz_channels = np.c_[x, y, z]
-        key['region_boundaries'], key['region_label'], \
-            key['region_color'], key['region_id'] = \
-            EphysAlignment.get_histology_regions(
-                xyz_channels.astype('float')/1e6, coords[:, 1])
+        (
+            key["region_boundaries"],
+            key["region_label"],
+            key["region_color"],
+            key["region_id"],
+        ) = EphysAlignment.get_histology_regions(
+            xyz_channels.astype("float") / 1e6, coords[:, 1]
+        )
 
         self.insert1(key)
 
@@ -255,11 +284,11 @@ class DepthBrainRegion(dj.Computed):
             keys_with_duplicated_boundaries (list of dicts): a list of keys that have duplicated boundaries.
         """
 
-        keys = (cls & restrictor).fetch('KEY')
+        keys = (cls & restrictor).fetch("KEY")
 
         keys_with_duplicated_boundaries = []
         for key in keys:
-            region_labels = (cls & key).fetch1('region_label')
+            region_labels = (cls & key).fetch1("region_label")
 
             if len(region_labels) != len(set(region_labels[:, 0])):
                 keys_with_duplicated_boundaries.append(key)

@@ -1,22 +1,28 @@
-'''
+"""
 This module contains functions that generates plots.
-'''
+"""
 
-import numpy as np
+import colorlover as cl
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 from matplotlib import cm
 from matplotlib.colors import Normalize
 from scipy.interpolate import interpn
-import colorlover as cl
 
 
 def driftmap_color(
-        clusters_depths, spikes_times,
-        spikes_amps, spikes_depths, spikes_clusters,
-        ax=None, axesoff=False, return_lims=False):
+    clusters_depths,
+    spikes_times,
+    spikes_amps,
+    spikes_depths,
+    spikes_clusters,
+    ax=None,
+    axesoff=False,
+    return_lims=False,
+):
 
-    '''
+    """
     Plots the driftmap of a session or a trial
 
     The plot shows the spike times vs spike depths.
@@ -47,23 +53,27 @@ def driftmap_color(
         range of x axis
     y_lim: list of two elements
         range of y axis
-    '''
+    """
 
     color_bins = sns.color_palette("hls", 500)
     new_color_bins = np.vstack(
-        np.transpose(np.reshape(color_bins, [5, 100, 3]), [1, 0, 2]))
+        np.transpose(np.reshape(color_bins, [5, 100, 3]), [1, 0, 2])
+    )
 
     # get the sorted idx of each depth, and create colors based on the idx
 
     sorted_idx = np.argsort(np.argsort(clusters_depths))
 
     colors = np.vstack(
-        [np.repeat(
-            new_color_bins[np.mod(idx, 500), :][np.newaxis, ...],
-            n_spikes, axis=0)
-            for (idx, n_spikes) in
-            zip(sorted_idx, np.unique(spikes_clusters,
-                                      return_counts=True)[1])])
+        [
+            np.repeat(
+                new_color_bins[np.mod(idx, 500), :][np.newaxis, ...], n_spikes, axis=0
+            )
+            for (idx, n_spikes) in zip(
+                sorted_idx, np.unique(spikes_clusters, return_counts=True)[1]
+            )
+        ]
+    )
 
     max_amp = np.percentile(spikes_amps, 90)
     min_amp = np.percentile(spikes_amps, 10)
@@ -71,20 +81,20 @@ def driftmap_color(
     opacity[opacity > 1] = 1
     opacity[opacity < 0] = 0
 
-    colorvec = np.zeros([len(opacity), 4], dtype='float16')
-    colorvec[:, 3] = opacity.astype('float16')
-    colorvec[:, 0:3] = colors.astype('float16')
+    colorvec = np.zeros([len(opacity), 4], dtype="float16")
+    colorvec[:, 3] = opacity.astype("float16")
+    colorvec[:, 0:3] = colors.astype("float16")
 
-    x = spikes_times.astype('float32')
-    y = spikes_depths.astype('float32')
+    x = spikes_times.astype("float32")
+    y = spikes_depths.astype("float32")
 
-    args = dict(color=colorvec, edgecolors='none')
+    args = dict(color=colorvec, edgecolors="none")
 
     if ax is None:
         fig = plt.Figure(dpi=200, frameon=False, figsize=[10, 10])
         ax = plt.Axes(fig, [0.1, 0.1, 0.9, 0.9])
-        ax.set_xlabel('Time (sec)')
-        ax.set_ylabel('Distance from the probe tip (µm)')
+        ax.set_xlabel("Time (sec)")
+        ax.set_ylabel("Distance from the probe tip (µm)")
         savefig = True
         args.update(s=0.1)
 
@@ -96,11 +106,11 @@ def driftmap_color(
     ax.set_ylim(y_lim[0], y_lim[1])
 
     if axesoff:
-        ax.axis('off')
+        ax.axis("off")
 
     if savefig:
         fig.add_axes(ax)
-        fig.savefig('driftmap.png')
+        fig.savefig("driftmap.png")
 
     if return_lims:
         return ax, x_lim, y_lim
@@ -108,10 +118,9 @@ def driftmap_color(
         return ax
 
 
-def depth_peth(peth_df, ax=None, colors=None,
-               as_background=False, return_lims=False):
+def depth_peth(peth_df, ax=None, colors=None, as_background=False, return_lims=False):
 
-    '''
+    """
     Plots the peth of all trials for multi-unit activities across different depths.
 
     The plot shows the heatmap of peth of each time point and depth.
@@ -136,7 +145,7 @@ def depth_peth(peth_df, ax=None, colors=None,
         range of x axis
     y_lim: list of two elements
         range of y axis
-    '''
+    """
 
     if colors is None:
         colors = sns.diverging_palette(255, 10, n=100)
@@ -148,19 +157,22 @@ def depth_peth(peth_df, ax=None, colors=None,
         fig, ax = plt.subplots(1, 1, dpi=100, frameon=False, figsize=[6, 4])
 
     if as_background:
-        ax.axis('off')
+        ax.axis("off")
         cbar = None
     else:
-        ax.set_xlabel('Time (s)')
-        ax.set_ylabel('Depth relative to the probe tip (µm)')
-        cbar = 'auto'
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Depth relative to the probe tip (µm)")
+        cbar = "auto"
 
-    ax = sns.heatmap(peth_df,
-                     xticklabels=10,
-                     yticklabels=5,
-                     cmap=colors,
-                     center=center,
-                     ax=ax, cbar=cbar)
+    ax = sns.heatmap(
+        peth_df,
+        xticklabels=10,
+        yticklabels=5,
+        cmap=colors,
+        center=center,
+        ax=ax,
+        cbar=cbar,
+    )
     ax.invert_yaxis()
 
     if return_lims:
@@ -168,19 +180,19 @@ def depth_peth(peth_df, ax=None, colors=None,
         depths = peth_df.index.to_list()
         time_bin = np.mean(np.diff(time))
         depth_bin = np.mean(np.diff(depths))
-        x_lim = [min(time) - time_bin/2, max(time) + time_bin/2]
-        y_lim = [min(depths) - depth_bin/2, max(depths) + depth_bin/2]
+        x_lim = [min(time) - time_bin / 2, max(time) + time_bin / 2]
+        y_lim = [min(depths) - depth_bin / 2, max(depths) + depth_bin / 2]
 
         return ax, x_lim, y_lim
     else:
         return ax
 
 
-def spike_amp_time(spike_times, spike_amps,
-                   ax=None, s=3,
-                   as_background=False, return_lims=False):
+def spike_amp_time(
+    spike_times, spike_amps, ax=None, s=3, as_background=False, return_lims=False
+):
 
-    '''
+    """
     Plots spike amps versus the time
 
     Parameters
@@ -205,24 +217,27 @@ def spike_amp_time(spike_times, spike_amps,
         range of x axis
     y_lim: list of two elements
         range of y axis
-    '''
+    """
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, dpi=100, frameon=False, figsize=[6, 4])
 
     if as_background:
-        ax.axis('off')
+        ax.axis("off")
     else:
-        ax.set_xlabel('Time (s)')
-        ax.set_ylabel('Spike amplitude (µV)')
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Spike amplitude (µV)")
 
     x = spike_times
     y = spike_amps
-    data, x_e, y_e = np.histogram2d(
-        x, y, bins=[100, 100], density=True)
-    z = interpn((0.5*(x_e[1:] + x_e[:-1]), 0.5*(y_e[1:]+y_e[:-1])),
-                data, np.vstack([x, y]).T,
-                method="splinef2d", bounds_error=False)
+    data, x_e, y_e = np.histogram2d(x, y, bins=[100, 100], density=True)
+    z = interpn(
+        (0.5 * (x_e[1:] + x_e[:-1]), 0.5 * (y_e[1:] + y_e[:-1])),
+        data,
+        np.vstack([x, y]).T,
+        method="splinef2d",
+        bounds_error=False,
+    )
 
     # To be sure to plot all data
     z[np.where(np.isnan(z))] = 0.0
@@ -249,9 +264,10 @@ def spike_amp_time(spike_times, spike_amps,
         return ax
 
 
-def template_waveform(waveforms, coords,
-                      ax=None, as_background=False, return_lims=False):
-    '''
+def template_waveform(
+    waveforms, coords, ax=None, as_background=False, return_lims=False
+):
+    """
     Plots template waveform for a unit in different channels
 
     Parameters
@@ -274,15 +290,15 @@ def template_waveform(waveforms, coords,
         range of x axis
     y_lim: list of two elements
         range of y axis
-    '''
+    """
     if ax is None:
         fig, ax = plt.subplots(1, 1, dpi=100, frameon=False, figsize=[5.8, 4])
 
     if as_background:
-        ax.axis('off')
+        ax.axis("off")
     else:
-        ax.set_xlabel('Channel position x (µm)')
-        ax.set_ylabel('Channel position y (µm)')
+        ax.set_xlabel("Channel position x (µm)")
+        ax.set_ylabel("Channel position y (µm)")
 
     x_max = np.max(coords[:, 0])
     x_min = np.min(coords[:, 0])
@@ -298,8 +314,8 @@ def template_waveform(waveforms, coords,
 
     # time (in ms) * x_scale (in um/ms) + x_start(coord[0]) = position
     # the waveform takes 0.9 of each x interval between adjacent channels
-    dt = 1/30
-    x_scale = (x_max - x_min) / (n_xpos - 1) * 0.9 / (dt*time_len)
+    dt = 1 / 30
+    x_scale = (x_max - x_min) / (n_xpos - 1) * 0.9 / (dt * time_len)
 
     # y_scale adjusted with the amplitude of the waveforms
     # waveform voltage in (uV) * y_scale (in um/uV) + y_start (coord[1]) = position
@@ -311,8 +327,9 @@ def template_waveform(waveforms, coords,
     time = np.arange(time_len) * dt
 
     for wf, coord in zip(waveforms_in_uV.T, coords):
-        ax.plot(time*x_scale + coord[0],
-                wf*y_scale + coord[1], color=[0.2, 0.3, 0.8])
+        ax.plot(
+            time * x_scale + coord[0], wf * y_scale + coord[1], color=[0.2, 0.3, 0.8]
+        )
 
     # plot scale bar
     # um corresponding to 1 ms in time
@@ -323,11 +340,11 @@ def template_waveform(waveforms, coords,
     x0 = x_min - 6
     y0 = y_min + 10
 
-    ax.text(x0, y0-20, '1ms', fontdict=dict(family='serif'))
-    ax.text(x0-3, y0, '100uV', fontdict=dict(family='serif'), rotation='vertical')
+    ax.text(x0, y0 - 20, "1ms", fontdict=dict(family="serif"))
+    ax.text(x0 - 3, y0, "100uV", fontdict=dict(family="serif"), rotation="vertical")
 
-    ax.plot([x0, x0 + x_bar], [y0, y0], color='black')
-    ax.plot([x0, x0], [y0, y0 + y_bar], color='black')
+    ax.plot([x0, x0 + x_bar], [y0, y0], color="black")
+    ax.plot([x0, x0], [y0, y0 + y_bar], color="black")
 
     x_lim = [x_min - 10, x_max + 15]
     y_lim = [y_min - 20, y_max + 20]

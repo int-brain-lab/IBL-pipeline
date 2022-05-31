@@ -1,12 +1,13 @@
-
 import datajoint as dj
-from ibl_pipeline import  reference, action, subject
+
+from ibl_pipeline import action
+from ibl_pipeline import reference
 from ibl_pipeline import reference as reference_ingest
+from ibl_pipeline import subject
 from ibl_pipeline.ingest import action as action_ingest
 from ibl_pipeline.ingest import subject as subject_ingest
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     with dj.config(safemode=False):
 

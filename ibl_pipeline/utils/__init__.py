@@ -1,5 +1,5 @@
-from uuid import UUID
 import json
+from uuid import UUID
 
 
 def is_valid_uuid(uuid):
@@ -10,12 +10,7 @@ def is_valid_uuid(uuid):
         return False
 
 
-json_replace_map = {
-    "\'": "\"",
-    'None': '\"None\"',
-    'True': 'true',
-    'False': 'false'
-}
+json_replace_map = {"'": '"', "None": '"None"', "True": "true", "False": "false"}
 
 
 def str_to_dict(string):

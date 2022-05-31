@@ -1,13 +1,13 @@
-'''
+"""
 This script inserts tuples in the alyxraw table into the shadow tables \
 via auto-populating, to detect the latest values.
-'''
+"""
 
 import datajoint as dj
-from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data
 
+from ibl_pipeline.ingest import acquisition, action, alyxraw, data, reference, subject
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # reference tables
     reference.Lab.populate(suppress_errors=True)
     reference.LabMember.populate(suppress_errors=True)

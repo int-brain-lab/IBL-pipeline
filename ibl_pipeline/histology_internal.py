@@ -1,25 +1,26 @@
+import warnings
+
 import datajoint as dj
 import numpy as np
-from ibl_pipeline.utils import atlas
-import warnings
-from ibl_pipeline import reference, acquisition, data, qc
-from ibl_pipeline import mode, one
 
+from ibl_pipeline import acquisition, data, mode, one, qc, reference
+from ibl_pipeline.utils import atlas
 
 # avoid importing ONE when importing the ephys module if possible
 try:
-    ephys = dj.create_virtual_module('ephys', 'ibl_ephys')
+    ephys = dj.create_virtual_module("ephys", "ibl_ephys")
 except dj.DataJointError:
     from ibl_pipeline import ephys
 
 
-if mode == 'update':
-    schema = dj.schema('ibl_histology')
+if mode == "update":
+    schema = dj.schema("ibl_histology")
 else:
-    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_histology')
+    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_histology")
 
 
 # ================= The temporary tables before the probe trajectories are finally resolved ===================
+
 
 @schema
 class Provenance(dj.Lookup):
@@ -30,10 +31,10 @@ class Provenance(dj.Lookup):
     provenance_description       : varchar(128)     # type of trajectory
     """
     contents = [
-        (70, 'Ephys aligned histology track'),
-        (50, 'Histology track'),
-        (30, 'Micro-manipulator'),
-        (10, 'Planned'),
+        (70, "Ephys aligned histology track"),
+        (50, "Histology track"),
+        (30, "Micro-manipulator"),
+        (10, "Planned"),
     ]
 
 
@@ -81,8 +82,8 @@ class ChannelBrainLocationTemp(dj.Imported):
         Returns:
             list of str: list of channel_brain_location_uuids that are deleted from alyx
         """
-        dj_uuids = [str(uuid) for uuid in cls.fetch('channel_brain_location_uuid')]
-        alyx_uuids = [c['id'] for c in one.alyx.rest('channels', 'list')]
+        dj_uuids = [str(uuid) for uuid in cls.fetch("channel_brain_location_uuid")]
+        alyx_uuids = [c["id"] for c in one.alyx.rest("channels", "list")]
         return list(set(dj_uuids) - set(alyx_uuids))
 
 
@@ -103,13 +104,21 @@ class DepthBrainRegionTemp(dj.Computed):
         from ibllib.pipes.ephys_alignment import EphysAlignment
 
         x, y, z, axial = (ChannelBrainLocationTemp & key).fetch(
-            'channel_x', 'channel_y', 'channel_z', 'channel_axial',
-            order_by='channel_axial')
+            "channel_x",
+            "channel_y",
+            "channel_z",
+            "channel_axial",
+            order_by="channel_axial",
+        )
         xyz_channels = np.c_[x, y, z]
-        key['region_boundaries'], key['region_label'], \
-            key['region_color'], key['region_id'] = \
-            EphysAlignment.get_histology_regions(
-                xyz_channels.astype('float')/1e6, axial.astype('float'))
+        (
+            key["region_boundaries"],
+            key["region_label"],
+            key["region_color"],
+            key["region_id"],
+        ) = EphysAlignment.get_histology_regions(
+            xyz_channels.astype("float") / 1e6, axial.astype("float")
+        )
 
         self.insert1(key)
 
@@ -124,54 +133,65 @@ class ClusterBrainRegionTemp(dj.Computed):
     ---
     -> reference.BrainRegion
     """
-    key_source = ephys.DefaultCluster * Provenance & \
-        ProbeTrajectoryTemp & ephys.ChannelGroup & ChannelBrainLocationTemp
+    key_source = (
+        ephys.DefaultCluster * Provenance
+        & ProbeTrajectoryTemp
+        & ephys.ChannelGroup
+        & ChannelBrainLocationTemp
+    )
 
     def make(self, key):
         # pdb.set_trace()
-        channel_raw_inds, channel_local_coordinates = \
-            (ephys.ChannelGroup & key).fetch1(
-                'channel_raw_inds', 'channel_local_coordinates')
-        channel = (ephys.DefaultCluster & key).fetch1('cluster_channel')
+        channel_raw_inds, channel_local_coordinates = (ephys.ChannelGroup & key).fetch1(
+            "channel_raw_inds", "channel_local_coordinates"
+        )
+        channel = (ephys.DefaultCluster & key).fetch1("cluster_channel")
         if channel in channel_raw_inds:
             channel_coords = np.squeeze(
-                channel_local_coordinates[channel_raw_inds == channel])
+                channel_local_coordinates[channel_raw_inds == channel]
+            )
         else:
             return
 
-        q = ChannelBrainLocationTemp & key & \
-            dict(channel_lateral=channel_coords[0],
-                 channel_axial=channel_coords[1])
+        q = (
+            ChannelBrainLocationTemp
+            & key
+            & dict(channel_lateral=channel_coords[0], channel_axial=channel_coords[1])
+        )
 
         if len(q) == 1:
-            key['ontology'], key['acronym'] = q.fetch1(
-                'ontology', 'acronym')
+            key["ontology"], key["acronym"] = q.fetch1("ontology", "acronym")
 
             self.insert1(key)
         elif len(q) > 1:
-            ontology, acronym = q.fetch('ontology', 'acronym')
+            ontology, acronym = q.fetch("ontology", "acronym")
             if len(np.unique(acronym)) == 1:
-                key['ontology'] = 'CCF 2017'
-                key['acronym'] = acronym[0]
+                key["ontology"] = "CCF 2017"
+                key["acronym"] = acronym[0]
                 self.insert1(key)
             else:
                 # check which one is in alyx
-                uuids = q.fetch('channel_brain_location_uuid')
+                uuids = q.fetch("channel_brain_location_uuid")
                 channel_detected = 0
                 for uuid in uuids:
-                    channel = one.alyx.rest('channels', 'list', id=str(uuid))
+                    channel = one.alyx.rest("channels", "list", id=str(uuid))
                     if channel:
                         if channel_detected:
-                            warnings.warn('Duplicated Channel entries detected in alyx')
+                            warnings.warn("Duplicated Channel entries detected in alyx")
                         else:
-                            ontology, acronym = (ChannelBrainLocationTemp & {'channel_brain_location_uuid': uuid}).fetch1('ontology', 'acronym')
-                            key['ontology'] = 'CCF 2017'
-                            key['acronym'] = acronym
+                            ontology, acronym = (
+                                ChannelBrainLocationTemp
+                                & {"channel_brain_location_uuid": uuid}
+                            ).fetch1("ontology", "acronym")
+                            key["ontology"] = "CCF 2017"
+                            key["acronym"] = acronym
                             self.insert1(key)
 
                         channel_detected = 1
 
-                warnings.warn('Detect duplicated channel brain location entries in table ChannelBrainLocationTemp')
+                warnings.warn(
+                    "Detect duplicated channel brain location entries in table ChannelBrainLocationTemp"
+                )
         else:
             return
 
@@ -186,10 +206,14 @@ class ProbeBrainRegionTemp(dj.Computed):
     key_source = ProbeTrajectoryTemp & ClusterBrainRegionTemp
 
     def make(self, key):
-        regions = (dj.U('acronym') & (ClusterBrainRegionTemp & key)).fetch('acronym')
+        regions = (dj.U("acronym") & (ClusterBrainRegionTemp & key)).fetch("acronym")
         associated_regions = [
-            atlas.BrainAtlas.get_parents(acronym)
-            for acronym in regions] + list(regions)
+            atlas.BrainAtlas.get_parents(acronym) for acronym in regions
+        ] + list(regions)
 
-        self.insert([dict(**key, ontology='CCF 2017', acronym=region)
-                     for region in np.unique(np.hstack(associated_regions))])
+        self.insert(
+            [
+                dict(**key, ontology="CCF 2017", acronym=region)
+                for region in np.unique(np.hstack(associated_regions))
+            ]
+        )

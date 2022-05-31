@@ -1,17 +1,18 @@
-'''
+"""
 This script inserts tuples in the alyxraw table into the shadow tables \
 via auto-populating.
-'''
+"""
 
 import datajoint as dj
-from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, data
-from ibl_pipeline import public
 import utils
+
+from ibl_pipeline import public
+from ibl_pipeline.ingest import acquisition, action, alyxraw, data, reference, subject
 
 kargs = dict(suppress_errors=True, display_progress=True, reserve_jobs=True)
 
 # reference tables
-print('-------- Populating reference shadow tables ------------')
+print("-------- Populating reference shadow tables ------------")
 reference.Lab.populate(**kargs)
 reference.LabMember.populate(**kargs)
 reference.LabMembership.populate(**kargs)
@@ -19,7 +20,7 @@ reference.LabLocation.populate(**kargs)
 reference.Project.populate(**kargs)
 
 # subject tables
-print('-------- Populating subject shadow tables ------------')
+print("-------- Populating subject shadow tables ------------")
 subject.Species.populate(**kargs)
 subject.Source.populate(**kargs)
 subject.Strain.populate(**kargs)
@@ -43,17 +44,17 @@ subject.GenotypeTest.populate(**kargs)
 subject.Zygosity.populate(**kargs)
 
 # action tables
-print('-------- Populating action shadow tables -----------')
+print("-------- Populating action shadow tables -----------")
 action.ProcedureType.populate(**kargs)
 action.Surgery.populate(**kargs)
 
 
 # acquisition tables
-print('-------- Populating session entries -----------')
+print("-------- Populating session entries -----------")
 acquisition.Session.populate(**kargs)
 
 # data tables
-print('-------- Populating data shadow tables -----------')
+print("-------- Populating data shadow tables -----------")
 data.DataFormat.populate(**kargs)
 data.DataRepositoryType.populate(**kargs)
 data.DataRepository.populate(**kargs)

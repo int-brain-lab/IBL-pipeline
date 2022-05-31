@@ -1,22 +1,21 @@
 import os
+
 import datajoint as dj
-from tqdm import tqdm
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
-from ibl_pipeline import acquisition, reference, behavior, data
-from ibl_pipeline import one, mode
-
+from ibl_pipeline import acquisition, behavior, data, mode, one, reference
 
 try:
-    wheel = dj.create_virtual_module('wheel', 'group_shared_wheel')
+    wheel = dj.create_virtual_module("wheel", "group_shared_wheel")
 except dj.DataJointError:
     from ibl_pipeline.group_shared import wheel
 
-if mode == 'update':
-    schema = dj.schema('ibl_ephys')
+if mode == "update":
+    schema = dj.schema("ibl_ephys")
 else:
-    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_ephys')
+    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ephys")
 
 
 @schema
@@ -42,33 +41,36 @@ class CompleteClusterSession(dj.Computed):
     complete_cluster_session_ts=CURRENT_TIMESTAMP  :  timestamp
     """
     required_datasets = [
-        'clusters.amps.npy',
-        'clusters.channels.npy',
-        'clusters.depths.npy',
-        'clusters.metrics.pqt',
-        'clusters.peakToTrough.npy',
-        'clusters.uuids.csv',
-        'clusters.metrics.pqt',
-        'clusters.waveforms.npy',
-        'clusters.waveformsChannels.npy',
-        'spikes.amps.npy',
-        'spikes.clusters.npy',
-        'spikes.depths.npy',
-        'spikes.samples.npy',
-        'spikes.templates.npy'
+        "clusters.amps.npy",
+        "clusters.channels.npy",
+        "clusters.depths.npy",
+        "clusters.metrics.pqt",
+        "clusters.peakToTrough.npy",
+        "clusters.uuids.csv",
+        "clusters.metrics.pqt",
+        "clusters.waveforms.npy",
+        "clusters.waveformsChannels.npy",
+        "spikes.amps.npy",
+        "spikes.clusters.npy",
+        "spikes.depths.npy",
+        "spikes.samples.npy",
+        "spikes.templates.npy",
     ]
-    key_source = acquisition.Session & \
-        'task_protocol like "%ephysChoiceWorld%"' \
-        & (data.FileRecord & 'dataset_name like "%spikes.times%.npy"') \
+    key_source = (
+        acquisition.Session
+        & 'task_protocol like "%ephysChoiceWorld%"'
+        & (data.FileRecord & 'dataset_name like "%spikes.times%.npy"')
         & (data.FileRecord & 'dataset_name="spikes.clusters.npy"')
+    )
 
     def make(self, key):
 
-        datasets = (data.FileRecord & key & 'repo_name LIKE "flatiron_%"' &
-                    {'exists': 1}).fetch('dataset_name')
-        is_complete = bool(np.all([req_ds in datasets
-                                   for req_ds in self.required_datasets])) \
-            and bool(np.any(['spikes.times' in d for d in datasets]))
+        datasets = (
+            data.FileRecord & key & 'repo_name LIKE "flatiron_%"' & {"exists": 1}
+        ).fetch("dataset_name")
+        is_complete = bool(
+            np.all([req_ds in datasets for req_ds in self.required_datasets])
+        ) and bool(np.any(["spikes.times" in d for d in datasets]))
 
         if is_complete:
             self.insert1(key)
@@ -78,9 +80,8 @@ class CompleteClusterSession(dj.Computed):
             for req_ds in self.required_datasets:
                 if req_ds not in datasets:
                     EphysMissingDataLog.insert1(
-                        dict(**key,
-                             missing_data=req_ds),
-                        skip_duplicates=True)
+                        dict(**key, missing_data=req_ds), skip_duplicates=True
+                    )
 
 
 @schema
@@ -117,9 +118,11 @@ class ProbeInsertion(dj.Imported):
 
     @classmethod
     def validate(cls):
-        probe_insertions_alyx = one.alyx.rest('insertions', 'list')
-        uuids_alyx = {p['id'] for p in probe_insertions_alyx}
-        uuids_dj = (cls & 'probe_insertion_uuid is not null').fetch('probe_insertion_uuid')
+        probe_insertions_alyx = one.alyx.rest("insertions", "list")
+        uuids_alyx = {p["id"] for p in probe_insertions_alyx}
+        uuids_dj = (cls & "probe_insertion_uuid is not null").fetch(
+            "probe_insertion_uuid"
+        )
         uuids_dj = {str(uuid) for uuid in uuids_dj}
         return list(uuids_alyx - uuids_dj)
 
@@ -146,28 +149,35 @@ class ChannelGroup(dj.Imported):
     channel_group_ts=CURRENT_TIMESTAMP  :  timestamp
     """
 
-    if mode != 'public':
-        key_source = ProbeInsertion \
-            & (data.FileRecord & 'dataset_name="channels.rawInd.npy"') \
-            & (data.FileRecord & 'dataset_name="channels.localCoordinates.npy"') - \
-                (ProbeInsertionMissingDataLog & 'missing_data="channels"')
+    if mode != "public":
+        key_source = (
+            ProbeInsertion
+            & (data.FileRecord & 'dataset_name="channels.rawInd.npy"')
+            & (data.FileRecord & 'dataset_name="channels.localCoordinates.npy"')
+            - (ProbeInsertionMissingDataLog & 'missing_data="channels"')
+        )
 
     def make(self, key):
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        probe_name = (ProbeInsertion & key).fetch1('probe_label')
+        eID = str((acquisition.Session & key).fetch1("session_uuid"))
+        probe_name = (ProbeInsertion & key).fetch1("probe_label")
 
         try:
-            channels = one.load_object(eID, obj='channels',
-                                       collection=f'alf/{probe_name}')
+            channels = one.load_object(
+                eID, obj="channels", collection=f"alf/{probe_name}"
+            )
         except Exception as e:
             ProbeInsertionMissingDataLog.insert1(
-                dict(**key, missing_data='channels', error_message=str(e)))
+                dict(**key, missing_data="channels", error_message=str(e))
+            )
             return
 
         self.insert1(
-            dict(**key,
-                 channel_raw_inds=channels.rawInd,
-                 channel_local_coordinates=channels.localCoordinates))
+            dict(
+                **key,
+                channel_raw_inds=channels.rawInd,
+                channel_local_coordinates=channels.localCoordinates,
+            )
+        )
 
 
 @schema
@@ -175,7 +185,7 @@ class ClusteringMethod(dj.Lookup):
     definition = """
     clustering_method:   varchar(32)   # clustering method
     """
-    contents = [['ks2']]
+    contents = [["ks2"]]
 
 
 @schema
@@ -200,33 +210,43 @@ class DefaultCluster(dj.Imported):
     cluster_ts=CURRENT_TIMESTAMP  :  timestamp
     """
 
-    if mode != 'public':
-        key_source = (ProbeInsertion & (CompleteClusterSession - ProblematicDataSet)
-                      - (ProbeInsertionMissingDataLog & 'missing_data="clusters"'))
+    if mode != "public":
+        key_source = ProbeInsertion & (CompleteClusterSession - ProblematicDataSet) - (
+            ProbeInsertionMissingDataLog & 'missing_data="clusters"'
+        )
 
     def make(self, key):
-        eID = str((acquisition.Session & key).fetch1('session_uuid'))
-        probe_name = (ProbeInsertion & key).fetch1('probe_label')
+        eID = str((acquisition.Session & key).fetch1("session_uuid"))
+        probe_name = (ProbeInsertion & key).fetch1("probe_label")
 
         try:
-            clusters = one.load_object(eID, obj='clusters', collection=f'alf/{probe_name}')
-            spikes = one.load_object(eID, obj='spikes', collection=f'alf/{probe_name}')
+            clusters = one.load_object(
+                eID, obj="clusters", collection=f"alf/{probe_name}"
+            )
+            spikes = one.load_object(eID, obj="spikes", collection=f"alf/{probe_name}")
         except Exception as e:
             ProbeInsertionMissingDataLog.insert1(
-                dict(**key, missing_data='clusters', error_message=str(e)))
+                dict(**key, missing_data="clusters", error_message=str(e))
+            )
             return
 
-        time_fnames = [k for k in spikes.keys() if 'times' in k]
+        time_fnames = [k for k in spikes.keys() if "times" in k]
 
         if len(time_fnames) > 1:
-            raise ValueError('More than one fields of spikes are about times: {}'.format(spikes.keys()))
+            raise ValueError(
+                "More than one fields of spikes are about times: {}".format(
+                    spikes.keys()
+                )
+            )
         else:
             time_fname = time_fnames[0]
 
         max_spike_time = spikes[time_fname][-1]
 
         cluster_list, metrics_list, metric_list, Ks2Label_list = [], [], [], []
-        for icluster, cluster_uuid in tqdm(enumerate(clusters.uuids['uuids']), position=0):
+        for icluster, cluster_uuid in tqdm(
+            enumerate(clusters.uuids["uuids"]), position=0
+        ):
             idx = spikes.clusters == icluster
             cluster = dict(
                 **key,
@@ -242,31 +262,42 @@ class DefaultCluster(dj.Imported):
                 cluster_spikes_depths=spikes.depths[idx],
                 cluster_spikes_amps=spikes.amps[idx],
                 cluster_spikes_templates=spikes.templates[idx],
-                cluster_spikes_samples=spikes.samples[idx])
+                cluster_spikes_samples=spikes.samples[idx],
+            )
 
             cluster_list.append(cluster)
 
-            num_spikes = len(cluster['cluster_spikes_times'])
-            firing_rate = num_spikes/max_spike_time
+            num_spikes = len(cluster["cluster_spikes_times"])
+            firing_rate = num_spikes / max_spike_time
 
             metrics = clusters.metrics.iloc[icluster]
 
-            metrics_list.append(dict(**key,
-                                     cluster_id=icluster,
-                                     num_spikes=num_spikes,
-                                     firing_rate=firing_rate,
-                                     metrics=metrics.to_dict()))
+            metrics_list.append(
+                dict(
+                    **key,
+                    cluster_id=icluster,
+                    num_spikes=num_spikes,
+                    firing_rate=firing_rate,
+                    metrics=metrics.to_dict(),
+                )
+            )
 
             if metrics.ks2_label and (not pd.isnull(metrics.ks2_label)):
                 Ks2Label_list.append(
-                    dict(**key, cluster_id=icluster,
-                         ks2_label=metrics.ks2_label))
+                    dict(**key, cluster_id=icluster, ks2_label=metrics.ks2_label)
+                )
 
             metric_list.extend(
-                [dict(**key, cluster_id=icluster,
-                      metric_name=name, metric_value=value)
-                 for name, value in metrics.to_dict().items()
-                 if name != 'ks2_label' and not np.isnan(value) and not np.isinf(value)])
+                [
+                    dict(
+                        **key, cluster_id=icluster, metric_name=name, metric_value=value
+                    )
+                    for name, value in metrics.to_dict().items()
+                    if name != "ks2_label"
+                    and not np.isnan(value)
+                    and not np.isinf(value)
+                ]
+            )
 
         self.insert(cluster_list)
         self.Metrics.insert(metrics_list)
@@ -309,7 +340,7 @@ class GoodClusterCriterion(dj.Lookup):
     ---
     criterion_description:      varchar(255)
     """
-    contents = [[1, 'firing rate greater than 0.2']]
+    contents = [[1, "firing rate greater than 0.2"]]
 
 
 @schema
@@ -323,10 +354,10 @@ class GoodCluster(dj.Computed):
     """
 
     def make(self, key):
-        firing_rate = (DefaultCluster.Metrics & key).fetch1('firing_rate')
-        if key['criterion_id'] == 1:
+        firing_rate = (DefaultCluster.Metrics & key).fetch1("firing_rate")
+        if key["criterion_id"] == 1:
             if firing_rate > 0.2:
-                key['is_good'] = True
+                key["is_good"] = True
         self.insert1(key)
 
 
@@ -336,7 +367,7 @@ class Event(dj.Lookup):
     # Different behavioral events, including 'go cue', 'stim on', 'response', 'feedback', and 'movement'
     event:       varchar(32)
     """
-    contents = zip(['go cue', 'stim on', 'response', 'feedback', 'movement'])
+    contents = zip(["go cue", "stim on", "response", "feedback", "movement"])
 
 
 @schema
@@ -350,63 +381,84 @@ class AlignedTrialSpikes(dj.Computed):
     trial_spike_times=null:   longblob     # spike time for each trial, aligned to different event times
     trial_spikes_ts=CURRENT_TIMESTAMP:    timestamp
     """
-    key_source = behavior.TrialSet * DefaultCluster * Event & \
-        ['event in ("stim on", "feedback")',
-         dj.AndList([wheel.MovementTimes, 'event="movement"'])]
+    key_source = behavior.TrialSet * DefaultCluster * Event & [
+        'event in ("stim on", "feedback")',
+        dj.AndList([wheel.MovementTimes, 'event="movement"']),
+    ]
 
     def make(self, key):
         cluster = DefaultCluster() & key
-        spike_times = cluster.fetch1('cluster_spikes_times')
-        event = (Event & key).fetch1('event')
+        spike_times = cluster.fetch1("cluster_spikes_times")
+        event = (Event & key).fetch1("event")
 
-        if event == 'movement':
+        if event == "movement":
             trials = behavior.TrialSet.Trial * wheel.MovementTimes & key
-            trial_keys, trial_start_times, trial_end_times, \
-                trial_stim_on_times, trial_feedback_times, \
-                trial_movement_times = \
-                trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
-                             'trial_stim_on_time', 'trial_feedback_time',
-                             'movement_onset')
+            (
+                trial_keys,
+                trial_start_times,
+                trial_end_times,
+                trial_stim_on_times,
+                trial_feedback_times,
+                trial_movement_times,
+            ) = trials.fetch(
+                "KEY",
+                "trial_start_time",
+                "trial_end_time",
+                "trial_stim_on_time",
+                "trial_feedback_time",
+                "movement_onset",
+            )
         else:
             trials = behavior.TrialSet.Trial & key
-            trial_keys, trial_start_times, trial_end_times, \
-                trial_stim_on_times, trial_feedback_times = \
-                trials.fetch('KEY', 'trial_start_time', 'trial_end_time',
-                             'trial_stim_on_time', 'trial_feedback_time')
+            (
+                trial_keys,
+                trial_start_times,
+                trial_end_times,
+                trial_stim_on_times,
+                trial_feedback_times,
+            ) = trials.fetch(
+                "KEY",
+                "trial_start_time",
+                "trial_end_time",
+                "trial_stim_on_time",
+                "trial_feedback_time",
+            )
 
         # trial idx of each spike
         spike_ids = np.searchsorted(
             np.sort(np.hstack(np.vstack([trial_start_times, trial_end_times]).T)),
-            spike_times)
+            spike_times,
+        )
 
         trial_spks = []
         for itrial, trial_key in enumerate(trial_keys):
 
             trial_spk = dict(
-                **trial_key,
-                cluster_id=key['cluster_id'],
-                probe_idx=key['probe_idx']
+                **trial_key, cluster_id=key["cluster_id"], probe_idx=key["probe_idx"]
             )
 
-            trial_spike_time = spike_times[spike_ids == itrial*2+1]
+            trial_spike_time = spike_times[spike_ids == itrial * 2 + 1]
 
             if not len(trial_spike_time):
-                trial_spk['trial_spike_times'] = np.array([])
+                trial_spk["trial_spike_times"] = np.array([])
             else:
-                if event == 'stim on':
-                    trial_spk['trial_spike_times'] = \
+                if event == "stim on":
+                    trial_spk["trial_spike_times"] = (
                         trial_spike_time - trial_stim_on_times[itrial]
-                elif event == 'movement':
-                    trial_spk['trial_spike_times'] = \
+                    )
+                elif event == "movement":
+                    trial_spk["trial_spike_times"] = (
                         trial_spike_time - trial_movement_times[itrial]
-                elif event == 'feedback':
+                    )
+                elif event == "feedback":
                     if trial_feedback_times[itrial]:
-                        trial_spk['trial_spike_times'] = \
+                        trial_spk["trial_spike_times"] = (
                             trial_spike_time - trial_feedback_times[itrial]
+                        )
                     else:
                         continue
 
-            trial_spk['event'] = event
+            trial_spk["event"] = event
             trial_spks.append(trial_spk.copy())
 
         self.insert(trial_spks)

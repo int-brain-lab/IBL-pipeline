@@ -15,4 +15,3 @@ For each day of the behavioral task, performance (only on easy trials, i.e. 50% 
 
 ### 4th panel from top: contrast/choice heatmap ###
 For each day of the behavioral task (x-axis) and each contrast level (y-axis), the fraction of rightward choices. Ideal performance would be dark blue bars at the top half, and dark red bars at the bottom half. This plot is basically a flattened psychometric function into a heatmap, over days. You can see when additional, more difficult contrasts are introduced over training.
-

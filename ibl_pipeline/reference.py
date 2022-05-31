@@ -1,12 +1,12 @@
 import datajoint as dj
-from ibl_pipeline.ingest import reference
+
 from ibl_pipeline import mode
+from ibl_pipeline.ingest import reference
 
-
-if mode == 'update':
-    schema = dj.schema('ibl_reference')
+if mode == "update":
+    schema = dj.schema("ibl_reference")
 else:
-    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_reference')
+    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_reference")
 
 
 @schema
@@ -106,12 +106,12 @@ class Severity(dj.Lookup):
     severity_desc:		varchar(32)		# severity desc
     """
     contents = (
-        (0, ''),
-        (1, 'Sub-threshold'),
-        (2, 'Mild'),
-        (3, 'Moderate'),
-        (4, 'Severe'),
-        (5, 'Non-recovery'),
+        (0, ""),
+        (1, "Sub-threshold"),
+        (2, "Mild"),
+        (3, "Moderate"),
+        (4, "Severe"),
+        (5, "Non-recovery"),
     )
 
 
@@ -130,7 +130,7 @@ class Ontology(dj.Lookup):
     definition = """
     ontology    : varchar(32)
     """
-    contents = zip(['CCF 2017'])
+    contents = zip(["CCF 2017"])
 
 
 @schema
@@ -154,14 +154,11 @@ class ParentRegion(dj.Imported):
     ---
     -> BrainRegion.proj(parent='acronym')
     """
-    key_source = BrainRegion & \
-        (reference.BrainRegion & 'parent is not NULL').proj()
+    key_source = BrainRegion & (reference.BrainRegion & "parent is not NULL").proj()
 
     def make(self, key):
 
-        parent_pk = (reference.BrainRegion & key).fetch1('parent')
-        acronym = (BrainRegion & dict(brain_region_pk=parent_pk)).fetch1(
-            'acronym')
+        parent_pk = (reference.BrainRegion & key).fetch1("parent")
+        acronym = (BrainRegion & dict(brain_region_pk=parent_pk)).fetch1("acronym")
 
-        self.insert1(
-            dict(**key, parent=acronym))
+        self.insert1(dict(**key, parent=acronym))

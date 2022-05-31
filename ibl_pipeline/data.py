@@ -1,13 +1,12 @@
 import datajoint as dj
 from tqdm import tqdm
-from ibl_pipeline import reference, acquisition
-from ibl_pipeline import mode, one
 
+from ibl_pipeline import acquisition, mode, one, reference
 
-if mode == 'update':
-    schema = dj.schema('ibl_data')
+if mode == "update":
+    schema = dj.schema("ibl_data")
 else:
-    schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_data')
+    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_data")
 
 
 @schema
@@ -103,37 +102,44 @@ class DataSet(dj.Manual):
         for uuid in tqdm(session_uuids):
             for dataset_name in tqdm(dataset_names):
                 try:
-                    dataset = one.alyx.rest('datasets', 'list', session=uuid, name=dataset_name)
+                    dataset = one.alyx.rest(
+                        "datasets", "list", session=uuid, name=dataset_name
+                    )
                     if not dataset:
-                        print(f'Dataset {dataset_name} for session {uuid} does not exist in alyx.')
+                        print(
+                            f"Dataset {dataset_name} for session {uuid} does not exist in alyx."
+                        )
                         continue
                     else:
                         dataset = dataset[0]
-                    session_key = (acquisition.Session & {'session_uuid': uuid}).fetch1('KEY')
+                    session_key = (acquisition.Session & {"session_uuid": uuid}).fetch1(
+                        "KEY"
+                    )
                     dataset_entry = dict(
                         session_key,
                         dataset_name=dataset_name,
-                        dataset_uuid=dataset['hash'],
-                        dataset_created_by=dataset['created_by'],
-                        dataset_type_name=dataset['dataset_type'],
-                        format_name=dataset['data_format'],
-                        created_datetime=dataset['created_datetime'],
-                        file_size=dataset['file_size'])
+                        dataset_uuid=dataset["hash"],
+                        dataset_created_by=dataset["created_by"],
+                        dataset_type_name=dataset["dataset_type"],
+                        format_name=dataset["data_format"],
+                        created_datetime=dataset["created_datetime"],
+                        file_size=dataset["file_size"],
+                    )
 
                     cls.insert1(dataset_entry, skip_duplicates=True)
                     # except Exception as e:
                     #     print(f'Error inserting {dataset_name} in table DataSet for session {uuid}: {str(e)}')
 
                     file_record_entries = []
-                    for fr in dataset['file_records']:
-                        if fr['exists'] and 'flatiron' in fr['data_repository']:
+                    for fr in dataset["file_records"]:
+                        if fr["exists"] and "flatiron" in fr["data_repository"]:
                             file_record_entry = dict(
                                 session_key,
                                 dataset_name=dataset_name,
-                                repo_name=fr['data_repository'],
-                                record_uuid=fr['id'],
-                                exists=fr['exists'],
-                                relative_path=fr['relative_path']
+                                repo_name=fr["data_repository"],
+                                record_uuid=fr["id"],
+                                exists=fr["exists"],
+                                relative_path=fr["relative_path"],
                             )
                             file_record_entries.append(file_record_entry)
                     # try:

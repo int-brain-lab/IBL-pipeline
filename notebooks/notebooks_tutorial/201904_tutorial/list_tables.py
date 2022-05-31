@@ -1,5 +1,7 @@
-from datajoint.user_tables import UserTable
 import inspect
+
+from datajoint.user_tables import UserTable
+
 
 def list_tables(schema):
     for k in dir(schema):

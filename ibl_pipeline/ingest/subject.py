@@ -1,12 +1,13 @@
-import datajoint as dj
 import json
 import uuid
 
-from ibl_pipeline.ingest import alyxraw, reference, ShadowIngestionError
-from ibl_pipeline.ingest import get_raw_field as grf
+import datajoint as dj
 
-schema = dj.schema(dj.config.get('database.prefix', '') +
-                   'ibl_ingest_subject')
+from ibl_pipeline.ingest import ShadowIngestionError, alyxraw
+from ibl_pipeline.ingest import get_raw_field as grf
+from ibl_pipeline.ingest import reference
+
+schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ingest_subject")
 
 subjects = alyxraw.AlyxRaw & 'model="subjects.subject"'
 
@@ -21,13 +22,14 @@ class Species(dj.Computed):
     species_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.species"').proj(
-        species_uuid='uuid')
+        species_uuid="uuid"
+    )
 
     def make(self, key):
         key_species = key.copy()
-        key['uuid'] = key['species_uuid']
-        key_species['binomial'] = grf(key, 'name')
-        key_species['species_nickname'] = grf(key, 'nickname')
+        key["uuid"] = key["species_uuid"]
+        key_species["binomial"] = grf(key, "name")
+        key_species["species_nickname"] = grf(key, "nickname")
 
         self.insert1(key_species)
 
@@ -42,17 +44,16 @@ class Strain(dj.Computed):
     strain_description=null:    varchar(255)	# description
     strain_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model="subjects.strain"').proj(
-        strain_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model="subjects.strain"').proj(strain_uuid="uuid")
 
     def make(self, key):
         key_strain = key.copy()
-        key['uuid'] = key['strain_uuid']
-        key_strain['strain_name'] = grf(key, 'name')
+        key["uuid"] = key["strain_uuid"]
+        key_strain["strain_name"] = grf(key, "name")
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_strain['strain_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_strain["strain_description"] = description
 
         self.insert1(key_strain)
 
@@ -67,17 +68,16 @@ class Source(dj.Computed):
     source_description=null:	varchar(255)	# description
     source_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model="subjects.source"').proj(
-        source_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model="subjects.source"').proj(source_uuid="uuid")
 
     def make(self, key):
         key_animal_source = key.copy()
-        key['uuid'] = key['source_uuid']
-        key_animal_source['source_name'] = grf(key, 'name')
+        key["uuid"] = key["source_uuid"]
+        key_animal_source["source_name"] = grf(key, "name")
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_animal_source['source_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_animal_source["source_description"] = description
         self.insert1(key_animal_source)
 
 
@@ -93,20 +93,21 @@ class Sequence(dj.Computed):
     sequence_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.sequence"').proj(
-        sequence_uuid='uuid')
+        sequence_uuid="uuid"
+    )
 
     def make(self, key):
         key_seq = key.copy()
-        key['uuid'] = key['sequence_uuid']
-        key_seq['sequence_name'] = grf(key, 'name')
+        key["uuid"] = key["sequence_uuid"]
+        key_seq["sequence_name"] = grf(key, "name")
 
-        base_pairs = grf(key, 'base_pairs')
-        if base_pairs != 'None':
-            key_seq['base_pairs'] = base_pairs
+        base_pairs = grf(key, "base_pairs")
+        if base_pairs != "None":
+            key_seq["base_pairs"] = base_pairs
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_seq['sequence_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_seq["sequence_description"] = description
 
         self.insert1(key_seq)
 
@@ -125,17 +126,16 @@ class Allele(dj.Computed):
     expression_data_url=null:   varchar(255)    # link to the expression pattern from Allen institute brain atlas
     allele_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model="subjects.allele"').proj(
-        allele_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model="subjects.allele"').proj(allele_uuid="uuid")
 
     def make(self, key):
         key_allele = key.copy()
-        key['uuid'] = key['allele_uuid']
-        key_allele['allele_name'] = grf(key, 'nickname')
+        key["uuid"] = key["allele_uuid"]
+        key_allele["allele_name"] = grf(key, "nickname")
 
-        standard_name = grf(key, 'name')
-        if standard_name != 'None':
-            key_allele['standard_name'] = standard_name
+        standard_name = grf(key, "name")
+        if standard_name != "None":
+            key_allele["standard_name"] = standard_name
 
         self.insert1(key_allele)
 
@@ -165,34 +165,34 @@ class Line(dj.Computed):
     is_active:				    boolean		    # is active
     line_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model="subjects.line"').proj(
-        line_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model="subjects.line"').proj(line_uuid="uuid")
 
     def make(self, key):
 
         key_line = key.copy()
-        key['uuid'] = key['line_uuid']
+        key["uuid"] = key["line_uuid"]
 
-        species_uuid = grf(key, 'species')
-        key_line['binomial'] = \
-            (Species & dict(species_uuid=uuid.UUID(species_uuid))).fetch1(
-                'binomial')
+        species_uuid = grf(key, "species")
+        key_line["binomial"] = (
+            Species & dict(species_uuid=uuid.UUID(species_uuid))
+        ).fetch1("binomial")
 
-        strain_uuid = grf(key, 'strain')
-        if strain_uuid != 'None':
-            key_line['strain_name'] = (Strain & dict(
-                strain_uuid=uuid.UUID(strain_uuid))).fetch1('strain_name')
+        strain_uuid = grf(key, "strain")
+        if strain_uuid != "None":
+            key_line["strain_name"] = (
+                Strain & dict(strain_uuid=uuid.UUID(strain_uuid))
+            ).fetch1("strain_name")
 
-        key_line['line_name'] = grf(key, 'name')
+        key_line["line_name"] = grf(key, "name")
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_line['line_description'] = description
-        key_line['target_phenotype'] = grf(key, 'target_phenotype')
-        key_line['line_nickname'] = grf(key, 'nickname')
+        description = grf(key, "description")
+        if description != "None":
+            key_line["line_description"] = description
+        key_line["target_phenotype"] = grf(key, "target_phenotype")
+        key_line["line_nickname"] = grf(key, "nickname")
 
-        active = grf(key, 'is_active')
-        key_line['is_active'] = active == "True"
+        active = grf(key, "is_active")
+        key_line["is_active"] = active == "True"
 
         self.insert1(key_line)
 
@@ -225,52 +225,52 @@ class Subject(dj.Computed):
     subject_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
-    key_source = subjects.proj(subject_uuid='uuid')
+    key_source = subjects.proj(subject_uuid="uuid")
 
     def make(self, key):
 
         key_subject = key.copy()
-        key['uuid'] = key['subject_uuid']
+        key["uuid"] = key["subject_uuid"]
 
-        nickname = grf(key, 'nickname')
-        if nickname != 'None':
-            key_subject['subject_nickname'] = nickname
+        nickname = grf(key, "nickname")
+        if nickname != "None":
+            key_subject["subject_nickname"] = nickname
 
-        sex = grf(key, 'sex')
-        if sex != 'None':
-            key_subject['sex'] = sex
+        sex = grf(key, "sex")
+        if sex != "None":
+            key_subject["sex"] = sex
 
-        strain_uuid = grf(key, 'strain')
-        if strain_uuid != 'None':
-            key_subject['subject_strain'] = \
-                (Strain & dict(strain_uuid=uuid.UUID(strain_uuid))).fetch1(
-                    'strain_name')
+        strain_uuid = grf(key, "strain")
+        if strain_uuid != "None":
+            key_subject["subject_strain"] = (
+                Strain & dict(strain_uuid=uuid.UUID(strain_uuid))
+            ).fetch1("strain_name")
 
-        birth_date = grf(key, 'birth_date')
-        if birth_date != 'None':
-            key_subject['subject_birth_date'] = birth_date
+        birth_date = grf(key, "birth_date")
+        if birth_date != "None":
+            key_subject["subject_birth_date"] = birth_date
 
-        line_uuid = grf(key, 'line')
-        if line_uuid != 'None':
-            key_subject['subject_line'] = \
-                (Line & dict(line_uuid=uuid.UUID(line_uuid))).fetch1(
-                    'line_name')
+        line_uuid = grf(key, "line")
+        if line_uuid != "None":
+            key_subject["subject_line"] = (
+                Line & dict(line_uuid=uuid.UUID(line_uuid))
+            ).fetch1("line_name")
 
-        key_subject['protocol_number'] = grf(key, 'protocol_number')
+        key_subject["protocol_number"] = grf(key, "protocol_number")
 
-        ear_mark = grf(key, 'ear_mark')
-        if ear_mark != 'None':
-            key_subject['ear_mark'] = ear_mark
+        ear_mark = grf(key, "ear_mark")
+        if ear_mark != "None":
+            key_subject["ear_mark"] = ear_mark
 
-        source_uuid = grf(key, 'source')
-        if source_uuid != 'None':
-            key_subject['subject_source'] = \
-                (Source & dict(source_uuid=uuid.UUID(source_uuid))).fetch1(
-                    'source_name')
+        source_uuid = grf(key, "source")
+        if source_uuid != "None":
+            key_subject["subject_source"] = (
+                Source & dict(source_uuid=uuid.UUID(source_uuid))
+            ).fetch1("source_name")
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_subject['subject_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_subject["subject_description"] = description
 
         self.insert1(key_subject)
 
@@ -283,19 +283,20 @@ class SubjectCullMethod(dj.Computed):
     cull_method:       varchar(255)
     cull_method_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    subjects_with_cull = alyxraw.AlyxRaw.Field & subjects & \
-        'fname="cull_method"' & 'fvalue!="None"'
-    key_source = (subjects & subjects_with_cull).proj(
-        subject_uuid='uuid')
+    subjects_with_cull = (
+        alyxraw.AlyxRaw.Field & subjects & 'fname="cull_method"' & 'fvalue!="None"'
+    )
+    key_source = (subjects & subjects_with_cull).proj(subject_uuid="uuid")
 
     def make(self, key):
         if not len(Subject & key):
-            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+            raise ShadowIngestionError(
+                f'Subject not found in the table subject.Subject: {key["subject_uuid"]}'
+            )
 
         key_c = key.copy()
-        key['uuid'] = key['subject_uuid']
-        self.insert1(dict(
-            **key_c, cull_method=grf(key, 'cull_method')))
+        key["uuid"] = key["subject_uuid"]
+        self.insert1(dict(**key_c, cull_method=grf(key, "cull_method")))
 
 
 @schema
@@ -315,43 +316,44 @@ class BreedingPair(dj.Computed):
     breedingpair_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="subjects.breedingpair"').proj(
-        bp_uuid='uuid')
+        bp_uuid="uuid"
+    )
 
     def make(self, key):
         key_bp = key.copy()
-        key['uuid'] = key['bp_uuid']
+        key["uuid"] = key["bp_uuid"]
 
-        line_uuid = grf(key, 'line')
-        if line_uuid != 'None':
-            key_bp['bp_line'] = \
-                (Line & dict(line_uuid=uuid.UUID(line_uuid))).fetch1(
-                    'line_name')
+        line_uuid = grf(key, "line")
+        if line_uuid != "None":
+            key_bp["bp_line"] = (Line & dict(line_uuid=uuid.UUID(line_uuid))).fetch1(
+                "line_name"
+            )
 
-        key_bp['bp_name'] = grf(key, 'name')
+        key_bp["bp_name"] = grf(key, "name")
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_bp['bp_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_bp["bp_description"] = description
 
-        start_date = grf(key, 'start_date')
-        if start_date != 'None':
-            key_bp['bp_start_date'] = grf(key, 'start_date')
+        start_date = grf(key, "start_date")
+        if start_date != "None":
+            key_bp["bp_start_date"] = grf(key, "start_date")
 
-        end_date = grf(key, 'end_date')
-        if end_date != 'None':
-            key_bp['bp_end_date'] = end_date
+        end_date = grf(key, "end_date")
+        if end_date != "None":
+            key_bp["bp_end_date"] = end_date
 
-        father = grf(key, 'father')
-        if father != 'None':
-            key_bp['father'] = uuid.UUID(father)
+        father = grf(key, "father")
+        if father != "None":
+            key_bp["father"] = uuid.UUID(father)
 
-        mother1 = grf(key, 'mother1')
-        if mother1 != 'None':
-            key_bp['mother1'] = uuid.UUID(mother1)
+        mother1 = grf(key, "mother1")
+        if mother1 != "None":
+            key_bp["mother1"] = uuid.UUID(mother1)
 
-        mother2 = grf(key, 'mother2')
-        if mother2 != 'None':
-            key_bp['mother2'] = uuid.UUID(mother2)
+        mother2 = grf(key, "mother2")
+        if mother2 != "None":
+            key_bp["mother2"] = uuid.UUID(mother2)
 
         self.insert1(key_bp)
 
@@ -369,34 +371,33 @@ class Litter(dj.Computed):
     litter_birth_date=null:		    date		    # birth date
     litter_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model="subjects.litter"').proj(
-        litter_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model="subjects.litter"').proj(litter_uuid="uuid")
 
     def make(self, key):
         key_litter = key.copy()
-        key['uuid'] = key['litter_uuid']
+        key["uuid"] = key["litter_uuid"]
 
-        bp_uuid = grf(key, 'breeding_pair')
-        if bp_uuid != 'None':
-            key_litter['bp_name'] = \
-                (BreedingPair & dict(bp_uuid=uuid.UUID(bp_uuid))).fetch1(
-                    'bp_name')
+        bp_uuid = grf(key, "breeding_pair")
+        if bp_uuid != "None":
+            key_litter["bp_name"] = (
+                BreedingPair & dict(bp_uuid=uuid.UUID(bp_uuid))
+            ).fetch1("bp_name")
 
-        key_litter['litter_name'] = grf(key, 'name')
+        key_litter["litter_name"] = grf(key, "name")
 
-        line_uuid = grf(key, 'line')
-        if line_uuid != 'None':
-            key_litter['litter_line'] = \
-                (Line & dict(line_uuid=uuid.UUID(line_uuid))).fetch1(
-                    'line_name')
+        line_uuid = grf(key, "line")
+        if line_uuid != "None":
+            key_litter["litter_line"] = (
+                Line & dict(line_uuid=uuid.UUID(line_uuid))
+            ).fetch1("line_name")
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_litter['litter_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_litter["litter_description"] = description
 
-        birth_date = grf(key, 'birth_date')
-        if birth_date != 'None':
-            key_litter['litter_birth_date'] = birth_date
+        birth_date = grf(key, "birth_date")
+        if birth_date != "None":
+            key_litter["litter_birth_date"] = birth_date
         self.insert1(key_litter)
 
 
@@ -409,21 +410,23 @@ class LitterSubject(dj.Computed):
     littersubject_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
-    subjects_with_litter = alyxraw.AlyxRaw.Field & subjects & \
-        'fname="litter"' & 'fvalue!="None"'
-    key_source = (subjects & subjects_with_litter).proj(
-        subject_uuid='uuid')
+    subjects_with_litter = (
+        alyxraw.AlyxRaw.Field & subjects & 'fname="litter"' & 'fvalue!="None"'
+    )
+    key_source = (subjects & subjects_with_litter).proj(subject_uuid="uuid")
 
     def make(self, key):
         if not len(Subject & key):
-            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+            raise ShadowIngestionError(
+                f'Subject not found in the table subject.Subject: {key["subject_uuid"]}'
+            )
 
         key_ls = key.copy()
-        key['uuid'] = key['subject_uuid']
-        litter = grf(key, 'litter')
-        key_ls['litter_name'] = \
-            (Litter & dict(litter_uuid=uuid.UUID(litter))).fetch1(
-                'litter_name')
+        key["uuid"] = key["subject_uuid"]
+        litter = grf(key, "litter")
+        key_ls["litter_name"] = (Litter & dict(litter_uuid=uuid.UUID(litter))).fetch1(
+            "litter_name"
+        )
         self.insert1(key_ls)
 
 
@@ -436,29 +439,30 @@ class SubjectProject(dj.Computed):
     subjectproject_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
-    subjects_with_projects = alyxraw.AlyxRaw.Field & subjects & \
-        'fname="projects"' & 'fvalue!="None"'
-    key_source = (subjects & subjects_with_projects).proj(
-        subject_uuid='uuid')
+    subjects_with_projects = (
+        alyxraw.AlyxRaw.Field & subjects & 'fname="projects"' & 'fvalue!="None"'
+    )
+    key_source = (subjects & subjects_with_projects).proj(subject_uuid="uuid")
 
     def make(self, key):
         if not len(Subject & key):
-            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+            raise ShadowIngestionError(
+                f'Subject not found in the table subject.Subject: {key["subject_uuid"]}'
+            )
 
         key_s = key.copy()
-        key['uuid'] = key['subject_uuid']
+        key["uuid"] = key["subject_uuid"]
 
-        proj_uuids = grf(key, 'projects', multiple_entries=True)
+        proj_uuids = grf(key, "projects", multiple_entries=True)
         for proj_uuid in proj_uuids:
             key_sp = key_s.copy()
             try:
-                key_sp['subject_project'] = \
-                    (reference.Project &
-                        dict(project_uuid=uuid.UUID(proj_uuid))).fetch1(
-                            'project_name')
+                key_sp["subject_project"] = (
+                    reference.Project & dict(project_uuid=uuid.UUID(proj_uuid))
+                ).fetch1("project_name")
                 self.insert1(key_sp)
             except Exception:
-                print(key['subject_uuid'])
+                print(key["subject_uuid"])
 
 
 @schema
@@ -470,23 +474,25 @@ class SubjectUser(dj.Computed):
     subjectuser_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
-    subjects_with_user = alyxraw.AlyxRaw.Field & subjects & \
-        'fname="responsible_user"' & 'fvalue!="None"'
+    subjects_with_user = (
+        alyxraw.AlyxRaw.Field & subjects & 'fname="responsible_user"' & 'fvalue!="None"'
+    )
 
-    key_source = (subjects & subjects_with_user).proj(
-        subject_uuid='uuid')
+    key_source = (subjects & subjects_with_user).proj(subject_uuid="uuid")
 
     def make(self, key):
         if not len(Subject & key):
-            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+            raise ShadowIngestionError(
+                f'Subject not found in the table subject.Subject: {key["subject_uuid"]}'
+            )
 
         key_su = key.copy()
-        key['uuid'] = key['subject_uuid']
+        key["uuid"] = key["subject_uuid"]
 
-        user = grf(key, 'responsible_user')
-        key_su['responsible_user'] = \
-            (reference.LabMember &
-                dict(user_uuid=uuid.UUID(user))).fetch1('user_name')
+        user = grf(key, "responsible_user")
+        key_su["responsible_user"] = (
+            reference.LabMember & dict(user_uuid=uuid.UUID(user))
+        ).fetch1("user_name")
         self.insert1(key_su)
 
 
@@ -501,14 +507,16 @@ class SubjectLab(dj.Computed):
 
     def make(self, key):
         if not len(Subject & key):
-            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+            raise ShadowIngestionError(
+                f'Subject not found in the table subject.Subject: {key["subject_uuid"]}'
+            )
 
         key_sl = key.copy()
-        key['uuid'] = key['subject_uuid']
-        lab = grf(key, 'lab')
-        key_sl['lab_name'] = \
-            (reference.Lab &
-                dict(lab_uuid=uuid.UUID(lab))).fetch1('lab_name')
+        key["uuid"] = key["subject_uuid"]
+        lab = grf(key, "lab")
+        key_sl["lab_name"] = (reference.Lab & dict(lab_uuid=uuid.UUID(lab))).fetch1(
+            "lab_name"
+        )
         self.insert1(key_sl)
 
 
@@ -521,36 +529,38 @@ class Caging(dj.Computed):
     caging_time=null:       datetime    # time when changed to this cage
     caging_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = subjects.proj(subject_uuid='uuid')
+    key_source = subjects.proj(subject_uuid="uuid")
 
     def make(self, key):
         key_cage = key.copy()
-        key['uuid'] = key['subject_uuid']
+        key["uuid"] = key["subject_uuid"]
 
         if not len(Subject & key):
-            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+            raise ShadowIngestionError(
+                f'Subject not found in the table subject.Subject: {key["subject_uuid"]}'
+            )
 
-        key_cage['cage_name'] = grf(key, 'cage')
-        json_content = grf(key, 'json')
-        if json_content != 'None':
+        key_cage["cage_name"] = grf(key, "cage")
+        json_content = grf(key, "json")
+        if json_content != "None":
             try:
                 json_dict = json.loads(json_content)
             except json.decoder.JSONDecodeError:
-                json_content = json_content.replace("\'", "\"")
+                json_content = json_content.replace("'", '"')
                 json_dict = json.loads(json_content)
 
-            history = json_dict['history']
-            if 'cage' not in history:
+            history = json_dict["history"]
+            if "cage" not in history:
                 self.insert1(key_cage, skip_duplicates=True)
             else:
-                cages = history['cage']
+                cages = history["cage"]
                 key_cage_i = key_cage.copy()
                 for cage in cages[::-1]:
-                    cage_time = cage['date_time']
-                    key_cage_i['caging_time'] = cage_time[:-6]
+                    cage_time = cage["date_time"]
+                    key_cage_i["caging_time"] = cage_time[:-6]
                     self.insert1(key_cage_i, skip_duplicates=True)
-                    if cage['value'] != 'None':
-                        key_cage_i['cage_name'] = cage['value']
+                    if cage["value"] != "None":
+                        key_cage_i["cage_name"] = cage["value"]
 
 
 @schema
@@ -563,40 +573,41 @@ class UserHistory(dj.Computed):
     userhistory_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
-    key_source = subjects.proj(subject_uuid='uuid')
+    key_source = subjects.proj(subject_uuid="uuid")
 
     def make(self, key):
         if not len(Subject & key):
-            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+            raise ShadowIngestionError(
+                f'Subject not found in the table subject.Subject: {key["subject_uuid"]}'
+            )
 
         key_user = key.copy()
-        key['uuid'] = key['subject_uuid']
+        key["uuid"] = key["subject_uuid"]
 
-        user = grf(key, 'responsible_user', model='subjects.subject')
-        key_user['user_name'] = \
-            (reference.LabMember &
-             dict(user_uuid=uuid.UUID(user))).fetch1('user_name')
+        user = grf(key, "responsible_user", model="subjects.subject")
+        key_user["user_name"] = (
+            reference.LabMember & dict(user_uuid=uuid.UUID(user))
+        ).fetch1("user_name")
 
-        json_content = grf(key, 'json', model='subjects.subject')
-        if json_content != 'None':
-            json_content = json_content.replace("\'", "\"")
+        json_content = grf(key, "json", model="subjects.subject")
+        if json_content != "None":
+            json_content = json_content.replace("'", '"')
             json_dict = json.loads(json_content)
-            history = json_dict['history']
-            if 'reponsible_user' not in history:
+            history = json_dict["history"]
+            if "reponsible_user" not in history:
                 self.insert1(key_user)
             else:
-                users = history['responsible_user']
+                users = history["responsible_user"]
                 key_user_i = key_user.copy()
                 for user in users[::-1]:
-                    user_change_time = user['date_time']
-                    key_user_i['user_change_time'] = user_change_time[:-6]
+                    user_change_time = user["date_time"]
+                    key_user_i["user_change_time"] = user_change_time[:-6]
                     self.insert1(key_user_i)
-                    if user['value'] != 'None':
-                        user_uuid = user['value']
-                        key_user_i['user_name'] = \
-                            (reference.LabMember &
-                             dict(user_uuid=uuid.UUID(user_uuid))).fetch1(
-                                 'user_name')
+                    if user["value"] != "None":
+                        user_uuid = user["value"]
+                        key_user_i["user_name"] = (
+                            reference.LabMember & dict(user_uuid=uuid.UUID(user_uuid))
+                        ).fetch1("user_name")
         else:
             self.insert1(key_user)
 
@@ -610,19 +621,21 @@ class Weaning(dj.Computed):
     weaning_ts=CURRENT_TIMESTAMP:   timestamp
     """
 
-    subjects_with_wean = alyxraw.AlyxRaw.Field & subjects & \
-        'fname="wean_date"' & 'fvalue!="None"'
-    key_source = (subjects & subjects_with_wean).proj(
-        subject_uuid='uuid')
+    subjects_with_wean = (
+        alyxraw.AlyxRaw.Field & subjects & 'fname="wean_date"' & 'fvalue!="None"'
+    )
+    key_source = (subjects & subjects_with_wean).proj(subject_uuid="uuid")
 
     def make(self, key):
         if not len(Subject & key):
-            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+            raise ShadowIngestionError(
+                f'Subject not found in the table subject.Subject: {key["subject_uuid"]}'
+            )
 
         key_weaning = key.copy()
-        key['uuid'] = key['subject_uuid']
+        key["uuid"] = key["subject_uuid"]
 
-        key_weaning['wean_date'] = grf(key, 'wean_date')
+        key_weaning["wean_date"] = grf(key, "wean_date")
         self.insert1(key_weaning)
 
 
@@ -634,18 +647,20 @@ class Death(dj.Computed):
     death_date=null:         date
     death_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    subjects_with_death = alyxraw.AlyxRaw.Field & subjects & \
-        'fname="death_date"' & 'fvalue!="None"'
-    key_source = (subjects & subjects_with_death).proj(
-        subject_uuid='uuid')
+    subjects_with_death = (
+        alyxraw.AlyxRaw.Field & subjects & 'fname="death_date"' & 'fvalue!="None"'
+    )
+    key_source = (subjects & subjects_with_death).proj(subject_uuid="uuid")
 
     def make(self, key):
         if not len(Subject & key):
-            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+            raise ShadowIngestionError(
+                f'Subject not found in the table subject.Subject: {key["subject_uuid"]}'
+            )
 
         key_death = key.copy()
-        key['uuid'] = key['subject_uuid']
-        key_death['death_date'] = grf(key, 'death_date')
+        key["uuid"] = key["subject_uuid"]
+        key_death["death_date"] = grf(key, "death_date")
         self.insert1(key_death)
 
 
@@ -658,17 +673,16 @@ class Food(dj.Computed):
     food_description='':    varchar(255)
     food_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model="misc.food"').proj(
-        food_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model="misc.food"').proj(food_uuid="uuid")
 
     def make(self, key):
         key_food = key.copy()
-        key['uuid'] = key['food_uuid']
-        key_food['food_name'] = grf(key, 'name')
+        key["uuid"] = key["food_uuid"]
+        key_food["food_name"] = grf(key, "name")
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_food['food_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_food["food_description"] = description
 
         self.insert1(key_food)
 
@@ -682,17 +696,16 @@ class CageType(dj.Computed):
     cage_type_description='':           varchar(255)
     cage_type_ts=CURRENT_TIMESTAMP:     timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model="misc.cagetype"').proj(
-        cage_type_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model="misc.cagetype"').proj(cage_type_uuid="uuid")
 
     def make(self, key):
         key_cage_type = key.copy()
-        key['uuid'] = key['cage_type_uuid']
-        key_cage_type['cage_type_name'] = grf(key, 'name')
+        key["uuid"] = key["cage_type_uuid"]
+        key_cage_type["cage_type_name"] = grf(key, "name")
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_cage_type['cage_type_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_cage_type["cage_type_description"] = description
 
         self.insert1(key_cage_type)
 
@@ -707,16 +720,17 @@ class Enrichment(dj.Computed):
     enrichment_ts=CURRENT_TIMESTAMP:    timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="misc.enrichment"').proj(
-        enrichment_uuid='uuid')
+        enrichment_uuid="uuid"
+    )
 
     def make(self, key):
         key_enrichment = key.copy()
-        key['uuid'] = key['enrichment_uuid']
-        key_enrichment['enrichment_name'] = grf(key, 'name')
+        key["uuid"] = key["enrichment_uuid"]
+        key_enrichment["enrichment_name"] = grf(key, "name")
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_enrichment['enrichment_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_enrichment["enrichment_description"] = description
 
         self.insert1(key_enrichment)
 
@@ -735,45 +749,42 @@ class Housing(dj.Computed):
     housing_description='':         varchar(255)
     housing_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    key_source = (alyxraw.AlyxRaw & 'model="misc.housing"').proj(
-        housing_uuid='uuid')
+    key_source = (alyxraw.AlyxRaw & 'model="misc.housing"').proj(housing_uuid="uuid")
 
     def make(self, key):
         key_housing = key.copy()
-        key['uuid'] = key['housing_uuid']
-        key_housing['cage_name'] = grf(key, 'cage_name')
+        key["uuid"] = key["housing_uuid"]
+        key_housing["cage_name"] = grf(key, "cage_name")
 
-        food_uuid = grf(key, 'food')
-        if food_uuid != 'None':
-            key_housing['food_name'] = \
-                (Food & dict(food_uuid=uuid.UUID(food_uuid))).fetch1(
-                    'food_name')
+        food_uuid = grf(key, "food")
+        if food_uuid != "None":
+            key_housing["food_name"] = (
+                Food & dict(food_uuid=uuid.UUID(food_uuid))
+            ).fetch1("food_name")
 
-        enrichment_uuid = grf(key, 'enrichment')
-        if enrichment_uuid != 'None':
-            key_housing['enrichment_name'] = \
-                (Enrichment &
-                 dict(enrichment_uuid=uuid.UUID(enrichment_uuid))).fetch1(
-                    'enrichment_name')
+        enrichment_uuid = grf(key, "enrichment")
+        if enrichment_uuid != "None":
+            key_housing["enrichment_name"] = (
+                Enrichment & dict(enrichment_uuid=uuid.UUID(enrichment_uuid))
+            ).fetch1("enrichment_name")
 
-        cage_type_uuid = grf(key, 'cage_type')
-        if cage_type_uuid != 'None':
-            key_housing['cage_type_name'] = \
-                (CageType &
-                 dict(cage_type_uuid=uuid.UUID(cage_type_uuid))).fetch1(
-                    'cage_type_name')
+        cage_type_uuid = grf(key, "cage_type")
+        if cage_type_uuid != "None":
+            key_housing["cage_type_name"] = (
+                CageType & dict(cage_type_uuid=uuid.UUID(cage_type_uuid))
+            ).fetch1("cage_type_name")
 
-        frequency = grf(key, 'cage_cleaning_frequency_days')
-        if frequency != 'None':
-            key_housing['cage_cleaning_frequency'] = frequency
+        frequency = grf(key, "cage_cleaning_frequency_days")
+        if frequency != "None":
+            key_housing["cage_cleaning_frequency"] = frequency
 
-        light_cycle = grf(key, 'light_cycle')
-        if light_cycle != 'None':
-            key_housing['light_cycle'] = light_cycle
+        light_cycle = grf(key, "light_cycle")
+        if light_cycle != "None":
+            key_housing["light_cycle"] = light_cycle
 
-        description = grf(key, 'description')
-        if description != 'None':
-            key_housing['housing_description'] = description
+        description = grf(key, "description")
+        if description != "None":
+            key_housing["housing_description"] = description
 
         self.insert1(key_housing)
 
@@ -790,27 +801,28 @@ class SubjectHousing(dj.Computed):
     subject_housing_ts=CURRENT_TIMESTAMP    :  timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model="misc.housingsubject"').proj(
-        subject_housing_uuid='uuid')
+        subject_housing_uuid="uuid"
+    )
 
     def make(self, key):
 
         key_subj_housing = key.copy()
-        key['uuid'] = key['subject_housing_uuid']
+        key["uuid"] = key["subject_housing_uuid"]
 
-        key_subj_housing['housing_start_time'] = grf(key, 'start_datetime')
+        key_subj_housing["housing_start_time"] = grf(key, "start_datetime")
 
-        end_time = grf(key, 'end_datetime')
-        if end_time != 'None':
-            key_subj_housing['housing_end_time'] = end_time
+        end_time = grf(key, "end_datetime")
+        if end_time != "None":
+            key_subj_housing["housing_end_time"] = end_time
 
-        key_subj_housing['subject_uuid'] = grf(key, 'subject')
+        key_subj_housing["subject_uuid"] = grf(key, "subject")
 
-        housing = grf(key, 'housing')
-        if housing == 'None':
+        housing = grf(key, "housing")
+        if housing == "None":
             return
-        key_subj_housing['cage_name'] = \
-            (Housing & dict(housing_uuid=uuid.UUID(housing))).fetch1(
-                'cage_name')
+        key_subj_housing["cage_name"] = (
+            Housing & dict(housing_uuid=uuid.UUID(housing))
+        ).fetch1("cage_name")
 
         self.insert1(key_subj_housing)
 
@@ -829,20 +841,21 @@ class GenotypeTest(dj.Computed):
     genotypetest_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "subjects.genotypetest"').proj(
-        genotype_test_uuid='uuid')
+        genotype_test_uuid="uuid"
+    )
 
     def make(self, key):
         key_gt = key.copy()
-        key['uuid'] = key['genotype_test_uuid']
-        key_gt['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
+        key["uuid"] = key["genotype_test_uuid"]
+        key_gt["subject_uuid"] = uuid.UUID(grf(key, "subject"))
 
-        sequence_uuid = grf(key, 'sequence')
-        key_gt['sequence_name'] = \
-            (Sequence & dict(sequence_uuid=uuid.UUID(sequence_uuid))).fetch1(
-                'sequence_name')
+        sequence_uuid = grf(key, "sequence")
+        key_gt["sequence_name"] = (
+            Sequence & dict(sequence_uuid=uuid.UUID(sequence_uuid))
+        ).fetch1("sequence_name")
 
-        test_result = grf(key, 'test_result')
-        key_gt['test_result'] = 'Present' if test_result else 'Absent'
+        test_result = grf(key, "test_result")
+        key_gt["test_result"] = "Present" if test_result else "Absent"
         self.insert1(key_gt)
 
 
@@ -860,30 +873,31 @@ class Zygosity(dj.Computed):
     zygosity_ts=CURRENT_TIMESTAMP:   timestamp
     """
     key_source = (alyxraw.AlyxRaw & 'model = "subjects.zygosity"').proj(
-        zygosity_uuid='uuid')
+        zygosity_uuid="uuid"
+    )
 
     def make(self, key):
 
         key_zg = key.copy()
-        key['uuid'] = key['zygosity_uuid']
-        key_zg['subject_uuid'] = uuid.UUID(grf(key, 'subject'))
+        key["uuid"] = key["zygosity_uuid"]
+        key_zg["subject_uuid"] = uuid.UUID(grf(key, "subject"))
 
         if not len(Subject & key_zg):
             return
 
-        allele_uuid = grf(key, 'allele')
-        key_zg['allele_name'] = \
-            (Allele & dict(allele_uuid=uuid.UUID(allele_uuid))).fetch1(
-                'allele_name')
+        allele_uuid = grf(key, "allele")
+        key_zg["allele_name"] = (
+            Allele & dict(allele_uuid=uuid.UUID(allele_uuid))
+        ).fetch1("allele_name")
 
-        zygosity = grf(key, 'zygosity')
+        zygosity = grf(key, "zygosity")
         zygosity_types = {
-            '0': 'Absent',
-            '1': 'Heterozygous',
-            '2': 'Homozygous',
-            '3': 'Present'
+            "0": "Absent",
+            "1": "Heterozygous",
+            "2": "Homozygous",
+            "3": "Present",
         }
-        key_zg['zygosity'] = zygosity_types[zygosity]
+        key_zg["zygosity"] = zygosity_types[zygosity]
 
         self.insert1(key_zg)
 
@@ -900,28 +914,30 @@ class Implant(dj.Computed):
     protocol_number:            tinyint
     implant_ts=CURRENT_TIMESTAMP:   timestamp
     """
-    subjects_with_implant = alyxraw.AlyxRaw.Field & subjects & \
-        'fname="implant_weight"' & 'fvalue!="None"'
-    key_source = (subjects & subjects_with_implant).proj(
-        subject_uuid='uuid')
+    subjects_with_implant = (
+        alyxraw.AlyxRaw.Field & subjects & 'fname="implant_weight"' & 'fvalue!="None"'
+    )
+    key_source = (subjects & subjects_with_implant).proj(subject_uuid="uuid")
 
     def make(self, key):
         if not len(Subject & key):
-            raise ShadowIngestionError(f'Subject not found in the table subject.Subject: {key["subject_uuid"]}')
+            raise ShadowIngestionError(
+                f'Subject not found in the table subject.Subject: {key["subject_uuid"]}'
+            )
 
         key_implant = key.copy()
-        key['uuid'] = key['subject_uuid']
+        key["uuid"] = key["subject_uuid"]
 
-        key_implant['implant_weight'] = float(grf(key, 'implant_weight'))
+        key_implant["implant_weight"] = float(grf(key, "implant_weight"))
 
-        adverse_effects = grf(key, 'adverse_effects')
-        if adverse_effects != 'None':
-            key_implant['adverse_effects'] = adverse_effects
+        adverse_effects = grf(key, "adverse_effects")
+        if adverse_effects != "None":
+            key_implant["adverse_effects"] = adverse_effects
 
-        actual_severity = grf(key, 'actual_severity')
-        if actual_severity != 'None':
-            key_implant['actual_severity'] = int(actual_severity)
+        actual_severity = grf(key, "actual_severity")
+        if actual_severity != "None":
+            key_implant["actual_severity"] = int(actual_severity)
 
-        key_implant['protocol_number'] = int(grf(key, 'protocol_number'))
+        key_implant["protocol_number"] = int(grf(key, "protocol_number"))
 
         self.insert1(key_implant)
