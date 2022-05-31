@@ -1,6 +1,6 @@
-from .action_shared import *
-from . import mode
+from ibl_pipeline.action_shared import *
+from ibl_pipeline import mode
 
 
 if mode != 'public':
-    from .action_internal import *
+    from ibl_pipeline.action_internal import *

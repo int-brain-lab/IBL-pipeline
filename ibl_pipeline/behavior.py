@@ -1,6 +1,6 @@
-from .behavior_shared import *
-from . import mode
+from ibl_pipeline.behavior_shared import *
+from ibl_pipeline import mode
 
 
 if mode != 'public':
-    from .behavior_internal import *
+    from ibl_pipeline.behavior_internal import *

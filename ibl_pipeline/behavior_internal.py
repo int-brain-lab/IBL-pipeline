@@ -5,8 +5,8 @@ from os import path
 import datetime
 import logging
 import warnings
-from . import reference, subject, acquisition, data
-from . import mode, one
+from ibl_pipeline import reference, subject, acquisition, data
+from ibl_pipeline import mode, one
 
 
 logger = logging.getLogger(__name__)

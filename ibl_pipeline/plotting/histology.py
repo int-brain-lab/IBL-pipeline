@@ -1,11 +1,11 @@
 import datajoint as dj
 from os import path
-from .. import subject, acquisition, ephys, histology
-from . import histology_plotting as hplt
-from .figure_model import PngFigure, GifFigure
+from ibl_pipeline import subject, acquisition, ephys, histology
+from ibl_pipeline.plotting import histology_plotting as hplt
+from ibl_pipeline.plotting.figure_model import PngFigure, GifFigure
 import boto3
 
-from .. import one, mode
+from ibl_pipeline import one, mode
 
 
 if mode == 'public':

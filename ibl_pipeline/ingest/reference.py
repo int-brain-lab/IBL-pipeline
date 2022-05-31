@@ -1,13 +1,13 @@
 import datajoint as dj
 import uuid
 
-from . import alyxraw
-from . import get_raw_field as grf
+from ibl_pipeline.ingest import alyxraw
+from ibl_pipeline.ingest import get_raw_field as grf
 
 import os
 
 if dj.config.get('custom', {}).get('database.mode', "") == 'public':
-    from .. import public
+    from ibl_pipeline import public
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_ingest_reference')

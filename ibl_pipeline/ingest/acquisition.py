@@ -2,9 +2,9 @@ import datajoint as dj
 import json
 import uuid
 
-from . import alyxraw, reference, subject, action, ShadowIngestionError
-from .. import acquisition
-from . import get_raw_field as grf
+from ibl_pipeline.ingest import alyxraw, reference, subject, action, ShadowIngestionError
+from ibl_pipeline import acquisition
+from ibl_pipeline.ingest import get_raw_field as grf
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_ingest_acquisition')

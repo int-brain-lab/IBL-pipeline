@@ -1,11 +1,11 @@
 import datajoint as dj
 import numpy as np
-from .utils import atlas
+from ibl_pipeline.utils import atlas
 from tqdm import tqdm
 import warnings
 
-from . import reference, subject, acquisition, data, ephys, qc
-from . import mode, one
+from ibl_pipeline import reference, subject, acquisition, data, ephys, qc
+from ibl_pipeline import mode, one
 
 
 if mode == 'update':
@@ -14,7 +14,7 @@ else:
     schema = dj.schema(dj.config.get('database.prefix', '') + 'ibl_histology')
 
 if mode != 'public':
-    from .histology_internal import ProbeTrajectoryTemp
+    from ibl_pipeline.histology_internal import ProbeTrajectoryTemp
 
 
 @schema

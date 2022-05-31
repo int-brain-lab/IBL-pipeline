@@ -1,5 +1,5 @@
 import datajoint as dj
-from . import mode
+from ibl_pipeline import mode
 
 
 if mode == 'update':

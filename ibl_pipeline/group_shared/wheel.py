@@ -9,7 +9,7 @@ import pathlib
 import brainbox.behavior.wheel as wh
 from ibllib.io.extractors.training_wheel import extract_wheel_moves, extract_first_movement_times, infer_wheel_units
 
-from .. import one
+from ibl_pipeline import one
 
 
 log_path = pathlib.Path(__file__).parent / 'logs'

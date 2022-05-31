@@ -1,6 +1,6 @@
-from .histology_shared import *
-from . import mode
+from ibl_pipeline.histology_shared import *
+from ibl_pipeline import mode
 
 
 if mode != 'public':
-    from .histology_internal import *
+    from ibl_pipeline.histology_internal import *

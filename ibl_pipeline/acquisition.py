@@ -1,5 +1,5 @@
-from .acquisition_shared import *
-from . import mode
+from ibl_pipeline.acquisition_shared import *
+from ibl_pipeline import mode
 
 if mode != 'public':
-    from .acquisition_internal import *
+    from ibl_pipeline.acquisition_internal import *

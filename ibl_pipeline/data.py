@@ -1,7 +1,7 @@
 import datajoint as dj
 from tqdm import tqdm
-from . import reference, acquisition
-from . import mode, one
+from ibl_pipeline import reference, acquisition
+from ibl_pipeline import mode, one
 
 
 if mode == 'update':

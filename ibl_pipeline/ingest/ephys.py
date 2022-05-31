@@ -4,8 +4,8 @@ import json
 import uuid
 import re
 
-from . import alyxraw, reference, acquisition, ShadowIngestionError
-from . import get_raw_field as grf
+from ibl_pipeline.ingest import alyxraw, reference, acquisition, ShadowIngestionError
+from ibl_pipeline.ingest import get_raw_field as grf
 
 from ibl_pipeline import acquisition as acquisition_real
 

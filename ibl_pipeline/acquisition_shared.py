@@ -3,8 +3,8 @@ import datetime
 from tqdm import tqdm
 import uuid
 
-from . import reference, subject, action
-from . import mode, one
+from ibl_pipeline import reference, subject, action
+from ibl_pipeline import mode, one
 
 
 alyxraw = dj.create_virtual_module('alyxraw', dj.config.get('database.prefix', '') + 'ibl_alyxraw')

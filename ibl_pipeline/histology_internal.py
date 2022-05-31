@@ -1,16 +1,16 @@
 import datajoint as dj
 import numpy as np
-from .utils import atlas
+from ibl_pipeline.utils import atlas
 import warnings
-from . import reference, acquisition, data, qc
-from . import mode, one
+from ibl_pipeline import reference, acquisition, data, qc
+from ibl_pipeline import mode, one
 
 
 # avoid importing ONE when importing the ephys module if possible
 try:
     ephys = dj.create_virtual_module('ephys', 'ibl_ephys')
 except dj.DataJointError:
-    from . import ephys
+    from ibl_pipeline import ephys
 
 
 if mode == 'update':

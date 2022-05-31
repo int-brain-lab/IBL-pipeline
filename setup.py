@@ -10,7 +10,7 @@ setup(
     description="DataJoint schemas for IBL",
     author="DataJoint",
     author_email="info@datajoint.com",
-    packages=find_packages(exclude=[]),
+    packages=find_packages(include=["ibl_pipeline"]),
     install_requires=[
         "boto3",
         "colorlover",

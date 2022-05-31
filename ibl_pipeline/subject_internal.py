@@ -1,7 +1,7 @@
 import datajoint as dj
 
-from .subject_shared import Subject
-from . import mode
+from ibl_pipeline.subject_shared import Subject
+from ibl_pipeline import mode
 
 
 if mode == 'update':

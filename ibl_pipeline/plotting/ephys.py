@@ -1,11 +1,11 @@
 import datajoint as dj
-from .. import subject, acquisition
-from ..analyses import ephys as ephys_analyses
-from . import plotting_utils_ephys as putils
-from . import utils
-from . import ephys_plotting as eplt
-from .figure_model import PngFigure, GifFigure
-from .utils import RedBlueColorBar
+from ibl_pipeline import subject, acquisition
+from ibl_pipeline.analyses import ephys as ephys_analyses
+from ibl_pipeline.plotting import plotting_utils_ephys as putils
+from ibl_pipeline.plotting import utils
+from ibl_pipeline.plotting import ephys_plotting as eplt
+from ibl_pipeline.plotting.figure_model import PngFigure, GifFigure
+from ibl_pipeline.plotting.utils import RedBlueColorBar
 import numpy as np
 import pandas as pd
 import plotly
@@ -34,17 +34,17 @@ schema = dj.schema(dj.config.get('database.prefix', '') +
 try:
     wheel = dj.create_virtual_module('wheel', 'group_shared_wheel')
 except dj.DataJointError:
-    from ..group_shared import wheel
+    from ibl_pipeline.group_shared import wheel
 
 try:
     behavior = dj.create_virtual_module('behavior', 'ibl_behavior')
 except dj.DataJointError:
-    from .. import behavior
+    from ibl_pipeline import behavior
 
 try:
     ephys = dj.create_virtual_module('ephys', 'ibl_ephys')
 except dj.DataJointError:
-    from .. import ephys
+    from ibl_pipeline import ephys
 
 
 # get external bucket

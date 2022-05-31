@@ -1,12 +1,12 @@
 import datajoint as dj
 import json
-from ..utils import str_to_dict
+from ibl_pipeline.utils import str_to_dict
 
-from . import alyxraw, reference, subject, action, acquisition, ephys
-from .. import acquisition as acquisition_real
-from .. import ephys as ephys_real
-from .. import qc as qc_real
-from . import get_raw_field as grf
+from ibl_pipeline.ingest import alyxraw, reference, subject, action, acquisition, ephys
+from ibl_pipeline import acquisition as acquisition_real
+from ibl_pipeline import ephys as ephys_real
+from ibl_pipeline import qc as qc_real
+from ibl_pipeline.ingest import get_raw_field as grf
 from tqdm import tqdm
 
 schema = dj.schema(dj.config.get('database.prefix', '') +

@@ -4,7 +4,7 @@ import logging
 import datajoint as dj
 import numpy as np
 
-from . import acquisition, data, mode, one, reference, subject
+from ibl_pipeline import acquisition, data, mode, one, reference, subject
 
 logger = logging.getLogger(__name__)
 

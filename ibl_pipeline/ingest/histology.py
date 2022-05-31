@@ -5,8 +5,8 @@ import uuid
 import re
 import pdb
 
-from . import alyxraw, reference, acquisition, ephys, ShadowIngestionError
-from . import get_raw_field as grf
+from ibl_pipeline.ingest import alyxraw, reference, acquisition, ephys, ShadowIngestionError
+from ibl_pipeline.ingest import get_raw_field as grf
 
 from ibl_pipeline import acquisition as acquisition_real
 from ibl_pipeline import ephys as ephys_real

@@ -1,6 +1,6 @@
 import datajoint as dj
-from . import reference, subject
-from .action_shared import ProcedureType
+from ibl_pipeline import reference, subject
+from ibl_pipeline.action_shared import ProcedureType
 import os
 
 mode = dj.config.get('custom', {}).get('database.mode', "")

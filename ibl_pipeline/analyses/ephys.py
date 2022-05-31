@@ -1,5 +1,5 @@
 import datajoint as dj
-from .. import behavior, ephys
+from ibl_pipeline import behavior, ephys
 from datetime import datetime
 from tqdm import tqdm
 from brainbox import singlecell

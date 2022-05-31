@@ -4,14 +4,14 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 
-from . import acquisition, reference, behavior, data
-from . import one, mode
+from ibl_pipeline import acquisition, reference, behavior, data
+from ibl_pipeline import one, mode
 
 
 try:
     wheel = dj.create_virtual_module('wheel', 'group_shared_wheel')
 except dj.DataJointError:
-    from .group_shared import wheel
+    from ibl_pipeline.group_shared import wheel
 
 if mode == 'update':
     schema = dj.schema('ibl_ephys')

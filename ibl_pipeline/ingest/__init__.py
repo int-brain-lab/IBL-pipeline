@@ -55,7 +55,7 @@ use for the ingest modules.
 import logging
 import datajoint as dj
 from tqdm import tqdm
-from . import alyxraw
+from ibl_pipeline.ingest import alyxraw
 import os
 
 if dj.config.get('custom', {}).get('database.mode', "") == 'test':

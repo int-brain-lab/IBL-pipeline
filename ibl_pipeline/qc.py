@@ -1,7 +1,7 @@
 import datajoint as dj
-from .utils import str_to_dict
-from . import acquisition, ephys
-from . import mode, one
+from ibl_pipeline.utils import str_to_dict
+from ibl_pipeline import acquisition, ephys
+from ibl_pipeline import mode, one
 
 
 if mode == 'update':

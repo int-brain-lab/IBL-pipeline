@@ -5,11 +5,11 @@ import pandas as pd
 from tqdm import tqdm
 import plotly.graph_objs as go
 
-from ..analyses import behavior
-from .. import behavior as behavior_ingest
-from .. import reference, subject, action, acquisition, data
-from . import plotting_utils_behavior as putils
-from .. import one
+from ibl_pipeline.analyses import behavior
+from ibl_pipeline import behavior as behavior_ingest
+from ibl_pipeline import reference, subject, action, acquisition, data
+from ibl_pipeline.plotting import plotting_utils_behavior as putils
+from ibl_pipeline import one
 
 schema = dj.schema(dj.config.get('database.prefix', '') +
                    'ibl_plotting_behavior')

@@ -1,6 +1,6 @@
 import datajoint as dj
-from .. import subject, action, acquisition, behavior
-from ..utils import psychofit as psy
+from ibl_pipeline import subject, action, acquisition, behavior
+from ibl_pipeline.utils import psychofit as psy
 import numpy as np
 import pandas as pd
 import scipy
