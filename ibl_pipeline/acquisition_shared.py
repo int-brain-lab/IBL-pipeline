@@ -1,4 +1,5 @@
 import datetime
+import re
 import uuid
 
 import datajoint as dj
@@ -16,6 +17,15 @@ if mode == "update":
     schema = dj.schema("ibl_acquisition")
 else:
     schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_acquisition")
+
+
+_FLOAT_STR_REGEX = re.compile(r"\.[0-9]+$")
+
+
+def convert_time_str(tstr):
+    add_float = ".%f" if _FLOAT_STR_REGEX.search(tstr) else ""
+    dt_fmt = f"%Y-%m-%dT%H:%M:%S{add_float}"
+    return datetime.datetime.strptime(tstr, dt_fmt).strftime("%Y-%m-%d %H:%M:%S")
 
 
 @schema
@@ -55,9 +65,7 @@ class Session(dj.Manual):
                 "subject_uuid": (
                     subject.Subject & {"subject_nickname": alyx_session["subject"]}
                 ).fetch1("subject_uuid"),
-                "session_start_time": datetime.datetime.strptime(
-                    alyx_session["start_time"], "%Y-%m-%dT%H:%M:%S.%f"
-                ).strftime("%Y-%m-%d %H:%M:%S"),
+                "session_start_time": convert_time_str(alyx_session["start_time"]),
             }
 
             sess_uuid = alyx_session["url"].split("/")[-1]
