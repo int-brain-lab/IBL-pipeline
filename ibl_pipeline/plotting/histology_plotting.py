@@ -90,7 +90,7 @@ def probe_trajectory_coronal(eid, probe_label, one, ax=None):
 
     ba_allen = atlas.AllenAtlas(25)
 
-    one.path_from_eid(eid)
+    one.eid2path(eid)
     traj = one.alyx.rest(
         "trajectories",
         "list",
@@ -109,6 +109,6 @@ def probe_trajectory_coronal(eid, probe_label, one, ax=None):
 
     ax = ba_allen.plot_tilted_slice(xyz=picks, axis=1, volume="image", ax=ax)
     ax.plot(picks[:, 0] * 1e6, picks[:, 2] * 1e6)
-    ax.plot(channels[probe_label].x * 1e6, channels[probe_label].z * 1e6, "g*")
+    ax.plot(channels[probe_label]["x"] * 1e6, channels[probe_label]["z"] * 1e6, "g*")
 
     return ax
