@@ -9,10 +9,8 @@ import traceback
 import datajoint as dj
 import numpy as np
 
-from ibl_pipeline import acquisition, action, data, ephys, reference, subject
+from ibl_pipeline import acquisition, action, data, ephys, mode, reference, subject
 from ibl_pipeline.ingest.common import *
-
-mode = dj.config.get("custom", {}).get("database.mode", "")
 
 REF_TABLES = (
     "Lab",

@@ -3,10 +3,11 @@ import uuid
 
 import datajoint as dj
 
+from ibl_pipeline import mode
 from ibl_pipeline.ingest import alyxraw
 from ibl_pipeline.ingest import get_raw_field as grf
 
-if dj.config.get("custom", {}).get("database.mode", "") == "public":
+if mode == "public":
     from ibl_pipeline import public
 
 schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ingest_reference")
@@ -69,7 +70,7 @@ class LabMember(dj.Computed):
 
         # check the current mode, if public, omit some fields
         user_name = grf(key, "username")
-        if dj.config.get("custom", {}).get("database.mode", "") != "public":
+        if mode != "public":
             key_lab_member["user_name"] = user_name
             key_lab_member["password"] = grf(key, "password")
             key_lab_member["email"] = grf(key, "email")

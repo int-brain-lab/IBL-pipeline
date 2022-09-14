@@ -1,12 +1,13 @@
 import os
+import re
+from pathlib import Path
 
 import datajoint as dj
-
-_one = None
+from appdirs import user_cache_dir
 
 dj.config["enable_python_native_blobs"] = True
 
-mode = dj.config.get("custom", {}).get("database.mode", os.getenv("MODE", ""))
+mode = dj.config.get("custom", {}).get("database.mode", os.getenv("DJ_MODE", ""))
 
 if mode == "test":
     dj.config["database.prefix"] = "test_"
@@ -14,27 +15,8 @@ elif mode == "update":
     dj.config["database.prefix"] = "update_"
 
 
-schema = dj.schema("ibl_storage")
-
-
-@schema
-class S3Access(dj.Manual):
-    definition = """
-    s3_id:  tinyint   # unique id for each S3 pair
-    ---
-    access_key: varchar(128)   # S3 access key
-    secret_key: varchar(128)   # S3 secret key
-    """
-
-
-# attempt to get S3 access/secret key from different sources
 access_key = os.getenv("S3_ACCESS")
 secret_key = os.getenv("S3_SECRET")
-
-if (access_key is None or secret_key is None) and len(S3Access.fetch()) > 0:
-    # if there are multiple entries in S3, it won't work
-    access_key, secret_key = S3Access.fetch1("access_key", "secret_key")
-
 
 if mode == "public":
     bucket = "ibl-dj-external-public"
@@ -63,17 +45,49 @@ dj.config["stores"] = {
 }
 
 
-try:
-    from one.api import OneAlyx
-except ImportError:
-    print("ONE-api not set up")
-    one = False
-else:
-    base_url = dj.config.get("custom", {}).get(
-        "database.alyx.url", os.getenv("ALYX_URL", None)
-    )
+def get_one_api_public(password=None, url="https://openalyx.internationalbrainlab.org"):
     try:
-        one = OneAlyx(base_url=base_url, silent=True)
-    except ConnectionError:
-        # by-pass error in removing the old format .one_params
-        one = OneAlyx(base_url=base_url, silent=True)
+        from one.api import OneAlyx
+    except ImportError:
+        print("'one-api' package not installed.")
+        one = None
+    else:
+        base_url = (
+            dj.config.get("custom", {}).get(
+                "database.alyx.url", os.getenv("ALYX_URL", None)
+            )
+            or url
+        )
+        cache_dir = (
+            Path(os.getenv("CACHE_DIR") or user_cache_dir("ibl"))
+            / "ONE"
+            / re.sub(r"^https*:/+", "", base_url)
+        )
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            one = OneAlyx(
+                mode="remote",
+                wildcards=True,
+                base_url=base_url,
+                password=password or "international",
+                silent=True,
+                cache_dir=cache_dir,
+            )
+            one.refresh_cache("refresh")
+        except ConnectionError:
+            print(
+                "Could not connect to Alyx. Using 'openalyx.internationalbrainlab.org'"
+            )
+            one = OneAlyx(
+                mode="auto",
+                wildcards=True,
+                base_url="https://openalyx.internationalbrainlab.org",
+                password="international",
+                silent=True,
+                cache_dir=cache_dir,
+            )
+
+    return one
+
+
+one = get_one_api_public()

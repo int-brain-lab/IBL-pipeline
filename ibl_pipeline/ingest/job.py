@@ -375,7 +375,10 @@ DJ_TABLES = {
         "real": acquisition.WaterAdministrationSession,
         "shadow": shadow_acquisition.WaterAdministrationSession,
     },
-    "qc.SessionQCIngest": {"real": None, "shadow": shadow_qc.SessionQCIngest},
+    "qc.SessionQCIngest": {
+        "real": None,
+        "shadow": shadow_qc.SessionQCIngest,
+    },
     "qc.ProbeInsertionQCIngest": {
         "real": None,
         "shadow": shadow_qc.ProbeInsertionQCIngest,

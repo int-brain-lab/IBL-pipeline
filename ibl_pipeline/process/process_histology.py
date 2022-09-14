@@ -36,8 +36,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-mode = dj.config.get("custom", {}).get("database.mode", "")
-
+from ibl_pipeline import mode
 
 ALYX_HISTOLOGY_MODELS = [
     experiments.models.CoordinateSystem,

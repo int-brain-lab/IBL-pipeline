@@ -10,13 +10,11 @@ import datajoint as dj
 import pymysql
 from tqdm import tqdm
 
+from ibl_pipeline import mode
 from ibl_pipeline.ingest import QueryBuffer, acquisition, action, alyxraw, data
 from ibl_pipeline.ingest import get_raw_field as grf
 from ibl_pipeline.ingest import reference, subject
 from ibl_pipeline.utils import is_valid_uuid
-
-mode = dj.config.get("custom", {}).get("database.mode", "")
-
 
 MEMBERSHIP_TABLES = [
     {

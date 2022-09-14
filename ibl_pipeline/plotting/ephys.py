@@ -13,15 +13,13 @@ from brainbox import population
 from matplotlib.axes import Axes
 from tqdm import tqdm
 
-from ibl_pipeline import acquisition, subject
+from ibl_pipeline import acquisition, mode, subject
 from ibl_pipeline.analyses import ephys as ephys_analyses
 from ibl_pipeline.plotting import ephys_plotting as eplt
 from ibl_pipeline.plotting import plotting_utils_ephys as putils
 from ibl_pipeline.plotting import utils
 from ibl_pipeline.plotting.figure_model import GifFigure, PngFigure
 from ibl_pipeline.plotting.utils import RedBlueColorBar
-
-mode = dj.config.get("custom", {}).get("database.mode", "")
 
 if mode == "public":
     root_path = "public"
@@ -1190,8 +1188,7 @@ class DepthRasterExampleTrial(dj.Computed):
         return depth_raster
 
     def make(self, key):
-
-        mode = "all"
+        mode_ = "all"
         spikes_data = putils.prepare_spikes_data(key)
 
         # pick some example trials and generate depth raster
@@ -1212,7 +1209,7 @@ class DepthRasterExampleTrial(dj.Computed):
         )
 
         trials_depthraster = []
-        if mode == "example":
+        if mode_ == "example":
 
             conditions = [
                 {"trial_response_choice": "CW", "trial_feedback_type": 1},

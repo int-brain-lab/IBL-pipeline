@@ -58,9 +58,10 @@ import os
 import datajoint as dj
 from tqdm import tqdm
 
+from ibl_pipeline import mode
 from ibl_pipeline.ingest import alyxraw
 
-if dj.config.get("custom", {}).get("database.mode", "") == "test":
+if mode == "test":
     dj.config["database.prefix"] = "test_"
 
 logger = logging.getLogger(__name__)

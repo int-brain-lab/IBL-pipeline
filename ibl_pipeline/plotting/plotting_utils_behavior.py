@@ -2,10 +2,9 @@ import datajoint as dj
 
 from ibl_pipeline import acquisition, action
 from ibl_pipeline import behavior as behavior_ingest
-from ibl_pipeline import subject
+from ibl_pipeline import mode, subject
 from ibl_pipeline.analyses import behavior
 
-mode = dj.config.get("custom", {}).get("database.mode", "")
 if mode != "public":
     from ibl_pipeline import ephys
 

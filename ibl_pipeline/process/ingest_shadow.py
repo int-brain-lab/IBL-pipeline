@@ -1,6 +1,7 @@
 import datajoint as dj
 from datajoint import DataJointError
 
+from ibl_pipeline import mode
 from ibl_pipeline.ingest import (
     QueryBuffer,
     acquisition,
@@ -11,7 +12,6 @@ from ibl_pipeline.ingest import (
     subject,
 )
 
-mode = dj.config.get("custom", {}).get("database.mode", "")
 if mode != "public":
     from ibl_pipeline.ingest import ephys, histology
 

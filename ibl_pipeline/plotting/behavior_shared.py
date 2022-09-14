@@ -11,12 +11,10 @@ import statsmodels.stats.proportion as smp
 
 from ibl_pipeline import acquisition, action
 from ibl_pipeline import behavior as behavior_ingest
-from ibl_pipeline import data, reference, subject
+from ibl_pipeline import data, mode, reference, subject
 from ibl_pipeline.analyses import behavior
 from ibl_pipeline.plotting import plotting_utils_behavior as putils
 from ibl_pipeline.utils import psychofit as psy
-
-mode = dj.config.get("custom", {}).get("database.mode", "")
 
 schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_plotting_behavior")
 
@@ -325,10 +323,7 @@ class CumulativeSummary(dj.Computed):
         )
 
         # check the environment, public or internal
-        if dj.config.get("custom", {}).get("database.mode", "") == "public":
-            public = True
-        else:
-            public = False
+        public = mode == "public"
 
         subj = subject.Subject & key
         # get the first date when animal became "trained" and "ready for ephys"
