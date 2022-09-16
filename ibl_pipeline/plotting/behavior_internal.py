@@ -8,7 +8,8 @@ from tqdm import tqdm
 
 from ibl_pipeline import acquisition, action
 from ibl_pipeline import behavior as behavior_ingest
-from ibl_pipeline import data, one, reference, subject
+from ibl_pipeline import data as data_
+from ibl_pipeline import one, reference, subject
 from ibl_pipeline.analyses import behavior
 from ibl_pipeline.plotting import plotting_utils_behavior as putils
 
@@ -322,7 +323,7 @@ class DailyLabSummary(dj.Computed):
         )
 
         filerecord = (
-            data.FileRecord & subjects.fetch("KEY") & 'relative_path LIKE "%alf%"'
+            data_.FileRecord & subjects.fetch("KEY") & 'relative_path LIKE "%alf%"'
         )
         last_filerecord = subjects.aggr(
             filerecord, latest_session_on_flatiron="max(session_start_time)"

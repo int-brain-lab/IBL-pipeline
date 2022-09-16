@@ -1,86 +1,100 @@
-import datetime
-import pathlib
+import itertools
+import os
+import re
+import sys
 
-from tqdm import tqdm
+import django
+from django.apps import apps
+from django.conf import settings
 
-from ibl_pipeline.ingest import QueryBuffer, alyxraw
-from ibl_pipeline.utils import is_valid_uuid
+if not settings.configured:
+    try:
+        from alyx import settings as alyx_settings
+    except ImportError:
+        print(
+            "Could not import alyx settings. Check DJANGO_SETTINGS_MODULE and PYTHONPATH"
+        )
+        sys.path.insert(0, os.getenv("ALYX_SRC_PATH", "/var/www/alyx/alyx"))
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "alyx.settings")
 
-
-# TODO: change /data /tmp to use dj.config
-def get_file_timestamp(filepath=None, filetype="json"):
-    if not filepath:
-        if filetype == "json":
-            filepath = pathlib.Path("/data/alyxfull.json")
-        elif filetype == "sql":
-            filepath = pathlib.Path("/tmp/dump.sql.gz")
-        else:
-            raise ValueError("Unknown filetype, has to be either json or sql")
-    else:
-        filepath = pathlib.Path(filepath)
-
-    return datetime.datetime.fromtimestamp(filepath.stat().st_mtime)
-
-
-def get_timezone(t=None, filetype="json"):
-    if not t:
-        if not filetype:
-            raise ValueError("filetype is required if t is not specified")
-        else:
-            t = get_file_timestamp(filetype=filetype).time()
-
-    if t < datetime.time(8, 30):
-        timezone = "European"
-    elif t > datetime.time(8, 30) and t < datetime.time(10, 30):
-        timezone = "EST"
-    elif t > datetime.time(10, 30) and t < datetime.time(16, 30):
-        timezone = "PST"
-    else:
-        timezone = "other"
-    return timezone
+if not apps.ready:
+    django.setup()
 
 
-def get_file_date(filepath=None, filetype="json"):
-    return get_file_timestamp(filepath, filetype).date()
+def get_django_model_name(model):
+    return model._meta.db_table.replace("_", ".")
 
 
-def get_file_timezone(filepath=None, filetype="json"):
-    return get_timezone(get_file_timestamp(filepath, filetype).time())
+def get_django_field_names(model):
+    """Get all field names of an django model, ManyToMany fields are not included
 
+    Args:
+        model (django.model object): django model
 
-def get_important_pks(pks, return_original_dict=False):
+    Returns:
+        [list]: list of field names (property name), including foreign key references, not ManyToMany fields
     """
-    Filter out modified keys that belongs to data.filerecord and jobs.task
-    :params modified_keys: list of pks
-    :params optional return original_dict: boolean, if True, return the list of dictionaries with uuids to be the key
-    :returns pks_important: list of filtered pks
-    :returns pks_dict: list of dictionary with uuid as the key
+    return [field.name for field in model._meta.fields]
+
+
+def get_django_many_to_many_field_names(model):
+    """Get all ManyToMany field names of an django modelinclude
+
+    Args:
+        model (django.model object): django model
+
+    Returns:
+        [list]: list of ManyToMany field names (property name), including foreign key references
     """
+    one_entry = next(model.objects.iterator())
+    many_to_many_field_names = []
+    for field_name in dir(one_entry):
+        try:
+            obj = getattr(one_entry, field_name)
+        except:
+            pass
+        else:
+            if (
+                obj.__class__.__name__ == "ManyRelatedManager"
+                and not field_name.endswith("_set")
+            ):
+                many_to_many_field_names.append(field_name)
 
-    pks = [pk for pk in pks if is_valid_uuid(pk)]
-    pks_dict = [{"uuid": pk} for pk in pks]
+    return many_to_many_field_names
 
-    models_ignored = '"data.dataset", "data.filerecord", "jobs.task", "actions.wateradministration", "experiments.trajectoryestimate", "experiments.channel"'
 
-    if len(pks) < 1000:
-        pks_unimportant = [
-            str(pk["uuid"])
-            for pk in (
-                alyxraw.AlyxRaw & f"model in ({models_ignored})" & pks_dict
-            ).fetch("KEY")
-        ]
-    else:
-        buffer = QueryBuffer(alyxraw.AlyxRaw & f"model in ({models_ignored})")
-        for pk in tqdm(pks_dict):
-            buffer.add_to_queue1(pk)
-            buffer.flush_fetch("KEY", chunksz=200)
+def get_django_models(exclude=None):
+    models = {
+        get_django_model_name(model): {
+            "django_model": model,
+            "django_name": model.__name__,
+            "django_module": get_django_model_name(model),
+            "django_fields": tuple(field.name for field in model._meta.fields),
+        }
+        for model in apps.get_models()
+        if not model._meta.proxy
+    }
+    if not exclude:
+        return models
 
-        buffer.flush_fetch("KEY")
-        pks_unimportant = [str(pk["uuid"]) for pk in buffer.fetched_results]
+    if not isinstance(exclude, (list, tuple)):
+        exclude = [exclude]
 
-    pks_important = list(set(pks) - set(pks_unimportant))
+    exclusions = r"(?=(" + "|".join(exclude) + r"))"
+    return {k: v for k, v in models.items() if not re.findall(exclusions, k)}
 
-    if return_original_dict:
-        return pks_important, pks_dict
-    else:
-        return pks_important
+
+def extract_models_entry(models, *entries):
+    if not entries:
+        return tuple()
+
+    return [tuple(v[e] for e in entries if e in v) for v in models.values()]
+
+
+def alyx_models(as_dict=False):
+    models = get_django_models(exclude=["^django", "^reversion", "^auth", "^jobs"])
+    if as_dict:
+        return dict(extract_models_entry(models, "django_module", "django_model"))
+    return tuple(
+        itertools.chain.from_iterable(extract_models_entry(models, "django_model"))
+    )

@@ -1,15 +1,10 @@
-import datetime
-import logging
-import warnings
-from os import path
-
 import datajoint as dj
 import numpy as np
-import pandas as pd
 
 from ibl_pipeline import acquisition, data, mode, one, reference, subject
+from ibl_pipeline.utils import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 if mode == "update":
     schema = dj.schema("ibl_behavior")

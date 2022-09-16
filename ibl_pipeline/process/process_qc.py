@@ -1,11 +1,5 @@
-import logging
-import pathlib
-
 import actions
-import data
 import experiments
-
-# alyx models
 import misc
 import subjects
 
@@ -13,18 +7,10 @@ from ibl_pipeline import acquisition, ephys, qc
 from ibl_pipeline.ingest import alyxraw
 from ibl_pipeline.ingest import qc as qc_ingest
 from ibl_pipeline.process import ingest_alyx_raw_postgres, update_utils
+from ibl_pipeline.utils import get_logger
 
-log_file = pathlib.Path(__file__).parent / "logs/process_qc.log"
-log_file.parent.mkdir(parents=True, exist_ok=True)
-log_file.touch(exist_ok=True)
+logger = get_logger(__name__)
 
-logging.basicConfig(
-    format="%(asctime)s - %(message)s",
-    handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
-    level=25,
-)
-
-logger = logging.getLogger(__name__)
 
 QC_MODELS_TO_UPDATE = {
     "actions.session": {

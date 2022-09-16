@@ -11,7 +11,7 @@ import statsmodels.stats.proportion as smp
 
 from ibl_pipeline import acquisition, action
 from ibl_pipeline import behavior as behavior_ingest
-from ibl_pipeline import data, mode, reference, subject
+from ibl_pipeline import mode, reference, subject
 from ibl_pipeline.analyses import behavior
 from ibl_pipeline.plotting import plotting_utils_behavior as putils
 from ibl_pipeline.utils import psychofit as psy

@@ -52,19 +52,18 @@ While this should not happen in the current architecture, following the pattern
 outlined here should prevent it in general and so is a good 'safe practice' to
 use for the ingest modules.
 """
-import logging
-import os
+
 
 import datajoint as dj
-from tqdm import tqdm
 
 from ibl_pipeline import mode
 from ibl_pipeline.ingest import alyxraw
+from ibl_pipeline.utils import get_logger
 
 if mode == "test":
     dj.config["database.prefix"] = "test_"
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def get_raw_field(key, field, multiple_entries=False, model=None):
@@ -135,10 +134,10 @@ class QueryBuffer(object):
                         self._rel.insert1(entry, **kwargs)
                     except Exception as e:
                         failed_insertions.append(entry)
-                        logger.debug("error in flush-insert: {}".format(e))
+                        logger.error("error in flush-insert: {}".format(e))
             if self.verbose:
                 logger.log(
-                    25,
+                    0,
                     "Inserted {}/{} raw field tuples".format(
                         chunksz - len(failed_insertions), chunksz
                     ),
@@ -206,7 +205,7 @@ def populate_batch(t, chunksz=1000, verbose=True):
 
     keys = (t.key_source - t.proj()).fetch("KEY")
     table = QueryBuffer(t)
-    for key in tqdm(keys, position=0):
+    for key in keys:
         entry = t.create_entry(key)
         if entry:
             table.add_to_queue1(entry)

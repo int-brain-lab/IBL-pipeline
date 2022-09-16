@@ -1,23 +1,12 @@
 import datetime
-import logging
-import pathlib
 import time
 
-from ibl_pipeline import ephys, mode
+from ibl_pipeline import ephys
 from ibl_pipeline.group_shared import wheel
+from ibl_pipeline.utils import get_logger
 
-log_path = pathlib.Path(__file__).parent / "logs"
-log_path.mkdir(parents=True, exist_ok=True)
-log_file = log_path / f'process_wheel{"_public" if mode == "public" else ""}.log'
-log_file.touch(exist_ok=True)
+logger = get_logger(__name__)
 
-logging.basicConfig(
-    format="%(asctime)s - %(message)s",
-    handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
-    level=25,
-)
-
-logger = logging.getLogger(__name__)
 
 gkwargs = dict(display_progress=True, suppress_errors=True)
 

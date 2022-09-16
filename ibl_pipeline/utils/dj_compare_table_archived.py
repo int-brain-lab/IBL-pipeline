@@ -1,18 +1,13 @@
 """
 functions to compare contents in shadow tables and real tables.
 """
-import logging
+
 
 import datajoint as dj
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+from ibl_pipeline.utils import get_logger
 
-formatter = logging.Formatter("%(asctime)s:%(name)s:%(message)s")
-file_handler = logging.FileHandler("table-diff.log")
-file_handler.setFormatter(formatter)
-
-logger.addHandler(file_handler)
+logger = get_logger(__name__)
 
 
 def show(tablepairs, comment=""):

@@ -11,104 +11,9 @@ import numpy as np
 
 from ibl_pipeline import acquisition, action, data, ephys, mode, reference, subject
 from ibl_pipeline.ingest.common import *
+from ibl_pipeline.utils import get_logger
 
-REF_TABLES = (
-    "Lab",
-    "LabMember",
-    "LabMembership",
-    "LabLocation",
-    "Project",
-    "ProjectLabMember",
-    "CoordinateSystem",
-)
-
-SUBJECT_TABLES = (
-    "Species",
-    "Strain",
-    "Source",
-    "Sequence",
-    "Allele",
-    "AlleleSequence",
-    "Line",
-    "LineAllele",
-    "Subject",
-    "SubjectUser",
-    "SubjectProject",
-    "SubjectLab",
-    "BreedingPair",
-    "Litter",
-    "LitterSubject",
-    "Weaning",
-    "Death",
-    "SubjectCullMethod",
-    "Caging",
-    "UserHistory",
-    "GenotypeTest",
-    "Zygosity",
-    "Implant",
-    "Food",
-    "CageType",
-    "Enrichment",
-    "Housing",
-    "SubjectHousing",
-)
-
-if mode != "public":
-    ACTION_TABLES = (
-        "ProcedureType",
-        "Weighing",
-        "WaterType",
-        "WaterAdministration",
-        "WaterRestriction",
-        "WaterRestrictionUser",
-        "WaterRestrictionProcedure",
-        "Surgery",
-        "SurgeryUser",
-        "SurgeryProcedure",
-        "OtherAction",
-        "OtherActionUser",
-        "OtherActionProcedure",
-        "CullMethod",
-        "CullReason",
-        "Cull",
-    )
-else:
-    ACTION_TABLES = (
-        "ProcedureType",
-        "Surgery",
-        "SurgeryUser",
-        "SurgeryProcedure",
-    )
-
-if mode != "public":
-    ACQUISITION_TABLES = (
-        "Session",
-        "ChildSession",
-        "SessionUser",
-        "SessionProcedure",
-        "SessionProject",
-        "WaterAdministrationSession",
-    )
-else:
-    ACQUISITION_TABLES = (
-        "Session",
-        "ChildSession",
-        "SessionUser",
-        "SessionProcedure",
-        "SessionProject",
-    )
-
-DATA_TABLES = (
-    "DataFormat",
-    "DataRepositoryType",
-    "DataRepository",
-    "ProjectRepository",
-    "DataSetType",
-    "DataSet",
-    "FileRecord",
-)
-
-EPHYS_TABLES = ("Probe",)
+logger = get_logger(__name__)
 
 
 def copy_table(
@@ -120,6 +25,7 @@ def copy_table(
     backtrack_days=None,
     **kwargs,
 ):
+    logger.info(f"Copying {table_name} from {src_schema} to {target_schema}")
     if "." in table_name:
         # handling part-table
         master_name, part_name = table_name.split(".")
@@ -190,13 +96,116 @@ def copy_table(
                     target_table.insert(q_insert & key, **kwargs)
                 except Exception:
                     transferred_count -= 1
-                    print("Error when inserting {}".format((q_insert & key).fetch1()))
+                    logger.error(
+                        "Error when inserting {}".format((q_insert & key).fetch1())
+                    )
                     traceback.print_exc()
 
         return transferred_count
 
 
+_backtrack_days = int(os.getenv("BACKTRACK_DAYS", 0))
+
+
 def main(excluded_tables=[]):
+    REF_TABLES = (
+        "Lab",
+        "LabMember",
+        "LabMembership",
+        "LabLocation",
+        "Project",
+        "ProjectLabMember",
+        "CoordinateSystem",
+    )
+
+    SUBJECT_TABLES = (
+        "Species",
+        "Strain",
+        "Source",
+        "Sequence",
+        "Allele",
+        "AlleleSequence",
+        "Line",
+        "LineAllele",
+        "Subject",
+        "SubjectUser",
+        "SubjectProject",
+        "SubjectLab",
+        "BreedingPair",
+        "Litter",
+        "LitterSubject",
+        "Weaning",
+        "Death",
+        "SubjectCullMethod",
+        "Caging",
+        "UserHistory",
+        "GenotypeTest",
+        "Zygosity",
+        "Implant",
+        "Food",
+        "CageType",
+        "Enrichment",
+        "Housing",
+        "SubjectHousing",
+    )
+
+    if mode != "public":
+        ACTION_TABLES = (
+            "ProcedureType",
+            "Weighing",
+            "WaterType",
+            "WaterAdministration",
+            "WaterRestriction",
+            "WaterRestrictionUser",
+            "WaterRestrictionProcedure",
+            "Surgery",
+            "SurgeryUser",
+            "SurgeryProcedure",
+            "OtherAction",
+            "OtherActionUser",
+            "OtherActionProcedure",
+            "CullMethod",
+            "CullReason",
+            "Cull",
+        )
+    else:
+        ACTION_TABLES = (
+            "ProcedureType",
+            "Surgery",
+            "SurgeryUser",
+            "SurgeryProcedure",
+        )
+
+    if mode != "public":
+        ACQUISITION_TABLES = (
+            "Session",
+            "ChildSession",
+            "SessionUser",
+            "SessionProcedure",
+            "SessionProject",
+            "WaterAdministrationSession",
+        )
+    else:
+        ACQUISITION_TABLES = (
+            "Session",
+            "ChildSession",
+            "SessionUser",
+            "SessionProcedure",
+            "SessionProject",
+        )
+
+    DATA_TABLES = (
+        "DataFormat",
+        "DataRepositoryType",
+        "DataRepository",
+        "ProjectRepository",
+        "DataSetType",
+        "DataSet",
+        "FileRecord",
+    )
+
+    EPHYS_TABLES = ("Probe",)
+
     mods = [
         [reference, reference_ingest, REF_TABLES],
         [subject, subject_ingest, SUBJECT_TABLES],
@@ -204,17 +213,12 @@ def main(excluded_tables=[]):
         [acquisition, acquisition_ingest, ACQUISITION_TABLES],
         [data, data_ingest, DATA_TABLES],
     ]
-    if mode == "public":
-        backtrack_days = None
-    else:
-        backtrack_days = 30
-
     for (target, source, table_list) in mods:
         for table in table_list:
             if table in excluded_tables:
                 continue
             print(table)
-            copy_table(target, source, table, backtrack_days=backtrack_days)
+            copy_table(target, source, table, backtrack_days=_backtrack_days)
 
     # ephys tables
     table = "ProbeModel"
@@ -227,6 +231,5 @@ def main(excluded_tables=[]):
 
 
 if __name__ == "__main__":
-
     with dj.config(safemode=False):
         main()

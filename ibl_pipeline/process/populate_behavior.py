@@ -2,6 +2,7 @@
 This script ingest behavioral data into tables in the ibl_behavior schema
 """
 import datetime
+import os
 import time
 
 import datajoint as dj
@@ -39,9 +40,11 @@ if mode != "public":
 
 gkwargs = dict(suppress_errors=True, display_progress=True)
 
+_backtrack_days = int(os.getenv("BACKTRACK_DAYS", 0))
+
 
 def main(
-    backtrack_days=30,
+    backtrack_days=None,
     excluded_tables=None,
     run_duration=3600 * 3,
     sleep_duration=60 * 10,
@@ -58,11 +61,16 @@ def main(
     ):
 
         # Try inserting new sessions from querying directly the live alyx db
-        acquisition.Session.insert_with_alyx_rest(backtrack_days=1, verbose=True)
+        acquisition.Session.insert_with_alyx_rest(
+            backtrack_days=backtrack_days, verbose=True
+        )
 
-        date_cutoff = (
-            datetime.datetime.now().date() - datetime.timedelta(days=backtrack_days)
-        ).strftime("%Y-%m-%d")
+        if backtrack_days:
+            date_cutoff = (
+                datetime.datetime.now().date() - datetime.timedelta(days=backtrack_days)
+            ).strftime("%Y-%m-%d")
+        else:
+            date_cutoff = "2010-01-01"
 
         # ingest those dataset and file records where exists=False when json gets dumped
         # only check those sessions where required datasets are missing.
@@ -71,9 +79,8 @@ def main(
             f'session_start_time > "{date_cutoff}"', **gkwargs
         )
         sessions_missing = (
-            (acquisition.Session - behavior.CompleteTrialSession)
-            & f'session_start_time > "{(datetime.datetime.now().date() - datetime.timedelta(days=backtrack_days)).strftime("%Y-%m-%d")}"'
-        )
+            acquisition.Session - behavior.CompleteTrialSession
+        ) & f'session_start_time > "{date_cutoff}"'
 
         uuids = [str(u) for u in sessions_missing.fetch("session_uuid")]
 
@@ -149,5 +156,4 @@ def main(
 
 
 if __name__ == "__main__":
-
-    main(backtrack_days=30)
+    main(backtrack_days=_backtrack_days)

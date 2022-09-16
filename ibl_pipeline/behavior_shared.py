@@ -1,12 +1,12 @@
 import datetime
-import logging
 
 import datajoint as dj
 import numpy as np
 
 from ibl_pipeline import acquisition, data, mode, one, reference, subject
+from ibl_pipeline.utils import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 if mode == "update":
     schema = dj.schema("ibl_behavior")
@@ -73,10 +73,8 @@ class Wheel(dj.Imported):
 
         self.insert1(key)
         logger.info(
-            "Populated a Wheel tuple for subject {subject_uuid} \
-            in session on {session_start_time}".format(
-                **key
-            )
+            "Populated a Wheel tuple for subject {subject_uuid}"
+            "in session on {session_start_time}".format(**key)
         )
 
 

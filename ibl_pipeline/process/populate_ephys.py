@@ -11,27 +11,17 @@ Added histology tables populate
 Thinh Nguyen, 2021-10-15
 """
 
-import logging
-import pathlib
+
 import time
 
 from ibl_pipeline import ephys, histology, mode
 from ibl_pipeline.analyses import ephys as ephys_analyses
 from ibl_pipeline.plotting import ephys as ephys_plotting
 from ibl_pipeline.plotting import histology as histology_plotting
+from ibl_pipeline.utils import get_logger
 
-log_path = pathlib.Path(__file__).parent / "logs"
-log_path.mkdir(parents=True, exist_ok=True)
-log_file = log_path / f'ephys_ingestion{"_public" if mode == "public" else ""}.log'
-log_file.touch(exist_ok=True)
+logger = get_logger(__name__)
 
-logging.basicConfig(
-    format="%(asctime)s - %(message)s",
-    handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
-    level=30,
-)
-
-logger = logging.getLogger(__name__)
 
 EPHYS_TABLES = [
     ephys.CompleteClusterSession,
@@ -41,7 +31,7 @@ EPHYS_TABLES = [
     ephys.ChannelGroup,
     ephys_analyses.DepthPeth,
     ephys_analyses.NormedDepthPeth,
-    # ephys_plotting.DepthRaster,
+    ephys_plotting.DepthRaster,
     ephys_plotting.DepthPeth,
     ephys_plotting.Raster,
     ephys_plotting.Psth,

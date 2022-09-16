@@ -1,7 +1,3 @@
-import logging
-import pathlib
-from logging.handlers import RotatingFileHandler
-
 import brainbox.behavior.wheel as wh
 import datajoint as dj
 import numpy as np
@@ -11,20 +7,10 @@ from ibllib.io.extractors.training_wheel import (
     infer_wheel_units,
 )
 
-from ibl_pipeline import acquisition, behavior, mode, one
+from ibl_pipeline import acquisition, behavior, one
+from ibl_pipeline.utils import get_logger
 
-log_path = pathlib.Path(__file__).parent / "logs"
-log_path.mkdir(parents=True, exist_ok=True)
-log_file = log_path / f'process_wheel{"_public" if mode == "public" else ""}.log'
-log_file.touch(exist_ok=True)
-
-logging.basicConfig(
-    format="%(asctime)s - %(message)s",
-    handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
-    level=25,
-)
-
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 schema = dj.schema("group_shared_wheel")  # group_shared_wheel
 
@@ -64,11 +50,10 @@ class WheelMoveSet(dj.Imported):
 
     key_source = behavior.CompleteWheelSession
 
-    def make(self, key, one=None):
+    def make(self, key):
         # Load the wheel for this session
         move_key = key.copy()
         change_key = move_key.copy()
-        one = one or ONE()
         eid, ver = (acquisition.Session & key).fetch1("session_uuid", "task_protocol")
         logger.info("WheelMoves for session %s, %s", str(eid), ver)
 
@@ -172,7 +157,7 @@ class MovementTimes(dj.Computed):
 
     key_source = behavior.CompleteTrialSession & WheelMoveSet
 
-    def make(self, key, one=None):
+    def make(self, key):
         # Log eid and task version
         eid, ver = (acquisition.Session & key).fetch1("session_uuid", "task_protocol")
         logger.info("MovementTimes for session %s, %s", str(eid), ver)
@@ -222,7 +207,6 @@ class MovementTimes(dj.Computed):
 
         # Get minimum quiescent period for session
         try:
-            one = one or ONE()
             task_params = one.load_object(str(eid), "_iblrig_taskSettings.raw")
             min_qt = task_params["raw"]["QUIESCENT_PERIOD"]
         except Exception:

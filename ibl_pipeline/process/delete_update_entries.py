@@ -2,51 +2,61 @@
 This module delete the entries from alyxraw, shadow membership_tables and update real membership_tables
 """
 import datetime
-import logging
-import pathlib
 from uuid import UUID
 
 import datajoint as dj
-import django
 from tqdm import tqdm
 
-from ibl_pipeline import mode, update
-from ibl_pipeline.common import *
-from ibl_pipeline.ingest import QueryBuffer, ingest_utils, job
-from ibl_pipeline.ingest.common import *
-from ibl_pipeline.process import get_important_pks
-from ibl_pipeline.process.ingest_membership import MEMBERSHIP_TABLES
-from ibl_pipeline.utils import is_valid_uuid
-
-django.setup()
-
+# isort: split
 import actions
-
-# alyx models
 import subjects
 
-log_path = pathlib.Path(__file__).parent / "logs"
-log_path.mkdir(parents=True, exist_ok=True)
-log_file = (
-    log_path / f'delete_update_entries{"_public" if mode == "public" else ""}.log'
-)
-log_file.touch(exist_ok=True)
+from ibl_pipeline import update
+from ibl_pipeline.common import *
+from ibl_pipeline.ingest import QueryBuffer, alyxraw
+from ibl_pipeline.ingest.common import *
+from ibl_pipeline.process.ingest_membership import MEMBERSHIP_TABLES
+from ibl_pipeline.utils import get_logger, is_valid_uuid
 
-# logger does not work without this somehow
-for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler)
+logger = get_logger(__name__)
 
-logging.basicConfig(
-    format="%(asctime)s - %(message)s",
-    handlers=[
-        # write info into both the log file and console
-        logging.FileHandler(log_file),
-        logging.StreamHandler(),
-    ],
-    level=25,
-)
 
-logger = logging.getLogger(__name__)
+def get_important_pks(pks, return_original_dict=False):
+    """
+    Filter out modified keys that belongs to data.filerecord and jobs.task
+    :params modified_keys: list of pks
+    :params optional return original_dict: boolean, if True, return the list of dictionaries with uuids to be the key
+    :returns pks_important: list of filtered pks
+    :returns pks_dict: list of dictionary with uuid as the key
+    """
+
+    pks = [pk for pk in pks if is_valid_uuid(pk)]
+    pks_dict = [{"uuid": pk} for pk in pks]
+
+    models_ignored = '"data.dataset", "data.filerecord", "jobs.task", "actions.wateradministration", "experiments.trajectoryestimate", "experiments.channel"'
+
+    if len(pks) < 1000:
+        pks_unimportant = [
+            str(pk["uuid"])
+            for pk in (
+                alyxraw.AlyxRaw & f"model in ({models_ignored})" & pks_dict
+            ).fetch("KEY")
+        ]
+    else:
+        buffer = QueryBuffer(alyxraw.AlyxRaw & f"model in ({models_ignored})")
+        for pk in tqdm(pks_dict):
+            buffer.add_to_queue1(pk)
+            buffer.flush_fetch("KEY", chunksz=200)
+
+        buffer.flush_fetch("KEY")
+        pks_unimportant = [str(pk["uuid"]) for pk in buffer.fetched_results]
+
+    pks_important = list(set(pks) - set(pks_unimportant))
+
+    if return_original_dict:
+        return pks_important, pks_dict
+    else:
+        return pks_important
 
 
 # ====================================== functions for deletion ==================================
@@ -335,6 +345,7 @@ def update_entries_from_real_tables(modified_pks):
 
 
 if __name__ == "__main__":
+    from ibl_pipeline.ingest import job
 
     with dj.config(safemode=False):
 

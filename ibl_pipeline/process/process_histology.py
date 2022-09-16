@@ -1,10 +1,6 @@
 import inspect
-import logging
-import os
-import pathlib
 
 import actions
-import data
 import datajoint as dj
 import experiments
 
@@ -13,30 +9,14 @@ import misc
 import subjects
 from tqdm import tqdm
 
+from ibl_pipeline import mode
 from ibl_pipeline.common import *
 from ibl_pipeline.ingest import QueryBuffer, populate_batch
 from ibl_pipeline.ingest.common import *
-from ibl_pipeline.process import (
-    ingest_alyx_raw,
-    ingest_alyx_raw_postgres,
-    ingest_real,
-    update_utils,
-)
+from ibl_pipeline.process import ingest_alyx_raw_postgres, ingest_real, update_utils
+from ibl_pipeline.utils import get_logger
 
-log_file = pathlib.Path(__file__).parent / "logs/process_histology.log"
-log_file.parent.mkdir(parents=True, exist_ok=True)
-log_file.touch(exist_ok=True)
-
-logging.basicConfig(
-    format="%(asctime)s - %(message)s",
-    handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
-    level=25,
-)
-
-logger = logging.getLogger(__name__)
-
-
-from ibl_pipeline import mode
+logger = get_logger(__name__)
 
 ALYX_HISTOLOGY_MODELS = [
     experiments.models.CoordinateSystem,

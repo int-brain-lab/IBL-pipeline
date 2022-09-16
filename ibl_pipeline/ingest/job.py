@@ -3,9 +3,19 @@ import inspect
 import logging
 import os
 import time
-from pathlib import Path
 
 import datajoint as dj
+
+from ibl_pipeline.process import (
+    alyx_models,
+    extract_models_entry,
+    get_django_model_name,
+    get_django_models,
+)
+from ibl_pipeline.utils import get_logger
+
+logger = get_logger(__name__)
+logger.info("Creating ingest job tables")
 
 schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ingest_job")
 
@@ -97,20 +107,20 @@ class TaskStatus(dj.Manual):
 
 # ================== Orchestrating the ingestion jobs =============
 
-
 import actions as alyx_actions
 import data as alyx_data
 import experiments as alyx_experiments
 import misc as alyx_misc
 import subjects as alyx_subjects
-from tqdm import tqdm
 
+# isort: split
 from ibl_pipeline import (
     acquisition,
     action,
     data,
     ephys,
     histology,
+    mode,
     qc,
     reference,
     subject,
@@ -132,54 +142,11 @@ from ibl_pipeline.process import (
     ingest_real,
 )
 
-logger = logging.getLogger(__name__)
-_backtrack_days = int(os.getenv("BACKTRACK_DAYS", 10))
-
 # --------- Some constants -------
 
-ALYX_MODELS = {
-    "misc.lab": alyx_misc.models.Lab,
-    "misc.lablocation": alyx_misc.models.LabLocation,
-    "misc.labmember": alyx_misc.models.LabMember,
-    "misc.labmembership": alyx_misc.models.LabMembership,
-    "misc.cagetype": alyx_misc.models.CageType,
-    "misc.enrichment": alyx_misc.models.Enrichment,
-    "misc.food": alyx_misc.models.Food,
-    "misc.housing": alyx_misc.models.Housing,
-    "subjects.project": alyx_subjects.models.Project,
-    "subjects.source": alyx_subjects.models.Source,
-    "subjects.species": alyx_subjects.models.Species,
-    "subjects.strain": alyx_subjects.models.Strain,
-    "subjects.sequence": alyx_subjects.models.Sequence,
-    "subjects.allele": alyx_subjects.models.Allele,
-    "subjects.line": alyx_subjects.models.Line,
-    "subjects.subject": alyx_subjects.models.Subject,
-    "subjects.breedingpair": alyx_subjects.models.BreedingPair,
-    "subjects.litter": alyx_subjects.models.Litter,
-    "subjects.genotypetest": alyx_subjects.models.GenotypeTest,
-    "subjects.zygosity": alyx_subjects.models.Zygosity,
-    "actions.proceduretype": alyx_actions.models.ProcedureType,
-    "actions.surgery": alyx_actions.models.Surgery,
-    "actions.cullmethod": alyx_actions.models.CullMethod,
-    "actions.cullreason": alyx_actions.models.CullReason,
-    "actions.cull": alyx_actions.models.Cull,
-    "actions.weighing": alyx_actions.models.Weighing,
-    "actions.watertype": alyx_actions.models.WaterType,
-    "actions.waterrestriction": alyx_actions.models.WaterRestriction,
-    "actions.wateradministration": alyx_actions.models.WaterAdministration,
-    "actions.session": alyx_actions.models.Session,
-    "data.dataformat": alyx_data.models.DataFormat,
-    "data.datarepositorytype": alyx_data.models.DataRepositoryType,
-    "data.datarepository": alyx_data.models.DataRepository,
-    "data.datasettype": alyx_data.models.DatasetType,
-    "data.dataset": alyx_data.models.Dataset,
-    "data.filerecord": alyx_data.models.FileRecord,
-    "experiments.coordinatesystem": alyx_experiments.models.CoordinateSystem,
-    "experiments.probemodel": alyx_experiments.models.ProbeModel,
-    "experiments.probeinsertion": alyx_experiments.models.ProbeInsertion,
-    "experiments.trajectoryestimate": alyx_experiments.models.TrajectoryEstimate,
-    "experiments.channel": alyx_experiments.models.Channel,
-}
+_backtrack_days = int(os.getenv("BACKTRACK_DAYS", 0))
+
+ALYX_MODELS = alyx_models(as_dict=True)
 
 MEMBERSHIP_ALYX_MODELS = {
     "subjects.project": ["reference.ProjectLabMember", "data.ProjectRepository"],
@@ -205,7 +172,9 @@ MEMBERSHIP_ALYX_MODELS = {
         qc.ProbeInsertionQC,
         qc.ProbeInsertionExtendedQC,
     ],
-    "experiments.trajectoryestimate": [histology.ProbeTrajectoryTemp],
+    "experiments.trajectoryestimate": [
+        histology.ProbeTrajectoryTemp if mode != "public" else None
+    ],
 }
 
 DJ_TABLES = {
@@ -292,31 +261,43 @@ DJ_TABLES = {
     "data.FileRecord": {"shadow": shadow_data.FileRecord, "real": data.FileRecord},
     "subject.SubjectCullMethod": {
         "shadow": shadow_subject.SubjectCullMethod,
-        "real": subject.SubjectCullMethod,
+        "real": subject.SubjectCullMethod if mode != "public" else None,
     },
-    "action.Weighing": {"shadow": shadow_action.Weighing, "real": action.Weighing},
-    "action.WaterType": {"shadow": shadow_action.WaterType, "real": action.WaterType},
+    "action.Weighing": {
+        "shadow": shadow_action.Weighing,
+        "real": action.Weighing if mode != "public" else None,
+    },
+    "action.WaterType": {
+        "shadow": shadow_action.WaterType,
+        "real": action.WaterType if mode != "public" else None,
+    },
     "action.WaterAdministration": {
         "shadow": shadow_action.WaterAdministration,
-        "real": action.WaterAdministration,
+        "real": action.WaterAdministration if mode != "public" else None,
     },
     "action.WaterRestriction": {
         "shadow": shadow_action.WaterRestriction,
-        "real": action.WaterRestriction,
+        "real": action.WaterRestriction if mode != "public" else None,
     },
-    "action.Surgery": {"shadow": shadow_action.Surgery, "real": action.Surgery},
+    "action.Surgery": {
+        "shadow": shadow_action.Surgery,
+        "real": action.Surgery if mode != "public" else None,
+    },
     "action.CullMethod": {
         "shadow": shadow_action.CullMethod,
-        "real": action.CullMethod,
+        "real": action.CullMethod if mode != "public" else None,
     },
     "action.CullReason": {
         "shadow": shadow_action.CullReason,
-        "real": action.CullReason,
+        "real": action.CullReason if mode != "public" else None,
     },
-    "action.Cull": {"shadow": shadow_action.Cull, "real": action.Cull},
+    "action.Cull": {
+        "shadow": shadow_action.Cull,
+        "real": action.Cull if mode != "public" else None,
+    },
     "action.OtherAction": {
         "shadow": shadow_action.OtherAction,
-        "real": action.OtherAction,
+        "real": action.OtherAction if mode != "public" else None,
     },
     "ephys.ProbeModel": {"shadow": shadow_ephys.ProbeModel, "real": ephys.ProbeModel},
     "ephys.ProbeInsertion": {
@@ -336,7 +317,7 @@ DJ_TABLES = {
         "shadow": shadow_subject.LineAllele,
     },
     "action.SurgeryProcedure": {
-        "real": action.SurgeryProcedure,
+        "real": action.SurgeryProcedure if mode != "public" else None,
         "shadow": shadow_action.SurgeryProcedure,
     },
     "acquisition.ChildSession": {
@@ -360,19 +341,19 @@ DJ_TABLES = {
         "shadow": shadow_data.ProjectRepository,
     },
     "action.WaterRestrictionUser": {
-        "real": action.WaterRestrictionUser,
+        "real": action.WaterRestrictionUser if mode != "public" else None,
         "shadow": shadow_action.WaterRestrictionUser,
     },
     "action.WaterRestrictionProcedure": {
-        "real": action.WaterRestrictionProcedure,
+        "real": action.WaterRestrictionProcedure if mode != "public" else None,
         "shadow": shadow_action.WaterRestrictionProcedure,
     },
     "action.SurgeryUser": {
-        "real": action.SurgeryUser,
+        "real": action.SurgeryUser if mode != "public" else None,
         "shadow": shadow_action.SurgeryUser,
     },
     "acquisition.WaterAdministrationSession": {
-        "real": acquisition.WaterAdministrationSession,
+        "real": acquisition.WaterAdministrationSession if mode != "public" else None,
         "shadow": shadow_acquisition.WaterAdministrationSession,
     },
     "qc.SessionQCIngest": {
@@ -384,11 +365,11 @@ DJ_TABLES = {
         "shadow": shadow_qc.ProbeInsertionQCIngest,
     },
     "histology.ProbeTrajectoryTemp": {
-        "real": histology.ProbeTrajectoryTemp,
+        "real": histology.ProbeTrajectoryTemp if mode != "public" else None,
         "shadow": shadow_histology.ProbeTrajectoryTemp,
     },
     "histology.ChannelBrainLocationTemp": {
-        "real": histology.ChannelBrainLocationTemp,
+        "real": histology.ChannelBrainLocationTemp if mode != "public" else None,
         "shadow": shadow_histology.ChannelBrainLocationTemp,
     },
 }
@@ -572,6 +553,48 @@ DJ_UPDATES = {
 # ------ Pipeline for ingestion orchestration ------
 
 
+def cleanup_shadow_schema_jobs():
+    """
+    Routine to clean up any error jobs of type "ShadowIngestionError"
+     in jobs tables of the shadow schemas
+    """
+    _generic_errors = [
+        "%Deadlock%",
+        "%DuplicateError%",
+        "%Lock wait timeout%",
+        "%MaxRetryError%",
+        "%KeyboardInterrupt%",
+        "InternalError: (1205%",
+        "%SIGTERM%",
+        "LostConnectionError",
+    ]
+
+    for shadow_schema in (
+        shadow_reference,
+        shadow_subject,
+        shadow_action,
+        shadow_acquisition,
+        shadow_data,
+        shadow_ephys,
+        shadow_qc,
+        shadow_histology,
+    ):
+        # clear generic error jobs
+        (
+            shadow_schema.schema.jobs
+            & 'status = "error"'
+            & [
+                f'error_message LIKE "{e}"'
+                for e in _generic_errors + ["%ShadowIngestionError%"]
+            ]
+        ).delete()
+        # clear stale "reserved" jobs
+        stale_jobs = (shadow_schema.schema.jobs & 'status = "reserved"').proj(
+            elapsed_days="TIMESTAMPDIFF(DAY, timestamp, NOW())"
+        ) & "elapsed_days > 1"
+        (shadow_schema.schema.jobs & stale_jobs).delete()
+
+
 @schema
 class IngestionJob(dj.Manual):
     """
@@ -585,13 +608,13 @@ class IngestionJob(dj.Manual):
     definition = """
     job_datetime: datetime  # UTC time
     ---
-    alyx_sql_dump: varchar(36)  # '2021-10-26'
+    new_job_string: varchar(36)  # '2021-10-26'
     job_status: enum('completed', 'on-going', 'terminated')
     job_endtime=null: datetime  # UTC time
     """
 
     @classmethod
-    def create_entry(cls, alyx_sql_dump):
+    def create_entry(cls, new_job_string):
         try:
             with cls.connection.transaction:
                 for key in (cls & 'job_status = "on-going"').fetch("KEY"):
@@ -600,7 +623,7 @@ class IngestionJob(dj.Manual):
                 cls.insert1(
                     {
                         "job_datetime": datetime.datetime.utcnow(),
-                        "alyx_sql_dump": alyx_sql_dump,
+                        "new_job_string": new_job_string,
                         "job_status": "on-going",
                     }
                 )
@@ -608,7 +631,7 @@ class IngestionJob(dj.Manual):
         except AssertionError:
             pass
         else:
-            _clean_up()
+            cleanup_shadow_schema_jobs()
 
     @classmethod
     def get_on_going_key(cls):
@@ -616,7 +639,23 @@ class IngestionJob(dj.Manual):
 
     @classmethod
     def get_latest_key(cls):
-        return cls.fetch("KEY", order_by="job_datetime DESC", limit=1)[0]
+        latest = cls.fetch("KEY", order_by="job_datetime DESC", limit=1)
+        return latest[0] if latest else {}
+
+
+def _terminate_all():
+    with IngestionJob.connection.transaction:
+        for key in (IngestionJob & 'job_status = "on-going"').fetch("KEY"):
+            (IngestionJob & key)._update("job_status", "terminated")
+            (IngestionJob & key)._update("job_endtime", datetime.datetime.utcnow())
+
+    reserved_connections = (schema.jobs & 'status = "reserved"').fetch("connection_id")
+
+    terminated_count = 0
+    if len(reserved_connections):
+        restriction_str = ",".join(reserved_connections.astype(str))
+        terminated_count = dj.admin.kill_quick(restriction=f"ID in ({restriction_str})")
+    print(f"{terminated_count} connections killed")
 
 
 @schema
@@ -651,7 +690,7 @@ class IngestUpdateAlyxRawModel(dj.Computed):
     key_source = UpdateAlyxRawModel * IngestionJob & 'job_status = "on-going"'
 
     def make(self, key):
-        logger.info("Populating UpdateAlyxRaw for: {}".format(key["alyx_model_name"]))
+        logger.info(f"Populating UpdateAlyxRaw for: {key['alyx_model_name']}")
         alyx_model = ALYX_MODELS[key["alyx_model_name"]]
 
         # break transaction here, allowing for partial completion
@@ -831,7 +870,9 @@ class DeleteModifiedAlyxRaw(dj.Computed):
         # handle shadow membership tables
         if key["alyx_model_name"] in MEMBERSHIP_ALYX_MODELS:
             for membership_table_name in MEMBERSHIP_ALYX_MODELS[key["alyx_model_name"]]:
-                if isinstance(membership_table_name, str):
+                if membership_table_name is None:
+                    continue
+                elif isinstance(membership_table_name, str):
                     logger.info(
                         f"\tDeleting shadow membership table: {membership_table_name}"
                     )
@@ -1012,10 +1053,14 @@ class PopulateShadowTable(dj.Computed):
                             )
 
         if key["table_name"] in ("data.DataSet", "data.FileRecord"):
-            date_cutoff = (
-                datetime.datetime.now().date()
-                - datetime.timedelta(days=_backtrack_days)
-            ).strftime("%Y-%m-%d")
+            if _backtrack_days:
+                date_cutoff = (
+                    datetime.datetime.now().date()
+                    - datetime.timedelta(days=_backtrack_days)
+                ).strftime("%Y-%m-%d")
+            else:
+                date_cutoff = "1970-01-01"
+
             uuid_attr = shadow_table.primary_key[0]
             key_source = (
                 shadow_table.key_source.proj(uuid=uuid_attr)
@@ -1027,7 +1072,7 @@ class PopulateShadowTable(dj.Computed):
             ).proj(**{uuid_attr: "uuid"})
 
             query_buffer = QueryBuffer(shadow_table, verbose=True)
-            for k in tqdm((key_source - shadow_table).fetch("KEY")):
+            for k in (key_source - shadow_table).fetch("KEY"):
                 try:
                     query_buffer.add_to_queue1(shadow_table.create_entry(k))
                 except ShadowIngestionError:
@@ -1131,11 +1176,13 @@ class UpdateRealTable(dj.Computed):
     )
 
     def make(self, key):
-        alyx_model_name = ingest_alyx_raw_postgres.get_alyx_model_name(
+        alyx_model_name = get_django_model_name(
             DJ_UPDATES[key["table_name"]]["alyx_model"]
         )
 
         real_table = DJ_TABLES[key["table_name"]]["real"]
+        if real_table is None:
+            return
         shadow_table = DJ_TABLES[key["table_name"]]["shadow"]
         target_module = inspect.getmodule(real_table)
         source_module = inspect.getmodule(shadow_table)
@@ -1194,15 +1241,6 @@ class UpdateRealTable(dj.Computed):
         self.insert1(key)
 
 
-# what's next
-"""
-    job.main()
-    populate_behavior.main(backtrack_days=_backtrack_days)
-    populate_wheel.main(backtrack_days=_backtrack_days)
-    populate_ephys.main()
-"""
-
-
 def _check_ingestion_completion():
     """
     Check if the current "on-going" job is completed, if so, mark `job_status` to "completed"
@@ -1244,47 +1282,23 @@ _ingestion_tables = (
 )
 
 
-def read_db_loaded_file(local_alyx_name="alyxlocal") -> str:
-    try:
-        alyx_db_name = dj.config["custom"]["database.alyx.name"]
-    except KeyError:
-        logger.error("dj.config doesn't have key 'database.alyx.name'")
-        return ""
-
-    if alyx_db_name != local_alyx_name:
-        logger.debug(f"Connected to remote alyx postgres database '{alyx_db_name}'.")
-        return datetime.datetime.utcnow().strftime("%Y-%m-%d")
-
-    try:
-        alyx_src_path = dj.config["custom"]["repository.config"]["alyx_src_path"]
-    except KeyError:
-        logger.error("dj.config doesn't have key 'alyx_src_path'")
-        return ""
-
-    db_loaded_file = Path(alyx_src_path) / "shared" / "remote" / "db_loaded.out"
-    if not db_loaded_file.exists():
-        logger.error(f"db_loaded file not found: '{db_loaded_file}'")
-        return ""
-
-    with open(db_loaded_file, "r") as f:
-        dump_file = f.read()
-
-    dump_stem = Path(dump_file.rstrip("\n")).stem
-    backup_date = dump_stem.replace(".sql", "")
-    backup_date = backup_date.replace("_alyxfull", "")
-    return backup_date
-
-
-def populate_ingestion_tables(run_duration=3600 * 3, sleep_duration=60, **kwargs):
+def populate_ingestion_tables(
+    run_duration=3600 * 3,
+    sleep_duration=60,
+    new_job_string=None,
+    populate_settings=None,
+    **kwargs,
+):
     """
     Routine to populate all ingestion tables
     Run in continuous loop for the duration defined in "run_duration" (default 3 hours)
     """
-    populate_settings = {
+    populate_settings = (populate_settings or {}) | {
         "display_progress": True,
         "reserve_jobs": True,
         "suppress_errors": True,
     }
+
     start_time = time.time()
     while (
         (time.time() - start_time < run_duration)
@@ -1293,18 +1307,22 @@ def populate_ingestion_tables(run_duration=3600 * 3, sleep_duration=60, **kwargs
     ):
 
         # create new ingestion job
-        last_job_key = IngestionJob.get_latest_key()
-        last_dump_file = (IngestionJob & last_job_key).fetch1("alyx_sql_dump")
-        latest_sql_dump = read_db_loaded_file()
-        if latest_sql_dump and last_dump_file != latest_sql_dump:
-            IngestionJob.create_entry(latest_sql_dump)
+        last_job_datetime = IngestionJob.get_latest_key()
+
+        if not last_job_datetime:
+            IngestionJob.create_entry(datetime.datetime.utcnow().strftime("%Y-%m-%d"))
+        else:
+            recent_job_str = (IngestionJob & last_job_datetime).fetch1("new_job_string")
+            if new_job_string and recent_job_str != new_job_string:
+                IngestionJob.create_entry(new_job_string)
 
         # check if completed
         if _check_ingestion_completion():
-            _clean_up()
+            cleanup_shadow_schema_jobs()
+            logger.info("Ingestion completed, waiting for next job...")
         else:
             for table in _ingestion_tables:
-                logger.info(f"------------- {table.__name__} ---------------")
+                logger.info(f"POPULATING: {table.__name__}")
                 table.populate(**populate_settings)
 
         (schema.jobs & 'status = "error"').delete()
@@ -1313,65 +1331,9 @@ def populate_ingestion_tables(run_duration=3600 * 3, sleep_duration=60, **kwargs
         ) & "elapsed_days > 1"
         (schema.jobs & stale_jobs).delete()
 
+        logger.info(f"Sleeping for {sleep_duration} seconds...")
         time.sleep(sleep_duration)
 
 
-def _clean_up():
-    """
-    Routine to clean up any error jobs of type "ShadowIngestionError"
-     in jobs tables of the shadow schemas
-    """
-    _generic_errors = [
-        "%Deadlock%",
-        "%DuplicateError%",
-        "%Lock wait timeout%",
-        "%MaxRetryError%",
-        "%KeyboardInterrupt%",
-        "InternalError: (1205%",
-        "%SIGTERM%",
-        "LostConnectionError",
-    ]
-
-    for shadow_schema in (
-        shadow_reference,
-        shadow_subject,
-        shadow_action,
-        shadow_acquisition,
-        shadow_data,
-        shadow_ephys,
-        shadow_qc,
-        shadow_histology,
-    ):
-        # clear generic error jobs
-        (
-            shadow_schema.schema.jobs
-            & 'status = "error"'
-            & [
-                f'error_message LIKE "{e}"'
-                for e in _generic_errors + ["%ShadowIngestionError%"]
-            ]
-        ).delete()
-        # clear stale "reserved" jobs
-        stale_jobs = (shadow_schema.schema.jobs & 'status = "reserved"').proj(
-            elapsed_days="TIMESTAMPDIFF(DAY, timestamp, NOW())"
-        ) & "elapsed_days > 1"
-        (shadow_schema.schema.jobs & stale_jobs).delete()
-
-
-def _terminate_all():
-    with IngestionJob.connection.transaction:
-        for key in (IngestionJob & 'job_status = "on-going"').fetch("KEY"):
-            (IngestionJob & key)._update("job_status", "terminated")
-            (IngestionJob & key)._update("job_endtime", datetime.datetime.utcnow())
-
-    reserved_connections = (schema.jobs & 'status = "reserved"').fetch("connection_id")
-
-    terminated_count = 0
-    if len(reserved_connections):
-        restriction_str = ",".join(reserved_connections.astype(str))
-        terminated_count = dj.admin.kill_quick(restriction=f"ID in ({restriction_str})")
-    print(f"{terminated_count} connections killed")
-
-
 if __name__ == "__main__":
-    populate_ingestion_tables(run_duration=-1)
+    populate_ingestion_tables(run_duration=-1, sleep_duration=30)
