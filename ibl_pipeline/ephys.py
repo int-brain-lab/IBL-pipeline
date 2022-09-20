@@ -8,7 +8,9 @@ from tqdm import tqdm
 from ibl_pipeline import acquisition, behavior, data, mode, one, reference
 
 try:
-    wheel = dj.create_virtual_module("wheel", "group_shared_wheel")
+    wheel = dj.create_virtual_module(
+        "wheel", dj.config["database.prefix"] + "ibl_group_shared_wheel"
+    )
 except dj.DataJointError:
     from ibl_pipeline.group_shared import wheel
 

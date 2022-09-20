@@ -44,6 +44,7 @@ class Job(dj.Manual):
     """
 
 
+# fmt: off
 @schema
 class Task(dj.Lookup):
     definition = """
@@ -52,23 +53,12 @@ class Task(dj.Lookup):
     task_order              : tinyint
     task_description=''     : varchar(1024)
     """
+
     contents = [
-        [
-            "Ingest to update_alyxraw",
-            1,
-            "Ingest selected tables to schema update_alyxraw",
-        ],
+        ["Ingest to update_alyxraw", 1, "Ingest selected tables to schema update_alyxraw"],
         ["Get modified deleted pks", 2, "Get modified deleted pks"],
-        [
-            "Delete alyxraw",
-            3,
-            "Delete alyxraw and shadow table entries for updated and deleted records",
-        ],
-        [
-            "Delete shadow membership",
-            4,
-            "Delete shadow membership records for updated and deleted records",
-        ],
+        ["Delete alyxraw", 3, "Delete alyxraw and shadow table entries for updated and deleted records"],
+        ["Delete shadow membership", 4, "Delete shadow membership records for updated and deleted records"],
         ["Ingest alyxraw", 5, "Ingest to alyxraw"],
         ["Ingest shadow", 6, "Ingest to alyx shadow tables"],
         ["Ingest shadow membership", 7, "Ingest to alyx shadow membership tables"],
@@ -76,6 +66,7 @@ class Task(dj.Lookup):
         ["Update fields", 9, "Update fields in real tables"],
         ["Populate behavior", 10, "Populate behavior tables"],
     ]
+# fmt: on
 
 
 @schema
@@ -1272,13 +1263,13 @@ def _check_ingestion_completion():
 _ingestion_tables = (
     UpdateAlyxRawModel,
     IngestUpdateAlyxRawModel,
-    # AlyxRawDiff,
-    # DeleteModifiedAlyxRaw,
-    # IngestAlyxRawModel,
-    # ShadowTable,
-    # PopulateShadowTable,
-    # CopyRealTable,
-    # UpdateRealTable,
+    AlyxRawDiff,
+    DeleteModifiedAlyxRaw,
+    IngestAlyxRawModel,
+    ShadowTable,
+    PopulateShadowTable,
+    CopyRealTable,
+    UpdateRealTable,
 )
 
 
@@ -1317,19 +1308,19 @@ def populate_ingestion_tables(
                 IngestionJob.create_entry(new_job_string)
 
         # check if completed
-        # if _check_ingestion_completion():
-        #     cleanup_shadow_schema_jobs()
-        #     logger.info("Ingestion completed, waiting for next job...")
-        # else:
-        #     for table in _ingestion_tables:
-        #         logger.info(f"POPULATING: {table.__name__}")
-        #         table.populate(**populate_settings)
+        if _check_ingestion_completion():
+            cleanup_shadow_schema_jobs()
+            logger.info("Ingestion completed, waiting for next job...")
+        else:
+            for table in _ingestion_tables:
+                logger.info(f"POPULATING: {table.__name__}")
+                table.populate(**populate_settings)
 
-        # (schema.jobs & 'status = "error"').delete()
-        # stale_jobs = (schema.jobs & 'status = "reserved"').proj(
-        #     elapsed_days="TIMESTAMPDIFF(DAY, timestamp, NOW())"
-        # ) & "elapsed_days > 1"
-        # (schema.jobs & stale_jobs).delete()
+        (schema.jobs & 'status = "error"').delete()
+        stale_jobs = (schema.jobs & 'status = "reserved"').proj(
+            elapsed_days="TIMESTAMPDIFF(DAY, timestamp, NOW())"
+        ) & "elapsed_days > 1"
+        (schema.jobs & stale_jobs).delete()
 
         logger.info(f"Sleeping for {sleep_duration} seconds...")
         time.sleep(sleep_duration)

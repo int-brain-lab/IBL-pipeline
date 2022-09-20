@@ -69,7 +69,9 @@ class WaterTypeColor(dj.Computed):
         self.insert1(water_type_color)
 
 
-behavior_shared = dj.create_virtual_module("behavior_shared", "ibl_plotting_behavior")
+behavior_shared = dj.create_virtual_module(
+    "behavior_shared", dj.config["database.prefix"] + "ibl_plotting_behavior"
+)
 
 
 class WaterWeight(dj.Part):

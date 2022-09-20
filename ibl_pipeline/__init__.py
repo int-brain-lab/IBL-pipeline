@@ -9,12 +9,18 @@ from ibl_pipeline.utils import get_logger as _logger
 
 mode = dj.config.get("custom", {}).get("database.mode", os.getenv("DJ_MODE", ""))
 
+
 if mode == "test":
     dj.config["database.prefix"] = "test_"
 elif mode == "update":
     dj.config["database.prefix"] = "update_"
 else:
-    dj.config["database.prefix"] = ""
+    dj.config["database.prefix"] = os.getenv(
+        "DJ_DATABASE_PREFIX",
+        dj.config.get(
+            "database.prefix", dj.config.get("custom", {}).get("database.prefix", "")
+        ),
+    )
 
 dj.config["enable_python_native_blobs"] = True
 

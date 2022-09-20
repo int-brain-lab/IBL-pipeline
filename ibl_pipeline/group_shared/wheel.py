@@ -12,7 +12,8 @@ from ibl_pipeline.utils import get_logger
 
 logger = get_logger(__name__)
 
-schema = dj.schema("group_shared_wheel")  # group_shared_wheel
+# schema = dj.schema("group_shared_wheel")
+schema = dj.schema(dj.config["database.prefix"] + "ibl_group_shared_wheel")
 
 
 @schema

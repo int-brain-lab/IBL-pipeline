@@ -9,8 +9,12 @@ else:
     schema = dj.schema(dj.config["database.prefix"] + "ibl_qc")
 
 if mode != "public":
-    qc_ingest = dj.create_virtual_module("qc_ingest", "ibl_ingest_qc")
-    alyxraw = dj.create_virtual_module("alyxraw", "ibl_alyxraw")
+    qc_ingest = dj.create_virtual_module(
+        "qc_ingest", dj.config["database.prefix"] + "ibl_ingest_qc"
+    )
+    alyxraw = dj.create_virtual_module(
+        "alyxraw", dj.config["database.prefix"] + "ibl_alyxraw"
+    )
 
 
 @schema

@@ -9,7 +9,9 @@ from ibl_pipeline import behavior, ephys
 
 schema = dj.schema(dj.config["database.prefix"] + "ibl_analyses_ephys")
 
-wheel = dj.create_virtual_module("wheel", "group_shared_wheel")
+wheel = dj.create_virtual_module(
+    "wheel", dj.config["database.prefix"] + "ibl_group_shared_wheel"
+)
 
 
 @schema

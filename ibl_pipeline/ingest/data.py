@@ -2,7 +2,6 @@ import json
 import uuid
 
 import datajoint as dj
-
 from ibl_pipeline.ingest import ShadowIngestionError, acquisition, alyxraw
 from ibl_pipeline.ingest import get_raw_field as grf
 from ibl_pipeline.ingest import reference
@@ -333,3 +332,30 @@ class FileRecord(dj.Computed):
         ).fetch("KEY")
 
         return [cls.create_entry(key) for key in alyxraw_filerecord_keys]
+
+
+@schema
+class DataTag(dj.Computed):
+    definition = """
+    (tag_uuid) -> alyxraw.AlyxRaw
+    ---
+    tag_name:             varchar(255)
+    tag_protected=null:   boolean
+    tag_public=null:      boolean
+    tag_description=null: varchar(255)
+    """
+
+    key_source = (alyxraw.AlyxRaw & 'model="data.tag"').proj(tag_uuid="uuid")
+
+    def make(self, key):
+        key_ = key.copy()
+        key["uuid"] = key["tag_uuid"]
+        key_["tag_name"] = grf(key, "name")
+        protected = grf(key, "protected")
+        if protected:
+            key_["tag_protected"] = True if protected == "True" else False
+        public = grf(key, "public")
+        if public:
+            key_["tag_public"] = True if public == "True" else False
+        key_["tag_description"] = grf(key, "description")
+        self.insert1(key_)

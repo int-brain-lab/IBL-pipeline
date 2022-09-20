@@ -8,7 +8,9 @@ from ibl_pipeline.utils import atlas
 
 # avoid importing ONE when importing the ephys module if possible
 try:
-    ephys = dj.create_virtual_module("ephys", "ibl_ephys")
+    ephys = dj.create_virtual_module(
+        "ephys", dj.config["database.prefix"] + "ibl_ephys"
+    )
 except dj.DataJointError:
     from ibl_pipeline import ephys
 
