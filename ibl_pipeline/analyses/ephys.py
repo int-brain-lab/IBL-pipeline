@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from ibl_pipeline import behavior, ephys
 
-schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_analyses_ephys")
+schema = dj.schema(dj.config["database.prefix"] + "ibl_analyses_ephys")
 
 wheel = dj.create_virtual_module("wheel", "group_shared_wheel")
 

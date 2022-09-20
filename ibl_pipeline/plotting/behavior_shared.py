@@ -16,7 +16,7 @@ from ibl_pipeline.analyses import behavior
 from ibl_pipeline.plotting import plotting_utils_behavior as putils
 from ibl_pipeline.utils import psychofit as psy
 
-schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_plotting_behavior")
+schema = dj.schema(dj.config["database.prefix"] + "ibl_plotting_behavior")
 
 
 @schema

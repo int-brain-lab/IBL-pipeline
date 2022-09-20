@@ -6,7 +6,7 @@ from ibl_pipeline.utils import str_to_dict
 if mode == "update":
     schema = dj.schema("ibl_qc")
 else:
-    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_qc")
+    schema = dj.schema(dj.config["database.prefix"] + "ibl_qc")
 
 if mode != "public":
     qc_ingest = dj.create_virtual_module("qc_ingest", "ibl_ingest_qc")

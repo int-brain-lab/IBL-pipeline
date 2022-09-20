@@ -15,7 +15,7 @@ except dj.DataJointError:
 if mode == "update":
     schema = dj.schema("ibl_ephys")
 else:
-    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ephys")
+    schema = dj.schema(dj.config["database.prefix"] + "ibl_ephys")
 
 
 @schema

@@ -5,7 +5,6 @@ import os
 import time
 
 import datajoint as dj
-
 from ibl_pipeline.process import (
     alyx_models,
     extract_models_entry,
@@ -17,7 +16,7 @@ from ibl_pipeline.utils import get_logger
 logger = get_logger(__name__)
 logger.info("Creating ingest job tables")
 
-schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ingest_job")
+schema = dj.schema(dj.config["database.prefix"] + "ibl_ingest_job")
 
 
 @schema
@@ -108,10 +107,11 @@ class TaskStatus(dj.Manual):
 # ================== Orchestrating the ingestion jobs =============
 
 import actions as alyx_actions
-import data as alyx_data
 import experiments as alyx_experiments
 import misc as alyx_misc
 import subjects as alyx_subjects
+
+import data as alyx_data
 
 # isort: split
 from ibl_pipeline import (
@@ -1126,7 +1126,7 @@ class CopyRealTable(dj.Computed):
 
         # Ensure the real-table copy routine is "in topologically sorted order"
         # so, if ancestors of this table is not yet copied, exit and retry later
-        schema_prefix = dj.config.get("database.prefix", "") + "ibl_"
+        schema_prefix = dj.config["database.prefix"] + "ibl_"
         ancestors = [tbl_name.split(".") for tbl_name in real_table.ancestors()]
         ancestors = [
             schema_name.strip("`").replace(schema_prefix, "")
@@ -1272,13 +1272,13 @@ def _check_ingestion_completion():
 _ingestion_tables = (
     UpdateAlyxRawModel,
     IngestUpdateAlyxRawModel,
-    AlyxRawDiff,
-    DeleteModifiedAlyxRaw,
-    IngestAlyxRawModel,
-    ShadowTable,
-    PopulateShadowTable,
-    CopyRealTable,
-    UpdateRealTable,
+    # AlyxRawDiff,
+    # DeleteModifiedAlyxRaw,
+    # IngestAlyxRawModel,
+    # ShadowTable,
+    # PopulateShadowTable,
+    # CopyRealTable,
+    # UpdateRealTable,
 )
 
 
@@ -1317,19 +1317,19 @@ def populate_ingestion_tables(
                 IngestionJob.create_entry(new_job_string)
 
         # check if completed
-        if _check_ingestion_completion():
-            cleanup_shadow_schema_jobs()
-            logger.info("Ingestion completed, waiting for next job...")
-        else:
-            for table in _ingestion_tables:
-                logger.info(f"POPULATING: {table.__name__}")
-                table.populate(**populate_settings)
+        # if _check_ingestion_completion():
+        #     cleanup_shadow_schema_jobs()
+        #     logger.info("Ingestion completed, waiting for next job...")
+        # else:
+        #     for table in _ingestion_tables:
+        #         logger.info(f"POPULATING: {table.__name__}")
+        #         table.populate(**populate_settings)
 
-        (schema.jobs & 'status = "error"').delete()
-        stale_jobs = (schema.jobs & 'status = "reserved"').proj(
-            elapsed_days="TIMESTAMPDIFF(DAY, timestamp, NOW())"
-        ) & "elapsed_days > 1"
-        (schema.jobs & stale_jobs).delete()
+        # (schema.jobs & 'status = "error"').delete()
+        # stale_jobs = (schema.jobs & 'status = "reserved"').proj(
+        #     elapsed_days="TIMESTAMPDIFF(DAY, timestamp, NOW())"
+        # ) & "elapsed_days > 1"
+        # (schema.jobs & stale_jobs).delete()
 
         logger.info(f"Sleeping for {sleep_duration} seconds...")
         time.sleep(sleep_duration)

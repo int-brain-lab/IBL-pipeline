@@ -3,7 +3,7 @@ schema for update records
 """
 import datajoint as dj
 
-schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_update")
+schema = dj.schema(dj.config["database.prefix"] + "ibl_update")
 
 
 @schema

@@ -10,7 +10,7 @@ from ibl_pipeline.utils import atlas
 if mode == "update":
     schema = dj.schema("ibl_histology")
 else:
-    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_histology")
+    schema = dj.schema(dj.config["database.prefix"] + "ibl_histology")
 
 if mode != "public":
     from ibl_pipeline.histology_internal import ProbeTrajectoryTemp

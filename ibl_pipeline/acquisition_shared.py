@@ -8,7 +8,7 @@ from tqdm import tqdm
 from ibl_pipeline import action, mode, one, reference, subject
 
 alyxraw = dj.create_virtual_module(
-    "alyxraw", dj.config.get("database.prefix", "") + "ibl_alyxraw"
+    "alyxraw", dj.config["database.prefix"] + "ibl_alyxraw"
 )
 
 
@@ -16,7 +16,7 @@ alyxraw = dj.create_virtual_module(
 if mode == "update":
     schema = dj.schema("ibl_acquisition")
 else:
-    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_acquisition")
+    schema = dj.schema(dj.config["database.prefix"] + "ibl_acquisition")
 
 
 _FLOAT_STR_REGEX = re.compile(r"\.[0-9]+$")

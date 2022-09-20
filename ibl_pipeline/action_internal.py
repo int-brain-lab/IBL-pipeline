@@ -8,7 +8,7 @@ from ibl_pipeline.action_shared import ProcedureType
 if mode == "update":
     schema = dj.schema("ibl_action")
 else:
-    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_action")
+    schema = dj.schema(dj.config["database.prefix"] + "ibl_action")
 
 
 @schema

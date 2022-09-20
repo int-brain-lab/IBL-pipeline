@@ -7,7 +7,7 @@ from ibl_pipeline.ingest import ShadowIngestionError, alyxraw
 from ibl_pipeline.ingest import get_raw_field as grf
 from ibl_pipeline.ingest import reference, subject
 
-schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ingest_action")
+schema = dj.schema(dj.config["database.prefix"] + "ibl_ingest_action")
 
 
 @schema

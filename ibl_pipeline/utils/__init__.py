@@ -45,15 +45,13 @@ def get_log_dir(*folders):
     return log_path
 
 
-def get_logger(name="root", level=None):
+def get_logger(name="", level=None):
     logger = logging.getLogger(name)
-    if logger.handlers:
+    if logger.hasHandlers():
         return logger
     level = os.getenv("LOGLEVEL", "INFO") if level is None else level
     logger.setLevel(level)
-    logger.propagate = False
-    log_file = get_log_dir(*name.split(".")) / f"{level}.log"
-    log_file.parent.mkdir(parents=True, exist_ok=True)
+    log_file = get_log_dir("shared") / "ibl_pipeline.log"
     format_ = (
         "\n%(levelname)-8s | %(asctime)20s.%(msecs)-3d | PID=%(process)-7s | "
         "%(name)-20s %(funcName)20s\n%(message)s"
@@ -63,10 +61,10 @@ def get_logger(name="root", level=None):
     file_handler = logging.handlers.RotatingFileHandler(
         log_file, maxBytes=1_000_000, backupCount=15
     )
-    file_handler.setLevel("NOTSET")
+    file_handler.setLevel("DEBUG")
     file_handler.setFormatter(formatter)
     print_handler = logging.StreamHandler()
-    print_handler.setLevel("NOTSET")
+    print_handler.setLevel(level)
     print_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
     logger.addHandler(print_handler)

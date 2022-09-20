@@ -12,7 +12,7 @@ from ibl_pipeline.ingest import ShadowIngestionError, acquisition, alyxraw, ephy
 from ibl_pipeline.ingest import get_raw_field as grf
 from ibl_pipeline.ingest import reference
 
-schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ingest_histology")
+schema = dj.schema(dj.config["database.prefix"] + "ibl_ingest_histology")
 
 
 # Temporary probe trajectories and channel brain location based on methods

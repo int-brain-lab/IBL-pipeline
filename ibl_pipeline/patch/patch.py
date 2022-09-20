@@ -13,7 +13,7 @@ from ibl_pipeline.plotting import behavior as behavior_plotting
 from ibl_pipeline.plotting import ephys as ephys_plotting
 from ibl_pipeline.utils.dependent_tables import Graph
 
-schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_patch")
+schema = dj.schema(dj.config["database.prefix"] + "ibl_patch")
 
 
 SESSION_TABLES = [

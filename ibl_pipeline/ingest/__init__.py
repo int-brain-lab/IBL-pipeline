@@ -55,13 +55,8 @@ use for the ingest modules.
 
 
 import datajoint as dj
-
-from ibl_pipeline import mode
 from ibl_pipeline.ingest import alyxraw
 from ibl_pipeline.utils import get_logger
-
-if mode == "test":
-    dj.config["database.prefix"] = "test_"
 
 logger = get_logger(__name__)
 

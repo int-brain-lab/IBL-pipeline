@@ -5,7 +5,7 @@ from pathlib import Path
 import datajoint as dj
 from appdirs import user_cache_dir
 
-dj.config["enable_python_native_blobs"] = True
+from ibl_pipeline.utils import get_logger as _logger
 
 mode = dj.config.get("custom", {}).get("database.mode", os.getenv("DJ_MODE", ""))
 
@@ -13,7 +13,10 @@ if mode == "test":
     dj.config["database.prefix"] = "test_"
 elif mode == "update":
     dj.config["database.prefix"] = "update_"
+else:
+    dj.config["database.prefix"] = ""
 
+dj.config["enable_python_native_blobs"] = True
 
 access_key = os.getenv("S3_ACCESS")
 secret_key = os.getenv("S3_SECRET")
@@ -44,12 +47,15 @@ dj.config["stores"] = {
     ),
 }
 
+ibl_logger = _logger("ibl_pipeline")
+
 
 def get_one_api_public(password=None, url="https://openalyx.internationalbrainlab.org"):
     try:
         from one.api import OneAlyx
-    except ImportError:
-        print("'one-api' package not installed.")
+    except ImportError as error:
+        print(error)
+        print("'one-api' package not imported.")
         one = None
     else:
         base_url = (

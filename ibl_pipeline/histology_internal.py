@@ -16,7 +16,7 @@ except dj.DataJointError:
 if mode == "update":
     schema = dj.schema("ibl_histology")
 else:
-    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_histology")
+    schema = dj.schema(dj.config["database.prefix"] + "ibl_histology")
 
 
 # ================= The temporary tables before the probe trajectories are finally resolved ===================

@@ -12,7 +12,7 @@ if mode == "public":
 else:
     root_path = ""
 
-schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_plotting_histology")
+schema = dj.schema(dj.config["database.prefix"] + "ibl_plotting_histology")
 
 
 # get external bucket

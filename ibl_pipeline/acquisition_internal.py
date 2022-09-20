@@ -17,7 +17,7 @@ except dj.DataJointError:
 if mode == "update":
     schema = dj.schema("ibl_acquisition")
 else:
-    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_acquisition")
+    schema = dj.schema(dj.config["database.prefix"] + "ibl_acquisition")
 
 
 @schema

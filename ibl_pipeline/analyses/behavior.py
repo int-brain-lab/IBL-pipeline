@@ -9,7 +9,7 @@ from ibl_pipeline import acquisition, action, behavior, subject
 from ibl_pipeline.analyses import analysis_utils as utils
 from ibl_pipeline.utils import psychofit as psy
 
-schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_analyses_behavior")
+schema = dj.schema(dj.config["database.prefix"] + "ibl_analyses_behavior")
 
 
 def compute_reaction_time(trials, stim_on_type="stim on"):

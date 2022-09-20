@@ -27,7 +27,7 @@ else:
     root_path = ""
 
 
-schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_plotting_ephys")
+schema = dj.schema(dj.config["database.prefix"] + "ibl_plotting_ephys")
 
 try:
     wheel = dj.create_virtual_module("wheel", "group_shared_wheel")

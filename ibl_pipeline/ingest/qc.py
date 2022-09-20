@@ -11,7 +11,7 @@ from ibl_pipeline.ingest import get_raw_field as grf
 from ibl_pipeline.ingest import reference, subject
 from ibl_pipeline.utils import str_to_dict
 
-schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ingest_qc")
+schema = dj.schema(dj.config["database.prefix"] + "ibl_ingest_qc")
 
 
 # This function automatically get qc types from alyx

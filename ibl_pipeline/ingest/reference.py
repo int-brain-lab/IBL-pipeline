@@ -10,7 +10,7 @@ from ibl_pipeline.ingest import get_raw_field as grf
 if mode == "public":
     from ibl_pipeline import public
 
-schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_ingest_reference")
+schema = dj.schema(dj.config["database.prefix"] + "ibl_ingest_reference")
 
 
 @schema

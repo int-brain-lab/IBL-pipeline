@@ -6,7 +6,7 @@ from ibl_pipeline.ingest import reference
 if mode == "update":
     schema = dj.schema("ibl_reference")
 else:
-    schema = dj.schema(dj.config.get("database.prefix", "") + "ibl_reference")
+    schema = dj.schema(dj.config["database.prefix"] + "ibl_reference")
 
 
 @schema
