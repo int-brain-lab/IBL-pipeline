@@ -131,11 +131,8 @@ class QueryBuffer(object):
                         failed_insertions.append(entry)
                         logger.error("error in flush-insert: {}".format(e))
             if self.verbose:
-                logger.log(
-                    0,
-                    "Inserted {}/{} raw field tuples".format(
-                        chunksz - len(failed_insertions), chunksz
-                    ),
+                logger.info(
+                    f"Inserted {chunksz - len(failed_insertions)}/{chunksz} raw field tuples"
                 )
 
             del entries

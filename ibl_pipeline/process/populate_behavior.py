@@ -6,11 +6,10 @@ import os
 import time
 
 import datajoint as dj
-from tqdm import tqdm
-
 from ibl_pipeline import acquisition, action, behavior, data, mode, reference, subject
 from ibl_pipeline.analyses import behavior as behavior_analyses
 from ibl_pipeline.plotting import behavior as behavior_plotting
+from tqdm import tqdm
 
 BEHAVIOR_TABLES = [
     behavior.CompleteWheelSession,
@@ -38,8 +37,6 @@ if mode != "public":
     BEHAVIOR_TABLES.append(behavior_plotting.WaterTypeColor)
 
 
-gkwargs = dict(suppress_errors=True, display_progress=True)
-
 _backtrack_days = int(os.getenv("BACKTRACK_DAYS", 0))
 
 
@@ -48,8 +45,15 @@ def main(
     excluded_tables=None,
     run_duration=3600 * 3,
     sleep_duration=60 * 10,
+    populate_settings=None,
     **kwargs,
 ):
+    populate_settings = (populate_settings or {}) | {
+        "display_progress": True,
+        "reserve_jobs": True,
+        "suppress_errors": True,
+    }
+
     if excluded_tables is None:
         excluded_tables = []
 
@@ -76,7 +80,7 @@ def main(
         # only check those sessions where required datasets are missing.
         # populate CompleteTrialSession first with existing file records
         behavior.CompleteTrialSession.populate(
-            f'session_start_time > "{date_cutoff}"', **gkwargs
+            f'session_start_time > "{date_cutoff}"', **populate_settings
         )
         sessions_missing = (
             acquisition.Session - behavior.CompleteTrialSession
@@ -105,7 +109,7 @@ def main(
             else:
                 restrictor = {}
 
-            table.populate(restrictor, **gkwargs)
+            table.populate(restrictor, **populate_settings)
 
         print("Populating SubjectLatestEvent...")
         for key in tqdm(subject.Subject.fetch("KEY"), position=0):
@@ -119,7 +123,7 @@ def main(
                     "KEY"
                 )
             ).delete()
-        behavior_plotting.CumulativeSummary.populate(**gkwargs)
+        behavior_plotting.CumulativeSummary.populate(**populate_settings)
 
         print("Update SubjectLatestDate...")
         subject_latest_date = subject.Subject.aggr(
@@ -150,7 +154,7 @@ def main(
                     behavior_plotting.DailyLabSummary
                     & outdated_lab_summary.fetch("KEY")
                 ).delete()
-            behavior_plotting.DailyLabSummary.populate(**gkwargs)
+            behavior_plotting.DailyLabSummary.populate(**populate_settings)
 
         time.sleep(sleep_duration)
 

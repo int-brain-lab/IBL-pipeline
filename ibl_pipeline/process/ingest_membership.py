@@ -1,5 +1,5 @@
 """
-This script inserts membership tuples into the membership shadow tables, \
+This script inserts membership tuples into the membership shadow tables,
 which cannot be inserted with auto-population.
 """
 
@@ -8,8 +8,6 @@ import os
 
 import datajoint as dj
 import pymysql
-from tqdm import tqdm
-
 from ibl_pipeline import mode
 from ibl_pipeline.ingest import QueryBuffer, acquisition, action, alyxraw, data
 from ibl_pipeline.ingest import get_raw_field as grf

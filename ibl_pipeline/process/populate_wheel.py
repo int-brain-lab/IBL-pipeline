@@ -8,10 +8,19 @@ from ibl_pipeline.utils import get_logger
 logger = get_logger(__name__)
 
 
-gkwargs = dict(display_progress=True, suppress_errors=True)
+def main(
+    backtrack_days=30,
+    run_duration=3600 * 3,
+    sleep_duration=60,
+    populate_settings=None,
+    **kwargs,
+):
+    populate_settings = (populate_settings or {}) | {
+        "display_progress": True,
+        "reserve_jobs": True,
+        "suppress_errors": True,
+    }
 
-
-def main(backtrack_days=30, run_duration=3600 * 3, sleep_duration=60, **kwargs):
     start_time = time.time()
     while (
         (time.time() - start_time < run_duration)
@@ -24,11 +33,15 @@ def main(backtrack_days=30, run_duration=3600 * 3, sleep_duration=60, **kwargs):
         ).strftime("%Y-%m-%d")
         date_range = f'session_start_time > "{date_cutoff}"'
 
-        logger.log(25, "Populating WheelMoveSet...")
-        wheel.WheelMoveSet.populate(date_range, ephys.ProbeInsertion, **gkwargs)
+        logger.info("Populating WheelMoveSet...")
+        wheel.WheelMoveSet.populate(
+            date_range, ephys.ProbeInsertion, **populate_settings
+        )
 
-        logger.log(25, "Populating MovementTimes...")
-        wheel.MovementTimes.populate(date_range, ephys.ProbeInsertion, **gkwargs)
+        logger.info("Populating MovementTimes...")
+        wheel.MovementTimes.populate(
+            date_range, ephys.ProbeInsertion, **populate_settings
+        )
 
         time.sleep(sleep_duration)
 

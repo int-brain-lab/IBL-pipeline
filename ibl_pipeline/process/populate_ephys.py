@@ -60,10 +60,18 @@ if mode != "public":
     )
 
 
-gkwargs = dict(display_progress=True, suppress_errors=True)
-
-
-def main(exclude_plottings=False, run_duration=3600 * 3, sleep_duration=60, **kwargs):
+def main(
+    exclude_plottings=False,
+    run_duration=3600 * 3,
+    sleep_duration=60,
+    populate_settings=None,
+    **kwargs,
+):
+    populate_settings = (populate_settings or {}) | {
+        "display_progress": True,
+        "reserve_jobs": True,
+        "suppress_errors": True,
+    }
 
     start_time = time.time()
     while (
@@ -74,14 +82,14 @@ def main(exclude_plottings=False, run_duration=3600 * 3, sleep_duration=60, **kw
 
         tstart = time.time()
 
-        logger.log(30, "Ephys populate")
+        logger.info("Ephys populate")
 
         for table in EPHYS_TABLES:
             table_start_time = time.time()
             if exclude_plottings and table.__module__ == "ibl_pipeline.plotting.ephys":
                 continue
-            logger.log(30, "Ingesting {}...".format(table.__name__))
-            table.populate(**gkwargs)
+            logger.info("Ingesting {}...".format(table.__name__))
+            table.populate(**populate_settings)
             logger.log(
                 30,
                 "Ingestion time of {} is {}".format(
@@ -89,12 +97,12 @@ def main(exclude_plottings=False, run_duration=3600 * 3, sleep_duration=60, **kw
                 ),
             )
 
-        logger.log(30, "Total ingestion time {}".format(time.time() - tstart))
+        logger.info("Total ingestion time {}".format(time.time() - tstart))
 
-        logger.log(30, "Histology populate")
+        logger.info("Histology populate")
         for table in HISTOLOGY_TABLES:
-            logger.log(30, f"Populating {table.__name__}...")
-            table.populate(**gkwargs)
+            logger.info(f"Populating {table.__name__}...")
+            table.populate(**populate_settings)
 
         time.sleep(sleep_duration)
 

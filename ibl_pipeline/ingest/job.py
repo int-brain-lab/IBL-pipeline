@@ -1,6 +1,5 @@
 import datetime
 import inspect
-import logging
 import os
 import time
 
@@ -1324,7 +1323,3 @@ def populate_ingestion_tables(
 
         logger.info(f"Sleeping for {sleep_duration} seconds...")
         time.sleep(sleep_duration)
-
-
-if __name__ == "__main__":
-    populate_ingestion_tables(run_duration=-1, sleep_duration=30)

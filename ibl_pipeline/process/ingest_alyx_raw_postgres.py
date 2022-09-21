@@ -9,7 +9,6 @@ import re
 
 import datajoint as dj
 import numpy as np
-
 from ibl_pipeline.ingest import QueryBuffer, alyxraw
 from ibl_pipeline.process import (
     alyx_models,
@@ -237,7 +236,7 @@ def insert_to_update_alyxraw_postgres(
 
     if delete_UpdateAlyxRaw_first:
         with dj.config(safemode=False):
-            logger.log(25, "Deleting update ibl alyxraw tables...")
+            logger.info("Deleting update ibl alyxraw tables...")
             models_res = [{"model": get_django_model_name(m) for m in alyx_models}]
             (alyxraw.UpdateAlyxRaw.Field & models_res).delete_quick()
             (alyxraw.UpdateAlyxRaw & models_res).delete_quick()
@@ -245,8 +244,7 @@ def insert_to_update_alyxraw_postgres(
     for alyx_model in alyx_models:
         if alyx_model.__name__ in excluded_models:
             continue
-        logger.log(
-            25,
+        logger.info(
             "Ingesting alyx table {} into datajoint UpdateAlyxRaw...".format(
                 get_django_model_name(alyx_model)
             ),
@@ -260,8 +258,7 @@ def insert_to_update_alyxraw_postgres(
 
 def main(backtrack_days=None, skip_existing_alyxraw=False):
     for alyx_model in ALYX_MODELS:
-        logger.log(
-            25,
+        logger.info(
             "Ingesting alyx table {} into datajoint alyxraw...".format(
                 get_django_model_name(alyx_model)
             ),

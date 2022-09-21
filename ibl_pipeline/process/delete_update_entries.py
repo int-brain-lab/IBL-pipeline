@@ -10,7 +10,6 @@ from tqdm import tqdm
 # isort: split
 import actions
 import subjects
-
 from ibl_pipeline import update
 from ibl_pipeline.common import *
 from ibl_pipeline.ingest import QueryBuffer, alyxraw
@@ -74,7 +73,7 @@ def delete_entries_from_alyxraw(file_record_keys=[], alyxraw_keys=[]):
     """
 
     if file_record_keys:
-        logger.log(25, "Deleting alyxraw entries corresponding to file records...")
+        logger.info("Deleting alyxraw entries corresponding to file records...")
 
         if len(file_record_keys) > 5000:
             file_record_fields = alyxraw.AlyxRaw.Field & {
@@ -92,7 +91,7 @@ def delete_entries_from_alyxraw(file_record_keys=[], alyxraw_keys=[]):
             (alyxraw.AlyxRaw.Field & key).delete_quick()
 
     if alyxraw_keys:
-        logger.log(25, "Deleting modified entries...")
+        logger.info("Deleting modified entries...")
 
         pk_list = [k for k in alyxraw_keys if is_valid_uuid(k["uuid"])]
 
@@ -142,8 +141,7 @@ def delete_entries_from_membership(pks_to_be_deleted):
             ]
         ).fetch("KEY")
 
-        logger.log(
-            25,
+        logger.info(
             f"Deleting {len(entries_to_delete)} records from membership table {mem_table_name} ...",
         )
 
@@ -263,7 +261,7 @@ def update_fields(
                 )
                 update.UpdateError.insert1(update_record_error)
 
-            logger.log(25, f"Error updating entry: {update_error_msg}")
+            logger.info(f"Error updating entry: {update_error_msg}")
             continue
         # if there are more than 1 record
         elif len(shadow_table & key) > 1:
@@ -286,7 +284,7 @@ def update_fields(
                         f"{table_name}.{f}: {shadow_record[f]} != {real_record[f]}"
                     )
                 except BaseException as e:
-                    logger.log(25, f"Error while updating record {key}: {str(e)}")
+                    logger.info(f"Error while updating record {key}: {str(e)}")
                 else:
                     if log_to_UpdateRecord:
                         update_record = dict(
@@ -306,7 +304,7 @@ def update_fields(
 def update_entries_from_real_tables(modified_pks):
     for table_info in TABLES_TO_UPDATE:
 
-        logger.log(25, "Updating {}...".format(table_info["table_name"]))
+        logger.info("Updating {}...".format(table_info["table_name"]))
         table = getattr(table_info["real_schema"], table_info["table_name"])
 
         if table_info["table_name"] == "Subject":

@@ -173,7 +173,7 @@ def populate_real_tables():
 
 def main():
 
-    logger.log(25, "Histology - Ingesting from Postgres to UpdateAlyxRaw...")
+    logger.info("Histology - Ingesting from Postgres to UpdateAlyxRaw...")
     ingest_alyx_raw_postgres.insert_to_update_alyxraw_postgres(
         alyx_models=ALYX_HISTOLOGY_MODELS,
         delete_UpdateAlyxRaw_first=True,
@@ -186,22 +186,22 @@ def main():
     )
     delete_histology_alyx_shadow()
 
-    logger.log(25, "Histology - Ingesting from Postgres to AlyxRaw...")
+    logger.info("Histology - Ingesting from Postgres to AlyxRaw...")
     for alyx_model in ALYX_HISTOLOGY_MODELS:
         ingest_alyx_raw_postgres.insert_alyx_entries_model(
             alyx_model, skip_existing_alyxraw=True
         )
 
-    logger.log(25, "Histology - Ingesting into shadow tables...")
+    logger.info("Histology - Ingesting into shadow tables...")
     populate_shadow_tables()
 
-    logger.log(25, "Histology - Deleting updated/deleted entries from real tables...")
+    logger.info("Histology - Deleting updated/deleted entries from real tables...")
     delete_histology_real()
 
-    logger.log(25, "Histology - Ingesting the real tables...")
+    logger.info("Histology - Ingesting the real tables...")
     copy_to_real_tables()
 
-    logger.log(25, "Histology - Populate the histology tables...")
+    logger.info("Histology - Populate the histology tables...")
     populate_real_tables()
 
 
