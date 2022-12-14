@@ -22,48 +22,49 @@ if not apps.ready:
 
 
 MODEL_ORDER = [
-    'misc.lab',
-    'misc.lablocation',
-    'misc.labmember',
-    'misc.labmembership',
-    'misc.cagetype',
-    'misc.enrichment',
-    'misc.food',
-    'misc.housing',
-    'subjects.project',
-    'subjects.source',
-    'subjects.species',
-    'subjects.strain',
-    'subjects.sequence',
-    'subjects.allele',
-    'subjects.line',
-    'subjects.subject',
-    'subjects.breedingpair',
-    'subjects.litter',
-    'subjects.genotypetest',
-    'subjects.zygosity',
-    'actions.proceduretype',
-    'actions.surgery',
-    'actions.cullmethod',
-    'actions.cullreason',
-    'actions.cull',
-    'actions.weighing',
-    'actions.watertype',
-    'actions.waterrestriction',
-    'actions.wateradministration',
-    'actions.session',
-    'data.dataformat',
-    'data.datarepositorytype',
-    'data.datarepository',
-    'data.datasettype',
-    'data.dataset',
-    'data.filerecord',
-    'experiments.coordinatesystem',
-    'experiments.probemodel',
-    'experiments.probeinsertion',
-    'experiments.trajectoryestimate',
-    'experiments.channel',
+    "misc.lab",
+    "misc.lablocation",
+    "misc.labmember",
+    "misc.labmembership",
+    "misc.cagetype",
+    "misc.enrichment",
+    "misc.food",
+    "misc.housing",
+    "subjects.project",
+    "subjects.source",
+    "subjects.species",
+    "subjects.strain",
+    "subjects.sequence",
+    "subjects.allele",
+    "subjects.line",
+    "subjects.subject",
+    "subjects.breedingpair",
+    "subjects.litter",
+    "subjects.genotypetest",
+    "subjects.zygosity",
+    "actions.proceduretype",
+    "actions.surgery",
+    "actions.cullmethod",
+    "actions.cullreason",
+    "actions.cull",
+    "actions.weighing",
+    "actions.watertype",
+    "actions.waterrestriction",
+    "actions.wateradministration",
+    "actions.session",
+    "data.dataformat",
+    "data.datarepositorytype",
+    "data.datarepository",
+    "data.datasettype",
+    "data.dataset",
+    "data.filerecord",
+    "experiments.coordinatesystem",
+    "experiments.probemodel",
+    "experiments.probeinsertion",
+    "experiments.trajectoryestimate",
+    "experiments.channel",
 ]
+
 
 def get_django_model_name(model):
     return model._meta.db_table.replace("_", ".")
@@ -109,6 +110,7 @@ def get_django_many_to_many_field_names(model):
 
     return many_to_many_field_names
 
+
 def get_django_models(exclude=None):
     models = {
         get_django_model_name(model): {
@@ -139,7 +141,6 @@ def extract_models_entry(models, *entries):
         return tuple()
 
     return [tuple(v[e] for e in entries if e in v) for v in models.values()]
-
 
 
 def alyx_models(as_dict=False):
