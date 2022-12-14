@@ -126,7 +126,7 @@ def insert_alyx_entries_model(
 
                 field_entry = {"uuid": r.id, "fname": field_name}
                 field_value = getattr(r, field_name)
-                logger.info(f"Loading field '{field_name}' for '{model_name}': {r.id}")
+                logger.debug(f"Loading field '{field_name}' for '{model_name}': {r.id}")
                 if field_name == "json" and field_value:
                     # handles the 'json' field - store the json dump
                     field_entry["value_idx"] = 0
@@ -174,7 +174,7 @@ def insert_alyx_entries_model(
                 else:
                     field_entry["value_idx"] = 0
                     fk_id = field_name + "_id"
-                    logger.info(f"special handling for foreign key object {fk_id}")
+                    logger.debug(f"special handling for foreign key object {fk_id}")
                     if hasattr(r, fk_id):
                         field_entry["fvalue"] = str(getattr(r, fk_id))
 
@@ -183,7 +183,7 @@ def insert_alyx_entries_model(
             for field_name in many_to_many_field_names:
                 many_to_many_entries = getattr(r, field_name).all()
                 if len(many_to_many_entries) > 200:
-                    logger.info(
+                    logger.debug(
                         f"many-to-many field {field_name} with "
                         f"{len(many_to_many_entries)} entries - skipping..."
                     )

@@ -7,8 +7,8 @@ from appdirs import user_cache_dir
 
 from ibl_pipeline.utils import get_logger as _logger
 
-mode = dj.config.get("custom", {}).get("database.mode", os.getenv("DJ_MODE", ""))
-
+# mode = dj.config.get("custom", {}).get("database.mode", os.getenv("DJ_MODE", ""))
+mode = ""
 
 if mode == "test":
     dj.config["database.prefix"] = "test_"

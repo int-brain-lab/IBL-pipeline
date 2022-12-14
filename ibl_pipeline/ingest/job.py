@@ -4,6 +4,7 @@ import os
 import time
 
 import datajoint as dj
+
 from ibl_pipeline.process import (
     alyx_models,
     extract_models_entry,
@@ -97,11 +98,10 @@ class TaskStatus(dj.Manual):
 # ================== Orchestrating the ingestion jobs =============
 
 import actions as alyx_actions
+import data as alyx_data
 import experiments as alyx_experiments
 import misc as alyx_misc
 import subjects as alyx_subjects
-
-import data as alyx_data
 
 # isort: split
 from ibl_pipeline import (
@@ -1002,7 +1002,11 @@ class PopulateShadowTable(dj.Computed):
     completion_count=null: int  # how many has been populated by this job
     """
 
-    key_source = ShadowTable * IngestionJob & 'job_status = "on-going"'
+    @property
+    def key_source(self):
+        key_source = ShadowTable * IngestionJob & 'job_status = "on-going"'
+        return key_source
+
 
     def make(self, key):
         is_membership = key["table_name"] in DJ_SHADOW_MEMBERSHIP
@@ -1303,7 +1307,7 @@ def populate_ingestion_tables(
             IngestionJob.create_entry(datetime.datetime.utcnow().strftime("%Y-%m-%d"))
         else:
             recent_job_str = (IngestionJob & last_job_datetime).fetch1("new_job_string")
-            if new_job_string and recent_job_str != new_job_string:
+            if new_job_string and (recent_job_str != new_job_string):
                 IngestionJob.create_entry(new_job_string)
 
         # check if completed
@@ -1311,9 +1315,15 @@ def populate_ingestion_tables(
             cleanup_shadow_schema_jobs()
             logger.info("Ingestion completed, waiting for next job...")
         else:
+            restrict = [f"table_name = '{t}'" for t in DJ_TABLES]
             for table in _ingestion_tables:
                 logger.info(f"POPULATING: {table.__name__}")
-                table.populate(**populate_settings)
+                if table.__name__ == "PopulateShadowTable":
+                    for r in restrict:
+                        logger.info(f"RESTRICT: {r}")
+                        table.populate([r], **populate_settings)
+                else:
+                    table.populate(**populate_settings)
 
         (schema.jobs & 'status = "error"').delete()
         stale_jobs = (schema.jobs & 'status = "reserved"').proj(

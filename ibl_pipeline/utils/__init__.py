@@ -59,9 +59,9 @@ def get_logger(name="", level=None):
     datetime = "%Y-%m-%d %H:%M:%S"
     formatter = logging.Formatter(datefmt=datetime, fmt=format_, style="%")
     file_handler = logging.handlers.RotatingFileHandler(
-        log_file, maxBytes=1_000_000, backupCount=15
+        log_file, maxBytes=10_000_000, backupCount=15
     )
-    file_handler.setLevel("DEBUG")
+    file_handler.setLevel(level)
     file_handler.setFormatter(formatter)
     print_handler = logging.StreamHandler()
     print_handler.setLevel(level)

@@ -21,6 +21,50 @@ if not apps.ready:
     django.setup()
 
 
+MODEL_ORDER = [
+    'misc.lab',
+    'misc.lablocation',
+    'misc.labmember',
+    'misc.labmembership',
+    'misc.cagetype',
+    'misc.enrichment',
+    'misc.food',
+    'misc.housing',
+    'subjects.project',
+    'subjects.source',
+    'subjects.species',
+    'subjects.strain',
+    'subjects.sequence',
+    'subjects.allele',
+    'subjects.line',
+    'subjects.subject',
+    'subjects.breedingpair',
+    'subjects.litter',
+    'subjects.genotypetest',
+    'subjects.zygosity',
+    'actions.proceduretype',
+    'actions.surgery',
+    'actions.cullmethod',
+    'actions.cullreason',
+    'actions.cull',
+    'actions.weighing',
+    'actions.watertype',
+    'actions.waterrestriction',
+    'actions.wateradministration',
+    'actions.session',
+    'data.dataformat',
+    'data.datarepositorytype',
+    'data.datarepository',
+    'data.datasettype',
+    'data.dataset',
+    'data.filerecord',
+    'experiments.coordinatesystem',
+    'experiments.probemodel',
+    'experiments.probeinsertion',
+    'experiments.trajectoryestimate',
+    'experiments.channel',
+]
+
 def get_django_model_name(model):
     return model._meta.db_table.replace("_", ".")
 
@@ -46,8 +90,11 @@ def get_django_many_to_many_field_names(model):
     Returns:
         [list]: list of ManyToMany field names (property name), including foreign key references
     """
-    one_entry = next(model.objects.iterator())
     many_to_many_field_names = []
+    try:
+        one_entry = next(model.objects.iterator())
+    except StopIteration:
+        return many_to_many_field_names
     for field_name in dir(one_entry):
         try:
             obj = getattr(one_entry, field_name)
@@ -62,7 +109,6 @@ def get_django_many_to_many_field_names(model):
 
     return many_to_many_field_names
 
-
 def get_django_models(exclude=None):
     models = {
         get_django_model_name(model): {
@@ -74,6 +120,10 @@ def get_django_models(exclude=None):
         for model in apps.get_models()
         if not model._meta.proxy
     }
+    first_set = {m: models[m] for m in MODEL_ORDER if m in models}
+    second_set = {m: models[m] for m in models if m not in MODEL_ORDER}
+    models = {**first_set, **second_set}
+
     if not exclude:
         return models
 
@@ -91,8 +141,10 @@ def extract_models_entry(models, *entries):
     return [tuple(v[e] for e in entries if e in v) for v in models.values()]
 
 
+
 def alyx_models(as_dict=False):
     models = get_django_models(exclude=["^django", "^reversion", "^auth", "^jobs"])
+
     if as_dict:
         return dict(extract_models_entry(models, "django_module", "django_model"))
     return tuple(
