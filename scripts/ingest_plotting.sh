@@ -1,3 +1,0 @@
-python compute_latest_date.py
-python plotting_behavior.py
-python insert_update_subject_last_date.py

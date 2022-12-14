@@ -1,0 +1,57 @@
+{
+	"folders": [
+		{
+			"name": "IBL",
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"**/.DS_Store": true,
+			"**/.git": true,
+			"**/.hg": true,
+			"**/.svn": true,
+			"**/CVS": true,
+			"**/Thumbs.db": true,
+			"*.command": true
+		},
+		"python.defaultInterpreterPath": "${env:CONDA_ENV_ROOT}/iblenv",
+		"python.formatting.provider": "black",
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": []
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"echoCommand": true,
+		"presentation": {
+			"clear": false,
+			"echo": true,
+			"focus": false,
+			"panel": "shared",
+			"reveal": "silent",
+			"revealProblems": "onProblem",
+			"showReuseMessage": true
+		},
+		"tasks": [
+			{
+				"label": "conda list",
+				"type": "shell",
+				"command": "conda",
+				"args": [
+					"list"
+				]
+			},
+			{
+				"label": "clean junk files",
+				"type": "shell",
+				"command": "find . -name '*.DS_Store' -type f -delete && find . -name '.ipynb_checkpoints' -type d -exec rm -rf {} + && find . -name '__pycache__' -type d -exec rm -rf {} + && find . -name '.pytest_cache' -type d -exec rm -rf {} +",
+				"options": {
+					"cwd": "${workspaceFolder}"
+				}
+			}
+		],
+		"problemMatcher": []
+	}
+}

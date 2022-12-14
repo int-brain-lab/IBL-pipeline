@@ -1,7 +1,7 @@
 # IDE
 .idea/
 .vscode/*
-*.code-workspace
+
 
 # macOS
 .DS_Store

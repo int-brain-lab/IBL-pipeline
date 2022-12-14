@@ -1,8 +1,0 @@
-**/*
-!docker
-!ibl_pipeline
-!setup.py
-**/*.datajoint_config.json
-**/*.env
-**/*.one_params
-**/*dj_local_conf.json
