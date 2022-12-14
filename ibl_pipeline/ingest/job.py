@@ -1288,7 +1288,7 @@ def populate_ingestion_tables(
     Run in continuous loop for the duration defined in "run_duration" (default 3 hours)
     """
     populate_settings = (populate_settings or {}) | {
-        "display_progress": True,
+        "display_progress": False,
         "reserve_jobs": True,
         "suppress_errors": True,
     }
