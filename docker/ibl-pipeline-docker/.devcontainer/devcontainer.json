@@ -1,0 +1,33 @@
+// For format details, see https://containers.dev/
+{
+	"name": "datajoint-ibl (devcontainer)",
+	"dockerComposeFile": [
+		"../docker-compose-dev.yml"
+	],
+	"service": "datajoint-ingest",
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"jupyter.generateSVGPlots": true,
+				"jupyter.interactiveWindowMode": "single",
+				"jupyter.notebookFileRoot": "${fileDirname}",
+				"jupyter.sendSelectionToInteractiveWindow": true
+			},
+			"extensions": [
+				"foxundermoon.shell-format",
+				"mikestead.dotenv",
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"ms-toolsai.jupyter-keymap",
+				"ms-toolsai.jupyter-renderers",
+				"ms-toolsai.jupyter",
+				"njpwerner.autodocstring",
+				"redhat.vscode-yaml",
+				"rogalmic.bash-debug",
+				"tamasfe.even-better-toml"
+			]
+		}
+	},
+	"shutdownAction": "none",
+	"workspaceFolder": "/int-brain-lab/IBL-pipeline"
+}

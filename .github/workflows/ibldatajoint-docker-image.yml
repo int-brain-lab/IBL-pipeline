@@ -1,0 +1,220 @@
+name: Build Docker IBL images
+
+on:
+  push:
+    branches: [public-ingest]
+
+env:
+  REBUILD_ALYXAPACHE: ${{ secrets.REBUILD_ALYXAPACHE }}
+  REBUILD_IBLENV: ${{ secrets.REBUILD_IBLENV }}
+  REBUILD_IBLDJENV: ${{ secrets.REBUILD_IBLDJENV }}
+
+jobs:
+  iblalyx_build_and_push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Get Previous tag
+        id: previoustag
+        uses: WyriHaximus/github-action-get-previous-tag@v1
+        with:
+          fallback: v0.0.0
+
+      - name: Get current date
+        id: timestamp
+        run: echo "::set-output name=date::$(date -d @${{ steps.previoustag.outputs.timestamp }} +'%Y-%m-%dT%H:%M:%SZ')"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          install: true
+          driver: docker-container
+          driver-opts: |
+            image=moby/buildkit:master
+          buildkitd-flags: --debug
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push iblalyx_apache
+        id: docker_build_iblalyx_apache
+        if: env.REBUILD_ALYXAPACHE == 'true'
+        uses: docker/build-push-action@v2
+        with:
+          build-args: |
+            IMAGE_CREATED=${{ steps.timestamp.outputs.date }}
+            IMAGE_VERSION=${{ steps.previoustag.outputs.tag }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/dj-iblalyx-apache:latest
+            ghcr.io/${{ github.repository_owner }}/dj-iblalyx-apache:${{ steps.previoustag.outputs.tag }}
+          context: docker/local-alyx-docker/build
+          file: docker/local-alyx-docker/build/Dockerfile
+          target: iblalyx_apache
+          # platforms: linux/arm64,linux/amd64
+          platforms: linux/amd64
+          push: true
+
+      - name: Build and push iblalyx
+        if: env.REBUILD_IBLENV != 'false'
+        id: docker_build_iblalyx
+        uses: docker/build-push-action@v2
+        with:
+          build-args: |
+            IMAGE_CREATED=${{ steps.timestamp.outputs.date }}
+            IMAGE_VERSION=${{ steps.previoustag.outputs.tag }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/dj-iblalyx:latest
+            ghcr.io/${{ github.repository_owner }}/dj-iblalyx:${{ steps.previoustag.outputs.tag }}
+          context: docker/local-alyx-docker/build
+          file: docker/local-alyx-docker/build/Dockerfile
+          target: iblalyx
+          # platforms: linux/arm64,linux/amd64
+          platforms: linux/amd64
+          no-cache: true
+          push: true
+
+      - name: Docker build digest
+        run: |
+          echo ${{ steps.docker_build_iblalyx_apache.outputs.digest }}
+          echo ${{ steps.docker_build_iblalyx.outputs.digest }}
+
+  iblenv_build_and_push:
+    needs: [iblalyx_build_and_push]
+    if: |
+      always() &&
+      (needs.iblalyx_build_and_push.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Get Previous tag
+        id: previoustag
+        uses: WyriHaximus/github-action-get-previous-tag@v1
+        with:
+          fallback: v0.0.0
+
+      - name: Get current date
+        id: timestamp
+        run: echo "::set-output name=date::$(date -d @${{ steps.previoustag.outputs.timestamp }} +'%Y-%m-%dT%H:%M:%SZ')"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          install: true
+          driver: docker-container
+          driver-opts: |
+            image=moby/buildkit:master
+          buildkitd-flags: --debug
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push iblenv
+        if: env.REBUILD_IBLENV == 'true'
+        id: docker_build_iblenv
+        uses: docker/build-push-action@v2
+        with:
+          build-args: |
+            IBLALYX_FORK=${{ github.repository_owner }}
+            IMAGE_CREATED=${{ steps.timestamp.outputs.date }}
+            IMAGE_VERSION=${{ steps.previoustag.outputs.tag }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/dj-iblenv:latest
+            ghcr.io/${{ github.repository_owner }}/dj-iblenv:${{ steps.previoustag.outputs.tag }}
+          context: docker/iblenv-docker/build
+          file: docker/iblenv-docker/build/Dockerfile
+          target: iblenv
+          # platforms: linux/arm64,linux/amd64
+          platforms: linux/amd64
+          no-cache: true
+          push: true
+
+      - name: Docker build digest
+        run: |
+          echo ${{ steps.docker_build_iblenv.outputs.digest }}
+
+  ibldj_build_and_push:
+    needs: [iblenv_build_and_push]
+    if: |
+      always() &&
+      (needs.iblenv_build_and_push.result == 'success')
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Get Previous tag
+        id: previoustag
+        uses: WyriHaximus/github-action-get-previous-tag@v1
+        with:
+          fallback: v0.0.0
+
+      - name: Get current date
+        id: timestamp
+        run: echo "::set-output name=date::$(date -d @${{ steps.previoustag.outputs.timestamp }} +'%Y-%m-%dT%H:%M:%SZ')"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          install: true
+          driver: docker-container
+          driver-opts: |
+            image=moby/buildkit:master
+          buildkitd-flags: --debug
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ibldatajoint
+        if: env.REBUILD_IBLDJENV != 'false'
+        id: docker_build_push
+        uses: docker/build-push-action@v2
+        with:
+          build-args: |
+            IBLENV_FORK=${{ github.repository_owner }}
+            IBLDATAJOINT_FORK=${{ github.repository_owner }}
+            IBLDATAJOINT_REF=public-ingest
+            IMAGE_CREATED=${{ steps.timestamp.outputs.date }}
+            IMAGE_VERSION=${{ steps.previoustag.outputs.tag }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/dj-ibl:latest
+            ghcr.io/${{ github.repository_owner }}/dj-ibl:${{ steps.previoustag.outputs.tag }}
+          context: docker/ibl-pipeline-docker/build
+          file: docker/ibl-pipeline-docker/build/Dockerfile
+          target: ibldatajoint
+          # platforms: linux/arm64,linux/amd64
+          platforms: linux/amd64
+          no-cache: false
+          push: true
+
+      - name: Docker build digest
+        run: |
+          echo ${{ steps.docker_build_push.outputs.digest }}
