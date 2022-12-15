@@ -1,0 +1,142 @@
+# Setup containerized ibldatajoint ingestion routines
+# Joseph Burling <joseph@datajoint.com>
+# --------------------------------------------------------------------------------------
+# Basic usage:
+#   cd ibl-pipeline-docker
+#   export GHCR_PAT=YOUR_GITHUB_PAT
+#   GITUSER=iamamutt
+#   echo $GHCR_PAT | docker login ghcr.io -u $GITUSER --password-stdin
+#   docker image rm ghcr.io/$GITUSER/dj-ibl:latest
+#   docker-compose up -d
+#   docker-compose down
+#
+# docker exec -u "root:docker" $(docker ps -aqf "name=iblenv") bash -c 'ls -la /int-brain-lab'
+
+version: "3.9"
+
+x-service-ibldatajoint-ingest: &service-ibldatajoint-ingest
+  command: dev
+  deploy:
+    mode: replicated
+    replicas: 1
+  entrypoint: ingest
+  env_file:
+    - .env
+    - ${ENV_FILE_OVERRIDE:-empty.env}
+  image: ghcr.io/${IBLDATAJOINT_FORK:-datajoint-company}/dj-ibl:latest
+  init: true
+  networks:
+    ibl: null
+  tty: true
+  volumes:
+    - alyx-server:/var/www/alyx-local/shared/remote:ro
+    - alyx-cache:/var/www/alyx-local/cache
+
+services:
+  alyx-postgres:
+    environment:
+      POSTGRES_USER: ${PGUSER? Must be set in .env file}
+      POSTGRES_PASSWORD: ${PGPASSWORD:? Must be set in .env file}
+      POSTGRES_DB: ${PGDATABASE:? Must be set in .env file}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready
+      timeout: 15s
+      interval: 30s
+      retries: 5
+      start_period: 10s
+    image: postgres:13-bullseye
+    networks:
+      ibl: null
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    deploy:
+      mode: replicated
+      replicas: ${ALYX_WORKER:-1}
+
+  alyx-apache:
+    depends_on:
+      alyx-postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    healthcheck:
+      test:
+        - CMD
+        - alyx
+        - check_server
+      timeout: 15s
+      interval: 30s
+      retries: 5
+      start_period: 2m0s
+    image: ghcr.io/${IBLALYX_FORK:-datajoint-company}/dj-iblalyx-apache:latest
+    init: true
+    networks:
+      ibl: null
+    ports:
+      - ${ALYX_PORT:-8000}:${ALYX_PORT:-8000}
+    tty: true
+    volumes:
+      - alyx-server:/var/www/alyx-local/shared/local:rw
+    command: ["fetch_and_load_db"]
+    deploy:
+      mode: replicated
+      replicas: ${ALYX_WORKER:-1}
+
+  datajoint-ingest:
+    <<: *service-ibldatajoint-ingest
+    deploy:
+      replicas: ${WORKER_COUNT:-1}
+    command:
+      - configure
+      - --all
+      - populate
+      - ingest
+      - --duration=-1
+      - --sleep=5
+      - --backtrack=5
+
+  datajoint-behavior:
+    <<: *service-ibldatajoint-ingest
+    command:
+      - configure
+      - --all
+      - populate
+      - behavior
+      - --duration=-1
+      - --sleep=5
+      - --backtrack=5
+
+  datajoint-wheel:
+    <<: *service-ibldatajoint-ingest
+    command:
+      - configure
+      - --all
+      - populate
+      - wheel
+      - --duration=-1
+      - --sleep=15
+      - --backtrack=5
+
+  datajoint-ephys:
+    <<: *service-ibldatajoint-ingest
+    command:
+      - configure
+      - --all
+      - populate
+      - ephys
+      - --duration=-1
+      - --sleep=15
+      - --backtrack=5
+
+# Global Networks and Volumes ----------------------------------------------------------
+networks:
+  ibl:
+
+volumes:
+  alyx-server:
+  alyx-cache:
+  postgres-data:

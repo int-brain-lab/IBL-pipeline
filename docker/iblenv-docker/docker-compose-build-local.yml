@@ -1,0 +1,25 @@
+# Setup devcontainers for using custom iblenv
+# Joseph Burling <joseph@datajoint.com>
+# --------------------------------------------------------------------------------------
+# Multifile Usage:
+#   docker-compose --verbose --log-level DEBUG -f docker-compose.yml -f docker-compose-build-local.yml up -d --remove-orphans --force-recreate --build
+#   docker-compose -f docker-compose.yml -f docker-compose-build-local.yml down --remove-orphans --volumes
+#   docker-compose -f docker-compose.yml -f docker-compose-build-local.yml config
+
+version: "3.9"
+
+services:
+  # IBL Environment  -------------------------------------------------------------------
+  iblenv:
+    build:
+      context: ./build
+      dockerfile: Dockerfile
+      args:
+        IBLALYX_FORK: ${IBLALYX_FORK:-datajoint-company}
+        ROOT_IBLENV_PATH: ${ROOT_IBLENV_PATH:-/int-brain-lab}
+    user: 999:999
+    volumes:
+      - vscode-ext:/home/ubuntu/.vscode-server/extensions
+
+volumes:
+  vscode-ext:

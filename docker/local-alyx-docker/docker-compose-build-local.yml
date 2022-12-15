@@ -1,0 +1,84 @@
+# Setup devcontainers for using custom iblalyx
+# Joseph Burling <joseph@datajoint.com>
+# --------------------------------------------------------------------------------------
+# Multifile Usage:
+#   docker-compose --verbose --log-level DEBUG -f docker-compose.yml -f docker-compose-build-local.yml up -d --remove-orphans --force-recreate --build
+#   docker-compose -f docker-compose.yml -f docker-compose-build-local.yml down --remove-orphans --volumes
+#   docker-compose -f docker-compose.yml -f docker-compose-build-local.yml config
+
+version: "3.9"
+
+services:
+  alyx-postgres:
+    environment:
+      POSTGRES_USER: ${ALYX_ADMIN_USER:? Must be set in .env file}
+
+  alyx-apache:
+    build:
+      context: ./build
+      dockerfile: Dockerfile
+      args:
+        ALYX_INST_TYPE: ${ALYX_INST_TYPE:? Must be set in .env file}
+        ALYX_GITHUB_BRANCH: ${ALYX_GITHUB_BRANCH:-dev}
+        USER_NAME: ${ALYX_ADMIN_USER?}
+        USER_UID: ${USER_UID:-1000}
+    environment:
+      PGUSER: ${ALYX_ADMIN_USER?}
+    user: root:docker # ${ALYX_ADMIN_USER}:docker
+    # volumes:
+    #   - ~/Datasets/iblalyx:/var/www/alyx-${ALYX_INST_TYPE:?}/shared
+
+  alyx-test:
+    depends_on:
+      alyx-apache:
+        condition: service_healthy
+    build:
+      context: ./build
+      dockerfile: Dockerfile
+      target: iblalyx
+    image: ghcr.io/${GITHUB_USERNAME:-datajoint-company}/dj-iblalyx:latest
+    environment:
+      PGUSER: ${ALYX_ADMIN_USER?}
+      PGPASSWORD: ${ALYX_ADMIN_PASS:?}
+      PGHOST: alyx-postgres
+      PGDATABASE: ${ALYX_DBNAME:?}
+      PGREADONLY: "off"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Need same key used for alyx-apache}
+      FLATIRON_SERVER: https://ibl.flatironinstitute.org
+      FLATIRON_SERVER_LOGIN: ${FLATIRON_SERVER_LOGIN:-}
+      FLATIRON_SERVER_PWD: ${FLATIRON_SERVER_PWD:-}
+      DJANGO_ALLOW_ASYNC_UNSAFE: "true"
+    init: true
+    networks:
+      ibl: null
+    tty: true
+    user: ubuntu:docker
+    volumes:
+      - alyx-shared:/var/www/alyx-local/shared/remote:ro
+      - vscode-ext:/home/ubuntu/.vscode-server/extensions
+      - ./build/scripts:/home/ubuntu/alyx/scripts
+      - ./test:/home/ubuntu/alyx/test
+      - ./.env:/home/ubuntu/alyx/.env
+
+  # Postgres GUI -----------------------------------------------------------------------
+  # http://localhost:8181/
+  # System: PostgreSQL
+  # Server: alyx-postgres
+  # Username: ibl_dev
+  # Password: $ALYX_ADMIN_PASS
+  adminer:
+    depends_on:
+      alyx-postgres:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: alyx-postgres
+      ADMINER_DESIGN: nette
+    image: adminer
+    networks:
+      ibl: null
+    ports:
+      - "8181:8080"
+    restart: always
+
+volumes:
+  vscode-ext:

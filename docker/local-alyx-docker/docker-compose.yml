@@ -1,0 +1,81 @@
+# Setup containerized local iblalyx environment
+# Joseph Burling <joseph@datajoint.com>
+# --------------------------------------------------------------------------------------
+# Basic usage:
+#   cd local-alyx-docker
+#   docker-compose up -d --remove-orphans --force-recreate
+#   docker-compose down --remove-orphans --volumes
+#
+# docker exec -u "root:docker" $(docker ps -aqf "name=alyx-apache") command
+
+version: "3.9"
+
+services:
+  # Postgres Server --------------------------------------------------------------------
+  alyx-postgres:
+    environment:
+      POSTGRES_USER: ibl_dev
+      POSTGRES_PASSWORD: ${ALYX_ADMIN_PASS:? Must be set in .env file}
+      POSTGRES_DB: ${ALYX_DBNAME:? Must be set in .env file}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready
+      timeout: 15s
+      interval: 30s
+      retries: 5
+      start_period: 10s
+    image: postgres:13-bullseye
+    networks:
+      ibl: null
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  # Local IBL Alyx Environment  --------------------------------------------------------
+  alyx-apache:
+    depends_on:
+      alyx-postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${ALYX_ADMIN_PASS:?}
+      PGUSER: ibl_dev
+      PGHOST: alyx-postgres
+      PGDATABASE: ${ALYX_DBNAME:?}
+      PGREADONLY: ${PGREADONLY:-off}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:? Must be set in .env file}
+      FLATIRON_SERVER: https://ibl.flatironinstitute.org
+      FLATIRON_SERVER_LOGIN: ${FLATIRON_SERVER_LOGIN:-}
+      FLATIRON_SERVER_PWD: ${FLATIRON_SERVER_PWD:-}
+      ALYX_INSTANCE: ${ALYX_INST_TYPE:-local}
+      ALYX_PORT: ${ALYX_PORT:-8000}
+      ALYX_NETWORK: alyx-apache
+    healthcheck:
+      test:
+        - CMD
+        - alyx
+        - check_server
+      timeout: 15s
+      interval: 30s
+      retries: 5
+      start_period: 2m0s
+    image: ghcr.io/${GITHUB_USERNAME:-datajoint-company}/dj-iblalyx-apache:latest
+    init: true
+    networks:
+      ibl: null
+    ports:
+      - ${ALYX_PORT:-8000}:${ALYX_PORT:-8000}
+    tty: true
+    user: ibl_dev:docker
+    volumes:
+      - alyx-shared:/var/www/alyx-local/shared/local:rw
+    # command: ["fetch_and_load_db"]
+
+# Global Networks and Volumes ----------------------------------------------------------
+networks:
+  ibl:
+
+volumes:
+  alyx-shared:
+  postgres-data:

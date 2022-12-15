@@ -1,0 +1,11 @@
+bzip2
+ca-certificates
+cron
+git
+htop
+net-tools
+nvi
+openssh-client
+procps
+tmux
+wget

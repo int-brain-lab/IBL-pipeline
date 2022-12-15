@@ -1,0 +1,10 @@
+*
+!.dockerignore
+!Dockerfile
+!requirements/*_requirements.txt
+!settings/*_template.json
+!settings/*_template.py
+!settings/ibldatajoint.env
+!scripts/populate.py
+!scripts/ONE-connect.py
+!scripts/ingest.sh

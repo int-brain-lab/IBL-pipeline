@@ -1,0 +1,62 @@
+# Setup devcontainers for using ibldatajoint
+# Joseph Burling <joseph@datajoint.com>
+# --------------------------------------------------------------------------------------
+#
+# Basic usage:
+#   cd ./docker/ibl-pipeline-docker
+#   export GHCR_PAT=YOUR_GITHUB_PAT
+#   GITUSER=iamamutt
+#   echo $GHCR_PAT | docker login ghcr.io -u $GITUSER --password-stdin
+#   docker image rm ghcr.io/$GITUSER/dj-ibl:latest
+#   docker-compose --verbose --log-level DEBUG up -d --remove-orphans --force-recreate --build
+#   docker-compose down --remove-orphans --volumes
+#   docker-compose config
+#   docker exec -u "root:docker" $(docker ps -aqf "name=iblenv") bash -c 'ls -la /int-brain-lab'
+
+version: "3.9"
+services:
+  datajoint-ingest:
+    build:
+      context: ./build
+      dockerfile: Dockerfile
+      args:
+        IBLDATAJOINT_FORK: ${IBLDATAJOINT_FORK:-datajoint-company}
+        IBLDATAJOINT_REF: ${IBLDATAJOINT_REF:-master}
+        IBLENV_FORK: ${IBLENV_FORK:-datajoint-company}
+    command:
+      - |
+        ingest configure --all
+        micromamba activate
+        populate --duration=1 --sleep=1 --backtrack=0 ingest
+        populate --duration=1 --sleep=1 --backtrack=0 ephys
+        populate --duration=1 --sleep=1 --backtrack=0 behavior
+        populate --duration=1 --sleep=1 --backtrack=0 wheel
+        tail -f /dev/null
+    entrypoint:
+      - /bin/bash
+      - -lc
+    env_file:
+      - .env
+      - ${ENV_FILE_OVERRIDE:-empty.env}
+    image: ghcr.io/${IBLDATAJOINT_FORK:-datajoint-company}/dj-ibl:latest
+    init: true
+    networks:
+      ibl: null
+    ports:
+      - "${JUPYTER_PORT:-8888}:${JUPYTER_PORT:-8888}"
+    tty: true
+    user: root
+    volumes:
+      - vscode-ext:/home/ubuntu/.vscode-server/extensions
+      - ./.devcontainer/notebooks:/int-brain-lab/notebooks
+      - ../../../IBL-pipeline/ibl_pipeline:/int-brain-lab/IBL-pipeline/ibl_pipeline
+      - ../../../IBL-pipeline/.vscode:/int-brain-lab/IBL-pipeline/.vscode
+      - ../../../IBL-pipeline/.cache:/root/.cache
+      - "${LOCAL_SCRATCH_DIR:-../../../IBL-pipeline/scripts}:/int-brain-lab/IBL-pipeline/scripts"
+
+networks:
+  ibl:
+    name: ibl-pipeline-docker_ibl
+volumes:
+  vscode-ext:
+    name: ibl-pipeline-docker_vscode-ext

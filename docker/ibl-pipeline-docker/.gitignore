@@ -1,0 +1,6 @@
+*.env*
+**/.ipynb_checkpoints
+!template.env
+!empty.env
+!build
+!build/settings/ibldatajoint.env

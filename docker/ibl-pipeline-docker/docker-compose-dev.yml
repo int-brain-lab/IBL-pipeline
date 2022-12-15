@@ -1,0 +1,53 @@
+# Setup devcontainers for using ibldatajoint
+# Joseph Burling <joseph@datajoint.com>
+# --------------------------------------------------------------------------------------
+# Usage:
+#   docker-compose --verbose --log-level DEBUG -f docker-compose-dev.yml up -d --remove-orphans --force-recreate --build
+#   docker-compose -f docker-compose-dev.yml down --remove-orphans --volumes
+#   docker-compose -f docker-compose-dev.yml config
+#
+# ./.devcontainer/vscode-open-dev-container
+
+
+version: "3.9"
+services:
+  datajoint-ingest:
+    build:
+      context: ./build
+      dockerfile: Dockerfile
+      args:
+        IBLDATAJOINT_FORK: ${IBLDATAJOINT_FORK:-datajoint-company}
+        IBLDATAJOINT_REF: ${IBLDATAJOINT_REF:-master}
+        IBLENV_FORK: ${IBLENV_FORK:-datajoint-company}
+    command:
+      - |
+        ingest configure --all
+        tail -f /dev/null
+        # jupyter lab -y --no-browser --ip=0.0.0.0 --allow-root --port="8008" --ServerApp.token="1blT0k" --ServerApp.root_dir=/int-brain-lab
+    entrypoint:
+      - /bin/bash
+      - -lc
+    env_file:
+      - .env
+      - ${ENV_FILE_OVERRIDE:-empty.env}
+    image: ghcr.io/${IBLDATAJOINT_FORK:-datajoint-company}/dj-ibl:latest
+    init: true
+    networks:
+      ibl: null
+    ports:
+      - "${JUPYTER_PORT:-8888}:${JUPYTER_PORT:-8888}"
+    tty: true
+    user: root
+    volumes:
+      - vscode-ext:/home/ubuntu/.vscode-server/extensions
+      - ./.devcontainer/notebooks:/int-brain-lab/notebooks
+      - ../../ibl_pipeline:/int-brain-lab/IBL-pipeline/ibl_pipeline
+      - ./.cache:/root/.cache
+      - "${LOCAL_SCRATCH_DIR:-../../scripts}:/int-brain-lab/IBL-pipeline/scripts"
+
+networks:
+  ibl:
+    name: ibl-pipeline-docker_ibl
+volumes:
+  vscode-ext:
+    name: ibl-pipeline-docker_vscode-ext

@@ -1,0 +1,41 @@
+# Setup containerized local iblenv
+# Joseph Burling <joseph@datajoint.com>
+# --------------------------------------------------------------------------------------
+# Basic usage:
+#   cd iblenv-docker
+#   docker-compose up -d --remove-orphans --force-recreate
+#   docker-compose down --remove-orphans --volumes
+#
+# docker exec -u "root:docker" $(docker ps -aqf "name=iblenv") bash -c 'ls -la /int-brain-lab'
+
+version: "3.9"
+
+services:
+  # IBL Environment  -------------------------------------------------------------------
+  # http://127.0.0.1:8008/lab?token=1blT0k
+  iblenv:
+    # # uncomment below to load environment variables from .env file into 'environment:'
+    # env_file:
+    #   - .env
+    environment:
+      IBL_PATH_ROOT: ${ROOT_IBLENV_PATH:-/int-brain-lab}
+      JUPYTER_PORT: ${JUPYTER_PORT:-8008}
+      JUPYTER_TOKEN: ${JUPYTER_TOKEN:-1blT0k}
+    image: ghcr.io/${IBLALYX_FORK:-int-brain-lab}/dj-iblenv:latest
+    init: true
+    networks:
+      ibl: null
+    ports:
+      - "${JUPYTER_PORT:-8008}:${JUPYTER_PORT:-8008}"
+    tty: true
+    volumes:
+      - ./int-brain-lab:${ROOT_IBLENV_PATH:-/int-brain-lab}/notebooks
+    command:
+      - |
+        jupyter lab -y --no-browser --ip=0.0.0.0 --allow-root \
+        --port="${JUPYTER_PORT:-8008}" --ServerApp.token="${JUPYTER_TOKEN:-1blT0k}" \
+        --ServerApp.root_dir=${ROOT_IBLENV_PATH:-/int-brain-lab}
+
+# Global Networks and Volumes ----------------------------------------------------------
+networks:
+  ibl:
