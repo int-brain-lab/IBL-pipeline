@@ -1007,7 +1007,6 @@ class PopulateShadowTable(dj.Computed):
         key_source = ShadowTable * IngestionJob & 'job_status = "on-going"'
         return key_source
 
-
     def make(self, key):
         is_membership = key["table_name"] in DJ_SHADOW_MEMBERSHIP
 

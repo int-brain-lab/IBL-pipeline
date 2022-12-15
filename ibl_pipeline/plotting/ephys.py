@@ -10,6 +10,9 @@ import plotly
 import plotly.graph_objs as go
 import seaborn as sns
 from brainbox import population
+from matplotlib.axes import Axes
+from tqdm import tqdm
+
 from ibl_pipeline import acquisition, mode, subject
 from ibl_pipeline.analyses import ephys as ephys_analyses
 from ibl_pipeline.plotting import ephys_plotting as eplt
@@ -17,8 +20,6 @@ from ibl_pipeline.plotting import plotting_utils_ephys as putils
 from ibl_pipeline.plotting import utils
 from ibl_pipeline.plotting.figure_model import GifFigure, PngFigure
 from ibl_pipeline.plotting.utils import RedBlueColorBar
-from matplotlib.axes import Axes
-from tqdm import tqdm
 
 if mode == "public":
     root_path = "public"
@@ -29,17 +30,23 @@ else:
 schema = dj.schema(dj.config["database.prefix"] + "ibl_plotting_ephys")
 
 try:
-    wheel = dj.create_virtual_module("wheel", dj.config["database.prefix"] + "ibl_group_shared_wheel")
+    wheel = dj.create_virtual_module(
+        "wheel", dj.config["database.prefix"] + "ibl_group_shared_wheel"
+    )
 except dj.DataJointError:
     from ibl_pipeline.group_shared import wheel
 
 try:
-    behavior = dj.create_virtual_module("behavior", dj.config["database.prefix"] + "ibl_behavior")
+    behavior = dj.create_virtual_module(
+        "behavior", dj.config["database.prefix"] + "ibl_behavior"
+    )
 except dj.DataJointError:
     from ibl_pipeline import behavior
 
 try:
-    ephys = dj.create_virtual_module("ephys", dj.config["database.prefix"] + "ibl_ephys")
+    ephys = dj.create_virtual_module(
+        "ephys", dj.config["database.prefix"] + "ibl_ephys"
+    )
 except dj.DataJointError:
     from ibl_pipeline import ephys
 

@@ -2,6 +2,7 @@ import json
 import uuid
 
 import datajoint as dj
+
 from ibl_pipeline.ingest import ShadowIngestionError, acquisition, alyxraw
 from ibl_pipeline.ingest import get_raw_field as grf
 from ibl_pipeline.ingest import reference

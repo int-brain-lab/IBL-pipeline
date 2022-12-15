@@ -6,10 +6,11 @@ import os
 import time
 
 import datajoint as dj
+from tqdm import tqdm
+
 from ibl_pipeline import acquisition, action, behavior, data, mode, reference, subject
 from ibl_pipeline.analyses import behavior as behavior_analyses
 from ibl_pipeline.plotting import behavior as behavior_plotting
-from tqdm import tqdm
 
 BEHAVIOR_TABLES = [
     behavior.CompleteWheelSession,

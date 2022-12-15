@@ -9,6 +9,7 @@ import re
 
 import datajoint as dj
 import numpy as np
+
 from ibl_pipeline.ingest import QueryBuffer, alyxraw
 from ibl_pipeline.process import (
     alyx_models,

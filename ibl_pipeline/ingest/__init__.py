@@ -55,6 +55,7 @@ use for the ingest modules.
 
 
 import datajoint as dj
+
 from ibl_pipeline.ingest import alyxraw
 from ibl_pipeline.utils import get_logger
 
