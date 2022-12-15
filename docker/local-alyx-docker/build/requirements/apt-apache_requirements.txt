@@ -1,0 +1,6 @@
+apache2
+apache2-dev
+apache2-utils
+lynx
+net-tools
+openssh-client

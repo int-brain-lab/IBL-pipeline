@@ -1,6 +1,8 @@
 # IBL public ingestion
 
-## Build base image
+## Build docker images
+
+### Setup environment
 
 ```bash
 # GITHUB_USERNAME=iamamutt
@@ -15,6 +17,8 @@ IBLDATAJOINT_FORK=${IBLENV_FORK}
 IBLDATAJOINT_REF=public-ingest
 ```
 
+### Build base image
+
 ```bash
 (cd docker/local-alyx-docker/build && \
 docker build \
@@ -26,7 +30,7 @@ docker build \
     .)
 ```
 
-## Build base w/ ibl environment dependencies
+### Build base w/ ibl environment dependencies
 
 ```bash
 (cd docker/iblenv-docker/build && \
@@ -40,7 +44,7 @@ docker build \
     .)
 ```
 
-## Build datajoint IBL ingestion image
+### Build datajoint IBL ingestion image
 
 ```bash
 (cd docker/ibl-pipeline-docker/build && \

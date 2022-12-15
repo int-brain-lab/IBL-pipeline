@@ -1,0 +1,4 @@
+*
+!.dockerignore
+!Dockerfile
+!requirements/*_requirements.txt

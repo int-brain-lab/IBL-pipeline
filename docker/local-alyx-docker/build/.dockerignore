@@ -1,0 +1,9 @@
+*
+!.dockerignore
+!Dockerfile
+!apache/*.conf
+!apache/*.json
+!requirements/*_requirements.txt
+!scripts/alyx*
+!settings/settings*.py
+!settings/su_authtoken_template.json

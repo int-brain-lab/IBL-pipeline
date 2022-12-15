@@ -1,0 +1,7 @@
+htop
+libmagic1
+libxcb-xinerama0
+mesa-utils
+procps
+tmux
+libvtk9

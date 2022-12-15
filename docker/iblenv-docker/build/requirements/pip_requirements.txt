@@ -1,0 +1,10 @@
+datajoint
+ibl-neuropixel
+iblutil
+mtscomp
+ONE-api
+opencv-python
+phylib
+soundfile
+SimpleITK
+pyqtgraph

@@ -1,0 +1,3 @@
+ONE-api
+python-dotenv
+git+https://github.com/datajoint-company/datajoint-utilities
